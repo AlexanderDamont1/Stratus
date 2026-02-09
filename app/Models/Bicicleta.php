@@ -1,0 +1,61 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Bicicleta extends Model
+{
+    protected $table = 'bicicletas';
+    protected $primaryKey = 'num_serie';
+    public $incrementing = false;
+    protected $keyType = 'string';
+
+    protected $fillable = [
+        'num_serie',
+        'id_negocio',
+        'id_cliente',
+        'id_producto',
+        'id_modelo',
+        'id_voltaje',
+        'id_color',
+        'status',
+    ];
+
+    /* ================= RELACIONES ================= */
+
+    public function negocio()
+    {
+        return $this->belongsTo(Negocio::class, 'id_negocio', 'id_negocio');
+    }
+
+    public function cliente()
+    {
+        return $this->belongsTo(Cliente::class, 'id_cliente', 'id_cliente');
+    }
+
+    public function producto()
+    {
+        return $this->belongsTo(Producto::class, 'id_producto', 'id_producto');
+    }
+
+    public function modelo()
+    {
+        return $this->belongsTo(Modelo::class, 'id_modelo', 'id_modelo');
+    }
+
+    public function voltaje()
+    {
+        return $this->belongsTo(Voltaje::class, 'id_voltaje', 'id_voltaje');
+    }
+
+    public function color()
+    {
+        return $this->belongsTo(Color::class, 'id_color', 'id_color');
+    }
+
+    public function mantenimientos()
+    {
+        return $this->hasMany(Mantenimiento::class, 'num_serie', 'num_serie');
+    }
+}
