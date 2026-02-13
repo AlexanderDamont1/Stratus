@@ -23,11 +23,14 @@ class Usuario extends Authenticatable
         'id_rol',
     ];
 
-    protected function idPrefix(): string
+     public static function generarId()
     {
-        return 'USR';
-    }
+        $fecha = now()->format('ymd');
+        $ultimo = self::whereDate('created_at', now())
+            ->count() + 1;
 
+        return 'USR' . $fecha . str_pad($ultimo, 4, '0', STR_PAD_LEFT);
+    }
     protected $hidden = [
         'password',
     ];
