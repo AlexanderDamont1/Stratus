@@ -17,7 +17,6 @@ class Negocio extends Model
         'id_negocio',
         'nombre_negocio',
         'max_users',
-        'id_admin_principal',
     ];
 
 
