@@ -23,20 +23,51 @@ class Usuario extends Authenticatable
         'id_rol',
     ];
 
-     public static function generarId()
-    {
-        $fecha = now()->format('ymd');
-        $ultimo = self::whereDate('created_at', now())
-            ->count() + 1;
-
-        return 'USR' . $fecha . str_pad($ultimo, 4, '0', STR_PAD_LEFT);
-    }
     protected $hidden = [
         'password',
     ];
 
+    /*
+    |----------------------------------------
+    | Generador de ID personalizado
+    |----------------------------------------
+    */
+    public static function generarId()
+    {
+        $fecha = now()->format('ymd');
+
+        $ultimo = self::whereDate('created_at', now())->count() + 1;
+
+        return 'USR' . $fecha . str_pad($ultimo, 4, '0', STR_PAD_LEFT);
+    }
+
+    /*
+    |----------------------------------------
+    | RELACIONES
+    |----------------------------------------
+    */
     public function negocio()
     {
         return $this->belongsTo(Negocio::class, 'id_negocio', 'id_negocio');
+    }
+
+    /*
+    |----------------------------------------
+    | HELPERS DE ROL
+    |----------------------------------------
+    */
+    public function esRoot()
+    {
+        return $this->id_rol === 0;
+    }
+
+    public function esAdmin()
+    {
+        return $this->id_rol === 1;
+    }
+
+    public function esVendedor()
+    {
+        return $this->id_rol === 2;
     }
 }

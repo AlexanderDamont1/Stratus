@@ -16,7 +16,10 @@ class Negocio extends Model
     protected $fillable = [
         'id_negocio',
         'nombre_negocio',
+        'max_users',
+        'id_admin_principal',
     ];
+
 
     protected function idPrefix(): string
     {
@@ -28,6 +31,17 @@ class Negocio extends Model
     public function usuarios()
     {
         return $this->hasMany(Usuario::class, 'id_negocio', 'id_negocio');
+    }
+
+    public function admin()
+    {
+        return $this->belongsTo(Usuario::class, 'id_admin_principal', 'id_usuario');
+    }
+
+    public function vendedores()
+    {
+        return $this->hasMany(Usuario::class, 'id_negocio', 'id_negocio')
+                    ->where('id_rol', 2);
     }
 
     public function clientes()
