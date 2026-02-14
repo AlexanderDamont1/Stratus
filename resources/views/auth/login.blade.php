@@ -19,12 +19,12 @@
 
             <div class="opacity-0 animate-slide-up" style="animation-delay: 0.3s">
                 <div class="relative group">
-                    <x-text-input id="email" 
+                    <x-text-input id="correo" 
                         class="block w-full border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg px-4 py-3.5 text-sm transition-all focus:outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-200"
-                        type="email" name="email" :value="old('email')" required autofocus placeholder="nombre@cloudlabs.com" />
+                        type="email" name="correo" :value="old('correo')" required autofocus placeholder="nombre@cloudlabs.com" />
                     <div class="absolute bottom-0 left-0 w-0 h-0.5 bg-gray-500 group-hover:w-full transition-all duration-300"></div>
                 </div>
-                <x-input-error :messages="$errors->get('email')" class="mt-2 text-xs animate-fade-in" />
+                <x-input-error :messages="$errors->get('correo')" class="mt-2 text-xs animate-fade-in" />
             </div>
 
             <div class="opacity-0 animate-slide-up" style="animation-delay: 0.4s">

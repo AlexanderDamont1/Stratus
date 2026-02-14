@@ -44,6 +44,14 @@
                 <span>Inicio</span>
             </a>
 
+            @if(Auth::user()->id_rol == 0)
+            <a href="{{ route('root.dashboard') }}"
+                class="flex items-center gap-3 px-3 py-2 rounded-md transition
+                {{ request()->routeIs('root.*') ? 'bg-gray-900 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">
+                    <span>Panel Root</span>
+                </a>
+            @endif
+
            <a href="{{ route('profile.edit') }}"
                 class="flex items-center gap-3 px-3 py-2 rounded-md transition
                 {{ request()->routeIs('profile.edit') ? 'bg-gray-900 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}"

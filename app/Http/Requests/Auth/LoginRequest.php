@@ -11,52 +11,52 @@ use Illuminate\Validation\ValidationException;
 
 class LoginRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
-     */
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'email'],
+            'correo' => ['required', 'string', 'email'],
             'password' => ['required', 'string'],
         ];
     }
 
-    /**
-     * Attempt to authenticate the request's credentials.
-     *
-     * @throws \Illuminate\Validation\ValidationException
-     */
     public function authenticate(): void
-    {
-        $this->ensureIsNotRateLimited();
+{
+    $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
-            RateLimiter::hit($this->throttleKey());
+    // DEBUG: Verifica que los datos lleguen
+    \Log::info('Intento de login', [
+        'correo' => $this->correo,
+        'remember' => $this->boolean('remember')
+    ]);
 
-            throw ValidationException::withMessages([
-                'email' => trans('auth.failed'),
-            ]);
-        }
+    $credentials = [
+        'correo' => $this->correo,
+        'password' => $this->password
+    ];
 
-        RateLimiter::clear($this->throttleKey());
+    if (! Auth::attempt($credentials, $this->boolean('remember'))) {
+        // DEBUG: Verifica si el usuario existe
+        $usuario = \App\Models\Usuario::where('correo', $this->correo)->first();
+        \Log::error('Login fallido', [
+            'usuario_existe' => $usuario ? 'Sí' : 'No',
+            'password_guardado' => $usuario ? substr($usuario->password, 0, 10) : 'N/A'
+        ]);
+
+        RateLimiter::hit($this->throttleKey());
+
+        throw ValidationException::withMessages([
+            'correo' => 'Credenciales incorrectas.',
+        ]);
     }
 
-    /**
-     * Ensure the login request is not rate limited.
-     *
-     * @throws \Illuminate\Validation\ValidationException
-     */
+    \Log::info('Login exitoso', ['correo' => $this->correo]);
+    RateLimiter::clear($this->throttleKey());
+}
     public function ensureIsNotRateLimited(): void
     {
         if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
@@ -68,18 +68,17 @@ class LoginRequest extends FormRequest
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
         throw ValidationException::withMessages([
-            'email' => trans('auth.throttle', [
+            'correo' => trans('auth.throttle', [
                 'seconds' => $seconds,
                 'minutes' => ceil($seconds / 60),
             ]),
         ]);
     }
 
-    /**
-     * Get the rate limiting throttle key for the request.
-     */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+        return Str::transliterate(
+            Str::lower($this->string('correo')) . '|' . $this->ip()
+        );
     }
 }
