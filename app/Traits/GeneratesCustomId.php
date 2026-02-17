@@ -2,39 +2,19 @@
 
 namespace App\Traits;
 
-use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
+use Illuminate\Support\Str;
 
 trait GeneratesCustomId
 {
-    protected static function bootGeneratesCustomId()
+    protected static function bootGeneratesCustomId(): void
     {
         static::creating(function ($model) {
-
-            $primaryKey = $model->getKeyName();
-
-            if (!empty($model->$primaryKey)) {
-                return;
+            if (empty($model->{$model->getKeyName()})) {
+                $prefix  = method_exists($model, 'idPrefix') ? $model->idPrefix() : 'ID';
+                $date    = now()->format('ymdHis');
+                $rand    = rand(100, 999);
+                $model->{$model->getKeyName()} = $prefix . $date . $rand;
             }
-
-            $prefix = $model->idPrefix();
-            $date   = Carbon::now()->format('ymd');
-
-            $lastId = DB::table($model->getTable())
-                ->where($primaryKey, 'like', "{$prefix}{$date}%")
-                ->orderBy($primaryKey, 'desc')
-                ->value($primaryKey);
-
-            $sequence = $lastId
-                ? intval(substr($lastId, -4)) + 1
-                : 1;
-
-            $model->$primaryKey =
-                $prefix .
-                $date .
-                str_pad($sequence, 4, '0', STR_PAD_LEFT);
         });
     }
-
-    abstract protected function idPrefix(): string;
 }

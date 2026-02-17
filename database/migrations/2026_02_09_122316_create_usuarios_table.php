@@ -6,43 +6,31 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('usuarios', function (Blueprint $table) {
-    $table->char('id_usuario', 36)->primary();
-    
-    $table->char('id_negocio', 36)->nullable(); 
-    // Root puede no pertenecer a negocio
+            $table->char('id_usuario', 36)->primary();
 
-    $table->string('nombre_usuario');
-    $table->string('correo');
-    $table->string('username');
-    $table->string('password');
+            $table->char('id_negocio', 36)->nullable();
+            // Root no pertenece a ningún negocio → nullable
 
-    // 0 = Root | 1 = Admin | 2 = Vendedor
-    $table->unsignedTinyInteger('id_rol');
+            $table->string('nombre_usuario');
+            $table->string('correo')->unique();
+            $table->string('username')->unique();
+            $table->string('password');
 
-    $table->timestamps();
+            // 0 = Root | 1 = Admin | 2 = Vendedor
+            $table->unsignedTinyInteger('id_rol')->default(1);
 
-    $table->foreign('id_negocio')
-          ->references('id_negocio')
-          ->on('negocios')
-          ->nullOnDelete();
+            $table->timestamps();
 
-    // Evita duplicados dentro del mismo negocio
-    $table->unique(['id_negocio', 'correo']);
-    $table->unique(['id_negocio', 'username']);
-});
-
-
+            $table->foreign('id_negocio')
+                  ->references('id_negocio')
+                  ->on('negocios')
+                  ->nullOnDelete();
+        });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('usuarios');

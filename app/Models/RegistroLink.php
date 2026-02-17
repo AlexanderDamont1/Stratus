@@ -2,49 +2,47 @@
 
 namespace App\Models;
 
+use App\Traits\GeneratesCustomId;
 use Illuminate\Database\Eloquent\Model;
 
 class RegistroLink extends Model
 {
-    protected $table = 'registro_links';
+    use GeneratesCustomId;
+
+    protected $table      = 'registro_links';
     protected $primaryKey = 'id_link';
-    public $incrementing = false;
-    protected $keyType = 'string';
+    public $incrementing  = false;
+    protected $keyType    = 'string';
 
     protected $fillable = [
         'id_link',
-        'id_negocio',
-        'creado_por',
         'token',
+        'max_users',
         'usado',
         'expires_at',
     ];
 
-    /*
-    |----------------------------------------
-    | RELACIONES
-    |----------------------------------------
-    */
+    protected $casts = [
+        'usado'      => 'boolean',
+        'expires_at' => 'datetime',
+    ];
 
-    public function negocio()
+    protected function idPrefix(): string
     {
-        return $this->belongsTo(Negocio::class, 'id_negocio', 'id_negocio');
-    }
-
-    public function creador()
-    {
-        return $this->belongsTo(Usuario::class, 'creado_por', 'id_usuario');
+        return 'LNK';
     }
 
     /*
     |----------------------------------------
-    | Validaciones de estado
+    | Validación de estado
     |----------------------------------------
     */
 
-    public function estaDisponible()
+    public function estaDisponible(): bool
     {
-        if ($this->usado) return false;
+        if ($this->usado) {
+            return false;
+        }
 
         if ($this->expires_at && now()->greaterThan($this->expires_at)) {
             return false;
@@ -52,5 +50,25 @@ class RegistroLink extends Model
 
         return true;
     }
-}
 
+    /*
+    |----------------------------------------
+    | Scopes
+    |----------------------------------------
+    */
+
+    public function scopeDisponibles($query)
+    {
+        return $query->where('usado', false)
+                     ->where(function ($q) {
+                         $q->whereNull('expires_at')
+                           ->orWhere('expires_at', '>', now());
+                     });
+    }
+
+    public function scopeExpirados($query)
+    {
+        return $query->where('usado', false)
+                     ->where('expires_at', '<=', now());
+    }
+}

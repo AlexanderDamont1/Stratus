@@ -2,15 +2,18 @@
 
 namespace App\Models;
 
+use App\Traits\GeneratesCustomId;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
 class Usuario extends Authenticatable
 {
-    protected $table = 'usuarios';
+    use GeneratesCustomId;
+
+    protected $table      = 'usuarios';
     protected $primaryKey = 'id_usuario';
-    public $incrementing = false;
-    protected $keyType = 'string';
-    public $timestamps = true;
+    public $incrementing  = false;
+    protected $keyType    = 'string';
+    public $timestamps    = true;
 
     protected $fillable = [
         'id_usuario',
@@ -26,34 +29,35 @@ class Usuario extends Authenticatable
         'password',
     ];
 
-    // IMPORTANTE: Define el nombre del campo de autenticación
-    public function getAuthIdentifierName()
-    {
-        return 'id_usuario';
-    }
+    protected $casts = [
+        'id_rol' => 'integer',
+    ];
 
-    // IMPORTANTE: Define qué campo usar como "username" para login
-    public function username()
+    protected function idPrefix(): string
     {
-        return 'correo';
-    }
-
-    // IMPORTANTE: Define el campo de password
-    public function getAuthPassword()
-    {
-        return $this->password;
+        return 'USR';
     }
 
     /*
     |----------------------------------------
-    | Generador de ID personalizado
+    | Autenticación
     |----------------------------------------
     */
-    public static function generarId()
+
+    public function getAuthIdentifierName(): string
     {
-        $fecha = now()->format('ymd');
-        $ultimo = self::whereDate('created_at', now())->count() + 1;
-        return 'USR' . $fecha . str_pad($ultimo, 4, '0', STR_PAD_LEFT);
+        return 'id_usuario';
+    }
+
+    // Campo que usa Laravel para login
+    public function username(): string
+    {
+        return 'correo';
+    }
+
+    public function getAuthPassword(): string
+    {
+        return $this->password;
     }
 
     /*
@@ -61,6 +65,7 @@ class Usuario extends Authenticatable
     | RELACIONES
     |----------------------------------------
     */
+
     public function negocio()
     {
         return $this->belongsTo(Negocio::class, 'id_negocio', 'id_negocio');
@@ -71,17 +76,18 @@ class Usuario extends Authenticatable
     | HELPERS DE ROL
     |----------------------------------------
     */
-    public function esRoot()
+
+    public function esRoot(): bool
     {
         return $this->id_rol === 0;
     }
 
-    public function esAdmin()
+    public function esAdmin(): bool
     {
         return $this->id_rol === 1;
     }
 
-    public function esVendedor()
+    public function esVendedor(): bool
     {
         return $this->id_rol === 2;
     }
