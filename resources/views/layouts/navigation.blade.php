@@ -2,6 +2,7 @@
     x-data="{ open: false }"
     class="flex min-h-screen bg-gray-50 dark:bg-gray-900"
 >
+    {{-- Overlay móvil --}}
     <div
         x-show="open"
         x-cloak
@@ -10,6 +11,9 @@
         x-transition:opacity
     ></div>
 
+    {{-- ═══════════════════════════════
+         SIDEBAR
+    ═══════════════════════════════ --}}
     <aside
         class="fixed sm:static inset-y-0 left-0 z-40
                w-64 bg-white dark:bg-gray-800
@@ -18,6 +22,7 @@
                transition-transform duration-300 ease-in-out"
         :class="open ? 'translate-x-0' : '-translate-x-full sm:translate-x-0'"
     >
+        {{-- Logo --}}
         <div class="h-16 flex items-center justify-between px-4 border-b dark:border-gray-700 shrink-0">
             <div class="flex items-center gap-3">
                 <x-application-logo class="h-8 w-8 text-gray-900 dark:text-gray-100" />
@@ -32,6 +37,7 @@
             </button>
         </div>
 
+        {{-- NAV --}}
         <nav class="flex-1 px-3 py-4 space-y-1 text-sm overflow-y-auto">
 
             {{-- Inicio --}}
@@ -50,13 +56,17 @@
             @if(Auth::user()->id_rol === 0)
                 <a href="{{ route('root.dashboard') }}"
                    class="flex items-center gap-3 px-3 py-2 rounded-md transition
-                   {{ request()->routeIs('root.*') ? 'bg-gray-900 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}"
-                   @click="open = false"
-                >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0-1.657-1.343-3-3-3S6 9.343 6 11s1.343 3 3 3 3-1.343 3-3zm6 0c0-1.657-1.343-3-3-3s-3 1.343-3 3 1.343 3 3 3 3-1.343 3-3zM3 20a9 9 0 0118 0" />
-                    </svg>
+                   {{ request()->routeIs('root.*') ? 'bg-gray-900 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">
                     <span>Panel Root</span>
+                </a>
+            @endif
+
+            {{-- Admin normal --}}
+            @if(auth()->user()->id_rol === 1)
+                <a href="{{ route('admin.vendedores.create') }}"
+                   class="flex items-center gap-3 px-3 py-2 rounded-md transition
+                   {{ request()->routeIs('admin.vendedores.*') ? 'bg-gray-900 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">
+                    <span>Vendedores</span>
                 </a>
             @endif
 
@@ -74,7 +84,7 @@
 
         </nav>
 
-        {{-- Usuario info + logout --}}
+        {{-- Usuario --}}
         <div class="border-t dark:border-gray-700 p-4">
             <div class="flex items-center gap-3 mb-3">
                 <div class="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center shrink-0">
@@ -106,6 +116,9 @@
         </div>
     </aside>
 
+    {{-- ═══════════════════════════════
+         CONTENIDO
+    ═══════════════════════════════ --}}
     <div class="flex-1 flex flex-col min-w-0">
 
         <header class="sm:hidden h-16 flex items-center px-4 bg-white dark:bg-gray-800 border-b dark:border-gray-700 shrink-0">
@@ -127,6 +140,104 @@
             {{ $slot }}
         </main>
     </div>
+
+    {{-- ═══════════════════════════════
+     MODAL SETUP OBLIGATORIO
+     (ROL 44)
+═══════════════════════════════ --}}
+@if(auth()->user()->id_rol === 44)
+    @php
+        $max = auth()->user()->negocio->max_users ?? 1;
+    @endphp
+
+    <div class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm">
+
+        {{-- Contenedor scrollable --}}
+        <div class="fixed inset-0 overflow-y-auto">
+
+            <div class="flex min-h-full items-center justify-center p-4 sm:p-6">
+
+                {{-- Card --}}
+                <div
+                    class="w-full
+                           max-w-2xl
+                           bg-white dark:bg-gray-900
+                           rounded-2xl
+                           shadow-2xl
+                           p-6 sm:p-8
+                           max-h-[95vh]
+                           overflow-y-auto"
+                >
+
+                    <h2 class="text-lg sm:text-xl font-semibold mb-2">
+                        Configuración inicial
+                    </h2>
+
+                    <p class="text-sm text-gray-500 mb-6">
+                        Debes registrar {{ $max }} vendedor(es) para activar el sistema.
+                    </p>
+
+                    <form method="POST" action="{{ route('admin.setup.completar') }}">
+                        @csrf
+
+                        @for($i = 0; $i < $max; $i++)
+                            <div class="mb-6 pb-6 border-b last:border-b-0">
+                                <h4 class="font-semibold mb-3 text-sm sm:text-base">
+                                    Vendedor {{ $i + 1 }}
+                                </h4>
+
+                                <div class="grid gap-3">
+
+                                    <input type="text"
+                                           name="vendedores[{{ $i }}][nombre]"
+                                           placeholder="Nombre de Sucursal"
+                                           class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 outline-none">
+
+                                    <input type="email"
+                                           name="vendedores[{{ $i }}][correo]"
+                                           placeholder="Correo"
+                                           class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 outline-none">
+
+                                    <input type="text"
+                                           name="vendedores[{{ $i }}][username]"
+                                           placeholder="Username"
+                                           class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 outline-none">
+
+                                    <input type="password"
+                                           name="vendedores[{{ $i }}][password]"
+                                           placeholder="Password"
+                                           class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 outline-none">
+
+                                </div>
+                            </div>
+                        @endfor
+
+                        <button
+                            class="w-full
+                                   bg-gray-900
+                                   hover:bg-black
+                                   text-white
+                                   py-2.5
+                                   rounded-lg
+                                   transition"
+                        >
+                            Activar sistema
+                        </button>
+                    </form>
+
+                    <form method="POST" action="{{ route('logout') }}" class="mt-6 text-center">
+                        @csrf
+                        <button class="text-xs text-gray-400 hover:text-gray-500 underline">
+                            Cerrar sesión
+                        </button>
+                    </form>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+@endif
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>

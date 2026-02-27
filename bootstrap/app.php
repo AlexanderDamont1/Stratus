@@ -14,6 +14,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'es.root' => \App\Http\Middleware\EsRoot::class,
             'single.session' => \App\Http\Middleware\SingleSessionMiddleware::class,
+            'force.setup'       => \App\Http\Middleware\ForceAdminSetupMiddleware::class,
+
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

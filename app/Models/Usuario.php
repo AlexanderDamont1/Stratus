@@ -23,12 +23,12 @@ class Usuario extends Authenticatable
         'username',
         'password',
         'id_rol',
-        'session_token',   // ← nuevo
+        'session_token',
     ];
 
     protected $hidden = [
         'password',
-        'session_token',   // ← no exponemos el token en JSON/arrays
+        'session_token',
     ];
 
     protected $casts = [
@@ -39,6 +39,17 @@ class Usuario extends Authenticatable
     {
         return 'USR';
     }
+
+    protected static function boot()
+{
+    parent::boot();
+
+    static::creating(function ($usuario) {
+        if (empty($usuario->id_usuario)) {
+            $usuario->id_usuario = static::generarId();
+        }
+    });
+}
 
     /*
     |----------------------------------------
@@ -51,7 +62,6 @@ class Usuario extends Authenticatable
         return 'id_usuario';
     }
 
-    // Campo que usa Laravel para login
     public function username(): string
     {
         return 'correo';
@@ -76,6 +86,10 @@ class Usuario extends Authenticatable
     /*
     |----------------------------------------
     | HELPERS DE ROL
+    |  0  = Root
+    |  1  = Admin normal
+    |  2  = Vendedor
+    | 44  = Admin en modo instalación (transitorio)
     |----------------------------------------
     */
 
@@ -84,7 +98,13 @@ class Usuario extends Authenticatable
         return $this->id_rol === 0;
     }
 
+    /** Admin normal O admin en modo setup */
     public function esAdmin(): bool
+    {
+        return in_array($this->id_rol, [1, 44]);
+    }
+
+    public function esAdminNormal(): bool
     {
         return $this->id_rol === 1;
     }
@@ -94,17 +114,24 @@ class Usuario extends Authenticatable
         return $this->id_rol === 2;
     }
 
+    /**
+     * Admin en modo instalación obligatoria.
+     * Rol transitorio: 44 → 1 al completar setup.
+     */
+    public function enModoSetup(): bool
+    {
+        return $this->id_rol === 44;
+    }
+
     /*
     |----------------------------------------
     | HELPERS DE SESIÓN
     |----------------------------------------
     */
 
-    /**
-     * Indica si este rol debe tener sesión única.
-     */
+    /** Roles 1, 2 y 44 tienen sesión única activa */
     public function requiereSesionUnica(): bool
     {
-        return in_array($this->id_rol, [1, 2]);
+        return in_array($this->id_rol, [1, 2, 44]);
     }
 }

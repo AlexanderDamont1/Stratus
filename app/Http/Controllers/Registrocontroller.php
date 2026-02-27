@@ -55,7 +55,7 @@ class RegistroController extends Controller
                 'correo'         => $request->correo,
                 'username'       => $request->username,
                 'password'       => Hash::make($request->password),
-                'id_rol'         => 1, // Admin siempre
+                'id_rol'         => 44, // Admin siempre
             ]);
 
             // 3. Matar el link ☠️

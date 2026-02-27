@@ -1,7 +1,17 @@
 <x-app-layout>
 
 <div
-    x-data="{ createModal: false }"
+    x-data="{
+        createModal: false,
+        deleteModal: false,
+        deleteToken: '',
+        deleteAction: '',
+        openDelete(token, action) {
+            this.deleteToken  = token;
+            this.deleteAction = action;
+            this.deleteModal  = true;
+        }
+    }"
     class="space-y-6"
 >
 
@@ -72,26 +82,77 @@
                         $expirado   = $link->expires_at && now()->greaterThan($link->expires_at);
                         $disponible = ! $link->usado && ! $expirado;
                         $url        = route('registro.show', $link->token);
+                        $deleteRoute = route('root.links.destroy', $link);
                     @endphp
                     <tr class="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition">
+
+                        {{-- URL + botón copiar --}}
                         <td class="px-4 py-3">
                             @if($disponible)
                                 <div class="flex items-center gap-2">
-                                    <span class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[220px] font-mono">{{ $url }}</span>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[180px] sm:max-w-[220px] font-mono">
+                                        {{ $url }}
+                                    </span>
+                                    {{-- Botón copiar compatible con móvil --}}
                                     <button
-                                        onclick="copiar('{{ $url }}', this)"
-                                        class="text-gray-400 hover:text-gray-700 dark:hover:text-white text-xs transition shrink-0"
+                                        type="button"
+                                        x-data="{ copied: false }"
+                                        @click="
+                                            const url = '{{ $url }}';
+                                            if (navigator.clipboard && navigator.clipboard.writeText) {
+                                                navigator.clipboard.writeText(url).then(() => {
+                                                    copied = true;
+                                                    setTimeout(() => copied = false, 1800);
+                                                });
+                                            } else {
+                                                // Fallback para móviles sin clipboard API
+                                                const el = document.createElement('textarea');
+                                                el.value = url;
+                                                el.setAttribute('readonly', '');
+                                                el.style.position = 'absolute';
+                                                el.style.left = '-9999px';
+                                                document.body.appendChild(el);
+                                                el.select();
+                                                el.setSelectionRange(0, 99999);
+                                                document.execCommand('copy');
+                                                document.body.removeChild(el);
+                                                copied = true;
+                                                setTimeout(() => copied = false, 1800);
+                                            }
+                                        "
+                                        class="shrink-0 transition"
+                                        :class="copied
+                                            ? 'text-green-500'
+                                            : 'text-gray-400 hover:text-gray-700 dark:hover:text-white'"
                                         title="Copiar URL"
-                                    >⎘</button>
+                                    >
+                                        <span x-show="!copied">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2
+                                                         m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                            </svg>
+                                        </span>
+                                        <span x-show="copied" x-cloak>
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                            </svg>
+                                        </span>
+                                    </button>
                                 </div>
                             @else
-                                <span class="text-xs text-gray-300 dark:text-gray-600 font-mono">{{ Str::limit($link->token, 24) }}</span>
+                                <span class="text-xs text-gray-300 dark:text-gray-600 font-mono">
+                                    {{ Str::limit($link->token, 24) }}
+                                </span>
                             @endif
                         </td>
+
                         <td class="px-4 py-3 text-gray-700 dark:text-gray-300">{{ $link->max_users }}</td>
+
                         <td class="px-4 py-3 text-xs text-gray-400">
                             {{ $link->expires_at ? $link->expires_at->diffForHumans() : '—' }}
                         </td>
+
                         <td class="px-4 py-3">
                             @if($link->usado)
                                 <span class="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800">
@@ -108,14 +169,16 @@
                                 </span>
                             @endif
                         </td>
+
+                        {{-- Botón eliminar → abre modal en lugar de confirm() nativo --}}
                         <td class="px-4 py-3 text-right">
-                            <form method="POST" action="{{ route('root.links.destroy', $link) }}" onsubmit="return confirm('¿Eliminar este link?')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="text-red-500 hover:text-red-700 dark:hover:text-red-400 text-xs transition">
-                                    Eliminar
-                                </button>
-                            </form>
+                            <button
+                                type="button"
+                                @click="openDelete('{{ Str::limit($link->token, 16) }}…', '{{ $deleteRoute }}')"
+                                class="text-red-500 hover:text-red-700 dark:hover:text-red-400 text-xs transition"
+                            >
+                                Eliminar
+                            </button>
                         </td>
                     </tr>
                 @empty
@@ -177,7 +240,10 @@
         @endif
     </div>
 
-    {{-- ===== MODAL CREAR LINK ===== --}}
+
+    {{-- ===================================================
+         MODAL: CREAR LINK
+    ==================================================== --}}
     <div
         x-show="createModal"
         x-cloak
@@ -187,7 +253,7 @@
         x-transition:leave="transition ease-in duration-150"
         x-transition:leave-start="opacity-100"
         x-transition:leave-end="opacity-0"
-        class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+        class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4"
         @click.self="createModal = false"
     >
         <div
@@ -195,11 +261,25 @@
             x-transition:enter="transition ease-out duration-200"
             x-transition:enter-start="opacity-0 scale-95"
             x-transition:enter-end="opacity-100 scale-100"
-            class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-sm mx-4"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100 scale-100"
+            x-transition:leave-end="opacity-0 scale-95"
+            class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-sm"
+            @click.stop
         >
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-base font-semibold text-gray-900 dark:text-white">Nuevo link de registro</h3>
-                <button @click="createModal = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition">
+            <div class="flex items-center justify-between mb-5">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-gray-900 dark:bg-white flex items-center justify-center shrink-0">
+                        <svg class="w-4 h-4 text-white dark:text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-base font-semibold text-gray-900 dark:text-white">Nuevo link de registro</h3>
+                </div>
+                <button
+                    @click="createModal = false"
+                    class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
@@ -208,8 +288,8 @@
 
             <form method="POST" action="{{ route('root.links.store') }}">
                 @csrf
-                <div class="mb-4">
-                    <label class="block text-sm text-gray-600 dark:text-gray-400 mb-1.5">
+                <div class="mb-5">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                         Límite de vendedores
                     </label>
                     <input
@@ -219,27 +299,32 @@
                         max="100"
                         value="{{ old('max_users', 1) }}"
                         placeholder="ej. 5"
-                        class="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30"
+                        class="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition"
                         required
                         autofocus
                     >
                     @error('max_users')
-                        <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
+                        <p class="text-xs text-red-500 mt-1.5">{{ $message }}</p>
                     @enderror
-                    <p class="text-xs text-gray-400 mt-1.5">El link expira en 24h y muere al ser usado.</p>
+                    <p class="text-xs text-gray-400 mt-2 flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Expira en 24h y se destruye al usarse.
+                    </p>
                 </div>
 
                 <div class="flex justify-end gap-2">
                     <button
                         type="button"
                         @click="createModal = false"
-                        class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition"
+                        class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
                     >
                         Cancelar
                     </button>
                     <button
                         type="submit"
-                        class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-md text-sm hover:opacity-90 transition"
+                        class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition"
                     >
                         Crear link
                     </button>
@@ -248,20 +333,75 @@
         </div>
     </div>
 
-</div>
 
-<script>
-    function copiar(url, btn) {
-        navigator.clipboard.writeText(url).then(() => {
-            const original = btn.textContent;
-            btn.textContent = '✓';
-            btn.classList.add('text-green-500');
-            setTimeout(() => {
-                btn.textContent = original;
-                btn.classList.remove('text-green-500');
-            }, 1500);
-        });
-    }
-</script>
+    {{-- ===================================================
+         MODAL: CONFIRMAR ELIMINAR LINK
+    ==================================================== --}}
+    <div
+        x-show="deleteModal"
+        x-cloak
+        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100"
+        x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0"
+        class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4"
+        @click.self="deleteModal = false"
+    >
+        <div
+            x-show="deleteModal"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 scale-95"
+            x-transition:enter-end="opacity-100 scale-100"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100 scale-100"
+            x-transition:leave-end="opacity-0 scale-95"
+            class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-sm"
+            @click.stop
+        >
+            {{-- Icono de advertencia --}}
+            <div class="flex items-start gap-4 mb-5">
+                <div class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-base font-semibold text-gray-900 dark:text-white">Eliminar link</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        Vas a eliminar el link
+                        <span class="font-mono text-xs font-semibold text-gray-700 dark:text-gray-300" x-text="deleteToken"></span>.
+                        Esta acción no se puede deshacer.
+                    </p>
+                </div>
+            </div>
+
+            {{-- Formulario DELETE --}}
+            <form method="POST" :action="deleteAction">
+                @csrf
+                @method('DELETE')
+
+                <div class="flex justify-end gap-2">
+                    <button
+                        type="button"
+                        @click="deleteModal = false"
+                        class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        type="submit"
+                        class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition active:scale-[.98]"
+                    >
+                        Sí, eliminar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
 
 </x-app-layout>
