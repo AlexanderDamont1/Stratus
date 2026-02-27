@@ -7,12 +7,13 @@ use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
 {
     /**
-     * Display the login view.
+     * Mostrar formulario de login.
      */
     public function create(): View
     {
@@ -20,29 +21,60 @@ class AuthenticatedSessionController extends Controller
     }
 
     /**
-     * Handle an incoming authentication request.
+     * Manejar el intento de autenticación.
      */
-    public function store(LoginRequest $request): RedirectResponse
+    public function store(Request $request): RedirectResponse
     {
-        $request->authenticate();
+        $request->validate([
+            'correo'   => ['required', 'string', 'email'],
+            'password' => ['required', 'string'],
+        ]);
+
+        if (! Auth::attempt($request->only('correo', 'password'), $request->boolean('remember'))) {
+            return back()->withErrors([
+                'correo' => __('Las credenciales proporcionadas no coinciden con nuestros registros.'),
+            ])->onlyInput('correo');
+        }
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        $usuario = Auth::user();
+
+        // ── Sesión única para Admin (1) y Vendedor (2) ──────────────────────
+        if ($usuario->requiereSesionUnica()) {
+
+            $newToken = Str::uuid()->toString();
+
+            // Guardar en BD (invalida cualquier sesión anterior)
+            $usuario->session_token = $newToken;
+            $usuario->save();
+
+            // Guardar en la sesión actual
+            session(['session_token' => $newToken]);
+        }
+        // ────────────────────────────────────────────────────────────────────
+
+        return redirect()->intended(route('dashboard'));
     }
 
     /**
-     * Destroy an authenticated session.
+     * Cerrar sesión.
      */
     public function destroy(Request $request): RedirectResponse
     {
-        Auth::guard('web')->logout();
+        $usuario = Auth::user();
+
+        // Limpiar token al cerrar sesión voluntariamente
+        if ($usuario && $usuario->requiereSesionUnica()) {
+            $usuario->session_token = null;
+            $usuario->save();
+        }
+
+        Auth::logout();
 
         $request->session()->invalidate();
-
         $request->session()->regenerateToken();
 
         return redirect()->route('login');
-
     }
 }

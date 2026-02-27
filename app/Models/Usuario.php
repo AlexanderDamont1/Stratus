@@ -23,10 +23,12 @@ class Usuario extends Authenticatable
         'username',
         'password',
         'id_rol',
+        'session_token',   // ← nuevo
     ];
 
     protected $hidden = [
         'password',
+        'session_token',   // ← no exponemos el token en JSON/arrays
     ];
 
     protected $casts = [
@@ -90,5 +92,19 @@ class Usuario extends Authenticatable
     public function esVendedor(): bool
     {
         return $this->id_rol === 2;
+    }
+
+    /*
+    |----------------------------------------
+    | HELPERS DE SESIÓN
+    |----------------------------------------
+    */
+
+    /**
+     * Indica si este rol debe tener sesión única.
+     */
+    public function requiereSesionUnica(): bool
+    {
+        return in_array($this->id_rol, [1, 2]);
     }
 }

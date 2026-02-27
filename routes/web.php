@@ -4,6 +4,8 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RegistroController;
 use App\Http\Controllers\RootController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Auth\AuthenticatedSessionController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -31,9 +33,13 @@ Route::post('/registro/{token}', [RegistroController::class, 'store'])->name('re
 |--------------------------------------------------------------------------
 */
 
+
+Route::middleware(['auth', 'single.session'])->group(function () {
 Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth'])->name('dashboard');
+});
+
 
 /*
 |--------------------------------------------------------------------------
