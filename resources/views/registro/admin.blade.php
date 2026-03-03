@@ -85,10 +85,6 @@
                 </div>
 
                 <div class="mb-4">
-                    <label class="block text-sm text-gray-700 dark:text-gray-300 mb-1.5">
-                        Username
-                        <span class="text-gray-400 text-xs ml-1">solo letras, números y _</span>
-                    </label>
                     <input
                         type="text"
                         name="username"

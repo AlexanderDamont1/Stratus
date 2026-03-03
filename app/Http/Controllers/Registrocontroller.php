@@ -36,7 +36,6 @@ class RegistroController extends Controller
             'nombre_negocio' => ['required', 'string', 'max:100'],
             'nombre_usuario'  => ['required', 'string', 'max:100'],
             'correo'          => ['required', 'email', 'unique:usuarios,correo'],
-            'username'        => ['required', 'string', 'min:3', 'max:30', 'regex:/^[a-zA-Z0-9_]+$/'],
             'password'        => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
@@ -53,7 +52,6 @@ class RegistroController extends Controller
                 'id_negocio'     => $negocio->id_negocio,
                 'nombre_usuario' => $request->nombre_usuario,
                 'correo'         => $request->correo,
-                'username'       => $request->username,
                 'password'       => Hash::make($request->password),
                 'id_rol'         => 44, // Admin siempre
             ]);
