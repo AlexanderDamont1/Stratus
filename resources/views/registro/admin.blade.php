@@ -84,16 +84,6 @@
                     >
                 </div>
 
-                <div class="mb-4">
-                    <input
-                        type="text"
-                        name="username"
-                        value="{{ old('username') }}"
-                        placeholder="ej. juan_admin"
-                        class="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30"
-                        required
-                    >
-                </div>
 
                 <div class="mb-4">
                     <label class="block text-sm text-gray-700 dark:text-gray-300 mb-1.5">Contraseña</label>

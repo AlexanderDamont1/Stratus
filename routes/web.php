@@ -127,6 +127,21 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
             ->name('root.links.destroy');
     });
 
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | ROOT (Solo id_rol = 0)
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware('es.gestor')->group(function () {
+
+            Route::get('/gestor', function () {
+                return view('gestor.dashboard');
+            })->name('gestor.dashboard');
+
+    });
+
 });
 
 require __DIR__.'/auth.php';

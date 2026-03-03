@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'es.root' => \App\Http\Middleware\EsRoot::class,
             'single.session' => \App\Http\Middleware\SingleSessionMiddleware::class,
             'force.setup'       => \App\Http\Middleware\ForceAdminSetupMiddleware::class,
+            'es.gestor' => \App\Http\Middleware\Gestor::class,
 
         ]);
     })

@@ -92,6 +92,66 @@
                 </a>
             @endif
 
+
+
+            {{-- Gestor --}}
+            @if(auth()->user()->id_rol === 5)
+                <a href="{{ route('gestor.dashboard') }}"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition
+                          {{ request()->routeIs('gestor.dashboard') 
+                             ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' 
+                             : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}"
+                   @click="open = false"
+                >
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                    </svg>
+                    <span class="truncate">Gestor</span>
+                </a>
+
+
+                <a href="#"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition
+                          {{ request()->routeIs('#') 
+                             ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' 
+                             : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}"
+                   @click="open = false"
+                >
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                    </svg>
+                    <span class="truncate">Clientes</span>
+                </a>
+
+                <a href="#"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition
+                          {{ request()->routeIs('#') 
+                             ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' 
+                             : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}"
+                   @click="open = false"
+                >
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                    </svg>
+                    <span class="truncate">Stock</span>
+                </a>
+
+                <a href="#"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition
+                          {{ request()->routeIs('#') 
+                             ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' 
+                             : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}"
+                   @click="open = false"
+                >
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                    </svg>
+                    <span class="truncate">Pedidos</span>
+                </a>
+
+
+            @endif
+
             {{-- Perfil --}}
             <a href="{{ route('profile.edit') }}"
                class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition
