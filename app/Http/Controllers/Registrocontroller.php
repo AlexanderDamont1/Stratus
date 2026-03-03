@@ -36,7 +36,7 @@ class RegistroController extends Controller
             'nombre_negocio' => ['required', 'string', 'max:100'],
             'nombre_usuario'  => ['required', 'string', 'max:100'],
             'correo'          => ['required', 'email', 'unique:usuarios,correo'],
-            'username'        => ['required', 'string', 'min:3', 'max:30', 'unique:usuarios,username', 'regex:/^[a-zA-Z0-9_]+$/'],
+            'username'        => ['required', 'string', 'min:3', 'max:30', 'regex:/^[a-zA-Z0-9_]+$/'],
             'password'        => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 

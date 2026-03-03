@@ -1,5 +1,4 @@
 <x-app-layout>
-
 <div
     x-data="{
         createModal: false,
@@ -14,8 +13,7 @@
     }"
     class="space-y-6"
 >
-
-    {{-- ===== FLASH ===== --}}
+    {{-- ===== MENSAJE FLASH ===== --}}
     @if(session('success'))
         <div class="flex items-center gap-2 px-4 py-3 rounded-md bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 text-sm">
             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -25,7 +23,7 @@
         </div>
     @endif
 
-    {{-- ===== HEADER ===== --}}
+    {{-- ===== ENCABEZADO ===== --}}
     <div class="flex justify-between items-center">
         <div>
             <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Panel Root</h2>
@@ -39,7 +37,7 @@
         </button>
     </div>
 
-    {{-- ===== STATS ===== --}}
+    {{-- ===== ESTADÍSTICAS ===== --}}
     @php
         $totalLinks    = $links->total();
         $disponibles   = \App\Models\RegistroLink::disponibles()->count();
@@ -60,7 +58,7 @@
         </div>
     </div>
 
-    {{-- ===== TABLA LINKS ===== --}}
+    {{-- ===== TABLA DE LINKS ===== --}}
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-x-auto">
         <div class="px-4 py-3 border-b dark:border-gray-700 flex items-center justify-between">
             <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Links de registro</h3>
@@ -85,15 +83,13 @@
                         $deleteRoute = route('root.links.destroy', $link);
                     @endphp
                     <tr class="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition">
-
-                        {{-- URL + botón copiar --}}
+                        {{-- URL + Botón copiar --}}
                         <td class="px-4 py-3">
                             @if($disponible)
                                 <div class="flex items-center gap-2">
                                     <span class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[180px] sm:max-w-[220px] font-mono">
                                         {{ $url }}
                                     </span>
-                                    {{-- Botón copiar compatible con móvil --}}
                                     <button
                                         type="button"
                                         x-data="{ copied: false }"
@@ -105,7 +101,6 @@
                                                     setTimeout(() => copied = false, 1800);
                                                 });
                                             } else {
-                                                // Fallback para móviles sin clipboard API
                                                 const el = document.createElement('textarea');
                                                 el.value = url;
                                                 el.setAttribute('readonly', '');
@@ -121,16 +116,13 @@
                                             }
                                         "
                                         class="shrink-0 transition"
-                                        :class="copied
-                                            ? 'text-green-500'
-                                            : 'text-gray-400 hover:text-gray-700 dark:hover:text-white'"
+                                        :class="copied ? 'text-green-500' : 'text-gray-400 hover:text-gray-700 dark:hover:text-white'"
                                         title="Copiar URL"
                                     >
                                         <span x-show="!copied">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2
-                                                         m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
                                             </svg>
                                         </span>
                                         <span x-show="copied" x-cloak>
@@ -146,13 +138,10 @@
                                 </span>
                             @endif
                         </td>
-
                         <td class="px-4 py-3 text-gray-700 dark:text-gray-300">{{ $link->max_users }}</td>
-
                         <td class="px-4 py-3 text-xs text-gray-400">
                             {{ $link->expires_at ? $link->expires_at->diffForHumans() : '—' }}
                         </td>
-
                         <td class="px-4 py-3">
                             @if($link->usado)
                                 <span class="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800">
@@ -169,8 +158,6 @@
                                 </span>
                             @endif
                         </td>
-
-                        {{-- Botón eliminar → abre modal en lugar de confirm() nativo --}}
                         <td class="px-4 py-3 text-right">
                             <button
                                 type="button"
@@ -197,7 +184,7 @@
         @endif
     </div>
 
-    {{-- ===== TABLA NEGOCIOS ===== --}}
+    {{-- ===== TABLA DE NEGOCIOS ===== --}}
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-x-auto">
         <div class="px-4 py-3 border-b dark:border-gray-700 flex items-center justify-between">
             <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Negocios registrados</h3>
@@ -240,10 +227,7 @@
         @endif
     </div>
 
-
-    {{-- ===================================================
-         MODAL: CREAR LINK
-    ==================================================== --}}
+    {{-- ===== MODAL: CREAR LINK ===== --}}
     <div
         x-show="createModal"
         x-cloak
@@ -333,10 +317,7 @@
         </div>
     </div>
 
-
-    {{-- ===================================================
-         MODAL: CONFIRMAR ELIMINAR LINK
-    ==================================================== --}}
+    {{-- ===== MODAL: CONFIRMAR ELIMINACIÓN ===== --}}
     <div
         x-show="deleteModal"
         x-cloak
@@ -360,7 +341,6 @@
             class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-sm"
             @click.stop
         >
-            {{-- Icono de advertencia --}}
             <div class="flex items-start gap-4 mb-5">
                 <div class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0">
                     <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -378,7 +358,6 @@
                 </div>
             </div>
 
-            {{-- Formulario DELETE --}}
             <form method="POST" :action="deleteAction">
                 @csrf
                 @method('DELETE')
@@ -401,7 +380,5 @@
             </form>
         </div>
     </div>
-
 </div>
-
 </x-app-layout>

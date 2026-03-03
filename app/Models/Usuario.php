@@ -20,7 +20,6 @@ class Usuario extends Authenticatable
         'id_negocio',
         'nombre_usuario',
         'correo',
-        'username',
         'password',
         'id_rol',
         'session_token',

@@ -27,7 +27,7 @@
             <div class="flex items-center gap-3">
                 <x-application-logo class="h-8 w-8 text-gray-900 dark:text-gray-100" />
                 <span class="text-base font-semibold text-gray-900 dark:text-gray-100">
-                    CloudLabs
+                    ArrowK
                 </span>
             </div>
             <button @click="open = false" class="sm:hidden text-gray-500">
@@ -121,31 +121,36 @@
     ═══════════════════════════════ --}}
     <div class="flex-1 flex flex-col min-w-0">
 
-        <header class="sm:hidden h-16 flex items-center px-4 bg-white dark:bg-gray-800 border-b dark:border-gray-700 shrink-0">
-            <button
-                @click="open = !open"
-                class="p-2 -ml-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition"
-            >
-                <svg x-show="!open" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-                <svg x-show="open" x-cloak class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </button>
-            <span class="ml-4 font-semibold text-gray-900 dark:text-white">CloudLabs</span>
-        </header>
+        <header
+    class="relative sm:hidden h-16 flex items-center px-4 bg-white dark:bg-gray-800 border-b dark:border-gray-700 shrink-0"
+>
+    <!-- Botón menú -->
+    <button
+        @click="open = !open"
+        class="p-2 -ml-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition"
+    >
+        <svg x-show="!open" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+        <svg x-show="open" x-cloak class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+    </button>
 
+    <!-- Título centrado -->
+    <span
+        class="absolute left-1/2 -translate-x-1/2 font-semibold text-gray-900 dark:text-white"
+    >
+        ArrowK
+    </span>
+</header>
         <main class="flex-1 p-4 sm:p-6 overflow-y-auto">
             {{ $slot }}
         </main>
     </div>
 
-    {{-- ═══════════════════════════════
-     MODAL SETUP OBLIGATORIO
-     (ROL 44)
-═══════════════════════════════ --}}
-@if(auth()->user()->id_rol === 44)
+   
+@if(auth()->user()->id_rol === 44 && auth()->user()->negocio)
     @php
         $max = auth()->user()->negocio->max_users ?? 1;
     @endphp
@@ -196,11 +201,6 @@
                                     <input type="email"
                                            name="vendedores[{{ $i }}][correo]"
                                            placeholder="Correo"
-                                           class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 outline-none">
-
-                                    <input type="text"
-                                           name="vendedores[{{ $i }}][username]"
-                                           placeholder="Username"
                                            class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 outline-none">
 
                                     <input type="password"
