@@ -6,31 +6,39 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
+use App\Models\Usuario;
 
 class SingleSessionMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (Auth::check()) {
+        $usuario = Auth::user();
 
-            $usuario = Auth::user();
+        // 🔒 Blindaje TOTAL (la clave del bug)
+        if (! $usuario instanceof Usuario) {
+            return $next($request);
+        }
 
-            if ($usuario->requiereSesionUnica()) {
+        if (! method_exists($usuario, 'requiereSesionUnica')) {
+            return $next($request);
+        }
 
-                $tokenEnSesion = session('session_token');
-                $tokenEnBD     = $usuario->session_token;
+        if ($usuario->requiereSesionUnica()) {
 
-                // Si los tokens no coinciden, esta sesión fue desplazada
-                if (! $tokenEnSesion || $tokenEnSesion !== $tokenEnBD) {
+            $tokenEnSesion = session('session_token');
+            $tokenEnBD     = $usuario->session_token;
 
-                    Auth::logout();
+            if (! $tokenEnSesion || $tokenEnSesion !== $tokenEnBD) {
 
-                    $request->session()->invalidate();
-                    $request->session()->regenerateToken();
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
 
-                    return redirect()->route('login')
-                        ->withErrors(['sesion' => 'Tu sesión fue iniciada en otro dispositivo. Por seguridad, fuiste desconectado.']);
-                }
+                return redirect()
+                    ->route('login')
+                    ->withErrors([
+                        'sesion' => 'Tu sesión fue iniciada en otro dispositivo. Por seguridad, fuiste desconectado.'
+                    ]);
             }
         }
 

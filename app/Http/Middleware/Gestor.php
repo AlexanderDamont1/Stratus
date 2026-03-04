@@ -5,12 +5,22 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
+use App\Models\Usuario;
+use Illuminate\Support\Facades\Auth;
 
 class Gestor
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (!auth()->check() || auth()->user()->id_rol !== 5) {
+         $usuario = Auth::user();
+
+
+        // 🔒 Blindaje total
+        if (! $usuario instanceof Usuario) {
+            abort(403, 'Acceso restringido.');
+        }
+
+        if ($usuario->id_rol !== 5) {
             abort(403, 'Acceso restringido.');
         }
 

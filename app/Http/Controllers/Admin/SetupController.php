@@ -15,8 +15,8 @@ class SetupController extends Controller
 {
     private function generarIdUsuario(): string
     {
-        $fecha  = Carbon::now()->format('ymd'); // aammdd
-        $random = random_int(100000000, 999999999); // 9 dígitos
+        $fecha  = Carbon::now()->format('ymd');
+        $random = random_int(100000000, 999999999);
 
         return 'USR' . $fecha . $random;
     }
@@ -25,13 +25,17 @@ class SetupController extends Controller
     {
         $admin = Auth::user();
 
-        if (! $admin || ! $admin->enModoSetup()) {
+      
+        if (! $admin instanceof Usuario || ! $admin->enModoSetup()) {
             abort(403, 'No autorizado');
         }
 
-        $maxUsuarios = $admin->negocio->max_users ?? 2;
+        $maxUsuarios = optional($admin->negocio)->max_users ?? 2;
 
-        $rules = [];
+        $rules = [
+            'vendedores' => 'required|array|min:1',
+        ];
+
         for ($i = 0; $i < $maxUsuarios; $i++) {
             $rules["vendedores.$i.nombre"]   = 'required|string|max:255';
             $rules["vendedores.$i.correo"]   = 'required|email|unique:usuarios,correo';

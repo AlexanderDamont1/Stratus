@@ -2,13 +2,14 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
-
+use Illuminate\Http\Request;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RegistroController;
 use App\Http\Controllers\RootController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Admin\SetupController;
 use App\Http\Controllers\Admin\VendedorController;
+use App\Events\NotificationEvent;
 
 /*
 |--------------------------------------------------------------------------
@@ -19,6 +20,19 @@ use App\Http\Controllers\Admin\VendedorController;
 Route::get('/', function () {
     return view('welcome');
 });
+
+        Route::get('/test-websocket', function () {
+    return view('test-websocket');
+});
+
+Route::post('/send-websocket-test', function (Request $request) {
+    $userId = $request->user_id ?? 1;
+    $message = $request->message ?? 'Mensaje de prueba';
+    
+    event(new NotificationEvent($userId, $message));
+    
+    return response()->json(['success' => true, 'message' => 'Evento enviado']);
+})->name('websocket.test');
 
 /*
 |--------------------------------------------------------------------------
@@ -125,6 +139,8 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
 
         Route::delete('/root/links/{link}', [RootController::class, 'destroyLink'])
             ->name('root.links.destroy');
+
+    
     });
 
 
