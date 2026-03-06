@@ -131,6 +131,6 @@ class Usuario extends Authenticatable
     /** Roles 1, 2 y 44 tienen sesión única activa */
     public function requiereSesionUnica(): bool
     {
-        return in_array($this->id_rol, [1, 2, 44,5]);
+        return in_array($this->id_rol, [1, 2, 44]);
     }
 }

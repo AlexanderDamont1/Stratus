@@ -12,9 +12,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('modelos', function (Blueprint $table) {
-    $table->char('id_modelo', 36)->primary();
+    $table->char('id_modelo', 15)->primary();
     $table->string('nombre_modelo');
     $table->timestamps();
+
+    
 });
 
     }

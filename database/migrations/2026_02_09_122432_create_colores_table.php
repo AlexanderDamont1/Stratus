@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('colores', function (Blueprint $table) {
-    $table->char('id_color', 36)->primary();
-    $table->char('id_modelo', 36);
+    $table->char('id_color', 15)->primary();
+    $table->char('id_modelo', 15);
     $table->string('color');
 
     $table->foreign('id_modelo')->references('id_modelo')->on('modelos');

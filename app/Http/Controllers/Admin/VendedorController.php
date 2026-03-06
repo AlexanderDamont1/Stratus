@@ -40,11 +40,7 @@ class VendedorController extends Controller
         $request->validate([
             'nombre_usuario' => ['required', 'string', 'max:255'],
             'correo'         => ['required', 'string', 'email', 'max:255', 'unique:usuarios,correo'],
-            'username'       => [
-                'required', 'string', 'max:255',
-                'unique:usuarios,username',
-                'regex:/^[a-zA-Z0-9_]+$/',
-            ],
+           
             'password'       => ['required', 'confirmed', Rules\Password::defaults()],
         ], [
             'username.regex' => 'El username solo puede contener letras, números y guiones bajos.',
@@ -55,7 +51,6 @@ class VendedorController extends Controller
             'id_negocio'     => $admin->id_negocio,
             'nombre_usuario' => $request->nombre_usuario,
             'correo'         => $request->correo,
-            'username'       => $request->username,
             'password'       => Hash::make($request->password),
             'id_rol'         => 2,
         ]);

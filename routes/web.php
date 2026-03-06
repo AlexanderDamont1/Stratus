@@ -9,6 +9,12 @@ use App\Http\Controllers\RootController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Admin\SetupController;
 use App\Http\Controllers\Admin\VendedorController;
+use App\Http\Controllers\BicicletaController;
+use App\Http\Controllers\ProductoController;
+use App\Http\Controllers\ModeloController;
+use App\Http\Controllers\ColorController;
+use App\Http\Controllers\VoltajeController;
+use App\Http\Controllers\ModeloVoltajeController;
 use App\Events\NotificationEvent;
 
 /*
@@ -21,30 +27,8 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-        Route::get('/test-websocket', function () {
-    return view('test-websocket');
-});
-
-Route::post('/send-websocket-test', function (Request $request) {
-    $userId = $request->user_id ?? 1;
-    $message = $request->message ?? 'Mensaje de prueba';
-    
-    event(new NotificationEvent($userId, $message));
-    
-    return response()->json(['success' => true, 'message' => 'Evento enviado']);
-})->name('websocket.test');
-
-/*
-|--------------------------------------------------------------------------
-| Registro por link (público)
-|--------------------------------------------------------------------------
-*/
-
-Route::get('/registro/{token}',  [RegistroController::class, 'show'])
-    ->name('registro.show');
-
-Route::post('/registro/{token}', [RegistroController::class, 'store'])
-    ->name('registro.store');
+Route::get('/registro/{token}',  [RegistroController::class, 'show'])->name('registro.show');
+Route::post('/registro/{token}', [RegistroController::class, 'store'])->name('registro.store');
 
 /*
 |--------------------------------------------------------------------------
@@ -53,9 +37,7 @@ Route::post('/registro/{token}', [RegistroController::class, 'store'])
 */
 
 Route::middleware('guest')->group(function () {
-    Route::get('/login',  [AuthenticatedSessionController::class, 'create'])
-        ->name('login');
-
+    Route::get('/login',  [AuthenticatedSessionController::class, 'create'])->name('login');
     Route::post('/login', [AuthenticatedSessionController::class, 'store']);
 });
 
@@ -66,97 +48,122 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
 /*
 |--------------------------------------------------------------------------
 | RUTAS PROTEGIDAS
-| Middleware:
-| - auth
-| - single.session
-| - force.setup  (inyecta modal si rol = 44)
 |--------------------------------------------------------------------------
 */
 
 Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () {
 
-    /*
-    |--------------------------------------------------------------------------
-    | Dashboard
-    |--------------------------------------------------------------------------
-    */
     Route::get('/dashboard', function () {
         return view('dashboard');
     })->name('dashboard');
 
+    Route::get('/profile',    [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile',  [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::post('/admin/setup/completar', [SetupController::class, 'completar'])->name('admin.setup.completar');
 
     /*
     |--------------------------------------------------------------------------
-    | Perfil (Breeze compatible)
-    |--------------------------------------------------------------------------
-    */
-    Route::get('/profile',    [ProfileController::class, 'edit'])
-        ->name('profile.edit');
-
-    Route::patch('/profile',  [ProfileController::class, 'update'])
-        ->name('profile.update');
-
-    Route::delete('/profile', [ProfileController::class, 'destroy'])
-        ->name('profile.destroy');
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Setup obligatorio (ROL 44 → 1)
-    |--------------------------------------------------------------------------
-    */
-    Route::post('/admin/setup/completar', [SetupController::class, 'completar'])
-        ->name('admin.setup.completar');
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Vendedores (Solo Admin rol = 1)
+    | Admin
     |--------------------------------------------------------------------------
     */
     Route::middleware('es.admin')->group(function () {
-
-        Route::get('/admin/vendedores/create', [VendedorController::class, 'create'])
-            ->name('admin.vendedores.create');
-
-        Route::post('/admin/vendedores', [VendedorController::class, 'store'])
-            ->name('admin.vendedores.store');
+        Route::get('/admin/vendedores/create', [VendedorController::class, 'create'])->name('admin.vendedores.create');
+        Route::post('/admin/vendedores', [VendedorController::class, 'store'])->name('admin.vendedores.store');
     });
-
 
     /*
     |--------------------------------------------------------------------------
-    | ROOT (Solo id_rol = 0)
+    | Root
     |--------------------------------------------------------------------------
     */
     Route::middleware('es.root')->group(function () {
-
-        Route::get('/root', [RootController::class, 'index'])
-            ->name('root.dashboard');
-
-        Route::post('/root/links', [RootController::class, 'storeLink'])
-            ->name('root.links.store');
-
-        Route::delete('/root/links/{link}', [RootController::class, 'destroyLink'])
-            ->name('root.links.destroy');
-
-    
+        Route::get('/root', [RootController::class, 'index'])->name('root.dashboard');
+        Route::post('/root/links', [RootController::class, 'storeLink'])->name('root.links.store');
+        Route::delete('/root/links/{link}', [RootController::class, 'destroyLink'])->name('root.links.destroy');
     });
-
-
 
     /*
     |--------------------------------------------------------------------------
-    | ROOT (Solo id_rol = 0)
+    | Gestor
     |--------------------------------------------------------------------------
     */
-    Route::middleware('es.gestor')->group(function () {
+    Route::middleware('gestor')->group(function () {
 
-            Route::get('/gestor', function () {
-                return view('gestor.dashboard');
-            })->name('gestor.dashboard');
+        Route::get('/gestor', function () {
+            return view('gestor.dashboard');
+        })->name('gestor.dashboard');
 
+        Route::prefix('gestor')->name('gestor.')->group(function () {
+            Route::prefix('vehiculos')->name('vehiculos.')->group(function () {
+
+                // Bicicletas
+                Route::get('/bicicletas', [BicicletaController::class, 'index'])->name('bicicletas.index');
+                Route::get('/bicicletas/crear', [BicicletaController::class, 'create'])->name('bicicletas.create');
+                Route::post('/bicicletas', [BicicletaController::class, 'store'])->name('bicicletas.store');
+                Route::get('/bicicletas/{id}/editar', [BicicletaController::class, 'edit'])->name('bicicletas.edit');
+                Route::put('/bicicletas/{id}', [BicicletaController::class, 'update'])->name('bicicletas.update');
+                Route::delete('/bicicletas/{id}', [BicicletaController::class, 'destroy'])->name('bicicletas.destroy');
+                Route::post('bicicletas/{num_serie}/status', [BicicletaController::class, 'updateStatus'])->name('bicicletas.status');
+                Route::get('bicicletas/cliente/{id_cliente}', [BicicletaController::class, 'getByCliente'])->name('bicicletas.por-cliente');
+
+                // Modelos
+                Route::get('/modelos', [ModeloController::class, 'index'])->name('modelos.index');
+                Route::get('/modelos/crear', [ModeloController::class, 'create'])->name('modelos.create');
+                Route::post('/modelos', [ModeloController::class, 'store'])->name('modelos.store');
+                Route::get('/modelos/{id}/editar', [ModeloController::class, 'edit'])->name('modelos.edit');
+                Route::put('/modelos/{id}', [ModeloController::class, 'update'])->name('modelos.update');
+                Route::delete('/modelos/{id}', [ModeloController::class, 'destroy'])->name('modelos.destroy');
+
+                // Colores
+                Route::get('/colores', [ColorController::class, 'index'])->name('colores.index');
+                Route::get('/colores/crear', [ColorController::class, 'create'])->name('colores.create');
+                Route::post('/colores', [ColorController::class, 'store'])->name('colores.store');
+                Route::get('/colores/{id}/editar', [ColorController::class, 'edit'])->name('colores.edit');
+                Route::put('/colores/{id}', [ColorController::class, 'update'])->name('colores.update');
+                Route::delete('/colores/{id}', [ColorController::class, 'destroy'])->name('colores.destroy');
+
+                // Voltajes
+                Route::get('/voltajes', [VoltajeController::class, 'index'])->name('voltajes.index');
+                Route::get('/voltajes/crear', [VoltajeController::class, 'create'])->name('voltajes.create');
+                Route::post('/voltajes', [VoltajeController::class, 'store'])->name('voltajes.store');
+                Route::get('/voltajes/{id}/editar', [VoltajeController::class, 'edit'])->name('voltajes.edit');
+                Route::put('/voltajes/{id}', [VoltajeController::class, 'update'])->name('voltajes.update');
+                Route::delete('/voltajes/{id}', [VoltajeController::class, 'destroy'])->name('voltajes.destroy');
+
+                // Modelo-Voltaje
+                Route::get('/modelo-voltaje', [ModeloVoltajeController::class, 'modeloVoltaje'])->name('modelo-voltaje');
+                Route::post('/modelo-voltaje', [ModeloVoltajeController::class, 'store'])->name('modelo-voltaje.store');
+                Route::delete('/modelo-voltaje/{id}', [ModeloVoltajeController::class, 'destroy'])->name('modelo-voltaje.destroy');
+
+                // AJAX: voltajes por modelo
+                Route::get('/voltaje-por-modelo/{id_modelo}', [ModeloVoltajeController::class, 'voltajesPorModelo'])->name('voltajes.porModelo');
+                Route::get('/colores-por-modelo/{id_modelo}', [BicicletaController::class, 'coloresPorModelo'])->name('colores.porModelo');
+            });
+        });
     });
+
+        // Productos
+    Route::get('/Productos', [ProductoController::class, 'index'])->name('productos.index');
+    Route::post('/Productos', [ProductoController::class, 'store'])->name('productos.store');
+    Route::delete('/Productos/{id}', [ProductoController::class, 'destroy'])->name('productos.destroy');
+
+    /*
+    |--------------------------------------------------------------------------
+    | WebSocket test
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/test-websocket', function () {
+        return view('test-websocket');
+    });
+
+    Route::post('/send-websocket-test', function (Request $request) {
+        $userId  = $request->user_id ?? 1;
+        $message = $request->message ?? 'Mensaje de prueba';
+        event(new NotificationEvent($userId, $message));
+        return response()->json(['success' => true, 'message' => 'Evento enviado']);
+    })->name('websocket.test');
 
 });
 

@@ -10,21 +10,15 @@ return new class extends Migration {
         Schema::create('bicicletas', function (Blueprint $table) {
 
             // PK
-            $table->char('num_serie', 36)->primary();
+            $table->char('num_serie', 17)->primary();
 
             // Multinegocio
-            $table->char('id_negocio', 36);
-
-            // Relación con cliente (NULL mientras esté en stock)
-            $table->char('id_cliente', 36)->nullable();
-
-            // Producto derivado de la combinación
-            $table->char('id_producto', 36);
+            $table->char('id_negocio', 26);
 
             // Atributos físicos
-            $table->char('id_modelo', 36);
-            $table->char('id_voltaje', 36);
-            $table->char('id_color', 36);
+            $table->char('id_modelo', 15);
+            $table->char('id_voltaje', 10);
+            $table->char('id_color', 15);
 
             // Estado de la bicicleta
             $table->enum('status', [
@@ -45,13 +39,6 @@ return new class extends Migration {
                   ->references('id_negocio')
                   ->on('negocios');
 
-            $table->foreign('id_cliente')
-                  ->references('id_cliente')
-                  ->on('clientes');
-
-            $table->foreign('id_producto')
-                  ->references('id_producto')
-                  ->on('productos');
 
             $table->foreign('id_modelo')
                   ->references('id_modelo')

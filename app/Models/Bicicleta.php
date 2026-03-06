@@ -14,7 +14,6 @@ class Bicicleta extends Model
     protected $fillable = [
         'num_serie',
         'id_negocio',
-        'id_cliente',
         'id_producto',
         'id_modelo',
         'id_voltaje',
@@ -29,10 +28,6 @@ class Bicicleta extends Model
         return $this->belongsTo(Negocio::class, 'id_negocio', 'id_negocio');
     }
 
-    public function cliente()
-    {
-        return $this->belongsTo(Cliente::class, 'id_cliente', 'id_cliente');
-    }
 
     public function producto()
     {
