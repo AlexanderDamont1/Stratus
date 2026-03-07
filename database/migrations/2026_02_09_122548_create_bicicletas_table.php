@@ -13,11 +13,11 @@ return new class extends Migration {
             $table->char('num_serie', 17)->primary();
 
             // Multinegocio
-            $table->char('id_negocio', 26);
+            $table->char('id_negocio', 36);
 
             // Atributos físicos
             $table->char('id_modelo', 15);
-            $table->char('id_voltaje', 10);
+            $table->char('id_voltaje', 15);
             $table->char('id_color', 15);
 
             // Estado de la bicicleta

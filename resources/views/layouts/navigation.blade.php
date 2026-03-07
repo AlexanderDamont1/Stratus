@@ -77,9 +77,9 @@
 
             {{-- Admin --}}
             @if(auth()->user()->id_rol === 1)
-                <a href="{{ route('admin.vendedores.create') }}"
+                <a href="{{ route('administrador.dashboard') }}"
                    class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition
-                          {{ request()->routeIs('admin.vendedores.*') 
+                          {{ request()->routeIs('administrador.*') 
                              ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' 
                              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}"
                    @click="open = false"
@@ -87,8 +87,10 @@
                     <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                     </svg>
-                    <span class="truncate">Sucursales</span>
+                    <span class="truncate">Administrador</span>
                 </a>
+
+                
             @endif
 
             {{-- Gestor --}}
@@ -220,9 +222,9 @@
                         </a>
 
                         {{-- Definir Voltaje --}}
-                        <a href="{{ route('gestor.vehiculos.modelo-voltaje') }}"
+                        <a href="{{ route('modelo-voltaje') }}"
                            class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition
-                                  {{ request()->routeIs('gestor.vehiculos.modelo-voltaje')
+                                  {{ request()->routeIs('modelo-voltaje')
                                      ? 'bg-gray-100 dark:bg-gray-700 font-semibold text-gray-900 dark:text-white'
                                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700' }}"
                            @click="open = false"
@@ -248,17 +250,25 @@
                     </div>
                 </div>
 
-                <a href="#"
-                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition
-                          text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                   @click="open = false"
-                >
-                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                    </svg>
-                    <span class="truncate">Pedidos</span>
-                </a>
+                
             @endif
+
+
+         @if(in_array(auth()->user()->id_rol, [1,5]))
+            <a href="{{ route('pedidos.index') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition
+                      {{ request()->routeIs('pedidos.index') 
+                         ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' 
+                         : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}"
+               @click="open = false"
+            >
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <span class="truncate">Pedidos</span>
+            </a>
+        @endif
+
 
             {{-- Perfil --}}
             <a href="{{ route('profile.edit') }}"

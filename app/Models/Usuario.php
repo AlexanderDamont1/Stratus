@@ -40,15 +40,15 @@ class Usuario extends Authenticatable
     }
 
     protected static function boot()
-{
-    parent::boot();
+    {
+        parent::boot();
 
-    static::creating(function ($usuario) {
-        if (empty($usuario->id_usuario)) {
-            $usuario->id_usuario = static::generarId();
-        }
-    });
-}
+        static::creating(function ($usuario) {
+            if (empty($usuario->id_usuario)) {
+                $usuario->id_usuario = static::generarId();
+            }
+        });
+    }
 
     /*
     |----------------------------------------
@@ -80,6 +80,18 @@ class Usuario extends Authenticatable
     public function negocio()
     {
         return $this->belongsTo(Negocio::class, 'id_negocio', 'id_negocio');
+    }
+
+    // Rol 1: su único enlace generado
+    public function enlace()
+    {
+        return $this->hasOne(Enlace::class, 'id_usuario1', 'id_usuario');
+    }
+
+    // Rol 5: todos sus enlaces con distintos rol 1
+    public function enlaces()
+    {
+        return $this->hasMany(Enlace::class, 'id_usuario2', 'id_usuario');
     }
 
     /*

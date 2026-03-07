@@ -16,7 +16,7 @@ return new class extends Migration
             $table->char('id_mvoltaje', 15)->primary();
 
             $table->char('id_modelo', 15);
-            $table->char('id_voltaje', 10);
+            $table->char('id_voltaje', 15);
 
             $table->timestamps();
 

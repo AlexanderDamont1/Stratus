@@ -5,14 +5,22 @@ namespace App\Http\Controllers;
 use App\Models\Modelo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use App\Services\CatalogService;
 
 class ModeloController extends Controller
 {
     public function index()
     {
-        $modelos = Modelo::orderBy('nombre_modelo')->paginate(15);
+        // Lista paginada (necesitamos paginar, no cachear la página)
+        $modelosPag = Modelo::orderBy('nombre_modelo')->paginate(15);
 
-        return view('gestor.Vehiculos.modelo.index', compact('modelos'));
+        // Lista completa para selects/otros: desde cache (Redis)
+        $modelosAll = CatalogService::getModelos();
+
+        return view('gestor.Vehiculos.modelo.index', [
+            'modelos' => $modelosPag,
+            'modelosAll' => $modelosAll
+        ]);
     }
 
     public function create()
@@ -26,13 +34,17 @@ class ModeloController extends Controller
             'nombre_modelo' => 'required|string|max:255|unique:modelos,nombre_modelo',
         ]);
 
-        Modelo::create([
-            'id_modelo'     => Str::upper(Str::random(10)),
+        $modelo = Modelo::create([
             'nombre_modelo' => $request->nombre_modelo,
         ]);
 
+        // Invalidar cache de modelos y relaciones afectadas
+        CatalogService::clearCache('modelos');
+        CatalogService::invalidateModelo($modelo->id_modelo);
+        CatalogService::incrementVersion();
+
         return redirect()
-            ->route('gestor.vehiculos.modelos.index') // 👈 PLURAL
+            ->route('gestor.vehiculos.modelos.index')
             ->with('success', 'Modelo creado correctamente.');
     }
 
@@ -51,8 +63,13 @@ class ModeloController extends Controller
             'nombre_modelo' => $request->nombre_modelo
         ]);
 
+        // Invalidar cache del modelo afectado y de la lista global
+        CatalogService::clearCache('modelos');
+        CatalogService::invalidateModelo($modelo->id_modelo);
+        CatalogService::incrementVersion();
+
         return redirect()
-            ->route('gestor.vehiculos.modelos.index') // 👈 PLURAL
+            ->route('gestor.vehiculos.modelos.index')
             ->with('success', 'Modelo actualizado correctamente.');
     }
 
@@ -60,14 +77,20 @@ class ModeloController extends Controller
     {
         if ($modelo->colores()->exists()) {
             return redirect()
-                ->route('gestor.vehiculos.modelos.index') // 👈 PLURAL
+                ->route('gestor.vehiculos.modelos.index')
                 ->with('error', 'No se puede eliminar: tiene colores asociados.');
         }
 
+        // Guardar id para invalidar después de borrar
+        $idModelo = $modelo->id_modelo;
         $modelo->delete();
 
+        CatalogService::clearCache('modelos');
+        CatalogService::invalidateModelo($idModelo);
+        CatalogService::incrementVersion();
+
         return redirect()
-            ->route('gestor.vehiculos.modelos.index') // 👈 PLURAL
+            ->route('gestor.vehiculos.modelos.index')
             ->with('success', 'Modelo eliminado correctamente.');
     }
 }

@@ -3,11 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Bicicleta;
-use App\Models\Negocio;
-use App\Models\Modelo;
-use App\Models\Voltaje;
-use App\Models\ModeloVoltaje;
-use App\Models\Color;
+use App\Services\CatalogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -18,12 +14,9 @@ class BicicletaController extends Controller
      ===================================================== */
     public function index(Request $request)
     {
-        $query = Bicicleta::with([
-            'negocio',
-            'modelo',
-            'voltaje',
-            'color'
-        ]);
+        $user = auth()->user();
+
+        $query = Bicicleta::with(['negocio', 'modelo', 'voltaje', 'color']);
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -41,7 +34,9 @@ class BicicletaController extends Controller
 
         return view('gestor.Vehiculos.Bicicleta.index', [
             'bicicletas' => $bicicletas,
-            'negocios'   => Negocio::all(),
+            'negocios'   => CatalogService::getNegocios(),   // ← cacheado
+            'negocio'    => $user->negocio,
+            'modelos'    => CatalogService::getModelos(),    // ← cacheado
         ]);
     }
 
@@ -62,7 +57,7 @@ class BicicletaController extends Controller
 
         return view('gestor.Vehiculos.Bicicleta.create', [
             'negocio' => $user->negocio,
-            'modelos' => Modelo::all(),
+            'modelos' => CatalogService::getModelos(),       // ← cacheado
         ]);
     }
 
@@ -105,7 +100,7 @@ class BicicletaController extends Controller
             'modelo',
             'voltaje',
             'color',
-            'mantenimientos'
+            'mantenimientos',
         ])->where('num_serie', $num_serie)->firstOrFail();
 
         return view('gestor.Vehiculos.Bicicleta.show', compact('bicicleta'));
@@ -118,9 +113,14 @@ class BicicletaController extends Controller
     {
         $bicicleta = Bicicleta::where('num_serie', $num_serie)->firstOrFail();
 
+        // Cargamos voltajes y colores filtrados por el modelo actual
+        $datosModelo = CatalogService::getModeloCompleto($bicicleta->id_modelo);
+
         return view('gestor.Vehiculos.Bicicleta.edit', [
             'bicicleta' => $bicicleta,
-            'modelos'   => Modelo::all(),
+            'modelos'   => CatalogService::getModelos(),     // ← cacheado
+            'voltajes'  => $datosModelo['voltajes'],         // ← cacheado
+            'colores'   => $datosModelo['colores'],          // ← cacheado
         ]);
     }
 
@@ -201,28 +201,12 @@ class BicicletaController extends Controller
     }
 
     /* =====================================================
-     | AJAX: VOLTAJES POR MODELO
-     ===================================================== */
-    public function voltajesPorModelo($id_modelo)
-    {
-        $voltajes = ModeloVoltaje::where('modelo_voltaje.id_modelo', $id_modelo)
-            ->join('voltajes', 'modelo_voltaje.id_voltaje', '=', 'voltajes.id_voltaje')
-            ->get([
-                'modelo_voltaje.id_voltaje',
-                'voltajes.voltaje'
-            ]);
-
-        return response()->json($voltajes);
-    }
-
-    /* =====================================================
      | AJAX: COLORES POR MODELO
      ===================================================== */
-    public function coloresPorModelo($id_modelo)
-    {
-        $colores = Color::where('id_modelo', $id_modelo)
-            ->get(['id_color', 'color']);
-
-        return response()->json($colores);
-    }
+    public function coloresPorModelo(string $id_modelo)
+{
+    return response()->json(
+        CatalogService::getColoresByModelo($id_modelo)
+    );
+}
 }

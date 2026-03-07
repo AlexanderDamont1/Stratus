@@ -18,6 +18,8 @@ return Application::configure(basePath: dirname(__DIR__))
         'single.session'  => \App\Http\Middleware\SingleSessionMiddleware::class,
         'force.setup'     => \App\Http\Middleware\ForceAdminSetupMiddleware::class,
         'gestor'       => \App\Http\Middleware\Gestor::class,
+        'enlace'       => \App\Http\Middleware\Enlace::class,
+        'administrador' => \App\Http\Middleware\Administrador::class,
     ]);
 
   

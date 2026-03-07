@@ -2,49 +2,58 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Models\Color;
 use App\Models\Modelo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use App\Services\CatalogService;
 
 class ColorController extends Controller
 {
-   public function index()
-{
-    $colores = Color::with('modelo')->orderBy('color')->paginate(15);
-    $modelos = Modelo::orderBy('nombre_modelo')->get();
+    public function index()
+    {
+        // Paginación de colores (seguimos necesitando DB para paginado)
+        $colores = Color::with('modelo')->orderBy('color')->paginate(15);
 
-    return view('gestor.Vehiculos.color.index', compact('colores', 'modelos'));
-}
+        // Modelos para selects: desde cache (Redis)
+        $modelos = CatalogService::getModelos();
+
+        return view('gestor.Vehiculos.color.index', compact('colores', 'modelos'));
+    }
 
     public function create()
     {
-        $modelos = Modelo::orderBy('nombre_modelo')->get();
+        // Usar cache para el select de modelos
+        $modelos = CatalogService::getModelos();
         return view('gestor.Vehiculos.color.create', compact('modelos'));
     }
 
-    public function store(Request $request)
-    {
-        $request->validate([
-            'color'     => 'required|string|max:100',
-            'id_modelo' => 'required|exists:modelos,id_modelo',
-        ]);
+   public function store(Request $request)
+{
+    $request->validate([
+        'color'     => 'required|string|max:100',
+        'id_modelo' => 'required|exists:modelos,id_modelo',
+    ]);
 
-        Color::create([
-            'id_color'  => Str::upper(Str::random(10)),
-            'id_modelo' => $request->id_modelo,
-            'color'     => $request->color,
-        ]);
+    $color = Color::create([
+        'id_modelo' => $request->id_modelo,
+        'color'     => $request->color,
+    ]);
 
-        return redirect()->route('gestor.vehiculos.colores.index')
-            ->with('success', 'Color creado correctamente.');
-    }
+    // Invalidar cache del modelo al que pertenece el color
+    CatalogService::invalidateModelo($request->id_modelo);
+    CatalogService::incrementVersion();
+
+    return redirect()->route('gestor.vehiculos.colores.index')
+        ->with('success', 'Color creado correctamente.');
+}
 
     public function edit(Color $color)
     {
-        $modelos = Modelo::orderBy('nombre_modelo')->get();
-        return view('gestor.vehiculos.colores.index', compact('color', 'modelos'));
+        // Modelos para select (cache)
+        $modelos = CatalogService::getModelos();
+        // Aseguramos retornar la vista "edit" correcta (antes devolvías index)
+        return view('gestor.vehiculos.colores.edit', compact('color', 'modelos'));
     }
 
     public function update(Request $request, Color $color)
@@ -54,22 +63,33 @@ class ColorController extends Controller
             'id_modelo' => 'required|exists:modelos,id_modelo',
         ]);
 
+        $oldModeloId = $color->id_modelo;
+
         $color->update([
             'id_modelo' => $request->id_modelo,
             'color'     => $request->color,
         ]);
 
+        // Si se cambió de modelo, invalidamos ambos modelos
+        CatalogService::invalidateModelo($oldModeloId);
+        CatalogService::invalidateModelo($request->id_modelo);
+        CatalogService::incrementVersion();
+
         return redirect()->route('gestor.vehiculos.colores.index')
             ->with('success', 'Color actualizado correctamente.');
     }
 
-   public function destroy($id)
-{
-    $color = Color::where('id_color', $id)->firstOrFail();
+    public function destroy($id)
+    {
+        $color = Color::where('id_color', $id)->firstOrFail();
+        $idModelo = $color->id_modelo;
 
-    $color->delete();
+        $color->delete();
 
-    return redirect()->route('gestor.vehiculos.colores.index')
-        ->with('success', 'Color eliminado correctamente.');
-}
+        CatalogService::invalidateModelo($idModelo);
+        CatalogService::incrementVersion();
+
+        return redirect()->route('gestor.vehiculos.colores.index')
+            ->with('success', 'Color eliminado correctamente.');
+    }
 }

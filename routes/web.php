@@ -15,6 +15,8 @@ use App\Http\Controllers\ModeloController;
 use App\Http\Controllers\ColorController;
 use App\Http\Controllers\VoltajeController;
 use App\Http\Controllers\ModeloVoltajeController;
+use App\Http\Controllers\PedidoController;
+use App\Http\Controllers\EnlaceController;
 use App\Events\NotificationEvent;
 
 /*
@@ -91,9 +93,7 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
     */
     Route::middleware('gestor')->group(function () {
 
-        Route::get('/gestor', function () {
-            return view('gestor.dashboard');
-        })->name('gestor.dashboard');
+      Route::get('/gestor/dashboard', [EnlaceController::class, 'dashboard'])->name('gestor.dashboard');
 
         Route::prefix('gestor')->name('gestor.')->group(function () {
             Route::prefix('vehiculos')->name('vehiculos.')->group(function () {
@@ -132,22 +132,63 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
                 Route::put('/voltajes/{id}', [VoltajeController::class, 'update'])->name('voltajes.update');
                 Route::delete('/voltajes/{id}', [VoltajeController::class, 'destroy'])->name('voltajes.destroy');
 
-                // Modelo-Voltaje
-                Route::get('/modelo-voltaje', [ModeloVoltajeController::class, 'modeloVoltaje'])->name('modelo-voltaje');
-                Route::post('/modelo-voltaje', [ModeloVoltajeController::class, 'store'])->name('modelo-voltaje.store');
-                Route::delete('/modelo-voltaje/{id}', [ModeloVoltajeController::class, 'destroy'])->name('modelo-voltaje.destroy');
-
-                // AJAX: voltajes por modelo
-                Route::get('/voltaje-por-modelo/{id_modelo}', [ModeloVoltajeController::class, 'voltajesPorModelo'])->name('voltajes.porModelo');
-                Route::get('/colores-por-modelo/{id_modelo}', [BicicletaController::class, 'coloresPorModelo'])->name('colores.porModelo');
+                
+                
             });
         });
     });
+
+
+    Route::middleware('enlace')->group(function () {
+
+                // Enlaces
+                Route::get('/enlaces', [EnlaceController::class, 'index'])->name('enlaces.index');
+                Route::post('/enlaces/generar', [EnlaceController::class, 'generar'])->name('enlaces.generar');
+                Route::post('/enlaces/aceptar', [EnlaceController::class, 'aceptar'])->name('enlaces.aceptar');
+                Route::patch('/enlaces/{id}/cancelar', [EnlaceController::class, 'cancelar'])->name('enlaces.cancelar');
+                Route::get('/enlaces/pedidos', [EnlaceController::class, 'pedidosDeEnlaces'])->name('enlaces.pedidos');
+
+
+
+      
+    });
+
+   Route::middleware('administrador')->group(function () {
+
+        Route::get('/Inicio', function () {
+        $enlace = \App\Models\Enlace::where('id_usuario1', auth()->user()->id_usuario)
+                    ->whereIn('estado', ['pendiente', 'activo'])
+                    ->with('usuarioDestino:id_usuario,nombre_usuario')
+                    ->first();
+
+        return view('administrador.dashboard', ['enlace' => $enlace]);
+        })->name('administrador.dashboard');
+
+    });
+
+
+
+        // Modelo-Voltaje
+    Route::get('/modelo-voltaje', [ModeloVoltajeController::class, 'modeloVoltaje'])->name('modelo-voltaje');
+    Route::post('/modelo-voltaje', [ModeloVoltajeController::class, 'store'])->name('modelo-voltaje.store');
+    Route::delete('/modelo-voltaje/{id}', [ModeloVoltajeController::class, 'destroy'])->name('modelo-voltaje.destroy');
+
+        // AJAX: voltajes por modelo
+    Route::get('/voltaje-por-modelo/{id_modelo}', [ModeloVoltajeController::class, 'voltajesPorModelo'])->name('voltajes.porModelo');
+    Route::get('/colores-por-modelo/{id_modelo}', [BicicletaController::class, 'coloresPorModelo'])->name('colores.porModelo');
 
         // Productos
     Route::get('/Productos', [ProductoController::class, 'index'])->name('productos.index');
     Route::post('/Productos', [ProductoController::class, 'store'])->name('productos.store');
     Route::delete('/Productos/{id}', [ProductoController::class, 'destroy'])->name('productos.destroy');
+
+    // Pedidos
+    Route::get('/Pedidos', [PedidoController::class, 'index'])->name('pedidos.index');
+    Route::get('/Pedidos/crear', [PedidoController::class, 'create'])->name('pedidos.create');
+    Route::post('/Pedidos', [PedidoController::class, 'store'])->name('pedidos.store');
+    Route::get('/Pedidos/{id_pedido}', [PedidoController::class, 'show'])->name('pedidos.show');
+    Route::patch('/Pedidos/{id_pedido}/status', [PedidoController::class, 'updateStatus'])->name('pedidos.status');
+    Route::delete('/Pedidos/{id_pedido}', [PedidoController::class, 'destroy'])->name('pedidos.destroy');
 
     /*
     |--------------------------------------------------------------------------

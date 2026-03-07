@@ -26,6 +26,21 @@ class Voltaje extends Model
         'voltaje'    => 'string',
     ];
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+
+            $fecha  = now()->format('ymd');
+            $letras = strtoupper(substr(str_shuffle('ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 0, 3));
+            $nums   = random_int(100, 999);
+
+            $model->id_voltaje = "VOL{$fecha}{$letras}{$nums}";
+        });
+    }
+
+
     public function modelos()
 {
     return $this->belongsToMany(
