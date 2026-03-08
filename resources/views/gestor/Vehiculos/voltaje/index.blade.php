@@ -32,13 +32,7 @@
 
     <div class="flex gap-2">
 
-        {{-- Definir voltajes por modelo --}}
-        <a
-            href="{{ route('modelo-voltaje') }}"
-            class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-md text-sm hover:opacity-90 transition"
-        >
-            + Definir voltajes por modelo
-        </a>
+        
 
         {{-- Crear voltaje --}}
         <button
@@ -98,7 +92,7 @@
                         @endphp
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
                             {{-- ID --}}
-                            <td class="px-4 py-3 text-center text-xs font-mono text-gray-500 dark:text-gray-400">
+                            <td class="px-4 py-3 text-center text-xs text-gray-500 dark:text-gray-400">
                                 #{{ $voltaje->id_voltaje }}
                             </td>
                             {{-- Voltaje --}}

@@ -106,7 +106,7 @@
                         <td class="px-4 py-3">
                             @if($disponible)
                                 <div class="flex items-center gap-2">
-                                    <span class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[180px] sm:max-w-[220px] font-mono">
+                                    <span class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[180px] sm:max-w-[220px]">
                                         {{ $url }}
                                     </span>
                                     <button
@@ -152,7 +152,7 @@
                                     </button>
                                 </div>
                             @else
-                                <span class="text-xs text-gray-300 dark:text-gray-600 font-mono">
+                                <span class="text-xs text-gray-300 dark:text-gray-600">
                                     {{ Str::limit($link->token, 24) }}
                                 </span>
                             @endif
@@ -222,7 +222,7 @@
             <tbody>
                 @forelse($negocios as $negocio)
                     <tr class="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition">
-                        <td class="px-4 py-3 text-xs font-mono text-gray-400">{{ $negocio->id_negocio }}</td>
+                        <td class="px-4 py-3 text-xs text-gray-400">{{ $negocio->id_negocio }}</td>
                         <td class="px-4 py-3 font-medium text-gray-800 dark:text-gray-200">{{ $negocio->nombre_negocio }}</td>
                         <td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
                             {{ $negocio->admin?->correo ?? '—' }}
@@ -371,7 +371,7 @@
                     <h3 class="text-base font-semibold text-gray-900 dark:text-white">Eliminar link</h3>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                         Vas a eliminar el link
-                        <span class="font-mono text-xs font-semibold text-gray-700 dark:text-gray-300" x-text="deleteToken"></span>.
+                        <span class="text-xs font-semibold text-gray-700 dark:text-gray-300" x-text="deleteToken"></span>.
                         Esta acción no se puede deshacer.
                     </p>
                 </div>

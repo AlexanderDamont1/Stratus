@@ -164,6 +164,8 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
         return view('administrador.dashboard', ['enlace' => $enlace]);
         })->name('administrador.dashboard');
 
+        Route::get('/Pedidos/crear', [PedidoController::class, 'create'])->name('pedidos.create');
+
     });
 
 
@@ -184,7 +186,7 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
 
     // Pedidos
     Route::get('/Pedidos', [PedidoController::class, 'index'])->name('pedidos.index');
-    Route::get('/Pedidos/crear', [PedidoController::class, 'create'])->name('pedidos.create');
+    
     Route::post('/Pedidos', [PedidoController::class, 'store'])->name('pedidos.store');
     Route::get('/Pedidos/{id_pedido}', [PedidoController::class, 'show'])->name('pedidos.show');
     Route::patch('/Pedidos/{id_pedido}/status', [PedidoController::class, 'updateStatus'])->name('pedidos.status');

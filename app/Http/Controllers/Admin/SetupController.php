@@ -25,7 +25,6 @@ class SetupController extends Controller
     {
         $admin = Auth::user();
 
-      
         if (! $admin instanceof Usuario || ! $admin->enModoSetup()) {
             abort(403, 'No autorizado');
         }
@@ -42,7 +41,17 @@ class SetupController extends Controller
             $rules["vendedores.$i.password"] = ['required', Rules\Password::defaults()];
         }
 
-        $data = $request->validate($rules);
+        $messages = [];
+        for ($i = 0; $i < $maxUsuarios; $i++) {
+            $num = $i + 1;
+            $messages["vendedores.$i.nombre.required"]   = "El nombre del vendedor $num es obligatorio.";
+            $messages["vendedores.$i.correo.required"]   = "El correo del vendedor $num es obligatorio.";
+            $messages["vendedores.$i.correo.email"]      = "El correo del vendedor $num no es válido.";
+            $messages["vendedores.$i.correo.unique"]     = "Intenta con otro correo";
+            $messages["vendedores.$i.password.required"] = "La contraseña del vendedor $num es obligatoria.";
+        }
+
+        $data = $request->validate($rules, $messages);
 
         DB::transaction(function () use ($data, $admin) {
 

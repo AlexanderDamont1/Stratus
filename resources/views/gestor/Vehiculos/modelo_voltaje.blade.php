@@ -127,7 +127,7 @@
                                               d="M13 10V3L4 14h7v7l9-11h-7z"/>
                                     </svg>
                                 </div>
-                                <span class="font-mono text-sm">{{ $rel->voltaje->voltaje ?? '—' }}</span>
+                                <span class=" text-sm">{{ $rel->voltaje->voltaje ?? '—' }}</span>
                             </div>
                         </td>
 
@@ -198,7 +198,7 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                                         </svg>
                                     </div>
-                                    <span class="font-mono text-xs">{{ $rel->voltaje->voltaje ?? '—' }}</span>
+                                    <span class="text-xs">{{ $rel->voltaje->voltaje ?? '—' }}</span>
                                 </div>
                             </td>
                             <td class="px-3 py-3 text-center">
