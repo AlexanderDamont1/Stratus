@@ -93,7 +93,7 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
     */
     Route::middleware('gestor')->group(function () {
 
-      Route::get('/gestor/dashboard', [EnlaceController::class, 'dashboard'])->name('gestor.dashboard');
+        Route::get('/gestor/dashboard', [EnlaceController::class, 'dashboard'])->name('gestor.dashboard');
 
         Route::prefix('gestor')->name('gestor.')->group(function () {
             Route::prefix('vehiculos')->name('vehiculos.')->group(function () {
@@ -131,66 +131,89 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
                 Route::get('/voltajes/{id}/editar', [VoltajeController::class, 'edit'])->name('voltajes.edit');
                 Route::put('/voltajes/{id}', [VoltajeController::class, 'update'])->name('voltajes.update');
                 Route::delete('/voltajes/{id}', [VoltajeController::class, 'destroy'])->name('voltajes.destroy');
-
-                
-                
             });
         });
     });
 
-
     Route::middleware('enlace')->group(function () {
 
-                // Enlaces
-                Route::get('/enlaces', [EnlaceController::class, 'index'])->name('enlaces.index');
-                Route::post('/enlaces/generar', [EnlaceController::class, 'generar'])->name('enlaces.generar');
-                Route::post('/enlaces/aceptar', [EnlaceController::class, 'aceptar'])->name('enlaces.aceptar');
-                Route::patch('/enlaces/{id}/cancelar', [EnlaceController::class, 'cancelar'])->name('enlaces.cancelar');
-                Route::get('/enlaces/pedidos', [EnlaceController::class, 'pedidosDeEnlaces'])->name('enlaces.pedidos');
+
+        // Enlaces
+        Route::get('/enlaces', [EnlaceController::class, 'index'])->name('enlaces.index');
+        Route::post('/enlaces/generar', [EnlaceController::class, 'generar'])->name('enlaces.generar');
+        Route::post('/enlaces/aceptar', [EnlaceController::class, 'aceptar'])->name('enlaces.aceptar');
+        Route::patch('/enlaces/{id}/cancelar', [EnlaceController::class, 'cancelar'])->name('enlaces.cancelar');
+        Route::get('/enlaces/pedidos', [EnlaceController::class, 'pedidosDeEnlaces'])->name('enlaces.pedidos');
 
 
+        /*
+        |--------------------------------------------------------------------------
+        | API para obtener pedido individual (WebSocket + fetch)
+        |--------------------------------------------------------------------------
+        */
+        Route::get('/api/pedidos/{id}', function ($id) {
+            $pedido = \App\Models\Pedido::with(['negocio', 'usuario', 'items.modelo', 'items.voltaje', 'items.color'])
+                ->findOrFail($id);
 
-      
+            return [
+                'id_pedido' => $pedido->id_pedido,
+                'negocio' => $pedido->negocio->nombre_negocio ?? '—',
+                'usuario' => $pedido->usuario->nombre_usuario ?? '—',
+                'status' => $pedido->status_label,
+                'status_num' => $pedido->status,
+                'notas' => $pedido->notas ?? '',
+                'fecha' => $pedido->created_at->format('d/m/Y H:i'),
+                'items' => $pedido->items->map(fn($i) => [
+                    'id_modelo' => $i->id_modelo,
+                    'id_voltaje' => $i->id_voltaje,
+                    'id_color' => $i->id_color,
+                    'modelo' => $i->modelo->nombre_modelo ?? '—',
+                    'voltaje' => $i->voltaje->voltaje ?? '—',
+                    'color' => $i->color->color ?? '—',
+                    'cantidad' => $i->cantidad,
+                ]),
+            ];
+        })->name('pedidos.api.get');
     });
 
-   Route::middleware('administrador')->group(function () {
+    Route::middleware('administrador')->group(function () {
 
         Route::get('/Inicio', function () {
-        $enlace = \App\Models\Enlace::where('id_usuario1', auth()->user()->id_usuario)
-                    ->whereIn('estado', ['pendiente', 'activo'])
-                    ->with('usuarioDestino:id_usuario,nombre_usuario')
-                    ->first();
+            $enlace = \App\Models\Enlace::where('id_usuario1', auth()->user()->id_usuario)
+                ->whereIn('estado', ['pendiente', 'activo'])
+                ->with('usuarioDestino:id_usuario,nombre_usuario')
+                ->first();
 
-        return view('administrador.dashboard', ['enlace' => $enlace]);
+            return view('administrador.dashboard', ['enlace' => $enlace]);
         })->name('administrador.dashboard');
 
         Route::get('/Pedidos/crear', [PedidoController::class, 'create'])->name('pedidos.create');
-
+        Route::get('/pedidos/{id_pedido}/edit', [PedidoController::class, 'edit'])->name('pedidos.edit');
+        Route::put('/pedidos/{id_pedido}',      [PedidoController::class, 'update'])->name('pedidos.update');
     });
 
-
-
-        // Modelo-Voltaje
+    // Modelo-Voltaje
     Route::get('/modelo-voltaje', [ModeloVoltajeController::class, 'modeloVoltaje'])->name('modelo-voltaje');
     Route::post('/modelo-voltaje', [ModeloVoltajeController::class, 'store'])->name('modelo-voltaje.store');
     Route::delete('/modelo-voltaje/{id}', [ModeloVoltajeController::class, 'destroy'])->name('modelo-voltaje.destroy');
 
-        // AJAX: voltajes por modelo
+    // AJAX: voltajes por modelo
     Route::get('/voltaje-por-modelo/{id_modelo}', [ModeloVoltajeController::class, 'voltajesPorModelo'])->name('voltajes.porModelo');
     Route::get('/colores-por-modelo/{id_modelo}', [BicicletaController::class, 'coloresPorModelo'])->name('colores.porModelo');
 
-        // Productos
+    // Productos
     Route::get('/Productos', [ProductoController::class, 'index'])->name('productos.index');
     Route::post('/Productos', [ProductoController::class, 'store'])->name('productos.store');
     Route::delete('/Productos/{id}', [ProductoController::class, 'destroy'])->name('productos.destroy');
 
     // Pedidos
     Route::get('/Pedidos', [PedidoController::class, 'index'])->name('pedidos.index');
-    
     Route::post('/Pedidos', [PedidoController::class, 'store'])->name('pedidos.store');
     Route::get('/Pedidos/{id_pedido}', [PedidoController::class, 'show'])->name('pedidos.show');
     Route::patch('/Pedidos/{id_pedido}/status', [PedidoController::class, 'updateStatus'])->name('pedidos.status');
     Route::delete('/Pedidos/{id_pedido}', [PedidoController::class, 'destroy'])->name('pedidos.destroy');
+
+
 
     /*
     |--------------------------------------------------------------------------
@@ -207,7 +230,6 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
         event(new NotificationEvent($userId, $message));
         return response()->json(['success' => true, 'message' => 'Evento enviado']);
     })->name('websocket.test');
-
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
