@@ -1,5 +1,33 @@
 <x-app-layout>
 
+    <!-- Pantalla de carga -->
+    <div
+        x-data="{ loading:true }"
+        x-init="window.addEventListener('load', () => loading=false)">
+
+        <div
+            x-show="loading"
+            x-cloak
+            class="fixed inset-0 bg-white flex items-center justify-center z-[999]">
+
+            <div class="flex flex-col items-center gap-6">
+
+                <div class="loader">
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                </div>
+
+                <p class="text-gray-600 font-semibold text-sm">
+                    Cargando pedidos...
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
     @php
     $modelosJson = json_encode($modelos->map(fn($m) => [
     'id_modelo' => $m->id_modelo,
@@ -27,21 +55,26 @@
     @endphp
 
     <div
-        x-data="pedidosIndex({{ $modelosJson }}, {{ Js::from($pedidosData) }}, {{ $pedidos->total() }}, {{ $pedidos->currentPage() }}, {{ $pedidos->lastPage() }})"
+        x-data="{
+        loading:true,
+        ...pedidosIndex({{ $modelosJson }}, {{ Js::from($pedidosData) }}, {{ $pedidos->total() }}, {{ $pedidos->currentPage() }}, {{ $pedidos->lastPage() }})
+    }"
         x-init="
-                @if(session('nuevo_pedido_id'))
-                    fetch('{{ route('pedidos.api.get', session('nuevo_pedido_id')) }}')
-                        .then(response => response.json())
-                        .then(pedido => {
-                            this.addPedido(pedido);
-                            this.showNotification('created', pedido.id_pedido);
-                        })
-                        .catch(error => {
-                            console.error('Error cargando nuevo pedido:', error);
-                            setTimeout(() => window.location.reload(), 1000);
-                        });
-                @endif
-            "
+        loading = false;
+
+        @if(session('nuevo_pedido_id'))
+            fetch('{{ route('pedidos.api.get', session('nuevo_pedido_id')) }}')
+                .then(response => response.json())
+                .then(pedido => {
+                    this.addPedido(pedido);
+                    this.showNotification('created', pedido.id_pedido);
+                })
+                .catch(error => {
+                    console.error('Error cargando nuevo pedido:', error);
+                    setTimeout(() => window.location.reload(), 1000);
+                });
+        @endif
+    "
         class="space-y-6">
         <x-flash-messages />
 
@@ -1078,6 +1111,10 @@
     </script>
 
     <style>
+        [x-cloak] {
+            display: none !important;
+        }
+
         @keyframes fadeInUp {
             from {
                 opacity: 0;
@@ -1091,7 +1128,42 @@
         }
 
         .animate-fade-in-up {
-            animation: fadeInUp .3s ease-out
+            animation: fadeInUp .2s ease-out
+        }
+
+        .loader {
+            display: flex;
+            align-items: center;
+        }
+
+        .bar {
+            display: inline-block;
+            width: 4px;
+            height: 20px;
+            background-color: rgba(0, 0, 0, .2);
+            border-radius: 10px;
+            animation: scale-up4 1s linear infinite;
+        }
+
+        .bar:nth-child(2) {
+            height: 35px;
+            margin: 0 6px;
+            animation-delay: .25s;
+        }
+
+        .bar:nth-child(3) {
+            animation-delay: .5s;
+        }
+
+        @keyframes scale-up4 {
+            20% {
+                background-color: #000000;
+                transform: scaleY(1.5);
+            }
+
+            40% {
+                transform: scaleY(1);
+            }
         }
     </style>
 
