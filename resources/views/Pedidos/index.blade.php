@@ -1,33 +1,5 @@
 <x-app-layout>
 
-    <!-- Pantalla de carga -->
-    <div
-        x-data="{ loading:true }"
-        x-init="window.addEventListener('load', () => loading=false)">
-
-        <div
-            x-show="loading"
-            x-cloak
-            class="fixed inset-0 bg-white flex items-center justify-center z-[999]">
-
-            <div class="flex flex-col items-center gap-6">
-
-                <div class="loader">
-                    <span class="bar"></span>
-                    <span class="bar"></span>
-                    <span class="bar"></span>
-                </div>
-
-                <p class="text-gray-600 font-semibold text-sm">
-                    Cargando pedidos...
-                </p>
-
-            </div>
-
-        </div>
-
-    </div>
-
     @php
     $modelosJson = json_encode($modelos->map(fn($m) => [
     'id_modelo' => $m->id_modelo,
@@ -42,6 +14,7 @@
     'status_num' => $pedido->status,
     'notas' => $pedido->notas ?? '',
     'fecha' => $pedido->created_at->format('d/m/Y H:i'),
+    'updated_at' => $pedido->updated_at->format('d/m/Y H:i'),
     'items' => $pedido->items->map(fn($i) => [
     'id_modelo' => $i->id_modelo,
     'id_voltaje' => $i->id_voltaje,
@@ -54,29 +27,15 @@
     ])->values();
     @endphp
 
+    {{-- ✅ x-init limpio: solo loading = false. El fetch del nuevo pedido lo maneja Alpine en init() --}}
     <div
         x-data="{
-        loading:true,
+        loading: true,
         ...pedidosIndex({{ $modelosJson }}, {{ Js::from($pedidosData) }}, {{ $pedidos->total() }}, {{ $pedidos->currentPage() }}, {{ $pedidos->lastPage() }})
     }"
-        x-init="
-        loading = false;
-
-        @if(session('nuevo_pedido_id'))
-            fetch('{{ route('pedidos.api.get', session('nuevo_pedido_id')) }}')
-                .then(response => response.json())
-                .then(pedido => {
-                    this.addPedido(pedido);
-                    this.showNotification('created', pedido.id_pedido);
-                })
-                .catch(error => {
-                    console.error('Error cargando nuevo pedido:', error);
-                    setTimeout(() => window.location.reload(), 1000);
-                });
-        @endif
-    "
+        x-init="loading = false"
         class="space-y-6">
-        <x-flash-messages />
+
 
         {{-- ===== ENCABEZADO ===== --}}
         <div class="flex justify-between items-center">
@@ -119,13 +78,13 @@
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-6 py-4">
             <form method="GET" action="{{ route('pedidos.index') }}" class="flex flex-wrap gap-4 items-end">
                 <div class="flex-1 min-w-[160px]">
-                    <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Buscar</label>
+                    <label class="block text-xs text-gray-900 dark:text-white mb-1">Buscar</label>
                     <input type="text" name="search" value="{{ request('search') }}"
                         placeholder="N° Pedido o Negocio"
                         class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30">
                 </div>
                 <div class="min-w-[140px]">
-                    <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Status</label>
+                    <label class="block text-xs text-gray-900 dark:text-white mb-1">Status</label>
                     <select name="status"
                         class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30">
                         <option value="">Todos</option>
@@ -174,9 +133,9 @@
                                 class="hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer"
                                 @click="openDetail(pedido)">
                                 <td class="px-4 py-3 font-medium text-gray-900 dark:text-white text-xs" x-text="pedido.id_pedido"></td>
-                                <td class="px-4 py-3 text-gray-500 dark:text-gray-400" x-text="pedido.negocio"></td>
-                                <td class="px-4 py-3 text-gray-500 dark:text-gray-400" x-text="pedido.usuario"></td>
-                                <td class="px-4 py-3 text-center text-gray-500 dark:text-gray-400" x-text="pedido.items.reduce((sum, item) => sum + item.cantidad, 0)"></td>
+                                <td class="px-4 py-3 text-gray-900 dark:text-white" x-text="pedido.negocio"></td>
+                                <td class="px-4 py-3 text-gray-900 dark:text-white" x-text="pedido.usuario"></td>
+                                <td class="px-4 py-3 text-center text-gray-900 dark:text-white" x-text="pedido.items.reduce((sum, item) => sum + item.cantidad, 0)"></td>
                                 <td class="px-4 py-3 text-center">
                                     <span class="px-2 py-1 text-xs font-semibold rounded-full"
                                         :class="{
@@ -187,7 +146,7 @@
                                         x-text="pedido.status">
                                     </span>
                                 </td>
-                                <td class="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs" x-text="pedido.fecha"></td>
+                                <td class="px-4 py-3 text-gray-900 dark:text-white text-xs" x-text="pedido.fecha"></td>
 
                                 @if(auth()->user()->id_rol == 1 || (auth()->user()->id_rol == 5 && $pedidos->contains(function($p) { return $p->status == 2; })))
                                 <td class="px-4 py-3 text-center" @click.stop>
@@ -201,11 +160,10 @@
                                         </template>
 
                                         <template x-if="'{{ auth()->user()->id_rol }}' == 5 && pedido.status_num == 2">
-                                            <button type="button"
-                                                @click="openDelete(pedido.id_pedido, `{{ route('pedidos.destroy', 'REEMPLAZAR_ID') }}`.replace('REEMPLAZAR_ID', pedido.id_pedido))"
+                                            <a :href="`/pedidos/${pedido.id_pedido}/realizar`"
                                                 class="text-green-600 hover:text-green-800 text-xs font-semibold">
                                                 Realizar pedido
-                                            </button>
+                                            </a>
                                         </template>
 
                                         <template x-if="!('{{ auth()->user()->id_rol }}' == 1 && pedido.status_num == 1) && !('{{ auth()->user()->id_rol }}' == 5 && pedido.status_num == 2)">
@@ -219,7 +177,7 @@
 
                         <tr x-show="pedidos.length === 0">
                             <td :colspan="{{ (auth()->user()->id_rol == 1 || (auth()->user()->id_rol == 5 && $pedidos->contains(function($p) { return $p->status == 2; }))) ? 7 : 6 }}"
-                                class="px-6 py-10 text-center text-gray-500 dark:text-gray-400">
+                                class="px-6 py-10 text-center text-gray-900 dark:text-white">
                                 No se encontraron pedidos.
                             </td>
                         </tr>
@@ -232,10 +190,10 @@
                 <table class="w-full text-sm">
                     <thead class="bg-gray-50 dark:bg-gray-700/50">
                         <tr>
-                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Pedido</th>
-                            <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-900 dark:text-white uppercase">Pedido</th>
+                            <th class="px-3 py-2 text-center text-xs font-medium text-gray-900 dark:text-white uppercase">Status</th>
                             @if(auth()->user()->id_rol == 1 || (auth()->user()->id_rol == 5 && $pedidos->contains(function($pedido) { return $pedido->status == 2; })))
-                            <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                            <th class="px-3 py-2 text-center text-xs font-medium text-gray-900 dark:text-white uppercase">Acciones</th>
                             @endif
                         </tr>
                     </thead>
@@ -264,17 +222,16 @@
                                     <template x-if="'{{ auth()->user()->id_rol }}' == 1 && pedido.status_num == 1">
                                         <button type="button"
                                             @click="openDelete(pedido.id_pedido, `{{ route('pedidos.destroy', 'REEMPLAZAR_ID') }}`.replace('REEMPLAZAR_ID', pedido.id_pedido))"
-                                            class="text-red-600 text-xs font-semibold">
+                                            class="text-red-600 hover:text-red-800 dark:text-red-400 text-xs font-semibold">
                                             Eliminar
                                         </button>
                                     </template>
 
                                     <template x-if="'{{ auth()->user()->id_rol }}' == 5 && pedido.status_num == 2">
-                                        <button type="button"
-                                            @click="openDelete(pedido.id_pedido, `{{ route('pedidos.destroy', 'REEMPLAZAR_ID') }}`.replace('REEMPLAZAR_ID', pedido.id_pedido))"
-                                            class="text-green-600 text-xs font-semibold">
+                                        <a :href="`/pedidos/${pedido.id_pedido}/realizar`"
+                                            class="text-green-600 hover:text-green-800 text-xs font-semibold">
                                             Realizar pedido
-                                        </button>
+                                        </a>
                                     </template>
 
                                     <template x-if="!('{{ auth()->user()->id_rol }}' == 1 && pedido.status_num == 1) && !('{{ auth()->user()->id_rol }}' == 5 && pedido.status_num == 2)">
@@ -287,7 +244,7 @@
 
                         <tr x-show="pedidos.length === 0">
                             <td :colspan="{{ (auth()->user()->id_rol == 1 || (auth()->user()->id_rol == 5 && $pedidos->contains(function($p) { return $p->status == 2; }))) ? 3 : 2 }}"
-                                class="px-3 py-8 text-center text-gray-500 text-xs">
+                                class="px-3 py-8 text-center text-gray-900 dark:text-white text-xs">
                                 No hay pedidos
                             </td>
                         </tr>
@@ -334,7 +291,28 @@
                         </div>
                         <div>
                             <h3 class="text-sm font-semibold text-gray-900 dark:text-white" x-text="'Pedido #' + (detailPedido?.id_pedido || '')"></h3>
-                            <p class="text-xs text-gray-400" x-text="detailPedido?.fecha"></p>
+                            <div class="flex items-center gap-2 text-xs mt-0.5">
+                                {{-- Fecha de creación --}}
+                                <div class="flex items-center gap-1 text-gray-400">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span x-text="detailPedido?.fecha"></span>
+                                </div>
+
+                                {{-- Actualización - SOLO si es diferente --}}
+                                <template x-if="detailPedido?.updated_at && detailPedido?.updated_at !== detailPedido?.fecha">
+                                    <div class="flex items-center gap-1">
+                                        <span class="text-gray-300 dark:text-gray-600">-</span>
+                                        <div class="flex items-center gap-1 text-yellow-600 dark:text-yellow-400">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                            </svg>
+                                            <span x-text="detailPedido?.updated_at"></span>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
                         </div>
                     </div>
                     <button @click="detailModal = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition">
@@ -378,18 +356,18 @@
                         <table class="w-full text-sm min-w-[400px]">
                             <thead>
                                 <tr class="border-b dark:border-gray-700">
-                                    <th class="pb-2 text-left text-xs font-semibold text-gray-500 uppercase pr-3">Modelo</th>
-                                    <th class="pb-2 text-left text-xs font-semibold text-gray-500 uppercase pr-3">Color</th>
-                                    <th class="pb-2 text-left text-xs font-semibold text-gray-500 uppercase pr-3">Voltaje</th>
-                                    <th class="pb-2 text-center text-xs font-semibold text-gray-500 uppercase">Cant.</th>
+                                    <th class="pb-2 text-left text-xs font-semibold text-gray-900 dark:text-white uppercase pr-3">Modelo</th>
+                                    <th class="pb-2 text-left text-xs font-semibold text-gray-900 dark:text-white uppercase pr-3">Color</th>
+                                    <th class="pb-2 text-left text-xs font-semibold text-gray-900 dark:text-white uppercase pr-3">Voltaje</th>
+                                    <th class="pb-2 text-center text-xs font-semibold text-gray-900 dark:text-white uppercase">Cant.</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                                 <template x-for="(item, i) in detailPedido?.items" :key="i">
                                     <tr>
                                         <td class="py-2 text-gray-900 dark:text-white text-xs pr-3" x-text="item.modelo"></td>
-                                        <td class="py-2 text-gray-500 dark:text-gray-400 text-xs pr-3" x-text="item.color"></td>
-                                        <td class="py-2 text-gray-500 dark:text-gray-400 text-xs pr-3" x-text="item.voltaje"></td>
+                                        <td class="py-2 text-gray-900 dark:text-white text-xs pr-3" x-text="item.color"></td>
+                                        <td class="py-2 text-gray-900 dark:text-white text-xs pr-3" x-text="item.voltaje"></td>
                                         <td class="py-2 text-center font-semibold text-gray-900 dark:text-white text-xs" x-text="item.cantidad"></td>
                                     </tr>
                                 </template>
@@ -489,7 +467,7 @@
                         <p class="text-xs text-gray-400 uppercase tracking-wider mb-3 font-medium">Agregar artículo</p>
                         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 items-end">
                             <div>
-                                <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Modelo</label>
+                                <label class="block text-xs text-gray-900 dark:text-white mb-1">Modelo</label>
                                 <select x-model="editForm.id_modelo" @change="onModeloChange()"
                                     class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
                                     <option value="">Seleccionar</option>
@@ -499,7 +477,7 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Voltaje</label>
+                                <label class="block text-xs text-gray-900 dark:text-white mb-1">Voltaje</label>
                                 <select x-model="editForm.id_voltaje"
                                     :disabled="!editForm.voltajes.length"
                                     class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition disabled:opacity-50 disabled:cursor-not-allowed">
@@ -510,7 +488,7 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Color</label>
+                                <label class="block text-xs text-gray-900 dark:text-white mb-1">Color</label>
                                 <select x-model="editForm.id_color"
                                     :disabled="!editForm.colores.length"
                                     class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition disabled:opacity-50 disabled:cursor-not-allowed">
@@ -521,7 +499,7 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Cantidad</label>
+                                <label class="block text-xs text-gray-900 dark:text-white mb-1">Cantidad</label>
                                 <input type="number" x-model="editForm.cantidad" min="1" max="999"
                                     class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
                             </div>
@@ -540,10 +518,10 @@
 
                     {{-- Tabla de items editables --}}
                     <div class="px-4 sm:px-6 py-4 border-b dark:border-gray-700">
-                        <p class="text-xs text-gray-400 uppercase tracking-wider mb-3 font-medium flex items-center justify-between">
-                            Artículos
-                            <span x-text="editItems.length ? `${editItems.length} línea${editItems.length > 1 ? 's' : ''}` : ''"></span>
-                        </p>
+                        <div class="flex items-center justify-between mb-3">
+                            <p class="text-xs text-gray-400 uppercase tracking-wider font-medium">Artículos</p>
+                            <span class="text-xs text-gray-500" x-text="editItems.length ? `${editItems.length} línea${editItems.length > 1 ? 's' : ''}` : ''"></span>
+                        </div>
 
                         <div x-show="editItems.length === 0" class="flex flex-col items-center justify-center py-8 text-center">
                             <div class="h-10 w-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-2">
@@ -552,46 +530,77 @@
                                         d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.5 6h11M10 19a1 1 0 100 2 1 1 0 000-2zm7 0a1 1 0 100 2 1 1 0 000-2z" />
                                 </svg>
                             </div>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">No hay artículos en el pedido</p>
+                            <p class="text-sm text-gray-900 dark:text-white">No hay artículos en el pedido</p>
                         </div>
 
                         <div x-show="editItems.length > 0" x-cloak class="overflow-x-auto -mx-4 sm:-mx-6 px-4 sm:px-6">
                             <table class="w-full text-sm min-w-[400px]">
                                 <thead>
                                     <tr class="border-b dark:border-gray-700">
-                                        <th class="pb-2 text-left text-xs font-semibold text-gray-500 uppercase pr-3">#</th>
-                                        <th class="pb-2 text-left text-xs font-semibold text-gray-500 uppercase pr-3">Modelo</th>
-                                        <th class="pb-2 text-left text-xs font-semibold text-gray-500 uppercase pr-3">Color</th>
-                                        <th class="pb-2 text-left text-xs font-semibold text-gray-500 uppercase pr-3">Voltaje</th>
-                                        <th class="pb-2 text-center text-xs font-semibold text-gray-500 uppercase pr-3">Cant.</th>
-                                        <th class="pb-2"></th>
+                                        <th class="pb-2 text-left text-xs font-semibold text-gray-900 dark:text-white uppercase pr-3">#</th>
+                                        <th class="pb-2 text-left text-xs font-semibold text-gray-900 dark:text-white uppercase pr-3">Modelo</th>
+                                        <th class="pb-2 text-left text-xs font-semibold text-gray-900 dark:text-white uppercase pr-3">Color</th>
+                                        <th class="pb-2 text-left text-xs font-semibold text-gray-900 dark:text-white uppercase pr-3">Voltaje</th>
+                                        <th class="pb-2 text-center text-xs font-semibold text-gray-900 dark:text-white uppercase pr-3">Cantidad</th>
+                                        <th class="pb-2 text-center text-xs font-semibold text-gray-900 dark:text-white uppercase">Acción</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                                     <template x-for="(item, index) in editItems" :key="index">
                                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                                            <input type="hidden" :name="`items[${index}][id_modelo]`" :value="item.id_modelo">
-                                            <input type="hidden" :name="`items[${index}][id_voltaje]`" :value="item.id_voltaje">
-                                            <input type="hidden" :name="`items[${index}][id_color]`" :value="item.id_color">
-                                            <input type="hidden" :name="`items[${index}][cantidad]`" :value="item.cantidad">
+                                            {{-- Inputs ocultos que se ACTUALIZAN cuando cambia la cantidad --}}
+                                            <input type="hidden"
+                                                :name="`items[${index}][id_modelo]`"
+                                                :value="item.id_modelo">
+                                            <input type="hidden"
+                                                :name="`items[${index}][id_voltaje]`"
+                                                :value="item.id_voltaje">
+                                            <input type="hidden"
+                                                :name="`items[${index}][id_color]`"
+                                                :value="item.id_color">
+                                            <input type="hidden"
+                                                :name="`items[${index}][cantidad]`"
+                                                :value="item.cantidad"> {{-- ✅ AHORA SE ACTUALIZA --}}
 
                                             <td class="py-2.5 pr-3 text-gray-400 text-xs" x-text="index + 1"></td>
                                             <td class="py-2.5 pr-3 font-medium text-gray-900 dark:text-white text-xs" x-text="item.modelo_nombre"></td>
-                                            <td class="py-2.5 pr-3 text-gray-500 dark:text-gray-400 text-xs" x-text="item.color_nombre"></td>
+                                            <td class="py-2.5 pr-3 text-gray-900 dark:text-white text-xs" x-text="item.color_nombre"></td>
+                                            <td class="py-2.5 pr-3 text-gray-900 dark:text-white text-xs" x-text="item.voltaje_nombre"></td>
+
+                                            {{-- INPUT EDITABLE PARA CANTIDAD --}}
                                             <td class="py-2.5 pr-3">
-                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
-                                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                                    </svg>
-                                                    <span x-text="item.voltaje_nombre"></span>
-                                                </span>
+                                                <div class="flex items-center justify-center gap-1">
+                                                    {{-- Botón decrementar --}}
+                                                    <button type="button"
+                                                        @click="decrementQuantity(index)"
+                                                        class="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center justify-center transition">
+                                                        <svg class="w-3 h-3 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
+                                                        </svg>
+                                                    </button>
+
+                                                    {{-- Input numérico --}}
+                                                    <input type="number"
+                                                        x-model="item.cantidad"
+                                                        @input="updateItemQuantity(index, $event.target.value)"
+                                                        min="1"
+                                                        max="999"
+                                                        class="w-16 text-center border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg px-1 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
+
+                                                    {{-- Botón incrementar --}}
+                                                    <button type="button"
+                                                        @click="incrementQuantity(index)"
+                                                        class="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center justify-center transition">
+                                                        <svg class="w-3 h-3 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
                                             </td>
-                                            <td class="py-2.5 pr-3 text-center">
-                                                <span class="inline-flex items-center justify-center w-7 h-7 text-xs font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full border border-blue-200 dark:border-blue-800"
-                                                    x-text="item.cantidad"></span>
-                                            </td>
-                                            <td class="py-2.5 text-right">
-                                                <button type="button" @click="removeEditItem(index)"
+
+                                            <td class="py-2.5 text-center">
+                                                <button type="button"
+                                                    @click="removeEditItem(index)"
                                                     class="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-400 font-medium px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition">
                                                     Quitar
                                                 </button>
@@ -599,6 +608,15 @@
                                         </tr>
                                     </template>
                                 </tbody>
+
+                                {{-- Total de artículos --}}
+                                <tfoot x-show="editItems.length > 0" class="border-t dark:border-gray-700">
+                                    <tr>
+                                        <td colspan="4" class="pt-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">Total artículos:</td>
+                                        <td class="pt-3 text-center" x-text="editItems.reduce((sum, item) => sum + Number(item.cantidad), 0)"></td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
                             </table>
                         </div>
                     </div>
@@ -658,7 +676,7 @@
                     </div>
                     <div>
                         <h3 class="text-base font-semibold text-gray-900 dark:text-white">Eliminar pedido</h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        <p class="text-sm text-gray-900 dark:text-white mt-1">
                             Vas a eliminar el pedido
                             <span class="font-mono text-xs font-semibold text-gray-700 dark:text-gray-300" x-text="deleteNombre"></span>.
                             Esta acción no se puede deshacer.
@@ -686,11 +704,13 @@
 
     @push('scripts')
 
+    {{-- ✅ Solo se define la variable global, el fetch lo hace Alpine en init() --}}
     <script>
         window.NUEVO_PEDIDO_ID = @json(session('nuevo_pedido_id') ?? null);
     </script>
 
     <script>
+        // @ts-nocheck
         // @ts-nocheck
         document.addEventListener('alpine:init', () => {
 
@@ -701,6 +721,9 @@
                 totalPedidos: initialTotal,
                 currentPage: initialCurrentPage,
                 lastPage: initialLastPage,
+
+                // ✅ Flag para evitar que el WebSocket duplique el pedido recién creado
+                _justCreatedId: null,
 
                 detailModal: false,
                 detailPedido: null,
@@ -730,50 +753,35 @@
                     console.log("Echo realtime activo");
 
 
-                    // ─────────── cargar nuevo pedido si se acaba de crear ───────────
                     if (window.NUEVO_PEDIDO_ID) {
 
-                        fetch(`/pedidos/api/${window.NUEVO_PEDIDO_ID}`)
+                        fetch(`/api/pedidos/${window.NUEVO_PEDIDO_ID}`)
                             .then(r => {
                                 if (!r.ok) throw new Error('no ok');
                                 return r.json();
                             })
                             .then(pedido => {
-
                                 self.addPedido(pedido);
                                 self.totalPedidos++;
-
                                 self.showNotification('created', pedido.id_pedido);
-
+                                // ✅ Guardar el ID para que el WS lo ignore si llega después
+                                self._justCreatedId = pedido.id_pedido;
                             })
                             .catch(err => {
-
                                 console.error("Error cargando nuevo pedido:", err);
-
                                 setTimeout(() => location.reload(), 1000);
-
                             });
 
                     }
 
-
-
-                    // ─────────── verificar Echo ───────────
-
+                    // ─── verificar Echo ───
                     if (!window.Echo) {
-
                         console.error("Echo no disponible");
-
                         return;
-
                     }
 
-
-
-                    // ─────────── websocket pedidos ───────────
-
+                    // ─── websocket pedidos ───
                     window.Echo.channel('pedidos')
-
                         .listen('.pedido.updated', (e) => {
 
                             try {
@@ -783,38 +791,41 @@
 
                                 if (action === 'created') {
 
+                                    // ✅ Si ya lo cargamos por fetch (el que acaba de crear),
+                                    // ignoramos el evento WS para no duplicarlo
+                                    if (pedido && pedido.id_pedido === self._justCreatedId) {
+                                        self._justCreatedId = null;
+                                        return;
+                                    }
+
                                     if (pedido) {
                                         self.addPedido(pedido);
                                         self.totalPedidos++;
+                                        self.showNotification('created', pedido.id_pedido);
                                     }
 
                                 } else if (action === 'updated') {
 
+                                    // ✅ Solo actualiza, no elimina
                                     if (pedido) {
                                         self.updatePedido(pedido);
+                                        self.showNotification('updated', pedido.id_pedido);
                                     }
 
+                                } else if (action === 'deleted') {
 
+                                    // ✅ Bloque separado y correcto para eliminaciones
                                     const id = e.id_pedido ?? pedido?.id_pedido;
 
                                     if (id) {
-
                                         self.removePedido(id);
-
-                                        if (self.totalPedidos > 0) {
-                                            self.totalPedidos--;
-                                        }
-
+                                        self.showNotification('deleted', id);
                                     }
 
                                 }
 
-                                self.showNotification(action, pedido?.id_pedido ?? e.id_pedido);
-
                             } catch (err) {
-
                                 console.error("Error evento Echo:", err);
-
                             }
 
                         });
@@ -822,8 +833,7 @@
                 },
 
 
-
-                // ─────────── realtime handlers ───────────
+                // ─── realtime handlers ───
 
                 addPedido(newPedido) {
 
@@ -834,19 +844,18 @@
                         this.pedidos.unshift(newPedido);
 
                         this.pedidos.sort((a, b) => {
-
-                            const dateA = new Date(a.fecha.split('/').reverse().join('-'));
-                            const dateB = new Date(b.fecha.split('/').reverse().join('-'));
-
-                            return dateB - dateA;
-
+                            // Parsear formato d/m/Y H:i correctamente
+                            const parseDate = (fecha) => {
+                                const [datePart, timePart] = fecha.split(' ');
+                                const [day, month, year] = datePart.split('/');
+                                return new Date(`${year}-${month}-${day}T${timePart}:00`);
+                            };
+                            return parseDate(b.fecha) - parseDate(a.fecha);
                         });
 
                     }
 
                 },
-
-
 
                 updatePedido(updatedPedido) {
 
@@ -868,8 +877,6 @@
 
                 },
 
-
-
                 removePedido(id) {
 
                     const index = this.pedidos.findIndex(p => p.id_pedido === id);
@@ -877,6 +884,7 @@
                     if (index !== -1) {
 
                         this.pedidos.splice(index, 1);
+                        this.totalPedidos--; // ✅ Decrementar el total correctamente
 
                         if (this.detailPedido && this.detailPedido.id_pedido === id)
                             this.detailModal = false;
@@ -889,8 +897,7 @@
                 },
 
 
-
-                // ─────────── notificaciones ───────────
+                // ─── notificaciones ───
 
                 showNotification(action, pedidoId) {
 
@@ -910,14 +917,12 @@
                     };
 
                     const icons = {
-
                         created: `
         <div class="flex items-center justify-center w-6 h-6 rounded-full bg-green-100">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
             </svg>
         </div>`,
-
                         updated: `
         <div class="flex items-center justify-center w-6 h-6 rounded-full bg-yellow-200">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-yellow-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -926,7 +931,6 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M10.29 3.86l-7.4 12.8A1 1 0 004 18h16a1 1 0 00.87-1.34l-7.4-12.8a1 1 0 00-1.74 0z"/>
             </svg>
         </div>`,
-
                         deleted: `
         <div class="flex items-center justify-center w-6 h-6 rounded-full bg-red-200">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-red-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
@@ -949,29 +953,22 @@
                     container.appendChild(notification);
 
                     setTimeout(() => notification.remove(), 3000);
+
                 },
 
 
-
-                // ─────────── UI helpers ───────────
+                // ─── UI helpers ───
 
                 openDetail(pedido) {
-
                     this.detailPedido = pedido;
-
                     this.detailModal = true;
-
                 },
-
 
                 openEdit(pedido) {
 
                     this.editPedido = pedido;
-
                     this.editNotas = pedido.notas ?? '';
-
                     this.editItems = pedido.items.map(i => ({
-
                         id_modelo: i.id_modelo,
                         id_voltaje: i.id_voltaje,
                         id_color: i.id_color,
@@ -979,9 +976,7 @@
                         modelo_nombre: i.modelo,
                         voltaje_nombre: i.voltaje,
                         color_nombre: i.color,
-
                     }));
-
                     this.editForm = {
                         id_modelo: '',
                         id_voltaje: '',
@@ -990,14 +985,10 @@
                         voltajes: [],
                         colores: []
                     };
-
                     this.detailModal = false;
-
                     this.editModal = true;
 
                 },
-
-
 
                 async onModeloChange() {
 
@@ -1013,24 +1004,18 @@
                     try {
 
                         const [voltajes, colores] = await Promise.all([
-
                             fetch(`/voltaje-por-modelo/${modeloId}`).then(r => r.json()),
                             fetch(`/colores-por-modelo/${modeloId}`).then(r => r.json())
-
                         ]);
 
                         this.editForm.voltajes = voltajes;
                         this.editForm.colores = colores;
 
                     } catch (e) {
-
                         console.error("Error cargando datos", e);
-
                     }
 
                 },
-
-
 
                 addEditItem() {
 
@@ -1038,17 +1023,13 @@
                         return;
 
                     const existing = this.editItems.find(i =>
-
                         i.id_modelo == this.editForm.id_modelo &&
                         i.id_voltaje == this.editForm.id_voltaje &&
                         i.id_color == this.editForm.id_color
-
                     );
 
                     if (existing) {
-
                         existing.cantidad = Number(existing.cantidad) + Number(this.editForm.cantidad);
-
                     } else {
 
                         const modelo = this.modelos.find(m => m.id_modelo == this.editForm.id_modelo);
@@ -1056,7 +1037,6 @@
                         const color = this.editForm.colores.find(c => c.id_color == this.editForm.id_color);
 
                         this.editItems.push({
-
                             id_modelo: this.editForm.id_modelo,
                             id_voltaje: this.editForm.id_voltaje,
                             id_color: this.editForm.id_color,
@@ -1064,7 +1044,6 @@
                             modelo_nombre: modelo ? modelo.nombre_modelo : this.editForm.id_modelo,
                             voltaje_nombre: voltaje ? voltaje.voltaje : this.editForm.id_voltaje,
                             color_nombre: color ? color.color : this.editForm.id_color
-
                         });
 
                     }
@@ -1075,35 +1054,63 @@
 
                 },
 
-
-
                 removeEditItem(index) {
-
                     this.editItems.splice(index, 1);
-
                 },
 
+                updateItemQuantity(index, value) {
+                    // Asegurar que la cantidad sea al menos 1
+                    const newValue = parseInt(value) || 1;
+                    if (newValue < 1) {
+                        this.editItems[index].cantidad = 1;
+                    } else if (newValue > 999) {
+                        this.editItems[index].cantidad = 999;
+                    } else {
+                        this.editItems[index].cantidad = newValue;
+                    }
 
+                    // Forzar actualización del array para que Alpine detecte el cambio
+                    this.editItems = [...this.editItems];
+                },
+
+                // Función para incrementar cantidad
+                incrementQuantity(index) {
+                    const currentValue = this.editItems[index].cantidad;
+                    if (currentValue < 999) {
+                        this.editItems[index].cantidad = currentValue + 1;
+                        this.editItems = [...this.editItems];
+                    }
+                },
+
+                // Función para decrementar cantidad
+                decrementQuantity(index) {
+                    const currentValue = this.editItems[index].cantidad;
+                    if (currentValue > 1) {
+                        this.editItems[index].cantidad = currentValue - 1;
+                        this.editItems = [...this.editItems];
+                    }
+                },
 
                 submitEdit() {
+                    if (this.editItems.length === 0) {
+                        alert('Debe agregar al menos un artículo');
+                        return;
+                    }
 
-                    if (this.editItems.length === 0) return;
+                    // Mostrar los datos que se van a enviar (para debugging)
+                    console.log('Enviando datos:', this.editItems);
 
+                    // Enviar el formulario
                     this.$refs.editForm.submit();
-
                 },
 
-
-
                 openDelete(nombre, action) {
-
                     this.deleteNombre = nombre;
-
                     this.deleteAction = action;
-
                     this.deleteModal = true;
-
                 }
+
+
 
             }));
 

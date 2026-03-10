@@ -133,10 +133,20 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
                 Route::delete('/voltajes/{id}', [VoltajeController::class, 'destroy'])->name('voltajes.destroy');
             });
         });
+
+        Route::get('/pedidos/{id_pedido}/realizar', [PedidoController::class, 'realizar'])->name('pedidos.realizar');
+
+        Route::get('/pedidos/{id_pedido}/pdf', [PedidoController::class, 'pdf'])->name('pedidos.pdf');
+
+        Route::get('/bicicletas/{num_serie}', [BicicletaController::class, 'showApi'])->name('api.bicicletas.show');
     });
 
-    Route::middleware('enlace')->group(function () {
 
+
+
+    
+
+    Route::middleware('enlace')->group(function () {
 
         // Enlaces
         Route::get('/enlaces', [EnlaceController::class, 'index'])->name('enlaces.index');
@@ -163,6 +173,7 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
                 'status_num' => $pedido->status,
                 'notas' => $pedido->notas ?? '',
                 'fecha' => $pedido->created_at->format('d/m/Y H:i'),
+                'updated_at' => $pedido->updated_at->format('d/m/Y H:i'),
                 'items' => $pedido->items->map(fn($i) => [
                     'id_modelo' => $i->id_modelo,
                     'id_voltaje' => $i->id_voltaje,
@@ -190,7 +201,16 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
         Route::get('/Pedidos/crear', [PedidoController::class, 'create'])->name('pedidos.create');
         Route::get('/pedidos/{id_pedido}/edit', [PedidoController::class, 'edit'])->name('pedidos.edit');
         Route::put('/pedidos/{id_pedido}',      [PedidoController::class, 'update'])->name('pedidos.update');
+        Route::delete('/Pedidos/{id_pedido}', [PedidoController::class, 'destroy'])->name('pedidos.destroy');
     });
+
+
+
+
+
+
+
+
 
     // Modelo-Voltaje
     Route::get('/modelo-voltaje', [ModeloVoltajeController::class, 'modeloVoltaje'])->name('modelo-voltaje');
@@ -211,7 +231,7 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
     Route::post('/Pedidos', [PedidoController::class, 'store'])->name('pedidos.store');
     Route::get('/Pedidos/{id_pedido}', [PedidoController::class, 'show'])->name('pedidos.show');
     Route::patch('/Pedidos/{id_pedido}/status', [PedidoController::class, 'updateStatus'])->name('pedidos.status');
-    Route::delete('/Pedidos/{id_pedido}', [PedidoController::class, 'destroy'])->name('pedidos.destroy');
+
 
 
 

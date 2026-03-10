@@ -1,6 +1,6 @@
 <div
     x-data="{ open: false }"
-    class="flex min-h-screen bg-gray-50 dark:bg-gray-900"
+    class="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900"
 >
     {{-- Overlay móvil --}}
     <div
@@ -25,7 +25,8 @@
                border-r border-gray-200 dark:border-gray-700
                flex flex-col
                transition-transform duration-300 ease-in-out
-               shadow-xl lg:shadow-none"
+               shadow-xl lg:shadow-none
+               h-screen overflow-y-auto"
         :class="open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
     >
         {{-- Logo --}}
@@ -316,7 +317,7 @@
     </aside>
 
     {{-- CONTENIDO --}}
-    <div class="flex-1 flex flex-col min-w-0">
+    <div class="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
         <header class="lg:hidden h-16 flex items-center px-4 bg-white dark:bg-gray-800 border-b dark:border-gray-700 shrink-0 sticky top-0 z-20">
             <button
                 @click="open = !open"

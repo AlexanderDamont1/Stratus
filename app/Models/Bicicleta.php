@@ -8,8 +8,12 @@ class Bicicleta extends Model
 {
     protected $table = 'bicicletas';
     protected $primaryKey = 'num_serie';
+
     public $incrementing = false;
     protected $keyType = 'string';
+
+    // Actívalo solo si tu tabla tiene created_at y updated_at
+    public $timestamps = true;
 
     protected $fillable = [
         'num_serie',
@@ -19,6 +23,7 @@ class Bicicleta extends Model
         'id_voltaje',
         'id_color',
         'status',
+        'id_pedido',
     ];
 
     /* ================= RELACIONES ================= */
@@ -28,10 +33,9 @@ class Bicicleta extends Model
         return $this->belongsTo(Negocio::class, 'id_negocio', 'id_negocio');
     }
 
-
-    public function producto()
+    public function pedido()
     {
-        return $this->belongsTo(Producto::class, 'id_producto', 'id_producto');
+        return $this->belongsTo(Pedido::class, 'id_pedido', 'id_pedido');
     }
 
     public function modelo()

@@ -11,6 +11,7 @@ use App\Models\Enlace;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Barryvdh\DomPDF\Facade\Pdf;
 use App\Events\PedidoUpdated; // ← IMPORTANTE: Agregar esta línea
 
 class PedidoController extends Controller
@@ -47,7 +48,7 @@ class PedidoController extends Controller
                     fn($q) =>
                     $q->where('status', $status)
                 )
-                ->orderByDesc('created_at')
+                ->orderByDesc('updated_at')
                 ->paginate(10)
                 ->withQueryString();
 
@@ -284,4 +285,88 @@ class PedidoController extends Controller
             ->route('pedidos.index')
             ->with('success', 'Pedido eliminado.');
     }
+
+
+
+
+    // ══════════════════════════════════════════════════════════════
+    //  AGREGAR en PedidoController.php
+    // ══════════════════════════════════════════════════════════════
+
+    // ─── VISTA REALIZAR PEDIDO ────────────────────────────────────
+    public function realizar(string $id_pedido)
+    {
+        $usuario = auth()->user();
+
+        abort_if($usuario->id_rol !== 5, 403);
+
+        $pedido = Pedido::with([
+            'usuario',
+            'negocio',
+            'items.modelo',
+            'items.voltaje',
+            'items.color',
+            'bicicletas.modelo',
+            'bicicletas.voltaje',
+            'bicicletas.color',
+        ])->findOrFail($id_pedido);
+
+        abort_if($pedido->status !== 2, 403, 'Este pedido no está en estado Preparado.');
+
+        // Calcular cuántas bicis ya fueron escaneadas vs cuántas se necesitan
+        $resumen = [];
+        foreach ($pedido->items as $item) {
+            $key = $item->id_modelo . '-' . $item->id_voltaje . '-' . $item->id_color;
+            $resumen[$key] = [
+                'modelo'       => $item->modelo->nombre_modelo ?? 'N/D',
+                'voltaje'      => $item->voltaje->voltaje ?? 'N/D',
+                'color'        => $item->color->color  ?? 'N/D',
+                'id_modelo'    => $item->id_modelo,
+                'id_voltaje'   => $item->id_voltaje,
+                'id_color'     => $item->id_color,
+                'requerido'    => $item->cantidad,
+                'escaneado'    => 0,
+            ];
+        }
+
+        foreach ($pedido->bicicletas as $bic) {
+            $key = $bic->id_modelo . '-' . $bic->id_voltaje . '-' . $bic->id_color;
+            if (isset($resumen[$key])) {
+                $resumen[$key]['escaneado']++;
+            }
+        }
+
+        $modelos  = \App\Services\CatalogService::getModelos();
+
+        return view('pedidos.realizar', compact('pedido', 'resumen', 'modelos'));
+    }
+
+    public function pdf(string $id_pedido)
+{
+    $pedido = Pedido::with([
+        'usuario',
+        'negocio',
+        'items.modelo',
+        'items.voltaje',
+        'items.color',
+        'bicicletas.modelo',
+        'bicicletas.voltaje',
+        'bicicletas.color',
+    ])->findOrFail($id_pedido);
+
+    $qr_svg = base64_encode(
+        \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')
+            ->size(120)
+            ->generate($pedido->id_pedido)
+    );
+
+    $html = view('pedidos.pdf_create', compact('pedido', 'qr_svg'))->render();
+
+    $mpdf = new \Mpdf\Mpdf(['mode' => 'utf-8', 'format' => 'A4']);
+    $mpdf->WriteHTML($html);
+
+    return response($mpdf->Output("emision_{$pedido->id_pedido}.pdf", 'S'))
+        ->header('Content-Type', 'application/pdf')
+        ->header('Content-Disposition', 'inline; filename="emision_'.$pedido->id_pedido.'.pdf"');
+}
 }

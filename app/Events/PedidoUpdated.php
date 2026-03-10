@@ -46,7 +46,8 @@ class PedidoUpdated implements ShouldBroadcastNow // CAMBIADO
                 'status' => $this->getStatusLabel($this->pedido->status),
                 'status_num' => $this->pedido->status,
                 'notas' => $this->pedido->notas ?? '',
-                'fecha' => $this->pedido->created_at ? $this->pedido->created_at->format('Y/m/d H:i') : now()->format('Y/m/d H:i'),
+                'fecha' => $this->pedido->updated_at ? $this->pedido->updated_at->format('d/m/Y H:i') : now()->format('d/m/Y H:i'),
+                'updated_at' => $this->pedido->updated_at ? $this->pedido->updated_at->format('d/m/Y H:i') : now()->format('d/m/Y H:i'),
                 'items' => $this->pedido->items->map(fn($i) => [
                     'id_modelo' => $i->id_modelo,
                     'id_voltaje' => $i->id_voltaje,
@@ -62,7 +63,7 @@ class PedidoUpdated implements ShouldBroadcastNow // CAMBIADO
 
     private function getStatusLabel($status)
     {
-        return match($status) {
+        return match ($status) {
             1 => 'Solicitado',
             2 => 'Preparado',
             3 => 'Entregado',

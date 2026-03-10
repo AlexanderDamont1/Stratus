@@ -45,6 +45,11 @@ class Pedido extends Model
         return $this->hasMany(PedidoItem::class, 'id_pedido', 'id_pedido');
     }
 
+    public function bicicletas()
+{
+    return $this->hasMany(Bicicleta::class, 'id_pedido', 'id_pedido');
+}
+
     // Helper status
     public function getStatusLabelAttribute(): string
     {

@@ -27,6 +27,9 @@ return new class extends Migration {
                 'REPARACION'
             ])->default('STOCK');
 
+            $table->char('id_pedido', 15);
+
+
             $table->timestamps();
 
             /*
@@ -34,6 +37,9 @@ return new class extends Migration {
             FOREIGN KEYS
             ==========================
             */
+            $table->foreign('id_pedido')
+                  ->references('id_pedido')
+                  ->on('pedidos');
 
             $table->foreign('id_negocio')
                   ->references('id_negocio')
