@@ -36,6 +36,7 @@ class PedidoUpdated implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
+
         return [
             'id_pedido' => $this->pedido->id_pedido,
             'action'    => $this->action,
@@ -47,11 +48,11 @@ class PedidoUpdated implements ShouldBroadcastNow
                 'status_num' => $this->pedido->status,
                 'notas'      => $this->pedido->notas ?? '',
                 'fecha'      => $this->pedido->created_at
-                                    ? $this->pedido->created_at->format('d/m/Y H:i')
-                                    : now()->format('d/m/Y H:i'),
+                    ? $this->pedido->created_at->format('d/m/Y H:i')
+                    : now()->format('d/m/Y H:i'),
                 'updated_at' => $this->pedido->updated_at
-                                    ? $this->pedido->updated_at->format('d/m/Y H:i')
-                                    : now()->format('d/m/Y H:i'),
+                    ? $this->pedido->updated_at->format('d/m/Y H:i')
+                    : now()->format('d/m/Y H:i'),
                 'items' => $this->pedido->items->map(fn($i) => [
                     'id_modelo'  => $i->id_modelo,
                     'id_voltaje' => $i->id_voltaje,
@@ -69,8 +70,9 @@ class PedidoUpdated implements ShouldBroadcastNow
     {
         return match ($status) {
             1       => 'Solicitado',
-            2       => 'Preparado',
-            3       => 'Entregado',
+            2       => 'Verificando Pago',
+            3       => 'Listo para Entregar',
+            4       => 'Entregado',
             default => 'Desconocido',
         };
     }

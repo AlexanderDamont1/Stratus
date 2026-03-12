@@ -135,7 +135,6 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
         });
 
         Route::get('/pedidos/{id_pedido}/realizar', [PedidoController::class, 'realizar'])->name('pedidos.realizar');
-
         Route::get('/pedidos/{id_pedido}/pdf', [PedidoController::class, 'pdf'])->name('pedidos.pdf');
 
         Route::get('/bicicletas/{num_serie}', [BicicletaController::class, 'showApi'])->name('api.bicicletas.show');
@@ -202,11 +201,11 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
             return view('administrador.dashboard', ['enlace' => $enlace]);
         })->name('administrador.dashboard');
 
-        Route::get('/Pedidos/crear', [PedidoController::class, 'create'])->name('pedidos.create');
+        Route::get('/pedidos/crear', [PedidoController::class, 'create'])->name('pedidos.create');
         Route::get('/pedidos/{id_pedido}/edit', [PedidoController::class, 'edit'])->name('pedidos.edit');
         Route::put('/pedidos/{id_pedido}',      [PedidoController::class, 'update'])->name('pedidos.update');
-        Route::delete('/Pedidos/{id_pedido}', [PedidoController::class, 'destroy'])->name('pedidos.destroy');
-        Route::get('/pedidos/{id_pedido}/token', [PedidoController::class, 'token'])->name('pedidos.token');
+        Route::delete('/pedidos/{id_pedido}', [PedidoController::class, 'destroy'])->name('pedidos.destroy');
+        Route::get('/ver/{id_pedido}/token', [PedidoController::class, 'token'])->name('pedidos.token');
     });
 
 
@@ -232,10 +231,10 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
     Route::delete('/Productos/{id}', [ProductoController::class, 'destroy'])->name('productos.destroy');
 
     // Pedidos
-    Route::get('/Pedidos', [PedidoController::class, 'index'])->name('pedidos.index');
-    Route::post('/Pedidos', [PedidoController::class, 'store'])->name('pedidos.store');
-    Route::get('/Pedidos/{id_pedido}', [PedidoController::class, 'show'])->name('pedidos.show');
-    Route::patch('/Pedidos/{id_pedido}/status', [PedidoController::class, 'updateStatus'])->name('pedidos.status');
+    Route::get('/pedidos', [PedidoController::class, 'index'])->name('pedidos.index');
+    Route::post('/pedidos', [PedidoController::class, 'store'])->name('pedidos.store');
+    Route::get('/pedidos/{id_pedido}', [PedidoController::class, 'show'])->name('pedidos.show');
+    Route::patch('/pedidos/{id_pedido}/status', [PedidoController::class, 'updateStatus'])->name('pedidos.status');
 
 
 

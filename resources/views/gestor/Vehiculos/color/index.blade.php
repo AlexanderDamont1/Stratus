@@ -93,7 +93,6 @@
                                        class="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 text-xs font-semibold">
                                         Editar
                                     </a>
-                                    <span class="text-gray-300">|</span>
                                     
                                 </div>
                             </td>

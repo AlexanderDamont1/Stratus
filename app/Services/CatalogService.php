@@ -7,20 +7,66 @@ use App\Models\Negocio;
 use App\Models\Color;
 use App\Models\Voltaje;
 use App\Models\ModeloVoltaje;
+use App\Models\Bicicleta;
 use Illuminate\Support\Facades\Cache;
 
 class CatalogService
 {
     const CACHE_TTL = [
-        'modelos'    => 86400,  // 24 horas
-        'negocios'   => 3600,   // 1 hora
-        'voltajes'   => 7200,   // 2 horas
-        'colores'    => 7200,   // 2 horas
-        'relaciones' => 3600,   // 1 hora
-        'search'     => 600,    // 10 minutos (era 1 hora — riesgo de crecer sin control)
+        'modelos'    => 86400,
+        'negocios'   => 3600,
+        'voltajes'   => 7200,
+        'colores'    => 7200,
+        'search'     => 600,
     ];
 
     const CACHE_PREFIX = 'catalog:';
+
+    // ─── BICICLETAS ───────────────────────────────────────────────────────────
+
+    /**
+     * Sin cache — paginación no es serializable en Redis de forma confiable.
+     */
+    public static function getBicicletasPaginadas(string $idNegocio, int $page = 1, ?string $search = null)
+    {
+        $query = Bicicleta::where('id_negocio', $idNegocio)
+            ->with(['modelo', 'voltaje', 'color']);
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('num_serie', 'like', "%{$search}%")
+                  ->orWhere('status', 'like', "%{$search}%");
+            });
+        }
+
+        return $query->orderByDesc('created_at')->paginate(10);
+    }
+
+    /**
+     * Stats cacheadas — solo arrays simples, se serializan sin problema.
+     */
+    public static function getBicicletaStats(string $idNegocio)
+    {
+        return Cache::remember(
+            self::CACHE_PREFIX . "stats:bicicletas:{$idNegocio}",
+            600,
+            function () use ($idNegocio) {
+                return [
+                    'total'    => Bicicleta::where('id_negocio', $idNegocio)->count(),
+                    'en_stock' => Bicicleta::where('id_negocio', $idNegocio)->where('status', 'STOCK')->count(),
+                ];
+            }
+        );
+    }
+
+    /**
+     * Solo limpia stats — la paginación ya no se cachea.
+     */
+    public static function clearBicicletaCache(string $idNegocio): void
+    {
+        Cache::forget(self::CACHE_PREFIX . "stats:bicicletas:{$idNegocio}");
+        self::incrementVersion();
+    }
 
     // ─── MODELOS ──────────────────────────────────────────────────────────────
 
@@ -34,9 +80,7 @@ class CatalogService
                 ->get()
         );
 
-        return $withSelectFormato
-            ? $modelos->pluck('nombre_modelo', 'id_modelo')
-            : $modelos;
+        return $withSelectFormato ? $modelos->pluck('nombre_modelo', 'id_modelo') : $modelos;
     }
 
     public static function getModeloById(string $idModelo): ?Modelo
@@ -60,9 +104,7 @@ class CatalogService
                 ->get()
         );
 
-        return $withSelectFormato
-            ? $negocios->pluck('nombre_negocio', 'id_negocio')
-            : $negocios;
+        return $withSelectFormato ? $negocios->pluck('nombre_negocio', 'id_negocio') : $negocios;
     }
 
     // ─── VOLTAJES ─────────────────────────────────────────────────────────────
@@ -79,9 +121,7 @@ class CatalogService
                 ->get()
         );
 
-        return $withSelectFormato
-            ? $voltajes->pluck('voltaje', 'id_voltaje')
-            : $voltajes;
+        return $withSelectFormato ? $voltajes->pluck('voltaje', 'id_voltaje') : $voltajes;
     }
 
     public static function getAllVoltajes(bool $withSelectFormato = false)
@@ -89,14 +129,10 @@ class CatalogService
         $voltajes = Cache::remember(
             self::CACHE_PREFIX . 'voltajes:all',
             self::CACHE_TTL['voltajes'],
-            fn() => Voltaje::select('id_voltaje', 'voltaje')
-                ->orderBy('voltaje')
-                ->get()
+            fn() => Voltaje::select('id_voltaje', 'voltaje')->orderBy('voltaje')->get()
         );
 
-        return $withSelectFormato
-            ? $voltajes->pluck('voltaje', 'id_voltaje')
-            : $voltajes;
+        return $withSelectFormato ? $voltajes->pluck('voltaje', 'id_voltaje') : $voltajes;
     }
 
     // ─── COLORES ──────────────────────────────────────────────────────────────
@@ -112,9 +148,7 @@ class CatalogService
                 ->get()
         );
 
-        return $withSelectFormato
-            ? $colores->pluck('color', 'id_color')
-            : $colores;
+        return $withSelectFormato ? $colores->pluck('color', 'id_color') : $colores;
     }
 
     public static function getAllColores(bool $withSelectFormato = false)
@@ -122,32 +156,13 @@ class CatalogService
         $colores = Cache::remember(
             self::CACHE_PREFIX . 'colores:all',
             self::CACHE_TTL['colores'],
-            fn() => Color::select('id_color', 'color')
-                ->orderBy('color')
-                ->get()
+            fn() => Color::select('id_color', 'color')->orderBy('color')->get()
         );
 
-        return $withSelectFormato
-            ? $colores->pluck('color', 'id_color')
-            : $colores;
+        return $withSelectFormato ? $colores->pluck('color', 'id_color') : $colores;
     }
 
-    // ─── MODELO COMPLETO ──────────────────────────────────────────────────────
-    //
-    // CORRECCIÓN: ya no envuelve en un tercer Cache::remember.
-    // Cada método hijo ya cachea por separado; aquí solo los agrupamos.
-    // Evitamos duplicar los mismos datos tres veces en Redis.
-
-    public static function getModeloCompleto(string $idModelo): array
-    {
-        return [
-            'modelo'   => self::getModeloById($idModelo),
-            'voltajes' => self::getVoltajesByModelo($idModelo),
-            'colores'  => self::getColoresByModelo($idModelo),
-        ];
-    }
-
-    // ─── STATS ────────────────────────────────────────────────────────────────
+    // ─── STATS GLOBALES ───────────────────────────────────────────────────────
 
     public static function getStats(): array
     {
@@ -155,54 +170,16 @@ class CatalogService
             self::CACHE_PREFIX . 'stats',
             1800,
             fn() => [
-                'total_modelos'      => Modelo::count(),
-                'total_negocios'     => Negocio::count(),
-                'total_colores'      => Color::count(),
-                'total_voltajes'     => Voltaje::count(),
+                'total_modelos'       => Modelo::count(),
+                'total_negocios'      => Negocio::count(),
+                'total_colores'       => Color::count(),
+                'total_voltajes'      => Voltaje::count(),
                 'relaciones_voltajes' => ModeloVoltaje::count(),
             ]
         );
     }
 
-    // ─── BÚSQUEDA ─────────────────────────────────────────────────────────────
-    //
-    // CORRECCIÓN: TTL reducido a 10 min para evitar acumulación ilimitada de
-    // keys md5 en Redis. Considera añadir un comando artisan que limpie
-    // 'catalog:search:*' periódicamente si el volumen de búsquedas es alto.
-
-    public static function searchModelos(string $search)
-    {
-        return Cache::remember(
-            self::CACHE_PREFIX . 'search:modelos:' . md5($search),
-            self::CACHE_TTL['search'],
-            fn() => Modelo::where('nombre_modelo', 'like', "%{$search}%")
-                ->select('id_modelo', 'nombre_modelo')
-                ->orderBy('nombre_modelo')
-                ->get()
-        );
-    }
-
-    // ─── WARMUP ───────────────────────────────────────────────────────────────
-
-    public static function warmup(): void
-    {
-        self::getModelos();
-        self::getNegocios();
-        self::getAllVoltajes();
-        self::getAllColores();
-        self::getStats();
-
-        foreach (self::getModelos() as $modelo) {
-            self::getVoltajesByModelo($modelo->id_modelo);
-            self::getColoresByModelo($modelo->id_modelo);
-        }
-    }
-
     // ─── INVALIDACIÓN ─────────────────────────────────────────────────────────
-    //
-    // CORRECCIÓN: clearCache ya no intenta usar Cache::tags() porque los
-    // Cache::remember() del servicio no guardan con tags — el flush no
-    // habría borrado nada. Ahora limpia las keys conocidas explícitamente.
 
     public static function clearCache(?string $specific = null): void
     {
@@ -211,19 +188,11 @@ class CatalogService
             return;
         }
 
-        $keys = [
-            'modelos',
-            'negocios',
-            'voltajes:all',
-            'colores:all',
-            'stats',
-        ];
-
+        $keys = ['modelos', 'negocios', 'voltajes:all', 'colores:all', 'stats'];
         foreach ($keys as $key) {
             Cache::forget(self::CACHE_PREFIX . $key);
         }
 
-        // ── NUEVO: limpiar keys por modelo ──
         foreach (self::getModelos() as $modelo) {
             self::invalidateModelo($modelo->id_modelo);
         }
@@ -231,28 +200,10 @@ class CatalogService
 
     public static function invalidateModelo(string $idModelo): void
     {
-        $keys = [
-            "modelo:{$idModelo}",
-            "voltajes:modelo:{$idModelo}",
-            "colores:modelo:{$idModelo}",
-        ];
-
-        foreach ($keys as $key) {
-            Cache::forget(self::CACHE_PREFIX . $key);
-        }
-
-        // invalidar listas generales
-        Cache::forget(self::CACHE_PREFIX . 'voltajes:all');
-        Cache::forget(self::CACHE_PREFIX . 'colores:all');
-        Cache::forget(self::CACHE_PREFIX . 'stats');
+        Cache::forget(self::CACHE_PREFIX . "modelo:{$idModelo}");
+        Cache::forget(self::CACHE_PREFIX . "voltajes:modelo:{$idModelo}");
+        Cache::forget(self::CACHE_PREFIX . "colores:modelo:{$idModelo}");
     }
-
-    // ─── VERSIÓN ──────────────────────────────────────────────────────────────
-    //
-    // NOTA: La propiedad estática $version fue eliminada. En PHP-FPM cada
-    // request tiene su propio proceso — la estática no persiste entre requests
-    // y daba una falsa sensación de "cache en memoria". La versión se lee
-    // siempre desde Redis directamente.
 
     public static function getVersion(): int
     {
@@ -263,6 +214,4 @@ class CatalogService
     {
         Cache::increment(self::CACHE_PREFIX . 'version');
     }
-
-    
 }

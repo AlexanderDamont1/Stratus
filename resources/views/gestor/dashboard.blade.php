@@ -17,7 +17,7 @@
         {{-- ===== ENCABEZADO ===== --}}
         <div class="flex justify-between items-center">
             <div>
-                <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Dashboard</h2>
+                <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Inicio</h2>
                 <p class="text-xs text-gray-400 mt-0.5">Bienvenido, {{ auth()->user()->nombre_usuario }}</p>
             </div>
             <button
@@ -25,22 +25,6 @@
                 class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-md text-sm hover:opacity-90 transition">
                 + Ingresar token
             </button>
-        </div>
-
-        {{-- ===== ESTADÍSTICAS ===== --}}
-        <div class="grid grid-cols-3 gap-4">
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-5 py-4">
-                <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Total enlaces</p>
-                <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ $enlaces->total() }}</p>
-            </div>
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-5 py-4">
-                <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Activos</p>
-                <p class="text-2xl font-semibold text-green-600 dark:text-green-400">{{ $enlaces->where('estado', 'activo')->count() }}</p>
-            </div>
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-5 py-4">
-                <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Página</p>
-                <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ $enlaces->currentPage() }}<span class="text-sm font-normal text-gray-400 ml-1">/{{ $enlaces->lastPage() }}</span></p>
-            </div>
         </div>
 
         {{-- ===== TABLA DE ENLACES ===== --}}

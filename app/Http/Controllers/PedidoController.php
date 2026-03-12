@@ -276,11 +276,11 @@ class PedidoController extends Controller
     // ─── ELIMINAR PEDIDO ─────────────────────────────────────────────
     public function destroy(string $id_pedido)
     {
-        $pedido = Pedido::findOrFail($id_pedido);
+        $pedido = Pedido::with(['negocio', 'usuario', 'items'])->findOrFail($id_pedido);
 
         abort_if($pedido->status > 1, 403, 'No se puede eliminar un pedido que ya fue preparado o entregado.');
 
-        $usuario = auth()->user();
+        $usuarioId = $pedido->id_usuario;
         $pedidoId = $pedido->id_pedido; // Guardar ID antes de eliminar
 
         $pedido->delete();
@@ -288,9 +288,8 @@ class PedidoController extends Controller
         Cache::forget("pedido:{$pedidoId}");
         Cache::forget("pedidos:index:" . auth()->user()->id_usuario . ":all:all:page:1");
 
-        // 🔥 NUEVO: Disparar evento WebSocket para pedido eliminado
-        // Nota: Usamos un objeto simple ya que el pedido ya no existe en BD
-        event(new PedidoUpdated(new Pedido(['id_pedido' => $pedidoId]), 'deleted'));
+      
+        event(new PedidoUpdated($pedido, 'deleted'));
 
         return redirect()
             ->route('pedidos.index')
@@ -430,7 +429,6 @@ class PedidoController extends Controller
 
         abort_if($pedido->status !== 3, 422, 'El pedido no está listo para entregar.');
 
-        // Buscar token válido para este pedido y este gestor
         $tokenRecord = \App\Models\PedidoToken::where('id_pedido', $id_pedido)
             ->where('id_usuario2', $usuario->id_usuario)
             ->where('token', strtoupper($request->token))
@@ -449,19 +447,22 @@ class PedidoController extends Controller
             $pedido->update(['status' => 4]);
 
             // 2. Cambiar id_negocio de todas las bicicletas al negocio del vendedor
-            $idNegocioVendedor = $pedido->id_negocio;
-
             \App\Models\Bicicleta::where('id_pedido', $pedido->id_pedido)
-                ->update([
-                    'id_negocio' => $idNegocioVendedor,
-                    'status'     => 'VENDIDA',
-                ]);
+                ->update(['id_negocio' => $pedido->id_negocio]);
 
             // 3. Eliminar el token
             $tokenRecord->delete();
 
             // 4. Limpiar cache
             Cache::forget("pedido:{$pedido->id_pedido}");
+            Cache::forget("pedidos:index:{$pedido->id_usuario}:all:all:page:1");
+
+            // ── NUEVO: limpiar cache de bicicletas de ambos negocios ──
+            $idNegocioGestor   = auth()->user()->id_negocio;
+            $idNegocioVendedor = $pedido->id_negocio;
+
+            \App\Services\CatalogService::clearBicicletaCache($idNegocioGestor);
+            \App\Services\CatalogService::clearBicicletaCache($idNegocioVendedor);
 
             // 5. Disparar evento WebSocket
             $pedidoFresh = Pedido::with([
@@ -469,10 +470,12 @@ class PedidoController extends Controller
                 'usuario',
                 'items.modelo',
                 'items.voltaje',
-                'items.color'
+                'items.color',
             ])->find($pedido->id_pedido);
 
-            event(new \App\Events\PedidoUpdated($pedidoFresh, 'updated'));
+            if ($pedidoFresh && $pedidoFresh->id_usuario) {
+                event(new PedidoUpdated($pedidoFresh, 'updated'));
+            }
         });
 
         return response()->json([
@@ -480,7 +483,6 @@ class PedidoController extends Controller
             'mensaje' => 'Pedido entregado correctamente.',
         ]);
     }
-
 
     public function token(string $id_pedido)
     {

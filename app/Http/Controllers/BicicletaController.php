@@ -16,29 +16,15 @@ class BicicletaController extends Controller
      ===================================================== */
     public function index(Request $request)
     {
-        $user = auth()->user();
-
-        $query = Bicicleta::with(['negocio', 'modelo', 'voltaje', 'color']);
-
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('num_serie', 'like', "%{$search}%")
-                    ->orWhere('status', 'like', "%{$search}%");
-            });
-        }
-
-        if ($request->filled('id_negocio')) {
-            $query->where('id_negocio', $request->id_negocio);
-        }
-
-        $bicicletas = $query->orderByDesc('created_at')->paginate(10);
+        $id_negocio = auth()->user()->id_negocio;
+        $page = $request->get('page', 1);
+        $search = $request->get('search');
 
         return view('gestor.Vehiculos.Bicicleta.index', [
-            'bicicletas' => $bicicletas,
-            'negocios'   => CatalogService::getNegocios(),
-            'negocio'    => $user->negocio,
+            'bicicletas' => CatalogService::getBicicletasPaginadas($id_negocio, $page, $search),
+            'stats'      => CatalogService::getBicicletaStats($id_negocio),
             'modelos'    => CatalogService::getModelos(),
+            'negocios'   => CatalogService::getNegocios(),
         ]);
     }
 
@@ -62,162 +48,160 @@ class BicicletaController extends Controller
      | STORE
      ===================================================== */
     public function store(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'num_serie'  => 'required|string|size:17|unique:bicicletas,num_serie',
-            'id_modelo'  => 'required|exists:modelos,id_modelo',
-            'id_voltaje' => 'required|exists:voltajes,id_voltaje',
-            'id_color'   => 'required|exists:colores,id_color',
-            'id_pedido'  => 'nullable|exists:pedidos,id_pedido',
-        ]);
+{
+    $validator = Validator::make($request->all(), [
+        'num_serie'  => 'required|string|size:17|unique:bicicletas,num_serie',
+        'id_modelo'  => 'required|exists:modelos,id_modelo',
+        'id_voltaje' => 'required|exists:voltajes,id_voltaje',
+        'id_color'   => 'required|exists:colores,id_color',
+        'id_pedido'  => 'nullable|exists:pedidos,id_pedido',
+    ]);
 
-        if ($validator->fails()) {
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'ok'      => false,
-                    'mensaje' => $validator->errors()->first(),
-                ], 422);
-            }
-            return back()->withErrors($validator)->withInput();
+    if ($validator->fails()) {
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok'      => false,
+                'mensaje' => $validator->errors()->first(),
+            ], 422);
+        }
+        return back()->withErrors($validator)->withInput();
+    }
+
+    if ($request->id_pedido) {
+        $pedido = \App\Models\Pedido::with(['items', 'bicicletas'])->find($request->id_pedido);
+
+        if (!$pedido) {
+            return response()->json([
+                'ok'      => false,
+                'mensaje' => 'Pedido no encontrado.',
+            ], 404);
         }
 
-        if ($request->id_pedido) {
-            $pedido = \App\Models\Pedido::with(['items', 'bicicletas'])->find($request->id_pedido);
+        $tieneAcceso = Enlace::where('id_usuario2', auth()->user()->id_usuario)
+            ->where('id_usuario1', $pedido->id_usuario)
+            ->where('estado', 'activo')
+            ->exists();
 
-            if (!$pedido) {
-                return response()->json([
-                    'ok'      => false,
-                    'mensaje' => 'Pedido no encontrado.',
-                ], 404);
-            }
+        if (!$tieneAcceso) {
+            return response()->json([
+                'ok'      => false,
+                'mensaje' => 'No tienes acceso a este pedido.',
+            ], 403);
+        }
 
-            // ✅ Verificar que el gestor autenticado tiene enlace activo con el vendedor del pedido
-            $tieneAcceso = Enlace::where('id_usuario2', auth()->user()->id_usuario)
-                ->where('id_usuario1', $pedido->id_usuario)
-                ->where('estado', 'activo')
-                ->exists();
+        $item = $pedido->items->first(
+            fn($i) =>
+            $i->id_modelo  == $request->id_modelo &&
+                $i->id_voltaje == $request->id_voltaje &&
+                $i->id_color   == $request->id_color
+        );
 
-            if (!$tieneAcceso) {
-                return response()->json([
-                    'ok'      => false,
-                    'mensaje' => 'No tienes acceso a este pedido.',
-                ], 403);
-            }
+        if (!$item) {
+            return response()->json([
+                'ok'      => false,
+                'mensaje' => 'Esta combinación no está en el pedido.',
+            ], 422);
+        }
 
-            // ✅ Verificar que la combinación existe en el pedido
-            $item = $pedido->items->first(
-                fn($i) =>
-                $i->id_modelo  == $request->id_modelo &&
-                    $i->id_voltaje == $request->id_voltaje &&
-                    $i->id_color   == $request->id_color
+        $yaEscaneadas = \App\Models\Bicicleta::where('id_pedido',  $request->id_pedido)
+            ->where('id_modelo',  $request->id_modelo)
+            ->where('id_voltaje', $request->id_voltaje)
+            ->where('id_color',   $request->id_color)
+            ->count();
+
+        if ($yaEscaneadas >= $item->cantidad) {
+            return response()->json([
+                'ok'      => false,
+                'mensaje' => "Ya se completaron las {$item->cantidad} unidades requeridas para esta combinación.",
+            ], 422);
+        }
+    }
+
+    $bicicleta = Bicicleta::create([
+        'num_serie'  => strtoupper($request->num_serie),
+        'id_negocio' => auth()->user()->id_negocio,
+        'id_modelo'  => $request->id_modelo,
+        'id_voltaje' => $request->id_voltaje,
+        'id_color'   => $request->id_color,
+        'id_pedido'  => $request->id_pedido ?? null,
+        'status'     => 'STOCK',
+    ]);
+
+    $completo = false;
+
+    if ($request->id_pedido) {
+
+        // ── Status 1 → 2 ──────────────────────────────────────────
+        $pedidoActual = \App\Models\Pedido::find($request->id_pedido);
+
+        if ($pedidoActual && $pedidoActual->status == 1) {
+            $pedidoActual->update(['status' => 2]);
+            Cache::forget("pedido:{$pedidoActual->id_pedido}");
+            Cache::forget("pedidos:index:{$pedidoActual->id_usuario}:all:all:page:1"); // ← FIX
+
+            $pedidoFresh = \App\Models\Pedido::with([
+                'negocio',
+                'usuario',
+                'items.modelo',
+                'items.voltaje',
+                'items.color'
+            ])->find($pedidoActual->id_pedido);
+
+            event(new \App\Events\PedidoUpdated($pedidoFresh, 'updated'));
+        }
+
+        // ── Verificar si completo → Status 2 → 3 ──────────────────
+        $pedidoFull = \App\Models\Pedido::with(['items', 'bicicletas'])->find($request->id_pedido);
+
+        if ($pedidoFull) {
+            $completo = $pedidoFull->items->every(
+                fn($item) =>
+                \App\Models\Bicicleta::where('id_pedido',  $pedidoFull->id_pedido)
+                    ->where('id_modelo',  $item->id_modelo)
+                    ->where('id_voltaje', $item->id_voltaje)
+                    ->where('id_color',   $item->id_color)
+                    ->count() >= $item->cantidad
             );
 
-            if (!$item) {
-                return response()->json([
-                    'ok'      => false,
-                    'mensaje' => 'Esta combinación no está en el pedido.',
-                ], 422);
-            }
+            if ($completo && $pedidoFull->status == 2) {
+                $pedidoFull->update(['status' => 3]);
+                Cache::forget("pedido:{$pedidoFull->id_pedido}");
+                Cache::forget("pedidos:index:{$pedidoFull->id_usuario}:all:all:page:1"); // ← FIX
 
-            // ✅ Verificar que no se superó la cantidad requerida
-            $yaEscaneadas = \App\Models\Bicicleta::where('id_pedido',  $request->id_pedido)
-                ->where('id_modelo',  $request->id_modelo)
-                ->where('id_voltaje', $request->id_voltaje)
-                ->where('id_color',   $request->id_color)
-                ->count();
+                \App\Models\PedidoToken::where('id_pedido', $pedidoFull->id_pedido)->delete();
+                \App\Models\PedidoToken::create([
+                    'id_token'    => self::generarIdToken(),
+                    'id_pedido'   => $pedidoFull->id_pedido,
+                    'id_usuario1' => $pedidoFull->id_usuario,
+                    'id_usuario2' => auth()->user()->id_usuario,
+                    'token'       => self::generarToken(),
+                    'estado'      => 0,
+                ]);
 
-            if ($yaEscaneadas >= $item->cantidad) {
-                return response()->json([
-                    'ok'      => false,
-                    'mensaje' => "Ya se completaron las {$item->cantidad} unidades requeridas para esta combinación.",
-                ], 422);
-            }
-        }
-
-        $bicicleta = Bicicleta::create([
-            'num_serie'  => strtoupper($request->num_serie),
-            'id_negocio' => auth()->user()->id_negocio,
-            'id_modelo'  => $request->id_modelo,
-            'id_voltaje' => $request->id_voltaje,
-            'id_color'   => $request->id_color,
-            'id_pedido'  => $request->id_pedido ?? null,
-            'status'     => 'STOCK',
-        ]);
-
-        $completo = false;
-
-        if ($request->id_pedido) {
-
-            // ✅ Si está en Solicitado (1) → cambiar a Preparado (2)
-            $pedidoActual = \App\Models\Pedido::find($request->id_pedido);
-
-            if ($pedidoActual && $pedidoActual->status == 1) {
-                $pedidoActual->update(['status' => 2]);
-                Cache::forget("pedido:{$pedidoActual->id_pedido}");
-
-                $pedidoFresh = \App\Models\Pedido::with([
+                $pedidoFullFresh = \App\Models\Pedido::with([
                     'negocio',
                     'usuario',
                     'items.modelo',
                     'items.voltaje',
                     'items.color'
-                ])->find($pedidoActual->id_pedido);
+                ])->find($pedidoFull->id_pedido);
 
-                event(new \App\Events\PedidoUpdated($pedidoFresh, 'updated'));
-            }
-
-            // ✅ Verificar si el pedido está completo → pasar a Entregado (3)
-            $pedidoFull = \App\Models\Pedido::with(['items', 'bicicletas'])->find($request->id_pedido);
-
-            if ($pedidoFull) {
-                $completo = $pedidoFull->items->every(
-                    fn($item) =>
-                    \App\Models\Bicicleta::where('id_pedido',  $pedidoFull->id_pedido)
-                        ->where('id_modelo',  $item->id_modelo)
-                        ->where('id_voltaje', $item->id_voltaje)
-                        ->where('id_color',   $item->id_color)
-                        ->count() >= $item->cantidad
-                );
-
-                if ($completo && $pedidoFull->status == 2) {
-                    $pedidoFull->update(['status' => 3]);
-                    Cache::forget("pedido:{$pedidoFull->id_pedido}");
-
-                    $nuevoToken = self::generarToken();
-                    \App\Models\PedidoToken::create([
-                        'id_token'    => self::generarIdToken(),
-                        'id_pedido'   => $pedidoFull->id_pedido,
-                        'id_usuario2' => auth()->user()->id_usuario, // El gestor que completa el escaneo
-                        'token'       => $nuevoToken,
-                        'estado'      => 0, // 0 para activo
-                    ]);
-
-                    $pedidoFullFresh = \App\Models\Pedido::with([
-                        'negocio',
-                        'usuario',
-                        'items.modelo',
-                        'items.voltaje',
-                        'items.color'
-                    ])->find($pedidoFull->id_pedido);
-
-                    event(new \App\Events\PedidoUpdated($pedidoFullFresh, 'updated'));
-                }
+                event(new \App\Events\PedidoUpdated($pedidoFullFresh, 'updated'));
             }
         }
-
-        if ($request->expectsJson()) {
-            return response()->json([
-                'ok'              => true,
-                'pedido_completo' => $completo,
-                // ← no devolvemos datos internos innecesarios
-            ]);
-        }
-
-        return redirect()
-            ->route('gestor.vehiculos.bicicletas.index')
-            ->with('success', 'Bicicleta registrada correctamente.');
     }
 
+    if ($request->expectsJson()) {
+        return response()->json([
+            'ok'              => true,
+            'pedido_completo' => $completo,
+        ]);
+    }
+
+    return redirect()
+        ->route('gestor.vehiculos.bicicletas.index')
+        ->with('success', 'Bicicleta registrada correctamente.');
+}
     /* =====================================================
      | SHOW
      ===================================================== */

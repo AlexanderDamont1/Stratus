@@ -87,8 +87,9 @@
                         class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30">
                         <option value="">Todos</option>
                         <option value="1" {{ request('status') == '1' ? 'selected' : '' }}>Solicitado</option>
-                        <option value="2" {{ request('status') == '2' ? 'selected' : '' }}>Preparado/Chechando Pago</option>
+                        <option value="2" {{ request('status') == '2' ? 'selected' : '' }}>Verificando Pago</option>
                         <option value="3" {{ request('status') == '3' ? 'selected' : '' }}>Listo para Entregar</option>
+                        <option value="4" {{ request('status') == '4' ? 'selected' : '' }}>Entregado</option>
                     </select>
                 </div>
                 <div class="flex gap-2">
@@ -139,7 +140,8 @@
                                         :class="{
                                             'bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-400': pedido.status_num == 1,
                                             'bg-blue-100 text-blue-800 dark:bg-blue-800/30 dark:text-blue-400': pedido.status_num == 2,
-                                            'bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-400': pedido.status_num == 3
+                                            'bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-400': pedido.status_num == 3,
+                                            'bg-purple-100 text-purple-800 dark:bg-purple-800/30 dark:text-purple-400': pedido.status_num == 4
                                         }"
                                         x-text="pedido.status">
                                     </span>
@@ -150,6 +152,15 @@
                                 @if(auth()->user()->id_rol == 1 || auth()->user()->id_rol == 5)
                                 <td class="px-4 py-3 text-center" @click.stop>
                                     <div class="flex items-center justify-center gap-3">
+
+                                        {{-- ROL 1: eliminar si está en status 1 --}}
+                                        <template x-if="'{{ auth()->user()->id_rol }}' == 1 && pedido.status_num == 1">
+                                            <button type="button"
+                                                @click="openDelete(pedido.id_pedido, `{{ route('pedidos.destroy', 'REEMPLAZAR_ID') }}`.replace('REEMPLAZAR_ID', pedido.id_pedido))"
+                                                class="text-red-600 hover:text-red-800 dark:text-red-400 text-xs font-semibold">
+                                                Eliminar
+                                            </button>
+                                        </template>
 
                                         {{-- ROL 5: realizar pedido en status 1 o 2 --}}
                                         <template x-if="'{{ auth()->user()->id_rol }}' == 5 && (pedido.status_num == 1 || pedido.status_num == 2)">
@@ -218,7 +229,8 @@
                                         :class="{
                                             'bg-yellow-100 text-yellow-800': pedido.status_num == 1,
                                             'bg-blue-100 text-blue-800': pedido.status_num == 2,
-                                            'bg-green-100 text-green-800': pedido.status_num == 3
+                                            'bg-green-100 text-green-800': pedido.status_num == 3,
+                                            'bg-purple-100 text-purple-800': pedido.status_num == 4
                                         }"
                                         x-text="pedido.status">
                                     </span>
@@ -340,7 +352,7 @@
                             </div>
                         </div>
                     </div>
-                    <button @click="detailModal = false"
+                    <button @click="detailModal = false; detailToken = null; detailTokenError = ''"
                         class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -362,11 +374,11 @@
                         <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Status</p>
                         <span class="text-xs font-semibold px-2.5 py-1 rounded-full"
                             :class="{
-                        'bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-400': detailPedido?.status_num == 1,
-                        'bg-blue-100 text-blue-800 dark:bg-blue-800/30 dark:text-blue-400': detailPedido?.status_num == 2,
-                        'bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-400': detailPedido?.status_num == 3,
-                        'bg-purple-100 text-purple-800 dark:bg-purple-800/30 dark:text-purple-400': detailPedido?.status_num == 4,
-                    }"
+                                'bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-400': detailPedido?.status_num == 1,
+                                'bg-blue-100 text-blue-800 dark:bg-blue-800/30 dark:text-blue-400': detailPedido?.status_num == 2,
+                                'bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-400': detailPedido?.status_num == 3,
+                                'bg-purple-100 text-purple-800 dark:bg-purple-800/30 dark:text-purple-400': detailPedido?.status_num == 4,
+                            }"
                             x-text="detailPedido?.status || '—'">
                         </span>
                     </div>
@@ -381,8 +393,8 @@
                 <div x-show="detailPedido?.status_num == 3" x-cloak
                     class="px-4 sm:px-6 py-4 border-b dark:border-gray-700 bg-green-50 dark:bg-green-900/10">
                     <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Token de Entrega</p>
-                    <div x-show="!detailToken && !detailTokenCargando"
-                        class="flex items-center gap-2">
+
+                    <div x-show="!detailToken && !detailTokenCargando" class="flex items-center gap-2">
                         <button @click="cargarToken(detailPedido.id_pedido)"
                             class="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold transition">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -456,7 +468,7 @@
                 {{-- Footer --}}
                 <div class="px-4 sm:px-6 py-4 border-t dark:border-gray-700 flex justify-between items-center">
 
-                    {{-- Lado izquierdo: PDF para rol 5 status 3 --}}
+                    {{-- Lado izquierdo: PDF para rol 5 status 3 o 4 --}}
                     <div>
                         @if(auth()->user()->id_rol == 5)
                         <template x-if="detailPedido?.status_num == 3 || detailPedido?.status_num == 4">
@@ -818,183 +830,194 @@
     </script>
 
     <script>
-        document.addEventListener('alpine:init', () => {
+    document.addEventListener('alpine:init', () => {
 
-            Alpine.data('pedidosIndex', (modelos, initialPedidos, initialTotal, initialCurrentPage, initialLastPage, canalesVendedor) => ({
+        Alpine.data('pedidosIndex', (modelos, initialPedidos, initialTotal, initialCurrentPage, initialLastPage, canalesVendedor) => ({
 
-                modelos: modelos,
-                pedidos: initialPedidos,
-                totalPedidos: initialTotal,
-                currentPage: initialCurrentPage,
-                lastPage: initialLastPage,
-                canalesVendedor: canalesVendedor,
+            modelos: modelos,
+            pedidos: initialPedidos,
+            totalPedidos: initialTotal,
+            currentPage: initialCurrentPage,
+            lastPage: initialLastPage,
+            canalesVendedor: canalesVendedor,
 
-                _justCreatedId: null,
+            _justCreatedId: null,
 
-                detailModal: false,
-                detailPedido: null,
+            // Modales
+            detailModal: false,
+            detailPedido: null,
+            detailToken: null,
+            detailTokenCargando: false,
+            detailTokenError: '',
+            tokenCopiado: false,
 
-                // Variables token
-                detailToken: null,
-                detailTokenCargando: false,
-                detailTokenError: '',
-                tokenCopiado: false,
+            editModal: false,
+            editPedido: null,
+            editNotas: '',
+            editItems: [],
+            editForm: {
+                id_modelo: '',
+                id_voltaje: '',
+                id_color: '',
+                cantidad: 1,
+                voltajes: [],
+                colores: []
+            },
 
-                editModal: false,
-                editPedido: null,
-                editNotas: '',
-                editItems: [],
-                editForm: {
-                    id_modelo: '',
-                    id_voltaje: '',
-                    id_color: '',
-                    cantidad: 1,
-                    voltajes: [],
-                    colores: []
-                },
+            deleteModal: false,
+            deleteAction: '',
+            deleteNombre: '',
 
-                deleteModal: false,
-                deleteAction: '',
-                deleteNombre: '',
+            completarModal: false,
+            completarPedidoId: null,
+            completarToken: '',
+            completarError: '',
+            completarGuardando: false,
 
-                completarModal: false,
-                completarPedidoId: null,
-                completarToken: '',
-                completarError: '',
-                completarGuardando: false,
+            init() {
+                const self = this;
 
-                init() {
-                    const self = this;
-
-                    if (window.NUEVO_PEDIDO_ID) {
-                        fetch(`/api/pedidos/${window.NUEVO_PEDIDO_ID}`)
-                            .then(r => {
-                                if (!r.ok) throw new Error('no ok');
-                                return r.json();
-                            })
-                            .then(pedido => {
-                                self.addPedido(pedido);
-                                self.totalPedidos++;
-                                self.showNotification('created', pedido.id_pedido);
-                                self._justCreatedId = pedido.id_pedido;
-                            })
-                            .catch(err => {
-                                console.error("Error cargando nuevo pedido:", err);
-                                setTimeout(() => location.reload(), 1000);
-                            });
-                    }
-
-                    if (!window.Echo) {
-                        console.error("Echo no disponible");
-                        return;
-                    }
-
-                    canalesVendedor.forEach(idVendedor => {
-                        window.Echo.private(`vendedor.${idVendedor}`)
-                            .listen('.pedido.updated', (e) => {
-                                try {
-                                    const action = e.action ?? null;
-                                    const pedido = e.pedido ?? null;
-
-                                    if (action === 'created') {
-                                        if (pedido && pedido.id_pedido === self._justCreatedId) {
-                                            self._justCreatedId = null;
-                                            return;
-                                        }
-                                        if (pedido) {
-                                            self.addPedido(pedido);
-                                            self.totalPedidos++;
-                                            self.showNotification('created', pedido.id_pedido);
-                                        }
-                                    } else if (action === 'updated') {
-                                        if (pedido) {
-                                            self.updatePedido(pedido);
-                                            self.showNotification('updated', pedido.id_pedido);
-                                        }
-                                    } else if (action === 'deleted') {
-                                        const id = e.id_pedido ?? pedido?.id_pedido;
-                                        if (id) {
-                                            self.removePedido(id);
-                                            self.showNotification('deleted', id);
-                                        }
-                                    }
-                                } catch (err) {
-                                    console.error("Error evento Echo:", err);
-                                }
-                            });
-                    });
-                },
-
-                // ─── realtime handlers ───
-
-                addPedido(newPedido) {
-                    const exists = this.pedidos.some(p => p.id_pedido === newPedido.id_pedido);
-                    if (!exists) {
-                        this.pedidos.unshift(newPedido);
-                        this.pedidos.sort((a, b) => {
-                            const parseDate = (fecha) => {
-                                const [datePart, timePart] = fecha.split(' ');
-                                const [day, month, year] = datePart.split('/');
-                                return new Date(`${year}-${month}-${day}T${timePart}:00`);
-                            };
-                            return parseDate(b.fecha) - parseDate(a.fecha);
+                // 1. Verificar si venimos de una redirección de creación
+                if (window.NUEVO_PEDIDO_ID) {
+                    fetch(`/api/pedidos/${window.NUEVO_PEDIDO_ID}`)
+                        .then(r => r.ok ? r.json() : Promise.reject())
+                        .then(pedido => {
+                            self.addPedido(pedido);
+                            self.totalPedidos++;
+                            self.showNotification('created', pedido.id_pedido);
+                            self._justCreatedId = pedido.id_pedido;
+                        })
+                        .catch(err => {
+                            console.error("Error cargando nuevo pedido:", err);
                         });
+                }
+
+                // 2. Configurar Echo (WebSockets)
+                if (!window.Echo) {
+                    console.error("Echo no disponible");
+                    return;
+                }
+
+                canalesVendedor.forEach(idVendedor => {
+                    window.Echo.private(`vendedor.${idVendedor}`)
+                        .listen('.pedido.updated', (e) => {
+                            try {
+                                const action = e.action;
+                                const pedido = e.pedido;
+
+                                if (action === 'created') {
+                                    // Evitar duplicar si nosotros mismos lo creamos
+                                    if (pedido && pedido.id_pedido === self._justCreatedId) {
+                                        self._justCreatedId = null;
+                                        return;
+                                    }
+                                    if (pedido) {
+                                        self.addPedido(pedido);
+                                        self.totalPedidos++;
+                                        self.showNotification('created', pedido.id_pedido);
+                                    }
+                                } 
+                                else if (action === 'updated') {
+                                    if (pedido) {
+                                        self.updatePedido(pedido);
+                                        self.showNotification('updated', pedido.id_pedido);
+                                    }
+                                } 
+                                else if (action === 'deleted') {
+                                    // REVISIÓN: Capturamos el ID directamente del evento o del objeto
+                                    const idABorrar = e.id_pedido || (pedido ? pedido.id_pedido : null);
+                                    if (idABorrar) {
+                                        self.removePedido(idABorrar);
+                                        self.showNotification('deleted', idABorrar);
+                                    }
+                                }
+                            } catch (err) {
+                                console.error("Error en evento Echo:", err);
+                            }
+                        });
+                });
+            },
+
+            // --- GESTIÓN REACTIVA DE LA LISTA ---
+
+            addPedido(newPedido) {
+                const exists = this.pedidos.some(p => p.id_pedido === newPedido.id_pedido);
+                if (!exists) {
+                    // Reasignar el array para que Alpine detecte el cambio (Reactividad)
+                    this.pedidos = [newPedido, ...this.pedidos];
+                    this.sortPedidos();
+                }
+            },
+
+            updatePedido(updatedPedido) {
+                const index = this.pedidos.findIndex(p => p.id_pedido === updatedPedido.id_pedido);
+                if (index !== -1) {
+                    // Actualizamos la referencia del objeto y el array completo
+                    this.pedidos[index] = { ...updatedPedido };
+                    this.pedidos = [...this.pedidos];
+                    
+                    // Actualizar modal si está abierto
+                    if (this.detailPedido && this.detailPedido.id_pedido === updatedPedido.id_pedido) {
+                        this.detailPedido = { ...updatedPedido };
                     }
-                },
+                }
+            },
 
-                updatePedido(updatedPedido) {
-                    const index = this.pedidos.findIndex(p => p.id_pedido === updatedPedido.id_pedido);
-                    if (index !== -1) {
-                        this.pedidos[index] = updatedPedido;
-                        if (this.detailPedido && this.detailPedido.id_pedido === updatedPedido.id_pedido) {
-                            this.detailPedido = updatedPedido;
-                        }
-                        if (this.editPedido && this.editPedido.id_pedido === updatedPedido.id_pedido) {
-                            this.editModal = false;
-                        }
-                    }
-                },
+            removePedido(id) {
+                // Filtramos y reasignamos para forzar el redibujado del DOM
+                const countBefore = this.pedidos.length;
+                this.pedidos = this.pedidos.filter(p => p.id_pedido != id);
+                
+                if (this.pedidos.length < countBefore) {
+                    this.totalPedidos--;
+                }
 
-                removePedido(id) {
-                    const index = this.pedidos.findIndex(p => p.id_pedido === id);
-                    if (index !== -1) {
-                        this.pedidos.splice(index, 1);
-                        this.totalPedidos--;
-                        if (this.detailPedido && this.detailPedido.id_pedido === id) this.detailModal = false;
-                        if (this.editPedido && this.editPedido.id_pedido === id) this.editModal = false;
-                    }
-                },
+                // Cerrar modales si el pedido borrado estaba en pantalla
+                if (this.detailPedido && this.detailPedido.id_pedido == id) this.detailModal = false;
+                if (this.editPedido && this.editPedido.id_pedido == id) this.editModal = false;
+            },
 
-                // ─── notificaciones ───
-
-                showNotification(action, pedidoId) {
-                    const container = document.getElementById('notifications');
-                    if (!container) return;
-
-                    const messages = {
-                        created: 'Nuevo pedido #' + pedidoId,
-                        updated: 'Pedido #' + pedidoId + ' actualizado',
-                        deleted: 'Pedido #' + pedidoId + ' eliminado'
+            sortPedidos() {
+                this.pedidos.sort((a, b) => {
+                    const parseDate = (fecha) => {
+                        if (!fecha) return new Date(0);
+                        const [date, time] = fecha.split(' ');
+                        const [d, m, y] = date.split('/');
+                        return new Date(`${y}-${m}-${d}T${time}`);
                     };
-                    const styles = {
-                        created: "bg-white text-gray-800 border-gray-200",
-                        updated: "bg-yellow-50 text-yellow-800 border-yellow-300",
-                        deleted: "bg-red-50 text-red-800 border-red-300"
-                    };
-                    const icons = {
-                        created: `<div class="flex items-center justify-center w-6 h-6 rounded-full bg-green-100"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div>`,
-                        updated: `<div class="flex items-center justify-center w-6 h-6 rounded-full bg-yellow-200"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-yellow-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 17h.01"/><path stroke-linecap="round" stroke-linejoin="round" d="M10.29 3.86l-7.4 12.8A1 1 0 004 18h16a1 1 0 00.87-1.34l-7.4-12.8a1 1 0 00-1.74 0z"/></svg></div>`,
-                        deleted: `<div class="flex items-center justify-center w-6 h-6 rounded-full bg-red-200"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-red-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12"/><path stroke-linecap="round" stroke-linejoin="round" d="M18 6l-12 12"/></svg></div>`
-                    };
+                    return parseDate(b.fecha) - parseDate(a.fecha);
+                });
+            },
 
-                    const notification = document.createElement('div');
-                    notification.className = `px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 border ${styles[action]}`;
-                    notification.innerHTML = `${icons[action]}<span class="text-sm font-medium">${messages[action]}</span>`;
-                    container.appendChild(notification);
-                    setTimeout(() => notification.remove(), 3000);
-                },
+            // --- NOTIFICACIONES ---
 
-                // ─── UI helpers ───
+            showNotification(action, pedidoId) {
+                const container = document.getElementById('notifications');
+                if (!container) return;
+
+                const config = {
+                    created: { msg: `Nuevo pedido #${pedidoId}`, style: "bg-white text-gray-800 border-gray-200", icon: "bg-green-100 text-green-600", svg: "M5 13l4 4L19 7" },
+                    updated: { msg: `Pedido #${pedidoId} actualizado`, style: "bg-yellow-50 text-yellow-800 border-yellow-300", icon: "bg-yellow-200 text-yellow-700", svg: "M12 9v4m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" },
+                    deleted: { msg: `Pedido #${pedidoId} eliminado`, style: "bg-red-50 text-red-800 border-red-300", icon: "bg-red-200 text-red-700", svg: "M6 18L18 6M6 6l12 12" }
+                };
+
+                const c = config[action];
+                const notification = document.createElement('div');
+                notification.className = `px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 border animate-fade-in-up ${c.style}`;
+                notification.innerHTML = `
+                    <div class="flex items-center justify-center w-6 h-6 rounded-full ${c.icon}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="${c.svg}"/></svg>
+                    </div>
+                    <span class="text-sm font-medium">${c.msg}</span>
+                `;
+                
+                container.appendChild(notification);
+                setTimeout(() => {
+                    notification.style.opacity = '0';
+                    notification.style.transition = 'opacity 0.5s';
+                    setTimeout(() => notification.remove(), 500);
+                }, 3500);
+            },
 
                 openDetail(pedido) {
                     this.detailPedido = pedido;
@@ -1032,7 +1055,7 @@
                     this.detailTokenCargando = true;
                     this.detailTokenError = '';
                     try {
-                        const resp = await fetch(`/pedidos/${pedidoId}/token`, {
+                        const resp = await fetch(`/ver/${pedidoId}/token`, {
                             headers: {
                                 'Accept': 'application/json',
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -1056,9 +1079,7 @@
                     try {
                         await navigator.clipboard.writeText(this.detailToken);
                         this.tokenCopiado = true;
-                        setTimeout(() => {
-                            this.tokenCopiado = false;
-                        }, 2000);
+                        setTimeout(() => { this.tokenCopiado = false; }, 2000);
                     } catch (e) {
                         console.error('Error al copiar', e);
                     }
@@ -1111,9 +1132,7 @@
                     this.editForm.cantidad = 1;
                 },
 
-                removeEditItem(index) {
-                    this.editItems.splice(index, 1);
-                },
+                removeEditItem(index) { this.editItems.splice(index, 1); },
 
                 updateItemQuantity(index, value) {
                     const newValue = parseInt(value) || 1;
@@ -1136,10 +1155,7 @@
                 },
 
                 submitEdit() {
-                    if (this.editItems.length === 0) {
-                        alert('Debe agregar al menos un artículo');
-                        return;
-                    }
+                    if (this.editItems.length === 0) { alert('Debe agregar al menos un artículo'); return; }
                     this.$refs.editForm.submit();
                 },
 
@@ -1148,8 +1164,6 @@
                     this.deleteAction = action;
                     this.deleteModal = true;
                 },
-
-                // ─── Completar entrega ───
 
                 openCompletar(pedidoId) {
                     this.completarPedidoId = pedidoId;
@@ -1171,9 +1185,7 @@
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                                 'Accept': 'application/json',
                             },
-                            body: JSON.stringify({
-                                token: this.completarToken
-                            })
+                            body: JSON.stringify({ token: this.completarToken })
                         });
 
                         const data = await resp.json();
@@ -1198,59 +1210,26 @@
     </script>
 
     <style>
-        [x-cloak] {
-            display: none !important;
-        }
+        [x-cloak] { display: none !important; }
 
         @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px)
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0)
-            }
+            from { opacity: 0; transform: translateY(20px) }
+            to { opacity: 1; transform: translateY(0) }
         }
+        .animate-fade-in-up { animation: fadeInUp .2s ease-out }
 
-        .animate-fade-in-up {
-            animation: fadeInUp .2s ease-out
-        }
-
-        .loader {
-            display: flex;
-            align-items: center;
-        }
-
+        .loader { display: flex; align-items: center; }
         .bar {
-            display: inline-block;
-            width: 4px;
-            height: 20px;
-            background-color: rgba(0, 0, 0, .2);
-            border-radius: 10px;
+            display: inline-block; width: 4px; height: 20px;
+            background-color: rgba(0,0,0,.2); border-radius: 10px;
             animation: scale-up4 1s linear infinite;
         }
-
-        .bar:nth-child(2) {
-            height: 35px;
-            margin: 0 6px;
-            animation-delay: .25s;
-        }
-
-        .bar:nth-child(3) {
-            animation-delay: .5s;
-        }
+        .bar:nth-child(2) { height: 35px; margin: 0 6px; animation-delay: .25s; }
+        .bar:nth-child(3) { animation-delay: .5s; }
 
         @keyframes scale-up4 {
-            20% {
-                background-color: #000000;
-                transform: scaleY(1.5);
-            }
-
-            40% {
-                transform: scaleY(1);
-            }
+            20% { background-color: #000000; transform: scaleY(1.5); }
+            40% { transform: scaleY(1); }
         }
     </style>
 

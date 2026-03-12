@@ -111,13 +111,13 @@
 
                             {{-- ACCIONES --}}
                             <td class="px-4 py-3 text-center">
-                                <button
-                                    type="button"
-                                   
-                                    class="text-red-600 hover:text-red-800 dark:text-red-400 font-semibold"
-                                >
-                                    Actualizar
-                                </button>
+                                <div class="flex items-center justify-center gap-2">
+                                    <a href="#s" 
+                                       class="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 text-xs font-semibold">
+                                        Editar
+                                    </a>
+                                    
+                                </div>
                             </td>
 
                         </tr>
