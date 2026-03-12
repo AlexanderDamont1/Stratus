@@ -13,6 +13,7 @@ class PedidoUpdated implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
+    
     public $pedido;
     public $action;
 
