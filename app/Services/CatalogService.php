@@ -29,7 +29,7 @@ class CatalogService
         $modelos = Cache::remember(
             self::CACHE_PREFIX . 'modelos',
             self::CACHE_TTL['modelos'],
-            fn () => Modelo::select('id_modelo', 'nombre_modelo')
+            fn() => Modelo::select('id_modelo', 'nombre_modelo')
                 ->orderBy('nombre_modelo')
                 ->get()
         );
@@ -44,7 +44,7 @@ class CatalogService
         return Cache::remember(
             self::CACHE_PREFIX . "modelo:{$idModelo}",
             self::CACHE_TTL['modelos'],
-            fn () => Modelo::find($idModelo)
+            fn() => Modelo::find($idModelo)
         );
     }
 
@@ -55,7 +55,7 @@ class CatalogService
         $negocios = Cache::remember(
             self::CACHE_PREFIX . 'negocios',
             self::CACHE_TTL['negocios'],
-            fn () => Negocio::select('id_negocio', 'nombre_negocio')
+            fn() => Negocio::select('id_negocio', 'nombre_negocio')
                 ->orderBy('nombre_negocio')
                 ->get()
         );
@@ -72,8 +72,8 @@ class CatalogService
         $voltajes = Cache::remember(
             self::CACHE_PREFIX . "voltajes:modelo:{$idModelo}",
             self::CACHE_TTL['voltajes'],
-            fn () => ModeloVoltaje::where('id_modelo', $idModelo)
-            ->join('voltajes', 'modelo_voltaje.id_voltaje', '=', 'voltajes.id_voltaje')
+            fn() => ModeloVoltaje::where('id_modelo', $idModelo)
+                ->join('voltajes', 'modelo_voltaje.id_voltaje', '=', 'voltajes.id_voltaje')
                 ->select('voltajes.id_voltaje', 'voltajes.voltaje')
                 ->orderBy('voltajes.voltaje')
                 ->get()
@@ -89,7 +89,7 @@ class CatalogService
         $voltajes = Cache::remember(
             self::CACHE_PREFIX . 'voltajes:all',
             self::CACHE_TTL['voltajes'],
-            fn () => Voltaje::select('id_voltaje', 'voltaje')
+            fn() => Voltaje::select('id_voltaje', 'voltaje')
                 ->orderBy('voltaje')
                 ->get()
         );
@@ -106,7 +106,7 @@ class CatalogService
         $colores = Cache::remember(
             self::CACHE_PREFIX . "colores:modelo:{$idModelo}",
             self::CACHE_TTL['colores'],
-            fn () => Color::where('id_modelo', $idModelo)
+            fn() => Color::where('id_modelo', $idModelo)
                 ->select('id_color', 'color')
                 ->orderBy('color')
                 ->get()
@@ -122,7 +122,7 @@ class CatalogService
         $colores = Cache::remember(
             self::CACHE_PREFIX . 'colores:all',
             self::CACHE_TTL['colores'],
-            fn () => Color::select('id_color', 'color')
+            fn() => Color::select('id_color', 'color')
                 ->orderBy('color')
                 ->get()
         );
@@ -154,7 +154,7 @@ class CatalogService
         return Cache::remember(
             self::CACHE_PREFIX . 'stats',
             1800,
-            fn () => [
+            fn() => [
                 'total_modelos'      => Modelo::count(),
                 'total_negocios'     => Negocio::count(),
                 'total_colores'      => Color::count(),
@@ -175,7 +175,7 @@ class CatalogService
         return Cache::remember(
             self::CACHE_PREFIX . 'search:modelos:' . md5($search),
             self::CACHE_TTL['search'],
-            fn () => Modelo::where('nombre_modelo', 'like', "%{$search}%")
+            fn() => Modelo::where('nombre_modelo', 'like', "%{$search}%")
                 ->select('id_modelo', 'nombre_modelo')
                 ->orderBy('nombre_modelo')
                 ->get()
@@ -222,25 +222,30 @@ class CatalogService
         foreach ($keys as $key) {
             Cache::forget(self::CACHE_PREFIX . $key);
         }
+
+        // ── NUEVO: limpiar keys por modelo ──
+        foreach (self::getModelos() as $modelo) {
+            self::invalidateModelo($modelo->id_modelo);
+        }
     }
 
     public static function invalidateModelo(string $idModelo): void
-{
-    $keys = [
-        "modelo:{$idModelo}",
-        "voltajes:modelo:{$idModelo}",
-        "colores:modelo:{$idModelo}",
-    ];
+    {
+        $keys = [
+            "modelo:{$idModelo}",
+            "voltajes:modelo:{$idModelo}",
+            "colores:modelo:{$idModelo}",
+        ];
 
-    foreach ($keys as $key) {
-        Cache::forget(self::CACHE_PREFIX . $key);
+        foreach ($keys as $key) {
+            Cache::forget(self::CACHE_PREFIX . $key);
+        }
+
+        // invalidar listas generales
+        Cache::forget(self::CACHE_PREFIX . 'voltajes:all');
+        Cache::forget(self::CACHE_PREFIX . 'colores:all');
+        Cache::forget(self::CACHE_PREFIX . 'stats');
     }
-
-    // invalidar listas generales
-    Cache::forget(self::CACHE_PREFIX . 'voltajes:all');
-    Cache::forget(self::CACHE_PREFIX . 'colores:all');
-    Cache::forget(self::CACHE_PREFIX . 'stats');
-}
 
     // ─── VERSIÓN ──────────────────────────────────────────────────────────────
     //
@@ -258,4 +263,6 @@ class CatalogService
     {
         Cache::increment(self::CACHE_PREFIX . 'version');
     }
+
+    
 }

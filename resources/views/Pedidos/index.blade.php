@@ -25,17 +25,17 @@
     'cantidad' => $i->cantidad,
     ]),
     ])->values();
+
+    $canalesVendedorJson = json_encode($canalesVendedor ?? []);
     @endphp
 
-    {{-- ✅ x-init limpio: solo loading = false. El fetch del nuevo pedido lo maneja Alpine en init() --}}
     <div
         x-data="{
-        loading: true,
-        ...pedidosIndex({{ $modelosJson }}, {{ Js::from($pedidosData) }}, {{ $pedidos->total() }}, {{ $pedidos->currentPage() }}, {{ $pedidos->lastPage() }})
-    }"
+            loading: true,
+            ...pedidosIndex({{ $modelosJson }}, {{ Js::from($pedidosData) }}, {{ $pedidos->total() }}, {{ $pedidos->currentPage() }}, {{ $pedidos->lastPage() }}, {{ $canalesVendedorJson }})
+        }"
         x-init="loading = false"
         class="space-y-6">
-
 
         {{-- ===== ENCABEZADO ===== --}}
         <div class="flex justify-between items-center">
@@ -51,9 +51,7 @@
             @endif
         </div>
 
-        <div id="notifications"
-            class="fixed top-4 right-4 z-50 flex flex-col gap-2">
-        </div>
+        <div id="notifications" class="fixed top-4 right-4 z-50 flex flex-col gap-2"></div>
 
         {{-- ===== ESTADÍSTICAS ===== --}}
         <div class="grid grid-cols-3 gap-4">
@@ -89,15 +87,17 @@
                         class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30">
                         <option value="">Todos</option>
                         <option value="1" {{ request('status') == '1' ? 'selected' : '' }}>Solicitado</option>
-                        <option value="2" {{ request('status') == '2' ? 'selected' : '' }}>Preparado</option>
-                        <option value="3" {{ request('status') == '3' ? 'selected' : '' }}>Entregado</option>
+                        <option value="2" {{ request('status') == '2' ? 'selected' : '' }}>Preparado/Chechando Pago</option>
+                        <option value="3" {{ request('status') == '3' ? 'selected' : '' }}>Listo para Entregar</option>
                     </select>
                 </div>
                 <div class="flex gap-2">
-                    <button type="submit" class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-lg text-sm hover:opacity-90 transition">
+                    <button type="submit"
+                        class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-lg text-sm hover:opacity-90 transition">
                         Filtrar
                     </button>
-                    <a href="{{ route('pedidos.index') }}" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">
+                    <a href="{{ route('pedidos.index') }}"
+                        class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">
                         Limpiar
                     </a>
                 </div>
@@ -118,57 +118,65 @@
                         <tr>
                             <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">N° Pedido</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Negocio</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Solicitado por</th>
                             <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Items</th>
                             <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Status</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Fecha</th>
-                            @if(auth()->user()->id_rol == 1 || (auth()->user()->id_rol == 5 && $pedidos->contains(function($pedido) { return $pedido->status == 2; })))
+                            @if(auth()->user()->id_rol == 1 || auth()->user()->id_rol == 5)
                             <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Acciones</th>
                             @endif
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900">
                         <template x-for="pedido in pedidos" :key="pedido.id_pedido">
-                            <tr
-                                class="hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer"
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition cursor-pointer"
                                 @click="openDetail(pedido)">
                                 <td class="px-4 py-3 font-medium text-gray-900 dark:text-white text-xs" x-text="pedido.id_pedido"></td>
                                 <td class="px-4 py-3 text-gray-900 dark:text-white" x-text="pedido.negocio"></td>
-                                <td class="px-4 py-3 text-gray-900 dark:text-white" x-text="pedido.usuario"></td>
-                                <td class="px-4 py-3 text-center text-gray-900 dark:text-white" x-text="pedido.items.reduce((sum, item) => sum + item.cantidad, 0)"></td>
+                                <td class="px-4 py-3 text-center text-gray-900 dark:text-white"
+                                    x-text="pedido.items.reduce((sum, item) => sum + item.cantidad, 0)"></td>
                                 <td class="px-4 py-3 text-center">
                                     <span class="px-2 py-1 text-xs font-semibold rounded-full"
                                         :class="{
-                                          'bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-400': pedido.status_num == 1,
-                                          'bg-blue-100 text-blue-800 dark:bg-blue-800/30 dark:text-blue-400': pedido.status_num == 2,
-                                          'bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-400': pedido.status_num == 3
-                                      }"
+                                            'bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-400': pedido.status_num == 1,
+                                            'bg-blue-100 text-blue-800 dark:bg-blue-800/30 dark:text-blue-400': pedido.status_num == 2,
+                                            'bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-400': pedido.status_num == 3
+                                        }"
                                         x-text="pedido.status">
                                     </span>
                                 </td>
-                                <td class="px-4 py-3 text-gray-900 dark:text-white text-xs" x-text="pedido.fecha"></td>
+                                <td class="px-4 py-3 text-gray-900 dark:text-white text-xs"
+                                    x-text="pedido.fecha.split(' ')[0]"></td>
 
-                                @if(auth()->user()->id_rol == 1 || (auth()->user()->id_rol == 5 && $pedidos->contains(function($p) { return $p->status == 2; })))
+                                @if(auth()->user()->id_rol == 1 || auth()->user()->id_rol == 5)
                                 <td class="px-4 py-3 text-center" @click.stop>
                                     <div class="flex items-center justify-center gap-3">
-                                        <template x-if="'{{ auth()->user()->id_rol }}' == 1 && pedido.status_num == 1">
-                                            <button type="button"
-                                                @click="openDelete(pedido.id_pedido, `{{ route('pedidos.destroy', 'REEMPLAZAR_ID') }}`.replace('REEMPLAZAR_ID', pedido.id_pedido))"
-                                                class="text-red-600 hover:text-red-800 dark:text-red-400 text-xs font-semibold">
-                                                Eliminar
-                                            </button>
-                                        </template>
 
-                                        <template x-if="'{{ auth()->user()->id_rol }}' == 5 && pedido.status_num == 2">
+                                        {{-- ROL 5: realizar pedido en status 1 o 2 --}}
+                                        <template x-if="'{{ auth()->user()->id_rol }}' == 5 && (pedido.status_num == 1 || pedido.status_num == 2)">
                                             <a :href="`/pedidos/${pedido.id_pedido}/realizar`"
-                                                class="text-green-600 hover:text-green-800 text-xs font-semibold">
+                                                class="text-green-600 hover:text-green-800 dark:text-green-400 text-xs font-semibold">
                                                 Realizar pedido
                                             </a>
                                         </template>
 
-                                        <template x-if="!('{{ auth()->user()->id_rol }}' == 1 && pedido.status_num == 1) && !('{{ auth()->user()->id_rol }}' == 5 && pedido.status_num == 2)">
+                                        {{-- ROL 5: completar entrega en status 3 --}}
+                                        <template x-if="'{{ auth()->user()->id_rol }}' == 5 && pedido.status_num == 3">
+                                            <button type="button"
+                                                @click="openCompletar(pedido.id_pedido)"
+                                                class="text-blue-600 hover:text-blue-800 dark:text-blue-400 text-xs font-semibold">
+                                                Completar Pedido
+                                            </button>
+                                        </template>
+
+                                        {{-- Sin acción --}}
+                                        <template x-if="
+                                            !('{{ auth()->user()->id_rol }}' == 1 && pedido.status_num == 1) &&
+                                            !('{{ auth()->user()->id_rol }}' == 5 && (pedido.status_num == 1 || pedido.status_num == 2)) &&
+                                            !('{{ auth()->user()->id_rol }}' == 5 && pedido.status_num == 3)
+                                        ">
                                             <span class="text-xs text-gray-400">—</span>
                                         </template>
+
                                     </div>
                                 </td>
                                 @endif
@@ -176,7 +184,7 @@
                         </template>
 
                         <tr x-show="pedidos.length === 0">
-                            <td :colspan="{{ (auth()->user()->id_rol == 1 || (auth()->user()->id_rol == 5 && $pedidos->contains(function($p) { return $p->status == 2; }))) ? 7 : 6 }}"
+                            <td colspan="{{ auth()->user()->id_rol == 1 || auth()->user()->id_rol == 5 ? 6 : 5 }}"
                                 class="px-6 py-10 text-center text-gray-900 dark:text-white">
                                 No se encontraron pedidos.
                             </td>
@@ -192,15 +200,14 @@
                         <tr>
                             <th class="px-3 py-2 text-left text-xs font-medium text-gray-900 dark:text-white uppercase">Pedido</th>
                             <th class="px-3 py-2 text-center text-xs font-medium text-gray-900 dark:text-white uppercase">Status</th>
-                            @if(auth()->user()->id_rol == 1 || (auth()->user()->id_rol == 5 && $pedidos->contains(function($pedido) { return $pedido->status == 2; })))
+                            @if(auth()->user()->id_rol == 1 || auth()->user()->id_rol == 5)
                             <th class="px-3 py-2 text-center text-xs font-medium text-gray-900 dark:text-white uppercase">Acciones</th>
                             @endif
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                         <template x-for="pedido in pedidos" :key="pedido.id_pedido">
-                            <tr
-                                class="hover:bg-gray-50 dark:hover:bg-gray-700/30 cursor-pointer"
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 cursor-pointer"
                                 @click="openDetail(pedido)">
                                 <td class="px-3 py-3">
                                     <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="pedido.negocio"></div>
@@ -209,16 +216,18 @@
                                 <td class="px-3 py-3 text-center">
                                     <span class="px-2 py-1 text-xs font-semibold rounded-full"
                                         :class="{
-                                          'bg-yellow-100 text-yellow-800': pedido.status_num == 1,
-                                          'bg-blue-100 text-blue-800': pedido.status_num == 2,
-                                          'bg-green-100 text-green-800': pedido.status_num == 3
-                                      }"
+                                            'bg-yellow-100 text-yellow-800': pedido.status_num == 1,
+                                            'bg-blue-100 text-blue-800': pedido.status_num == 2,
+                                            'bg-green-100 text-green-800': pedido.status_num == 3
+                                        }"
                                         x-text="pedido.status">
                                     </span>
                                 </td>
 
-                                @if(auth()->user()->id_rol == 1 || (auth()->user()->id_rol == 5 && $pedidos->contains(function($p) { return $p->status == 2; })))
+                                @if(auth()->user()->id_rol == 1 || auth()->user()->id_rol == 5)
                                 <td class="px-3 py-3 text-center" @click.stop>
+
+                                    {{-- ROL 1: eliminar --}}
                                     <template x-if="'{{ auth()->user()->id_rol }}' == 1 && pedido.status_num == 1">
                                         <button type="button"
                                             @click="openDelete(pedido.id_pedido, `{{ route('pedidos.destroy', 'REEMPLAZAR_ID') }}`.replace('REEMPLAZAR_ID', pedido.id_pedido))"
@@ -227,23 +236,39 @@
                                         </button>
                                     </template>
 
-                                    <template x-if="'{{ auth()->user()->id_rol }}' == 5 && pedido.status_num == 2">
+                                    {{-- ROL 5: realizar pedido en status 1 o 2 --}}
+                                    <template x-if="'{{ auth()->user()->id_rol }}' == 5 && (pedido.status_num == 1 || pedido.status_num == 2)">
                                         <a :href="`/pedidos/${pedido.id_pedido}/realizar`"
-                                            class="text-green-600 hover:text-green-800 text-xs font-semibold">
+                                            class="text-green-600 hover:text-green-800 dark:text-green-400 text-xs font-semibold">
                                             Realizar pedido
                                         </a>
                                     </template>
 
-                                    <template x-if="!('{{ auth()->user()->id_rol }}' == 1 && pedido.status_num == 1) && !('{{ auth()->user()->id_rol }}' == 5 && pedido.status_num == 2)">
+                                    {{-- ROL 5: completar entrega en status 3 --}}
+                                    <template x-if="'{{ auth()->user()->id_rol }}' == 5 && pedido.status_num == 3">
+                                        <button type="button"
+                                            @click="openCompletar(pedido.id_pedido)"
+                                            class="text-blue-600 hover:text-blue-800 dark:text-blue-400 text-xs font-semibold">
+                                            Completar Pedido
+                                        </button>
+                                    </template>
+
+                                    {{-- Sin acción --}}
+                                    <template x-if="
+                                        !('{{ auth()->user()->id_rol }}' == 1 && pedido.status_num == 1) &&
+                                        !('{{ auth()->user()->id_rol }}' == 5 && (pedido.status_num == 1 || pedido.status_num == 2)) &&
+                                        !('{{ auth()->user()->id_rol }}' == 5 && pedido.status_num == 3)
+                                    ">
                                         <span class="text-xs text-gray-400">—</span>
                                     </template>
+
                                 </td>
                                 @endif
                             </tr>
                         </template>
 
                         <tr x-show="pedidos.length === 0">
-                            <td :colspan="{{ (auth()->user()->id_rol == 1 || (auth()->user()->id_rol == 5 && $pedidos->contains(function($p) { return $p->status == 2; }))) ? 3 : 2 }}"
+                            <td colspan="{{ auth()->user()->id_rol == 1 || auth()->user()->id_rol == 5 ? 3 : 2 }}"
                                 class="px-3 py-8 text-center text-gray-900 dark:text-white text-xs">
                                 No hay pedidos
                             </td>
@@ -252,11 +277,9 @@
                 </table>
             </div>
 
-            @if($pedidos->hasPages())
             <div class="px-6 py-4 border-t dark:border-gray-700">
                 {{ $pedidos->withQueryString()->links() }}
             </div>
-            @endif
         </div>
 
         {{-- MODAL: DETALLE DEL PEDIDO --}}
@@ -281,32 +304,34 @@
                 x-transition:leave-end="opacity-0 scale-95"
                 class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-3xl"
                 @click.stop>
+
                 {{-- Header --}}
                 <div class="flex items-center justify-between px-4 sm:px-6 py-4 border-b dark:border-gray-700">
                     <div class="flex items-center gap-3">
                         <div class="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
                             <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-sm font-semibold text-gray-900 dark:text-white" x-text="'Pedido #' + (detailPedido?.id_pedido || '')"></h3>
+                            <h3 class="text-sm font-semibold text-gray-900 dark:text-white"
+                                x-text="'Pedido #' + (detailPedido?.id_pedido || '')"></h3>
                             <div class="flex items-center gap-2 text-xs mt-0.5">
-                                {{-- Fecha de creación --}}
                                 <div class="flex items-center gap-1 text-gray-400">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                     <span x-text="detailPedido?.fecha"></span>
                                 </div>
-
-                                {{-- Actualización - SOLO si es diferente --}}
                                 <template x-if="detailPedido?.updated_at && detailPedido?.updated_at !== detailPedido?.fecha">
                                     <div class="flex items-center gap-1">
                                         <span class="text-gray-300 dark:text-gray-600">-</span>
                                         <div class="flex items-center gap-1 text-yellow-600 dark:text-yellow-400">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                             </svg>
                                             <span x-text="detailPedido?.updated_at"></span>
                                         </div>
@@ -315,7 +340,8 @@
                             </div>
                         </div>
                     </div>
-                    <button @click="detailModal = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                    <button @click="detailModal = false"
+                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -334,20 +360,71 @@
                     </div>
                     <div>
                         <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Status</p>
-                        <span
-                            class="text-xs font-semibold px-2.5 py-1 rounded-full"
+                        <span class="text-xs font-semibold px-2.5 py-1 rounded-full"
                             :class="{
-                            'bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-400': detailPedido?.status_num == 1,
-                            'bg-blue-100 text-blue-800 dark:bg-blue-800/30 dark:text-blue-400': detailPedido?.status_num == 2,
-                            'bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-400': detailPedido?.status_num == 3,
-                        }"
-                            x-text="detailPedido?.status || '—'"></span>
+                        'bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-400': detailPedido?.status_num == 1,
+                        'bg-blue-100 text-blue-800 dark:bg-blue-800/30 dark:text-blue-400': detailPedido?.status_num == 2,
+                        'bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-400': detailPedido?.status_num == 3,
+                        'bg-purple-100 text-purple-800 dark:bg-purple-800/30 dark:text-purple-400': detailPedido?.status_num == 4,
+                    }"
+                            x-text="detailPedido?.status || '—'">
+                        </span>
                     </div>
                     <div x-show="detailPedido?.notas">
                         <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Notas</p>
                         <p class="text-sm text-gray-600 dark:text-gray-400" x-text="detailPedido?.notas"></p>
                     </div>
                 </div>
+
+                {{-- Token de entrega — solo rol 1, solo status 3 --}}
+                @if(auth()->user()->id_rol == 1)
+                <div x-show="detailPedido?.status_num == 3" x-cloak
+                    class="px-4 sm:px-6 py-4 border-b dark:border-gray-700 bg-green-50 dark:bg-green-900/10">
+                    <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Token de Entrega</p>
+                    <div x-show="!detailToken && !detailTokenCargando"
+                        class="flex items-center gap-2">
+                        <button @click="cargarToken(detailPedido.id_pedido)"
+                            class="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold transition">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            Ver Token
+                        </button>
+                        <p class="text-xs text-gray-400">Haz clic para revelar el token de entrega</p>
+                    </div>
+
+                    <div x-show="detailTokenCargando" class="flex items-center gap-2">
+                        <svg class="w-4 h-4 animate-spin text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <span class="text-xs text-gray-400">Cargando...</span>
+                    </div>
+
+                    <div x-show="detailToken" class="flex items-center gap-3">
+                        <span class="font-mono text-lg font-bold tracking-widest text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-4 py-2 rounded-lg"
+                            x-text="detailToken"></span>
+                        <button @click="copiarToken()"
+                            class="flex items-center gap-1 px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                            <span x-text="tokenCopiado ? '¡Copiado!' : 'Copiar'"></span>
+                        </button>
+                        <button @click="detailToken = null"
+                            class="text-xs text-gray-400 hover:text-gray-600 transition">
+                            Ocultar
+                        </button>
+                    </div>
+
+                    <p x-show="detailTokenError" x-text="detailTokenError"
+                        class="text-xs text-red-500 mt-1"></p>
+                </div>
+                @endif
 
                 {{-- Tabla de items --}}
                 <div class="px-4 sm:px-6 py-4 max-h-64 overflow-y-auto">
@@ -377,24 +454,58 @@
                 </div>
 
                 {{-- Footer --}}
-                <div class="px-4 sm:px-6 py-4 border-t dark:border-gray-700 flex justify-end gap-2">
-                    <button
-                        @click="detailModal = false"
-                        class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-                        Cerrar
-                    </button>
-                    @if(auth()->user()->id_rol == 1)
-                    <button
-                        x-show="detailPedido?.status_num == 1"
-                        x-cloak
-                        @click="openEdit(detailPedido)"
-                        class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-1.5">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                        Editar
-                    </button>
-                    @endif
+                <div class="px-4 sm:px-6 py-4 border-t dark:border-gray-700 flex justify-between items-center">
+
+                    {{-- Lado izquierdo: PDF para rol 5 status 3 --}}
+                    <div>
+                        @if(auth()->user()->id_rol == 5)
+                        <template x-if="detailPedido?.status_num == 3 || detailPedido?.status_num == 4">
+                            <a :href="`/pedidos/${detailPedido?.id_pedido}/pdf`" target="_blank"
+                                class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-1.5">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                Descargar PDF
+                            </a>
+                        </template>
+                        @endif
+                    </div>
+
+                    {{-- Lado derecho: acciones --}}
+                    <div class="flex items-center gap-2">
+                        <button @click="detailModal = false; detailToken = null; detailTokenError = ''"
+                            class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                            Cerrar
+                        </button>
+
+                        @if(auth()->user()->id_rol == 1)
+                        <button
+                            x-show="detailPedido?.status_num == 1"
+                            x-cloak
+                            @click="openEdit(detailPedido)"
+                            class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            Editar
+                        </button>
+                        @endif
+
+                        @if(auth()->user()->id_rol == 5)
+                        <template x-if="detailPedido?.status_num == 1 || detailPedido?.status_num == 2">
+                            <a :href="`/pedidos/${detailPedido?.id_pedido}/realizar`"
+                                class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-1.5">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Realizar pedido
+                            </a>
+                        </template>
+                        @endif
+                    </div>
                 </div>
             </div>
         </div>
@@ -421,16 +532,19 @@
                 x-transition:leave-end="opacity-0 scale-95"
                 class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto"
                 @click.stop>
+
                 {{-- Header --}}
                 <div class="flex items-center justify-between px-4 sm:px-6 py-4 border-b dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
                     <div class="flex items-center gap-3">
                         <div class="w-9 h-9 rounded-lg bg-gray-900 dark:bg-white flex items-center justify-center shrink-0">
                             <svg class="w-4 h-4 text-white dark:text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-sm font-semibold text-gray-900 dark:text-white" x-text="'Editar Pedido #' + (editPedido?.id_pedido || '')"></h3>
+                            <h3 class="text-sm font-semibold text-gray-900 dark:text-white"
+                                x-text="'Editar Pedido #' + (editPedido?.id_pedido || '')"></h3>
                             <p class="text-xs text-gray-400" x-text="editPedido?.fecha"></p>
                         </div>
                     </div>
@@ -438,7 +552,8 @@
                         <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-400">
                             Solicitado
                         </span>
-                        <button @click="editModal = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                        <button @click="editModal = false"
+                            class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                             </svg>
@@ -446,11 +561,7 @@
                     </div>
                 </div>
 
-                {{-- Form --}}
-                <form
-                    x-ref="editForm"
-                    method="POST"
-                    :action="`/pedidos/${editPedido?.id_pedido}`">
+                <form x-ref="editForm" method="POST" :action="`/pedidos/${editPedido?.id_pedido}`">
                     @csrf
                     @method('PUT')
 
@@ -478,8 +589,7 @@
                             </div>
                             <div>
                                 <label class="block text-xs text-gray-900 dark:text-white mb-1">Voltaje</label>
-                                <select x-model="editForm.id_voltaje"
-                                    :disabled="!editForm.voltajes.length"
+                                <select x-model="editForm.id_voltaje" :disabled="!editForm.voltajes.length"
                                     class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition disabled:opacity-50 disabled:cursor-not-allowed">
                                     <option value="">— voltaje —</option>
                                     <template x-for="v in editForm.voltajes" :key="v.id_voltaje">
@@ -489,8 +599,7 @@
                             </div>
                             <div>
                                 <label class="block text-xs text-gray-900 dark:text-white mb-1">Color</label>
-                                <select x-model="editForm.id_color"
-                                    :disabled="!editForm.colores.length"
+                                <select x-model="editForm.id_color" :disabled="!editForm.colores.length"
                                     class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition disabled:opacity-50 disabled:cursor-not-allowed">
                                     <option value="">— color —</option>
                                     <template x-for="c in editForm.colores" :key="c.id_color">
@@ -520,7 +629,8 @@
                     <div class="px-4 sm:px-6 py-4 border-b dark:border-gray-700">
                         <div class="flex items-center justify-between mb-3">
                             <p class="text-xs text-gray-400 uppercase tracking-wider font-medium">Artículos</p>
-                            <span class="text-xs text-gray-500" x-text="editItems.length ? `${editItems.length} línea${editItems.length > 1 ? 's' : ''}` : ''"></span>
+                            <span class="text-xs text-gray-500"
+                                x-text="editItems.length ? `${editItems.length} línea${editItems.length > 1 ? 's' : ''}` : ''"></span>
                         </div>
 
                         <div x-show="editItems.length === 0" class="flex flex-col items-center justify-center py-8 text-center">
@@ -548,48 +658,28 @@
                                 <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                                     <template x-for="(item, index) in editItems" :key="index">
                                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                                            {{-- Inputs ocultos que se ACTUALIZAN cuando cambia la cantidad --}}
-                                            <input type="hidden"
-                                                :name="`items[${index}][id_modelo]`"
-                                                :value="item.id_modelo">
-                                            <input type="hidden"
-                                                :name="`items[${index}][id_voltaje]`"
-                                                :value="item.id_voltaje">
-                                            <input type="hidden"
-                                                :name="`items[${index}][id_color]`"
-                                                :value="item.id_color">
-                                            <input type="hidden"
-                                                :name="`items[${index}][cantidad]`"
-                                                :value="item.cantidad"> {{-- ✅ AHORA SE ACTUALIZA --}}
+                                            <input type="hidden" :name="`items[${index}][id_modelo]`" :value="item.id_modelo">
+                                            <input type="hidden" :name="`items[${index}][id_voltaje]`" :value="item.id_voltaje">
+                                            <input type="hidden" :name="`items[${index}][id_color]`" :value="item.id_color">
+                                            <input type="hidden" :name="`items[${index}][cantidad]`" :value="item.cantidad">
 
                                             <td class="py-2.5 pr-3 text-gray-400 text-xs" x-text="index + 1"></td>
                                             <td class="py-2.5 pr-3 font-medium text-gray-900 dark:text-white text-xs" x-text="item.modelo_nombre"></td>
                                             <td class="py-2.5 pr-3 text-gray-900 dark:text-white text-xs" x-text="item.color_nombre"></td>
                                             <td class="py-2.5 pr-3 text-gray-900 dark:text-white text-xs" x-text="item.voltaje_nombre"></td>
-
-                                            {{-- INPUT EDITABLE PARA CANTIDAD --}}
                                             <td class="py-2.5 pr-3">
                                                 <div class="flex items-center justify-center gap-1">
-                                                    {{-- Botón decrementar --}}
-                                                    <button type="button"
-                                                        @click="decrementQuantity(index)"
+                                                    <button type="button" @click="decrementQuantity(index)"
                                                         class="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center justify-center transition">
                                                         <svg class="w-3 h-3 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
                                                         </svg>
                                                     </button>
-
-                                                    {{-- Input numérico --}}
-                                                    <input type="number"
-                                                        x-model="item.cantidad"
+                                                    <input type="number" x-model="item.cantidad"
                                                         @input="updateItemQuantity(index, $event.target.value)"
-                                                        min="1"
-                                                        max="999"
+                                                        min="1" max="999"
                                                         class="w-16 text-center border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg px-1 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
-
-                                                    {{-- Botón incrementar --}}
-                                                    <button type="button"
-                                                        @click="incrementQuantity(index)"
+                                                    <button type="button" @click="incrementQuantity(index)"
                                                         class="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center justify-center transition">
                                                         <svg class="w-3 h-3 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -597,10 +687,8 @@
                                                     </button>
                                                 </div>
                                             </td>
-
                                             <td class="py-2.5 text-center">
-                                                <button type="button"
-                                                    @click="removeEditItem(index)"
+                                                <button type="button" @click="removeEditItem(index)"
                                                     class="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-400 font-medium px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition">
                                                     Quitar
                                                 </button>
@@ -608,12 +696,11 @@
                                         </tr>
                                     </template>
                                 </tbody>
-
-                                {{-- Total de artículos --}}
                                 <tfoot x-show="editItems.length > 0" class="border-t dark:border-gray-700">
                                     <tr>
                                         <td colspan="4" class="pt-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">Total artículos:</td>
-                                        <td class="pt-3 text-center" x-text="editItems.reduce((sum, item) => sum + Number(item.cantidad), 0)"></td>
+                                        <td class="pt-3 text-center"
+                                            x-text="editItems.reduce((sum, item) => sum + Number(item.cantidad), 0)"></td>
                                         <td></td>
                                     </tr>
                                 </tfoot>
@@ -623,31 +710,28 @@
 
                     {{-- Footer --}}
                     <div class="px-4 sm:px-6 py-4 flex justify-end gap-2">
-                        <button
-                            type="button"
-                            @click="editModal = false; detailModal = true"
+                        <button type="button" @click="editModal = false; detailModal = true"
                             class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
                             ← Volver
                         </button>
-                        <button
-                            type="button"
-                            @click="submitEdit()"
-                            :disabled="editItems.length === 0"
+                        <button type="button" @click="submitEdit()" :disabled="editItems.length === 0"
                             class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             Guardar cambios
                         </button>
                     </div>
-
                 </form>
             </div>
         </div>
 
-        {{-- MODAL: ELIMINAR --}}
+        <x-delete-modal />
+
+        {{-- MODAL: COMPLETAR ENTREGA --}}
         <div
-            x-show="deleteModal"
+            x-show="completarModal"
             x-cloak
             x-transition:enter="transition ease-out duration-200"
             x-transition:enter-start="opacity-0"
@@ -656,9 +740,9 @@
             x-transition:leave-start="opacity-100"
             x-transition:leave-end="opacity-0"
             class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4"
-            @click.self="deleteModal = false">
+            @click.self="completarModal = false">
             <div
-                x-show="deleteModal"
+                x-show="completarModal"
                 x-transition:enter="transition ease-out duration-200"
                 x-transition:enter-start="opacity-0 scale-95"
                 x-transition:enter-end="opacity-100 scale-100"
@@ -667,36 +751,61 @@
                 x-transition:leave-end="opacity-0 scale-95"
                 class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-sm"
                 @click.stop>
-                <div class="flex items-start gap-4 mb-5">
-                    <div class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0">
-                        <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
+                        <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                     </div>
                     <div>
-                        <h3 class="text-base font-semibold text-gray-900 dark:text-white">Eliminar pedido</h3>
-                        <p class="text-sm text-gray-900 dark:text-white mt-1">
-                            Vas a eliminar el pedido
-                            <span class="font-mono text-xs font-semibold text-gray-700 dark:text-gray-300" x-text="deleteNombre"></span>.
-                            Esta acción no se puede deshacer.
-                        </p>
+                        <h3 class="text-base font-semibold text-gray-900 dark:text-white">Completar Entrega</h3>
+                        <p class="text-xs text-gray-400" x-text="'Pedido #' + (completarPedidoId ?? '')"></p>
                     </div>
                 </div>
-                <form method="POST" :action="deleteAction">
-                    @csrf
-                    @method('DELETE')
-                    <div class="flex justify-end gap-2">
-                        <button type="button" @click="deleteModal = false"
-                            class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-                            Cancelar
-                        </button>
-                        <button type="submit"
-                            class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition active:scale-[.98]">
-                            Sí, eliminar
-                        </button>
-                    </div>
-                </form>
+
+                <div class="mb-4">
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+                        Token de entrega
+                    </label>
+                    <input
+                        type="text"
+                        x-model="completarToken"
+                        @input="completarToken = $event.target.value.toUpperCase()"
+                        maxlength="10"
+                        placeholder="Ej: ABCD1234WS"
+                        autocomplete="off"
+                        class="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-green-500 transition">
+                    <p class="text-xs text-gray-400 mt-1" x-text="completarToken.length + '/10 caracteres'"></p>
+                </div>
+
+                <p x-show="completarError" x-text="completarError"
+                    class="text-xs text-red-500 mb-3 font-medium"></p>
+
+                <div class="flex gap-2">
+                    <button type="button" @click="completarModal = false; completarToken = ''; completarError = ''"
+                        class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                        Cancelar
+                    </button>
+                    <button type="button"
+                        @click="submitCompletar()"
+                        :disabled="completarToken.length !== 10 || completarGuardando"
+                        class="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition disabled:opacity-40 disabled:cursor-not-allowed">
+                        <template x-if="!completarGuardando">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </template>
+                        <template x-if="completarGuardando">
+                            <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                        </template>
+                        <span x-text="completarGuardando ? 'Procesando...' : 'Confirmar Entrega'"></span>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -704,29 +813,32 @@
 
     @push('scripts')
 
-    {{-- ✅ Solo se define la variable global, el fetch lo hace Alpine en init() --}}
     <script>
         window.NUEVO_PEDIDO_ID = @json(session('nuevo_pedido_id') ?? null);
     </script>
 
     <script>
-        // @ts-nocheck
-        // @ts-nocheck
         document.addEventListener('alpine:init', () => {
 
-            Alpine.data('pedidosIndex', (modelos, initialPedidos, initialTotal, initialCurrentPage, initialLastPage) => ({
+            Alpine.data('pedidosIndex', (modelos, initialPedidos, initialTotal, initialCurrentPage, initialLastPage, canalesVendedor) => ({
 
                 modelos: modelos,
                 pedidos: initialPedidos,
                 totalPedidos: initialTotal,
                 currentPage: initialCurrentPage,
                 lastPage: initialLastPage,
+                canalesVendedor: canalesVendedor,
 
-                // ✅ Flag para evitar que el WebSocket duplique el pedido recién creado
                 _justCreatedId: null,
 
                 detailModal: false,
                 detailPedido: null,
+
+                // Variables token
+                detailToken: null,
+                detailTokenCargando: false,
+                detailTokenError: '',
+                tokenCopiado: false,
 
                 editModal: false,
                 editPedido: null,
@@ -745,16 +857,16 @@
                 deleteAction: '',
                 deleteNombre: '',
 
+                completarModal: false,
+                completarPedidoId: null,
+                completarToken: '',
+                completarError: '',
+                completarGuardando: false,
 
                 init() {
-
                     const self = this;
 
-                    console.log("Echo realtime activo");
-
-
                     if (window.NUEVO_PEDIDO_ID) {
-
                         fetch(`/api/pedidos/${window.NUEVO_PEDIDO_ID}`)
                             .then(r => {
                                 if (!r.ok) throw new Error('no ok');
@@ -764,87 +876,62 @@
                                 self.addPedido(pedido);
                                 self.totalPedidos++;
                                 self.showNotification('created', pedido.id_pedido);
-                                // ✅ Guardar el ID para que el WS lo ignore si llega después
                                 self._justCreatedId = pedido.id_pedido;
                             })
                             .catch(err => {
                                 console.error("Error cargando nuevo pedido:", err);
                                 setTimeout(() => location.reload(), 1000);
                             });
-
                     }
 
-                    // ─── verificar Echo ───
                     if (!window.Echo) {
                         console.error("Echo no disponible");
                         return;
                     }
 
-                    // ─── websocket pedidos ───
-                    window.Echo.channel('pedidos')
-                        .listen('.pedido.updated', (e) => {
+                    canalesVendedor.forEach(idVendedor => {
+                        window.Echo.private(`vendedor.${idVendedor}`)
+                            .listen('.pedido.updated', (e) => {
+                                try {
+                                    const action = e.action ?? null;
+                                    const pedido = e.pedido ?? null;
 
-                            try {
-
-                                const action = e.action ?? null;
-                                const pedido = e.pedido ?? null;
-
-                                if (action === 'created') {
-
-                                    // ✅ Si ya lo cargamos por fetch (el que acaba de crear),
-                                    // ignoramos el evento WS para no duplicarlo
-                                    if (pedido && pedido.id_pedido === self._justCreatedId) {
-                                        self._justCreatedId = null;
-                                        return;
+                                    if (action === 'created') {
+                                        if (pedido && pedido.id_pedido === self._justCreatedId) {
+                                            self._justCreatedId = null;
+                                            return;
+                                        }
+                                        if (pedido) {
+                                            self.addPedido(pedido);
+                                            self.totalPedidos++;
+                                            self.showNotification('created', pedido.id_pedido);
+                                        }
+                                    } else if (action === 'updated') {
+                                        if (pedido) {
+                                            self.updatePedido(pedido);
+                                            self.showNotification('updated', pedido.id_pedido);
+                                        }
+                                    } else if (action === 'deleted') {
+                                        const id = e.id_pedido ?? pedido?.id_pedido;
+                                        if (id) {
+                                            self.removePedido(id);
+                                            self.showNotification('deleted', id);
+                                        }
                                     }
-
-                                    if (pedido) {
-                                        self.addPedido(pedido);
-                                        self.totalPedidos++;
-                                        self.showNotification('created', pedido.id_pedido);
-                                    }
-
-                                } else if (action === 'updated') {
-
-                                    // ✅ Solo actualiza, no elimina
-                                    if (pedido) {
-                                        self.updatePedido(pedido);
-                                        self.showNotification('updated', pedido.id_pedido);
-                                    }
-
-                                } else if (action === 'deleted') {
-
-                                    // ✅ Bloque separado y correcto para eliminaciones
-                                    const id = e.id_pedido ?? pedido?.id_pedido;
-
-                                    if (id) {
-                                        self.removePedido(id);
-                                        self.showNotification('deleted', id);
-                                    }
-
+                                } catch (err) {
+                                    console.error("Error evento Echo:", err);
                                 }
-
-                            } catch (err) {
-                                console.error("Error evento Echo:", err);
-                            }
-
-                        });
-
+                            });
+                    });
                 },
-
 
                 // ─── realtime handlers ───
 
                 addPedido(newPedido) {
-
                     const exists = this.pedidos.some(p => p.id_pedido === newPedido.id_pedido);
-
                     if (!exists) {
-
                         this.pedidos.unshift(newPedido);
-
                         this.pedidos.sort((a, b) => {
-                            // Parsear formato d/m/Y H:i correctamente
                             const parseDate = (fecha) => {
                                 const [datePart, timePart] = fecha.split(' ');
                                 const [day, month, year] = datePart.split('/');
@@ -852,55 +939,35 @@
                             };
                             return parseDate(b.fecha) - parseDate(a.fecha);
                         });
-
                     }
-
                 },
 
                 updatePedido(updatedPedido) {
-
                     const index = this.pedidos.findIndex(p => p.id_pedido === updatedPedido.id_pedido);
-
                     if (index !== -1) {
-
                         this.pedidos[index] = updatedPedido;
-
                         if (this.detailPedido && this.detailPedido.id_pedido === updatedPedido.id_pedido) {
                             this.detailPedido = updatedPedido;
                         }
-
                         if (this.editPedido && this.editPedido.id_pedido === updatedPedido.id_pedido) {
                             this.editModal = false;
                         }
-
                     }
-
                 },
 
                 removePedido(id) {
-
                     const index = this.pedidos.findIndex(p => p.id_pedido === id);
-
                     if (index !== -1) {
-
                         this.pedidos.splice(index, 1);
-                        this.totalPedidos--; // ✅ Decrementar el total correctamente
-
-                        if (this.detailPedido && this.detailPedido.id_pedido === id)
-                            this.detailModal = false;
-
-                        if (this.editPedido && this.editPedido.id_pedido === id)
-                            this.editModal = false;
-
+                        this.totalPedidos--;
+                        if (this.detailPedido && this.detailPedido.id_pedido === id) this.detailModal = false;
+                        if (this.editPedido && this.editPedido.id_pedido === id) this.editModal = false;
                     }
-
                 },
-
 
                 // ─── notificaciones ───
 
                 showNotification(action, pedidoId) {
-
                     const container = document.getElementById('notifications');
                     if (!container) return;
 
@@ -909,63 +976,35 @@
                         updated: 'Pedido #' + pedidoId + ' actualizado',
                         deleted: 'Pedido #' + pedidoId + ' eliminado'
                     };
-
                     const styles = {
                         created: "bg-white text-gray-800 border-gray-200",
                         updated: "bg-yellow-50 text-yellow-800 border-yellow-300",
                         deleted: "bg-red-50 text-red-800 border-red-300"
                     };
-
                     const icons = {
-                        created: `
-        <div class="flex items-center justify-center w-6 h-6 rounded-full bg-green-100">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-            </svg>
-        </div>`,
-                        updated: `
-        <div class="flex items-center justify-center w-6 h-6 rounded-full bg-yellow-200">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-yellow-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4"/>
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 17h.01"/>
-                <path stroke-linecap="round" stroke-linejoin="round" d="M10.29 3.86l-7.4 12.8A1 1 0 004 18h16a1 1 0 00.87-1.34l-7.4-12.8a1 1 0 00-1.74 0z"/>
-            </svg>
-        </div>`,
-                        deleted: `
-        <div class="flex items-center justify-center w-6 h-6 rounded-full bg-red-200">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-red-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12"/>
-                <path stroke-linecap="round" stroke-linejoin="round" d="M18 6l-12 12"/>
-            </svg>
-        </div>`
+                        created: `<div class="flex items-center justify-center w-6 h-6 rounded-full bg-green-100"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div>`,
+                        updated: `<div class="flex items-center justify-center w-6 h-6 rounded-full bg-yellow-200"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-yellow-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 17h.01"/><path stroke-linecap="round" stroke-linejoin="round" d="M10.29 3.86l-7.4 12.8A1 1 0 004 18h16a1 1 0 00.87-1.34l-7.4-12.8a1 1 0 00-1.74 0z"/></svg></div>`,
+                        deleted: `<div class="flex items-center justify-center w-6 h-6 rounded-full bg-red-200"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-red-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12"/><path stroke-linecap="round" stroke-linejoin="round" d="M18 6l-12 12"/></svg></div>`
                     };
 
                     const notification = document.createElement('div');
-
-                    notification.className =
-                        `px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 border ${styles[action]}`;
-
-                    notification.innerHTML = `
-        ${icons[action]}
-        <span class="text-sm font-medium">${messages[action]}</span>
-    `;
-
+                    notification.className = `px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 border ${styles[action]}`;
+                    notification.innerHTML = `${icons[action]}<span class="text-sm font-medium">${messages[action]}</span>`;
                     container.appendChild(notification);
-
                     setTimeout(() => notification.remove(), 3000);
-
                 },
-
 
                 // ─── UI helpers ───
 
                 openDetail(pedido) {
                     this.detailPedido = pedido;
+                    this.detailToken = null;
+                    this.detailTokenError = '';
+                    this.tokenCopiado = false;
                     this.detailModal = true;
                 },
 
                 openEdit(pedido) {
-
                     this.editPedido = pedido;
                     this.editNotas = pedido.notas ?? '';
                     this.editItems = pedido.items.map(i => ({
@@ -987,55 +1026,76 @@
                     };
                     this.detailModal = false;
                     this.editModal = true;
+                },
 
+                async cargarToken(pedidoId) {
+                    this.detailTokenCargando = true;
+                    this.detailTokenError = '';
+                    try {
+                        const resp = await fetch(`/pedidos/${pedidoId}/token`, {
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            }
+                        });
+                        const data = await resp.json();
+                        if (!resp.ok || !data.ok) {
+                            this.detailTokenError = data.mensaje ?? 'No se pudo cargar el token.';
+                            return;
+                        }
+                        this.detailToken = data.token;
+                    } catch (e) {
+                        this.detailTokenError = 'Error de conexión.';
+                    } finally {
+                        this.detailTokenCargando = false;
+                    }
+                },
+
+                async copiarToken() {
+                    if (!this.detailToken) return;
+                    try {
+                        await navigator.clipboard.writeText(this.detailToken);
+                        this.tokenCopiado = true;
+                        setTimeout(() => {
+                            this.tokenCopiado = false;
+                        }, 2000);
+                    } catch (e) {
+                        console.error('Error al copiar', e);
+                    }
                 },
 
                 async onModeloChange() {
-
                     const modeloId = this.editForm.id_modelo;
-
                     this.editForm.id_voltaje = '';
                     this.editForm.id_color = '';
                     this.editForm.voltajes = [];
                     this.editForm.colores = [];
-
                     if (!modeloId) return;
-
                     try {
-
                         const [voltajes, colores] = await Promise.all([
                             fetch(`/voltaje-por-modelo/${modeloId}`).then(r => r.json()),
                             fetch(`/colores-por-modelo/${modeloId}`).then(r => r.json())
                         ]);
-
                         this.editForm.voltajes = voltajes;
                         this.editForm.colores = colores;
-
                     } catch (e) {
                         console.error("Error cargando datos", e);
                     }
-
                 },
 
                 addEditItem() {
-
-                    if (!this.editForm.id_modelo || !this.editForm.id_voltaje || !this.editForm.id_color || this.editForm.cantidad < 1)
-                        return;
-
+                    if (!this.editForm.id_modelo || !this.editForm.id_voltaje || !this.editForm.id_color || this.editForm.cantidad < 1) return;
                     const existing = this.editItems.find(i =>
                         i.id_modelo == this.editForm.id_modelo &&
                         i.id_voltaje == this.editForm.id_voltaje &&
                         i.id_color == this.editForm.id_color
                     );
-
                     if (existing) {
                         existing.cantidad = Number(existing.cantidad) + Number(this.editForm.cantidad);
                     } else {
-
                         const modelo = this.modelos.find(m => m.id_modelo == this.editForm.id_modelo);
                         const voltaje = this.editForm.voltajes.find(v => v.id_voltaje == this.editForm.id_voltaje);
                         const color = this.editForm.colores.find(c => c.id_color == this.editForm.id_color);
-
                         this.editItems.push({
                             id_modelo: this.editForm.id_modelo,
                             id_voltaje: this.editForm.id_voltaje,
@@ -1045,13 +1105,10 @@
                             voltaje_nombre: voltaje ? voltaje.voltaje : this.editForm.id_voltaje,
                             color_nombre: color ? color.color : this.editForm.id_color
                         });
-
                     }
-
                     this.editForm.id_voltaje = '';
                     this.editForm.id_color = '';
                     this.editForm.cantidad = 1;
-
                 },
 
                 removeEditItem(index) {
@@ -1059,34 +1116,21 @@
                 },
 
                 updateItemQuantity(index, value) {
-                    // Asegurar que la cantidad sea al menos 1
                     const newValue = parseInt(value) || 1;
-                    if (newValue < 1) {
-                        this.editItems[index].cantidad = 1;
-                    } else if (newValue > 999) {
-                        this.editItems[index].cantidad = 999;
-                    } else {
-                        this.editItems[index].cantidad = newValue;
-                    }
-
-                    // Forzar actualización del array para que Alpine detecte el cambio
+                    this.editItems[index].cantidad = Math.min(999, Math.max(1, newValue));
                     this.editItems = [...this.editItems];
                 },
 
-                // Función para incrementar cantidad
                 incrementQuantity(index) {
-                    const currentValue = this.editItems[index].cantidad;
-                    if (currentValue < 999) {
-                        this.editItems[index].cantidad = currentValue + 1;
+                    if (this.editItems[index].cantidad < 999) {
+                        this.editItems[index].cantidad++;
                         this.editItems = [...this.editItems];
                     }
                 },
 
-                // Función para decrementar cantidad
                 decrementQuantity(index) {
-                    const currentValue = this.editItems[index].cantidad;
-                    if (currentValue > 1) {
-                        this.editItems[index].cantidad = currentValue - 1;
+                    if (this.editItems[index].cantidad > 1) {
+                        this.editItems[index].cantidad--;
                         this.editItems = [...this.editItems];
                     }
                 },
@@ -1096,11 +1140,6 @@
                         alert('Debe agregar al menos un artículo');
                         return;
                     }
-
-                    // Mostrar los datos que se van a enviar (para debugging)
-                    console.log('Enviando datos:', this.editItems);
-
-                    // Enviar el formulario
                     this.$refs.editForm.submit();
                 },
 
@@ -1108,12 +1147,53 @@
                     this.deleteNombre = nombre;
                     this.deleteAction = action;
                     this.deleteModal = true;
-                }
+                },
 
+                // ─── Completar entrega ───
 
+                openCompletar(pedidoId) {
+                    this.completarPedidoId = pedidoId;
+                    this.completarToken = '';
+                    this.completarError = '';
+                    this.completarModal = true;
+                },
+
+                async submitCompletar() {
+                    if (this.completarGuardando) return;
+                    this.completarGuardando = true;
+                    this.completarError = '';
+
+                    try {
+                        const resp = await fetch(`/pedidos/${this.completarPedidoId}/completar`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                token: this.completarToken
+                            })
+                        });
+
+                        const data = await resp.json();
+
+                        if (!resp.ok || !data.ok) {
+                            this.completarError = data.mensaje ?? 'Token inválido.';
+                            return;
+                        }
+
+                        this.completarModal = false;
+                        this.completarToken = '';
+
+                    } catch (e) {
+                        this.completarError = 'Error de conexión.';
+                    } finally {
+                        this.completarGuardando = false;
+                    }
+                },
 
             }));
-
         });
     </script>
 

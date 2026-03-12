@@ -90,9 +90,7 @@
             {{-- BODY --}}
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900">
                 @forelse($relaciones as $rel)
-                    @php
-                        $deleteRoute = route('modelo-voltaje.destroy', $rel);
-                    @endphp
+                    
 
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
                         
@@ -135,15 +133,10 @@
                         <td class="px-4 py-3 text-center">
                             <button
                                 type="button"
-                                @click="openDelete(
-                                    '{{ $rel->id_mvoltaje }}',
-                                    '{{ $rel->modelo->nombre_modelo ?? 'Sin modelo' }}',
-                                    '{{ $rel->voltaje->voltaje ?? 'Sin voltaje' }}',
-                                    '{{ $deleteRoute }}'
-                                )"
+                                
                                 class="text-red-600 hover:text-red-800 dark:text-red-400 font-semibold text-sm"
                             >
-                                Eliminar
+                                Editar
                             </button>
                         </td>
 
@@ -204,15 +197,10 @@
                             <td class="px-3 py-3 text-center">
                                 <button
                                     type="button"
-                                    @click="openDelete(
-                                        '{{ $rel->id_mvoltaje }}',
-                                        '{{ $rel->modelo->nombre_modelo ?? 'Sin modelo' }}',
-                                        '{{ $rel->voltaje->voltaje ?? 'Sin voltaje' }}',
-                                        '{{ $deleteRoute }}'
-                                    )"
+                                   
                                     class="text-red-600 hover:text-red-900 dark:text-red-400 text-xs font-semibold"
                                 >
-                                    Eliminar
+                                    Editar
                                 </button>
                             </td>
                         </tr>

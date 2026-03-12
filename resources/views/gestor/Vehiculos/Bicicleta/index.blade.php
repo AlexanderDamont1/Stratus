@@ -55,7 +55,7 @@
 
     {{-- ===== FILTROS ===== --}}
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-6 py-4">
-        <form method="GET" action="{{ route('gestor.vehiculos.bicicletas.index') }}" class="flex flex-wrap gap-4 items-end">
+        <form method="GET" action="{{ route('bicicletas.index') }}" class="flex flex-wrap gap-4 items-end">
             <div class="flex-1 min-w-[160px]">
                 <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Buscar</label>
                 <input type="text" name="search" value="{{ request('search') }}"
@@ -66,7 +66,7 @@
                 <button type="submit" class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-lg text-sm hover:opacity-90 transition">
                     Filtrar
                 </button>
-                <a href="{{ route('gestor.vehiculos.bicicletas.index') }}" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">
+                <a href="{{ route('bicicletas.index') }}" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">
                     Limpiar
                 </a>
             </div>
@@ -90,12 +90,12 @@
                         <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Voltaje</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Color</th>
                         <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Status</th>
-                        <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Acciones</th>
+               
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900">
                     @forelse($bicicletas as $bicicleta)
-                        @php $deleteRoute = route('gestor.vehiculos.bicicletas.destroy', $bicicleta->num_serie); @endphp
+                       
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
                             <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">{{ $bicicleta->num_serie }}</td>
                             <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ $bicicleta->modelo->nombre_modelo ?? '—' }}</td>
@@ -111,17 +111,7 @@
                                     {{ ucfirst(str_replace('_', ' ', $bicicleta->status)) }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3 text-center">
-                                <div class="flex items-center justify-center gap-3">
-                                    <a href="{{ route('gestor.vehiculos.bicicletas.edit', $bicicleta->num_serie) }}"
-                                       class="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 text-xs font-semibold">Editar</a>
-                                    <button type="button"
-                                        @click="openDelete('{{ $bicicleta->num_serie }}', '{{ $bicicleta->num_serie }}', '{{ $deleteRoute }}')"
-                                        class="text-red-600 hover:text-red-800 dark:text-red-400 text-xs font-semibold">
-                                        Eliminar
-                                    </button>
-                                </div>
-                            </td>
+                            
                         </tr>
                     @empty
                         <tr>
@@ -141,12 +131,12 @@
                     <tr>
                         <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Serie</th>
                         <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                        <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                       
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                     @forelse($bicicletas as $bicicleta)
-                        @php $deleteRoute = route('gestor.vehiculos.bicicletas.destroy', $bicicleta->num_serie); @endphp
+                     
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
                             <td class="px-3 py-3">
                                 <div class="text-xs font-medium text-gray-900 dark:text-white">{{ $bicicleta->num_serie }}</div>
@@ -162,14 +152,7 @@
                                     {{ ucfirst(str_replace('_', ' ', $bicicleta->status)) }}
                                 </span>
                             </td>
-                            <td class="px-3 py-3 text-center">
-                                <div class="flex flex-col items-center gap-1">
-                                    <a href="{{ route('gestor.vehiculos.bicicletas.edit', $bicicleta->num_serie) }}" class="text-yellow-600 text-xs">Editar</a>
-                                    <button type="button"
-                                        @click="openDelete('{{ $bicicleta->num_serie }}', '{{ $bicicleta->num_serie }}', '{{ $deleteRoute }}')"
-                                        class="text-red-600 text-xs">Eliminar</button>
-                                </div>
-                            </td>
+                            
                         </tr>
                     @empty
                         <tr>

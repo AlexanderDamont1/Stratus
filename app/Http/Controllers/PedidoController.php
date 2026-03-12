@@ -31,6 +31,19 @@ class PedidoController extends Controller
 
         $modelos = CatalogService::getModelos();
 
+        // ─── Calcular canales WebSocket ───────────────────────────────
+        $canalesVendedor = [];
+
+        if ($usuario->id_rol === 1) {
+            $canalesVendedor = [$usuario->id_usuario];
+        } elseif ($usuario->id_rol === 5) {
+            $canalesVendedor = Enlace::where('id_usuario2', $usuario->id_usuario)
+                ->where('estado', 'activo')
+                ->pluck('id_usuario1')
+                ->toArray();
+        }
+        // ─────────────────────────────────────────────────────────────
+
         if ($usuario->id_rol === 5) {
             $idsUsuario1 = Enlace::where('id_usuario2', $usuario->id_usuario)
                 ->where('estado', 'activo')
@@ -40,19 +53,17 @@ class PedidoController extends Controller
                 ->whereIn('id_usuario', $idsUsuario1)
                 ->when(
                     $request->input('search'),
-                    fn($q, $s) =>
-                    $q->where('id_pedido', 'like', "%{$s}%")
+                    fn($q, $s) => $q->where('id_pedido', 'like', "%{$s}%")
                 )
                 ->when(
                     $request->input('status') && $status !== 'all',
-                    fn($q) =>
-                    $q->where('status', $status)
+                    fn($q) => $q->where('status', $status)
                 )
                 ->orderByDesc('updated_at')
-                ->paginate(10)
+                ->paginate(8)
                 ->withQueryString();
 
-            return view('pedidos.index', compact('pedidos', 'modelos'));
+            return view('pedidos.index', compact('pedidos', 'modelos', 'canalesVendedor')); // ← aquí
         }
 
         $cacheKey = "pedidos:index:{$usuario->id_usuario}:{$status}:{$search}:page:{$page}";
@@ -65,21 +76,21 @@ class PedidoController extends Controller
                 ->where('id_usuario', $usuario->id_usuario)
                 ->when(
                     $request->input('search'),
-                    fn($q, $s) =>
-                    $q->where('id_pedido', 'like', "%{$s}%")
+                    fn($q, $s) => $q->where('id_pedido', 'like', "%{$s}%")
                 )
                 ->when(
                     $request->input('status') && $status !== 'all',
-                    fn($q) =>
-                    $q->where('status', $status)
+                    fn($q) => $q->where('status', $status)
                 )
                 ->orderByDesc('created_at')
                 ->paginate(10)
                 ->withQueryString()
         );
 
-        return view('pedidos.index', compact('pedidos', 'modelos'));
+        return view('pedidos.index', compact('pedidos', 'modelos', 'canalesVendedor')); // ← y aquí
     }
+
+
 
     // ─── CREAR PEDIDO ────────────────────────────────────────────────
     public function create()
@@ -311,21 +322,20 @@ class PedidoController extends Controller
             'bicicletas.color',
         ])->findOrFail($id_pedido);
 
-        abort_if($pedido->status !== 2, 403, 'Este pedido no está en estado Preparado.');
+        abort_if(!in_array($pedido->status, [1, 2]), 403, 'Este pedido no puede ser realizado.');
 
-        // Calcular cuántas bicis ya fueron escaneadas vs cuántas se necesitan
         $resumen = [];
         foreach ($pedido->items as $item) {
             $key = $item->id_modelo . '-' . $item->id_voltaje . '-' . $item->id_color;
             $resumen[$key] = [
-                'modelo'       => $item->modelo->nombre_modelo ?? 'N/D',
-                'voltaje'      => $item->voltaje->voltaje ?? 'N/D',
-                'color'        => $item->color->color  ?? 'N/D',
-                'id_modelo'    => $item->id_modelo,
-                'id_voltaje'   => $item->id_voltaje,
-                'id_color'     => $item->id_color,
-                'requerido'    => $item->cantidad,
-                'escaneado'    => 0,
+                'modelo'    => $item->modelo->nombre_modelo ?? 'N/D',
+                'voltaje'   => $item->voltaje->voltaje ?? 'N/D',
+                'color'     => $item->color->color ?? 'N/D',
+                'id_modelo'  => $item->id_modelo,
+                'id_voltaje' => $item->id_voltaje,
+                'id_color'   => $item->id_color,
+                'requerido'  => $item->cantidad,
+                'escaneado'  => 0,
             ];
         }
 
@@ -336,37 +346,168 @@ class PedidoController extends Controller
             }
         }
 
-        $modelos  = \App\Services\CatalogService::getModelos();
+        $modelos = \App\Services\CatalogService::getModelos();
 
         return view('pedidos.realizar', compact('pedido', 'resumen', 'modelos'));
     }
 
-    public function pdf(string $id_pedido)
-{
-    $pedido = Pedido::with([
-        'usuario',
-        'negocio',
-        'items.modelo',
-        'items.voltaje',
-        'items.color',
-        'bicicletas.modelo',
-        'bicicletas.voltaje',
-        'bicicletas.color',
-    ])->findOrFail($id_pedido);
+    public function pdf(Request $request, string $id_pedido)
+    {
+        $pedido = Pedido::with([
+            'usuario',
+            'negocio',
+            'items.modelo',
+            'items.voltaje',
+            'items.color',
+            'bicicletas.modelo',
+            'bicicletas.voltaje',
+            'bicicletas.color',
+        ])->findOrFail($id_pedido);
 
-    $qr_svg = base64_encode(
-        \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')
-            ->size(120)
-            ->generate($pedido->id_pedido)
-    );
+        // ==> Calcular complementarios 
+        $cargadores = [];
+        $baterias   = [];
 
-    $html = view('pedidos.pdf_create', compact('pedido', 'qr_svg'))->render();
+        foreach ($pedido->items as $item) {
+            $modelo   = optional($item->modelo)->nombre_modelo ?? '';
+            $voltaje  = optional($item->voltaje)->voltaje ?? '';
+            $cantidad = $item->cantidad;
 
-    $mpdf = new \Mpdf\Mpdf(['mode' => 'utf-8', 'format' => 'A4']);
-    $mpdf->WriteHTML($html);
+            if ($modelo === 'VmpS5') {
+                // Siempre 48V/12Ah — 4 baterías de 12V/12Ah
+                $cargadores['48V/12Ah']  = ($cargadores['48V/12Ah']  ?? 0) + $cantidad;
+                $baterias['12V/12Ah']    = ($baterias['12V/12Ah']    ?? 0) + ($cantidad * 4);
+            } else {
 
-    return response($mpdf->Output("emision_{$pedido->id_pedido}.pdf", 'S'))
-        ->header('Content-Type', 'application/pdf')
-        ->header('Content-Disposition', 'inline; filename="emision_'.$pedido->id_pedido.'.pdf"');
-}
+                $volts = intval($voltaje);
+                $numBaterias = intval($volts / 12);
+
+                // Cargador según voltaje
+                if ($volts === 48) {
+                    $cargadores['48V/20Ah'] = ($cargadores['48V/20Ah'] ?? 0) + $cantidad;
+                } elseif ($volts === 60) {
+                    $cargadores['60V']      = ($cargadores['60V']      ?? 0) + $cantidad;
+                } elseif ($volts === 72) {
+                    $cargadores['72V']      = ($cargadores['72V']      ?? 0) + $cantidad;
+                }
+
+                // Baterías siempre 12V/20Ah para los demás modelos
+                $baterias['12V/20Ah'] = ($baterias['12V/20Ah'] ?? 0) + ($cantidad * $numBaterias);
+            }
+        }
+
+        // ─── Lotes de batería desde query params ──────────────────────
+        $lotesRaw = $request->input('lotes', []);
+        $lotes = [];
+        foreach ($lotesRaw as $idx => $valor) {
+            $lotes[(int)$idx] = $valor;
+        }
+        // ─────────────────────────────────────────────────────────────
+
+        $html = view('pedidos.pdf_create', compact('pedido', 'cargadores', 'baterias', 'lotes'))->render();
+
+
+        $mpdf = new \Mpdf\Mpdf(['mode' => 'utf-8', 'format' => 'A4']);
+        $mpdf->WriteHTML($html);
+
+        return response($mpdf->Output("emision_{$pedido->id_pedido}.pdf", 'S'))
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'inline; filename="emision_' . $pedido->id_pedido . '.pdf"');
+    }
+
+
+    public function completarEntrega(Request $request, string $id_pedido)
+    {
+        $usuario = auth()->user();
+
+        abort_if($usuario->id_rol !== 5, 403);
+
+        $request->validate([
+            'token' => 'required|string|size:10',
+        ]);
+
+        $pedido = Pedido::with(['bicicletas'])->findOrFail($id_pedido);
+
+        abort_if($pedido->status !== 3, 422, 'El pedido no está listo para entregar.');
+
+        // Buscar token válido para este pedido y este gestor
+        $tokenRecord = \App\Models\PedidoToken::where('id_pedido', $id_pedido)
+            ->where('id_usuario2', $usuario->id_usuario)
+            ->where('token', strtoupper($request->token))
+            ->where('estado', 0)
+            ->first();
+
+        if (!$tokenRecord) {
+            return response()->json([
+                'ok'      => false,
+                'mensaje' => 'Token inválido o ya utilizado.',
+            ], 422);
+        }
+
+        DB::transaction(function () use ($pedido, $tokenRecord) {
+            // 1. Cambiar status del pedido a 4
+            $pedido->update(['status' => 4]);
+
+            // 2. Cambiar id_negocio de todas las bicicletas al negocio del vendedor
+            $idNegocioVendedor = $pedido->id_negocio;
+
+            \App\Models\Bicicleta::where('id_pedido', $pedido->id_pedido)
+                ->update([
+                    'id_negocio' => $idNegocioVendedor,
+                    'status'     => 'VENDIDA',
+                ]);
+
+            // 3. Eliminar el token
+            $tokenRecord->delete();
+
+            // 4. Limpiar cache
+            Cache::forget("pedido:{$pedido->id_pedido}");
+
+            // 5. Disparar evento WebSocket
+            $pedidoFresh = Pedido::with([
+                'negocio',
+                'usuario',
+                'items.modelo',
+                'items.voltaje',
+                'items.color'
+            ])->find($pedido->id_pedido);
+
+            event(new \App\Events\PedidoUpdated($pedidoFresh, 'updated'));
+        });
+
+        return response()->json([
+            'ok'      => true,
+            'mensaje' => 'Pedido entregado correctamente.',
+        ]);
+    }
+
+
+    public function token(string $id_pedido)
+    {
+        $usuario = auth()->user();
+
+        abort_if($usuario->id_rol !== 1, 403);
+
+        $pedido = Pedido::findOrFail($id_pedido);
+
+        abort_if($pedido->id_usuario !== $usuario->id_usuario, 403);
+        abort_if($pedido->status !== 3, 422, 'El pedido no está listo para entregar.');
+
+        $tokenRecord = \App\Models\PedidoToken::where('id_pedido', $id_pedido)
+            ->where('id_usuario1', $usuario->id_usuario)
+            ->where('estado', 0)
+            ->first();
+
+        if (!$tokenRecord) {
+            return response()->json([
+                'ok'      => false,
+                'mensaje' => 'Token no encontrado para este pedido.',
+            ], 404);
+        }
+
+        return response()->json([
+            'ok'    => true,
+            'token' => $tokenRecord->token,
+        ]);
+    }
 }

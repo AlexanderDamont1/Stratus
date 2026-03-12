@@ -81,9 +81,7 @@
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900">
 
                     @forelse($modelos as $modelo)
-                        @php
-                            $deleteRoute = route('gestor.vehiculos.modelos.destroy', $modelo);
-                        @endphp
+                      
 
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
 
@@ -115,14 +113,10 @@
                             <td class="px-4 py-3 text-center">
                                 <button
                                     type="button"
-                                    @click="openDelete(
-                                        '{{ $modelo->id_modelo }}',
-                                        '{{ $modelo->nombre_modelo }}',
-                                        '{{ $deleteRoute }}'
-                                    )"
+                                   
                                     class="text-red-600 hover:text-red-800 dark:text-red-400 font-semibold"
                                 >
-                                    Eliminar
+                                    Actualizar
                                 </button>
                             </td>
 
@@ -152,9 +146,7 @@
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                     @forelse($modelos as $modelo)
-                        @php
-                            $deleteRoute = route('gestor.vehiculos.modelos.destroy', $modelo);
-                        @endphp
+                        
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                             <td class="px-3 py-3">
                                 <div class="flex items-center">
@@ -183,10 +175,10 @@
                                     
                                     <button
                                         type="button"
-                                        @click="openDelete({{ $modelo->id_modelo }}, '{{ $modelo->nombre_modelo }}', '{{ $deleteRoute }}')"
+                                        
                                         class="text-red-600 hover:text-red-900 dark:text-red-400 text-xs"
                                     >
-                                        Eliminar
+                                        Actualizar
                                     </button>
                                 </div>
                             </td>

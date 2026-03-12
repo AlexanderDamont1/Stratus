@@ -1,6 +1,6 @@
 <div
     x-data="{ open: false }"
-    class="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900"
+    class="flex min-h-screen bg-gray-50 dark:bg-gray-900"
 >
     {{-- Overlay móvil --}}
     <div
@@ -25,8 +25,7 @@
                border-r border-gray-200 dark:border-gray-700
                flex flex-col
                transition-transform duration-300 ease-in-out
-               shadow-xl lg:shadow-none
-               h-screen overflow-y-auto"
+               shadow-xl lg:shadow-none"
         :class="open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
     >
         {{-- Logo --}}
@@ -91,6 +90,19 @@
                     <span class="truncate">Administrador</span>
                 </a>
 
+                <a href="{{ route('bicicletas.index') }}"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition
+                          {{ request()->routeIs('bicicletas.index') 
+                             ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' 
+                             : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}"
+                   @click="open = false"
+                >
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                    </svg>
+                    <span class="truncate">Stock</span>
+                </a>
+
                 
             @endif
 
@@ -122,7 +134,7 @@
 
                 {{-- Stock con submenú desplegable --}}
                 @php
-                $stockActivo = request()->routeIs('gestor.vehiculos.bicicletas.*')
+                $stockActivo = request()->routeIs('bicicletas.index')
                     || request()->routeIs('gestor.vehiculos.modelos.*')
                     || request()->routeIs('gestor.vehiculos.colores.*')
                     || request()->routeIs('gestor.vehiculos.voltajes.*')
@@ -167,9 +179,9 @@
                         class="mt-1 ml-4 pl-3 border-l-2 border-gray-200 dark:border-gray-600 space-y-1"
                     >
                         {{-- Bicicletas --}}
-                        <a href="{{ route('gestor.vehiculos.bicicletas.index') }}"
+                        <a href="{{ route('bicicletas.index') }}"
                            class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition
-                                  {{ request()->routeIs('gestor.vehiculos.bicicletas.*')
+                                  {{ request()->routeIs('bicicletas.index')
                                      ? 'bg-gray-100 dark:bg-gray-700 font-semibold text-gray-900 dark:text-white'
                                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700' }}"
                            @click="open = false"
@@ -317,7 +329,7 @@
     </aside>
 
     {{-- CONTENIDO --}}
-    <div class="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
+    <div class="flex-1 flex flex-col min-w-0 ">
         <header class="lg:hidden h-16 flex items-center px-4 bg-white dark:bg-gray-800 border-b dark:border-gray-700 shrink-0 sticky top-0 z-20">
             <button
                 @click="open = !open"

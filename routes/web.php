@@ -99,12 +99,12 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
             Route::prefix('vehiculos')->name('vehiculos.')->group(function () {
 
                 // Bicicletas
-                Route::get('/bicicletas', [BicicletaController::class, 'index'])->name('bicicletas.index');
+                
                 Route::get('/bicicletas/crear', [BicicletaController::class, 'create'])->name('bicicletas.create');
                 Route::post('/bicicletas', [BicicletaController::class, 'store'])->name('bicicletas.store');
                 Route::get('/bicicletas/{id}/editar', [BicicletaController::class, 'edit'])->name('bicicletas.edit');
                 Route::put('/bicicletas/{id}', [BicicletaController::class, 'update'])->name('bicicletas.update');
-                Route::delete('/bicicletas/{id}', [BicicletaController::class, 'destroy'])->name('bicicletas.destroy');
+                Route::delete('/bicicletas/{num_serie}/pedido', [BicicletaController::class, 'destroyFromPedido'])->name('bicicletas.destroyFromPedido');;
                 Route::post('bicicletas/{num_serie}/status', [BicicletaController::class, 'updateStatus'])->name('bicicletas.status');
                 Route::get('bicicletas/cliente/{id_cliente}', [BicicletaController::class, 'getByCliente'])->name('bicicletas.por-cliente');
 
@@ -114,7 +114,7 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
                 Route::post('/modelos', [ModeloController::class, 'store'])->name('modelos.store');
                 Route::get('/modelos/{id}/editar', [ModeloController::class, 'edit'])->name('modelos.edit');
                 Route::put('/modelos/{id}', [ModeloController::class, 'update'])->name('modelos.update');
-                Route::delete('/modelos/{id}', [ModeloController::class, 'destroy'])->name('modelos.destroy');
+            
 
                 // Colores
                 Route::get('/colores', [ColorController::class, 'index'])->name('colores.index');
@@ -122,7 +122,7 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
                 Route::post('/colores', [ColorController::class, 'store'])->name('colores.store');
                 Route::get('/colores/{id}/editar', [ColorController::class, 'edit'])->name('colores.edit');
                 Route::put('/colores/{id}', [ColorController::class, 'update'])->name('colores.update');
-                Route::delete('/colores/{id}', [ColorController::class, 'destroy'])->name('colores.destroy');
+             
 
                 // Voltajes
                 Route::get('/voltajes', [VoltajeController::class, 'index'])->name('voltajes.index');
@@ -130,7 +130,7 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
                 Route::post('/voltajes', [VoltajeController::class, 'store'])->name('voltajes.store');
                 Route::get('/voltajes/{id}/editar', [VoltajeController::class, 'edit'])->name('voltajes.edit');
                 Route::put('/voltajes/{id}', [VoltajeController::class, 'update'])->name('voltajes.update');
-                Route::delete('/voltajes/{id}', [VoltajeController::class, 'destroy'])->name('voltajes.destroy');
+               
             });
         });
 
@@ -139,28 +139,29 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
         Route::get('/pedidos/{id_pedido}/pdf', [PedidoController::class, 'pdf'])->name('pedidos.pdf');
 
         Route::get('/bicicletas/{num_serie}', [BicicletaController::class, 'showApi'])->name('api.bicicletas.show');
+
+        Route::patch('/enlaces/{id}/activar', [EnlaceController::class, 'activar'])->name('enlaces.activar');
+        Route::get('/enlaces/pedidos', [EnlaceController::class, 'pedidosDeEnlaces'])->name('enlaces.pedidos');
+        Route::post('/enlaces/aceptar', [EnlaceController::class, 'aceptar'])->name('enlaces.aceptar');
     });
 
 
 
 
-    
+
 
     Route::middleware('enlace')->group(function () {
 
         // Enlaces
         Route::get('/enlaces', [EnlaceController::class, 'index'])->name('enlaces.index');
         Route::post('/enlaces/generar', [EnlaceController::class, 'generar'])->name('enlaces.generar');
-        Route::post('/enlaces/aceptar', [EnlaceController::class, 'aceptar'])->name('enlaces.aceptar');
         Route::patch('/enlaces/{id}/cancelar', [EnlaceController::class, 'cancelar'])->name('enlaces.cancelar');
-        Route::get('/enlaces/pedidos', [EnlaceController::class, 'pedidosDeEnlaces'])->name('enlaces.pedidos');
+
+        Route::post('/pedidos/{id_pedido}/completar', [PedidoController::class, 'completarEntrega'])->name('pedidos.completar');
+        Route::get('gestor/vehiculos/bicicletas', [BicicletaController::class, 'index'])->name('bicicletas.index');
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | API para obtener pedido individual (WebSocket + fetch)
-        |--------------------------------------------------------------------------
-        */
+
         Route::get('/api/pedidos/{id}', function ($id) {
             $pedido = \App\Models\Pedido::with(['negocio', 'usuario', 'items.modelo', 'items.voltaje', 'items.color'])
                 ->findOrFail($id);
@@ -187,6 +188,9 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
         })->name('pedidos.api.get');
     });
 
+
+
+
     Route::middleware('administrador')->group(function () {
 
         Route::get('/Inicio', function () {
@@ -202,6 +206,7 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
         Route::get('/pedidos/{id_pedido}/edit', [PedidoController::class, 'edit'])->name('pedidos.edit');
         Route::put('/pedidos/{id_pedido}',      [PedidoController::class, 'update'])->name('pedidos.update');
         Route::delete('/Pedidos/{id_pedido}', [PedidoController::class, 'destroy'])->name('pedidos.destroy');
+        Route::get('/pedidos/{id_pedido}/token', [PedidoController::class, 'token'])->name('pedidos.token');
     });
 
 

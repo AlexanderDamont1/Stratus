@@ -87,9 +87,7 @@
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900">
                     @forelse($voltajes as $voltaje)
-                        @php
-                            $deleteRoute = route('gestor.vehiculos.voltajes.destroy', $voltaje);
-                        @endphp
+                        
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
                             {{-- ID --}}
                             <td class="px-4 py-3 text-center text-xs text-gray-500 dark:text-gray-400">
@@ -114,17 +112,7 @@
                                         Editar
                                     </a>
                                     <span class="text-gray-300">|</span>
-                                    <button
-                                        type="button"
-                                        @click="openDelete(
-                                            '{{ $voltaje->id_voltaje }}',
-                                            '{{ $voltaje->voltaje }}',
-                                            '{{ $deleteRoute }}'
-                                        )"
-                                        class="text-red-600 hover:text-red-800 dark:text-red-400 text-xs font-semibold"
-                                    >
-                                        Eliminar
-                                    </button>
+                                    
                                 </div>
                             </td>
                         </tr>
@@ -151,9 +139,7 @@
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                         @forelse($voltajes as $voltaje)
-                            @php
-                                $deleteRoute = route('gestor.vehiculos.voltajes.destroy', $voltaje);
-                            @endphp
+                            
                             <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                                 <td class="px-3 py-3">
                                     <div class="flex items-center">
@@ -178,13 +164,7 @@
                                            class="text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 text-xs">
                                             Editar
                                         </a>
-                                        <button
-                                            type="button"
-                                            @click="openDelete({{ $voltaje->id_voltaje }}, '{{ $voltaje->voltaje }}', '{{ $deleteRoute }}')"
-                                            class="text-red-600 hover:text-red-900 dark:text-red-400 text-xs"
-                                        >
-                                            Eliminar
-                                        </button>
+                                        
                                     </div>
                                 </td>
                             </tr>

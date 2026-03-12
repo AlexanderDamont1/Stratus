@@ -79,17 +79,5 @@ class ColorController extends Controller
             ->with('success', 'Color actualizado correctamente.');
     }
 
-    public function destroy($id)
-    {
-        $color = Color::where('id_color', $id)->firstOrFail();
-        $idModelo = $color->id_modelo;
-
-        $color->delete();
-
-        CatalogService::invalidateModelo($idModelo);
-        CatalogService::incrementVersion();
-
-        return redirect()->route('gestor.vehiculos.colores.index')
-            ->with('success', 'Color eliminado correctamente.');
-    }
+    
 }

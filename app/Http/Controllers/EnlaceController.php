@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Enlace;
 use App\Models\Pedido;
+use App\Events\EnlaceUpdated;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -106,6 +107,10 @@ class EnlaceController extends Controller
             'estado'      => 'activo',
         ]);
 
+        // ✅ Carga confiable de la relación
+        $enlaceFresh = Enlace::with('usuarioDestino')->find($enlace->id_enlace);
+        event(new EnlaceUpdated($enlaceFresh, 'aceptado'));
+
         return redirect()->route('gestor.dashboard')
                          ->with('success', 'Enlace activado correctamente.');
     }
@@ -126,18 +131,47 @@ class EnlaceController extends Controller
                         ->firstOrFail();
 
         if ($usuario->id_rol === 1) {
-            // Rol 1 cancela → elimina el registro definitivamente
             $enlace->delete();
 
             return redirect()->route('administrador.dashboard')
                              ->with('success', 'Enlace eliminado correctamente.');
         }
 
-        // Rol 5 desenlaza → solo cambia el estado
         $enlace->update(['estado' => 'cancelado']);
+
+        // ✅ Carga confiable de la relación
+        $enlaceFresh = Enlace::with('usuarioDestino')->find($enlace->id_enlace);
+        event(new EnlaceUpdated($enlaceFresh, 'cancelado'));
 
         return redirect()->route('gestor.dashboard')
                          ->with('success', 'Enlace cancelado correctamente.');
+    }
+
+    // -------------------------------------------------------
+    // ROL 5: Reactiva un enlace cancelado
+    // PATCH /enlaces/{id}/activar
+    // -------------------------------------------------------
+    public function activar(string $id_enlace)
+    {
+        $usuario = Auth::user();
+
+        if ($usuario->id_rol !== 5) {
+            abort(403, 'Acceso restringido.');
+        }
+
+        $enlace = Enlace::where('id_enlace', $id_enlace)
+                        ->where('id_usuario2', $usuario->id_usuario)
+                        ->where('estado', 'cancelado')
+                        ->firstOrFail();
+
+        $enlace->update(['estado' => 'activo']);
+
+        // ✅ Carga confiable de la relación
+        $enlaceFresh = Enlace::with('usuarioDestino')->find($enlace->id_enlace);
+        event(new EnlaceUpdated($enlaceFresh, 'aceptado'));
+
+        return redirect()->route('gestor.dashboard')
+                         ->with('success', 'Enlace reactivado correctamente.');
     }
 
     // -------------------------------------------------------

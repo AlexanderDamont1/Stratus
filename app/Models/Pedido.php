@@ -55,8 +55,9 @@ class Pedido extends Model
     {
         return match($this->status) {
             1 => 'Solicitado',
-            2 => 'Preparado',
-            3 => 'Entregado',
+            2 => 'Verificando Pago',
+            3 => 'Listo para Entregar',
+            4 => 'Entregado',
             default => 'Desconocido',
         };
     }
@@ -70,4 +71,8 @@ class Pedido extends Model
             default => 'red',
         };
     }
+
+    protected $casts = [
+    'status' => 'integer',
+];
 }
