@@ -49,6 +49,12 @@
                 + Nuevo Pedido
             </a>
             @endif
+            @if(auth()->user()->id_rol == 5)
+            <a href="{{ route('pedidos.rapido.crear') }}"
+                class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-md text-sm hover:opacity-90 transition">
+                + Nuevo Pedido
+            </a>
+            @endif
         </div>
 
         <div id="notifications" class="fixed top-4 right-4 z-50 flex flex-col gap-2"></div>

@@ -783,56 +783,264 @@
             </svg>
         </button>
 
-        {{-- ===== MODAL PDF MOBILE refinado ===== --}}
-        <div x-show="pdfModal" x-cloak
-            x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-            x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
-            class="fixed inset-0 bg-black/70 z-50 md:hidden"
-            @click.self="pdfModal = false">
-            <div x-show="pdfModal"
-                x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-full" x-transition:enter-end="opacity-100 translate-y-0"
-                x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-full"
-                class="bg-white dark:bg-gray-800 rounded-t-xl w-full overflow-y-auto shadow-xl"
-                style="height:80vh; position:fixed; bottom:0; left:0; right:0;"
-                @click.stop>
-                <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
-                    <p class="text-sm font-medium text-gray-900 dark:text-white">Formulario de Emisión</p>
-                    <div class="flex items-center gap-3">
-                        <button @click="imprimirFormulario()" class="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                                    d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                            </svg>
-                            Imprimir
-                        </button>
-                        <button @click="pdfModal = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-                <div class="p-3 overflow-x-auto">
-                    <div style="min-width:520px; font-family: 'IBM Plex Sans', sans-serif; font-size:10px; font-weight:normal;">
-                        <!-- Contenido del PDF sin cambios -->
-                        <table style="width:100%; border-collapse:collapse;">
-                            <tr>
-                                <td colspan="6" style="text-align:center; padding:8px; border:1px solid #d0d9e3; font-size:14px; font-weight:600; font-style:italic;">Formulario de Emisión de Fábrica</td>
-                            </tr>
-                            <tr>
-                                <td style="width:10%;text-align:center;border:1px solid #d0d9e3;padding:4px;"><strong>Fecha:</strong><br>{{ now()->format('d/m/Y') }}</td>
-                                <td style="width:18%;text-align:center;border:1px solid #d0d9e3;padding:4px;"><strong>Código:</strong><br>{{ $pedido->id_pedido }}</td>
-                                <td style="width:21%;text-align:center;border:1px solid #d0d9e3;padding:4px;"><strong>Usuario:</strong><br>{{ optional($pedido->usuario)->nombre_usuario ?? '' }}</td>
-                                <td style="width:10%;text-align:center;border:1px solid #d0d9e3;padding:4px;"><strong>Negocio:</strong><br>{{ optional($pedido->negocio)->nombre_negocio ?? 'N/D' }}</td>
-                                <td style="width:25%;text-align:center;border:1px solid #d0d9e3;padding:4px;"><strong>Transporte:</strong><br>Evobike</td>
-                                <td style="width:16%;text-align:center;border:1px solid #d0d9e3;padding:4px;"><strong>Notas:</strong><br>{{ $pedido->notas ?? '-' }}</td>
-                            </tr>
-                        </table>
-                        <!-- ... resto del contenido del PDF sin cambios ... -->
-                    </div>
-                </div>
+        {{-- ===== MODAL PDF MOBILE ===== --}}
+<div x-show="pdfModal" x-cloak
+    x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+    x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+    class="fixed inset-0 bg-black/70 z-50 md:hidden"
+    @click.self="pdfModal = false">
+    <div x-show="pdfModal"
+        x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-full" x-transition:enter-end="opacity-100 translate-y-0"
+        x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-full"
+        class="bg-white rounded-t-2xl w-full overflow-y-auto"
+        style="height:80vh; position:fixed; bottom:0; left:0; right:0;"
+        @click.stop>
+        <div class="flex items-center justify-between px-5 py-4 border-b sticky top-0 bg-white z-10">
+            <p class="text-sm font-semibold text-gray-900">Formulario de Emisión</p>
+            <div class="flex items-center gap-3">
+                <button @click="imprimirFormulario()" class="text-xs text-blue-600 font-semibold flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    Imprimir
+                </button>
+                <button @click="pdfModal = false" class="text-gray-400 hover:text-gray-600 p-1">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
             </div>
         </div>
+        <div class="p-3 overflow-x-auto">
+            <div style="min-width:600px; font-family:Arial,sans-serif; font-size:10px; font-weight:bold;">
+
+                {{-- Encabezado --}}
+                <table style="width:100%; border-collapse:collapse;">
+                    <tr>
+                        <td colspan="7" style="text-align:center; padding:8px; border:1px solid #000; font-size:14px; font-weight:bold; font-style:italic;">
+                            Formulario de Emisión de Fábrica
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width:10%;text-align:center;border:1px solid #000;padding:4px;"><strong>Fecha:</strong><br>{{ now()->format('d/m/Y') }}</td>
+                        <td style="width:18%;text-align:center;border:1px solid #000;padding:4px;"><strong>Código:</strong><br>{{ $pedido->id_pedido }}</td>
+                        <td style="width:21%;text-align:center;border:1px solid #000;padding:4px;"><strong>Cliente:</strong><br>{{ optional($pedido->usuario)->nombre_usuario ?? '' }}</td>
+                        <td style="width:10%;text-align:center;border:1px solid #000;padding:4px;"><strong>Distancia:</strong><br>/</td>
+                        <td style="width:25%;text-align:center;border:1px solid #000;padding:4px;"><strong>Transporte:</strong><br>{{ $pedido->notas ?? 'Recoge en fabrica' }}</td>
+                        <td style="width:16%;text-align:center;border:1px solid #000;padding:4px;"><strong>Costo Envío:</strong><br>/</td>
+                    </tr>
+                </table>
+
+                {{-- Tabla de ítems --}}
+                @php
+                $modelGroups = [];
+                foreach ($pedido->items as $item) {
+                    $m = optional($item->modelo)->nombre_modelo ?? 'N/D';
+                    $v = optional($item->voltaje)->voltaje ?? 'Sin Pilas';
+                    $c = optional($item->color)->color ?? 'N/D';
+                    $modelGroups[$m]['voltajes'][$v]['colores'][$c][] = $item;
+                }
+                $bicGroups = [];
+                foreach ($pedido->bicicletas as $bic) {
+                    $m = optional($bic->modelo)->nombre_modelo ?? 'N/D';
+                    $v = optional($bic->voltaje)->voltaje ?? 'Sin Pilas';
+                    $c = optional($bic->color)->color ?? 'N/D';
+                    $bicGroups[$m][$v][$c][] = $bic->num_serie;
+                }
+
+                $filas = [];
+                foreach ($modelGroups as $modelName => $modelGroup) {
+                    foreach ($modelGroup['voltajes'] as $voltajeName => $voltGroup) {
+                        foreach ($voltGroup['colores'] as $colorName => $items) {
+                            $cantidad  = $items[0]->cantidad;
+                            $numSeries = $bicGroups[$modelName][$voltajeName][$colorName] ?? [];
+                            for ($i = 0; $i < max(1, $cantidad); $i++) {
+                                $filas[] = [
+                                    'modelo'   => $modelName,
+                                    'color'    => $colorName,
+                                    'cantidad' => $cantidad,
+                                    'serie'    => $numSeries[$i] ?? '',
+                                    'lote'     => $lotes[count($filas)] ?? '',
+                                ];
+                            }
+                        }
+                    }
+                }
+
+                $n = count($filas);
+                $modeloRowspan = array_fill(0, $n, 0);
+                $colorRowspan  = array_fill(0, $n, 0);
+                $skipModelo    = array_fill(0, $n, false);
+                $skipColor     = array_fill(0, $n, false);
+
+                $i = 0;
+                while ($i < $n) {
+                    $j = $i;
+                    while ($j < $n && $filas[$j]['modelo'] === $filas[$i]['modelo']) $j++;
+                    $modeloRowspan[$i] = $j - $i;
+
+                    $k = $i;
+                    while ($k < $j) {
+                        $l = $k;
+                        while ($l < $j && $filas[$l]['color'] === $filas[$k]['color']) $l++;
+                        $colorRowspan[$k] = $l - $k;
+                        for ($m2 = $k + 1; $m2 < $l; $m2++) $skipColor[$m2] = true;
+                        $k = $l;
+                    }
+                    for ($m2 = $i + 1; $m2 < $j; $m2++) $skipModelo[$m2] = true;
+                    $i = $j;
+                }
+
+                // Cargadores y baterías
+                $cargadoresMobile = [];
+                $bateriasMobile   = [];
+                foreach ($pedido->items as $item) {
+                    $modelo   = optional($item->modelo)->nombre_modelo ?? '';
+                    $voltaje  = optional($item->voltaje)->voltaje ?? '';
+                    $cantidad = $item->cantidad;
+                    if ($modelo === 'VmpS5') {
+                        $cargadoresMobile['48V/12Ah'] = ($cargadoresMobile['48V/12Ah'] ?? 0) + $cantidad;
+                        $bateriasMobile['12V/12Ah']   = ($bateriasMobile['12V/12Ah']   ?? 0) + ($cantidad * 4);
+                    } else {
+                        $volts = intval($voltaje);
+                        $numBaterias = intval($volts / 12);
+                        if ($volts === 48) $cargadoresMobile['48V/20Ah'] = ($cargadoresMobile['48V/20Ah'] ?? 0) + $cantidad;
+                        elseif ($volts === 60) $cargadoresMobile['60V']  = ($cargadoresMobile['60V']       ?? 0) + $cantidad;
+                        elseif ($volts === 72) $cargadoresMobile['72V']  = ($cargadoresMobile['72V']       ?? 0) + $cantidad;
+                        $bateriasMobile['12V/20Ah'] = ($bateriasMobile['12V/20Ah'] ?? 0) + ($cantidad * $numBaterias);
+                    }
+                }
+                @endphp
+
+                <table style="width:100%; border-collapse:collapse; margin-top:-1px;">
+                    <thead>
+                        <tr>
+                            <th style="border:1px solid #000;padding:4px;width:5%;text-align:center;">No.</th>
+                            <th style="border:1px solid #000;padding:4px;width:18%;text-align:center;">Modelo</th>
+                            <th style="border:1px solid #000;padding:4px;width:18%;text-align:center;">Color</th>
+                            <th style="border:1px solid #000;padding:4px;width:8%;text-align:center;">Cant.</th>
+                            <th style="border:1px solid #000;padding:4px;width:22%;text-align:center;">No. Serie</th>
+                            <th style="border:1px solid #000;padding:4px;width:5%;text-align:center;">No. Motor</th>
+                            <th style="border:1px solid #000;padding:4px;width:16%;text-align:center;">Lote Batería</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($filas as $idx => $fila)
+                        <tr>
+                            <td style="border:1px solid #000;padding:4px;text-align:center;">{{ $idx + 1 }}</td>
+
+                            @if (!$skipModelo[$idx])
+                            <td style="border:1px solid #000;padding:4px;text-align:center;" rowspan="{{ $modeloRowspan[$idx] }}">
+                                {{ $fila['modelo'] }}
+                            </td>
+                            @endif
+
+                            @if (!$skipColor[$idx])
+                            <td style="border:1px solid #000;padding:4px;text-align:center;" rowspan="{{ $colorRowspan[$idx] }}">
+                                {{ $fila['color'] }}
+                            </td>
+                            <td style="border:1px solid #000;padding:4px;text-align:center;" rowspan="{{ $colorRowspan[$idx] }}">
+                                {{ $fila['cantidad'] }}
+                            </td>
+                            @endif
+
+                            <td style="border:1px solid #000;padding:4px;text-align:center;">{{ $fila['serie'] }}</td>
+                            <td style="border:1px solid #000;padding:4px;text-align:center;"></td>
+                            <td style="border:1px solid #000;padding:4px;text-align:center;">{{ $fila['lote'] }}</td>
+                        </tr>
+                        @endforeach
+
+                        {{-- Cargadores --}}
+                        @php $globalIdx = count($filas); @endphp
+                        @foreach ($cargadoresMobile as $spec => $qty)
+                        <tr>
+                            <td style="border:1px solid #000;padding:4px;text-align:center;">{{ $globalIdx + 1 }}</td>
+                            <td style="border:1px solid #000;padding:4px;text-align:center;">Cargadores</td>
+                            <td style="border:1px solid #000;padding:4px;text-align:center;">{{ $spec }}</td>
+                            <td style="border:1px solid #000;padding:4px;text-align:center;">{{ $qty }}</td>
+                            <td style="border:1px solid #000;padding:4px;text-align:center;"></td>
+                            <td style="border:1px solid #000;padding:4px;text-align:center;"></td>
+                            <td style="border:1px solid #000;padding:4px;text-align:center;"></td>
+                        </tr>
+                        @php $globalIdx++; @endphp
+                        @endforeach
+
+                        {{-- Baterías --}}
+                        @foreach ($bateriasMobile as $spec => $qty)
+                        <tr>
+                            <td style="border:1px solid #000;padding:4px;text-align:center;">{{ $globalIdx + 1 }}</td>
+                            <td style="border:1px solid #000;padding:4px;text-align:center;">Baterías</td>
+                            <td style="border:1px solid #000;padding:4px;text-align:center;">{{ $spec }}</td>
+                            <td style="border:1px solid #000;padding:4px;text-align:center;">{{ $qty }}</td>
+                            <td style="border:1px solid #000;padding:4px;text-align:center;"></td>
+                            <td style="border:1px solid #000;padding:4px;text-align:center;"></td>
+                            <td style="border:1px solid #000;padding:4px;text-align:center;"></td>
+                        </tr>
+                        @php $globalIdx++; @endphp
+                        @endforeach
+                    </tbody>
+                </table>
+
+                {{-- Firmas --}}
+                <table style="width:100%; border-collapse:collapse; margin-top:-1px;">
+                    <tr>
+                        <td style="width:59%; height:70px; font-size:9px; padding:4px; font-style:italic; text-align:center; font-weight:bold; border:1px solid #000;">
+                            Este pedido es por duplicado, uno se enviará al destino con la mercancía, otro se guardará en fábrica y el archivo electrónico se enviará al departamento comercial.
+                        </td>
+                        <td rowspan="2" style="width:41%; vertical-align:top; font-size:9px; padding:4px; font-style:italic; text-align:center; font-weight:bold; border:1px solid #000;">
+                            Sello o firma del responsable de fábrica:
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:2px; font-size:9px; height:18px; line-height:1; border:1px solid #000;">Firma del inspector de calidad:</td>
+                    </tr>
+                </table>
+                <table style="width:100%; border-collapse:collapse; margin-top:-1px;">
+                    <tr>
+                        <td style="width:40%; padding:5px; border:1px solid #000;">Firma del chofer:<br></td>
+                        <td style="width:60%; padding:5px; border:1px solid #000;">Teléfono chofer:<br></td>
+                    </tr>
+                </table>
+                <table style="width:100%; border-collapse:collapse; margin-top:-1px;">
+                    <tr>
+                        <td style="font-weight:bold; font-style:italic; text-align:center; border:1px solid #000; padding:4px;">Recibo de Emisión</td>
+                    </tr>
+                </table>
+                <table style="width:100%; border-collapse:collapse; border-left:1px solid #000; border-right:1px solid #000;">
+                    <tr>
+                        <td style="width:33%; padding:5px; border:1px solid #000;">Verificación de orden de emisión</td>
+                        <td style="width:33%; padding:5px; border:1px solid #000;">Verificado</td>
+                        <td style="width:33%; padding:5px; border:1px solid #000;">Error de verificarlo</td>
+                    </tr>
+                </table>
+                <table style="width:100%; border-collapse:collapse; margin-top:-1px;">
+                    <tr>
+                        <td style="font-style:italic; text-align:center; height:50px; vertical-align:top; border:1px solid #000; padding:4px;">
+                            Firma del responsable de la tienda (el recibo se recibirá tras confirmar el pedido):
+                        </td>
+                    </tr>
+                </table>
+                <table style="width:100%; border-collapse:collapse;">
+                    <tr>
+                        <td style="border:1px solid #000; padding:5px;">Observación:</td>
+                    </tr>
+                    <tr>
+                        <td style="border:1px solid #000; padding:5px; height:30px;">
+                            Para cualquier aclaración o informe de daños comuníquese al siguiente número &nbsp; 56 7716 5697
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="border:1px solid #000; padding:5px; height:25px; color:red;">
+                            El pedido deberá ser supervisado por el cliente, una vez firmado este documento la empresa no se hace responsable de cualquier daño o pérdida que pueda ocurrir durante el transporte o después de la entrega.
+                        </td>
+                    </tr>
+                </table>
+
+            </div>
+        </div>
+    </div>
+</div>
 
         {{-- ===== MODAL ESCANEAR refinado ===== --}}
         <div x-show="scanModal" x-cloak

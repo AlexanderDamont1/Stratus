@@ -179,6 +179,30 @@ class CatalogService
         );
     }
 
+    /**
+         * Cachear un objeto Voltaje individual
+         */
+        public static function getVoltajeById(string $id): ?Voltaje
+        {
+            return Cache::remember(
+                self::CACHE_PREFIX . "voltaje:{$id}",
+                self::CACHE_TTL['voltajes'],
+                fn() => Voltaje::find($id)
+            );
+        }
+
+        /**
+         * Cachear un objeto Color individual
+         */
+        public static function getColorById(string $id): ?Color
+        {
+            return Cache::remember(
+                self::CACHE_PREFIX . "color:{$id}",
+                self::CACHE_TTL['colores'],
+                fn() => Color::find($id)
+            );
+        }
+
     // ─── INVALIDACIÓN ─────────────────────────────────────────────────────────
 
     public static function clearCache(?string $specific = null): void

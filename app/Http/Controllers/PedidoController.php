@@ -512,4 +512,84 @@ class PedidoController extends Controller
             'token' => $tokenRecord->token,
         ]);
     }
+
+
+    public function crearRapido()
+{
+    $usuario = auth()->user();
+    abort_if($usuario->id_rol !== 5, 403);
+
+    $modelos = CatalogService::getModelos();
+
+    $voltajes = [];
+    $colores  = [];
+
+    foreach ($modelos as $modelo) {
+        $voltajes[$modelo->id_modelo] = CatalogService::getVoltajesByModelo($modelo->id_modelo);
+        $colores[$modelo->id_modelo]  = CatalogService::getColoresByModelo($modelo->id_modelo);
+    }
+
+    return view('pedidos.rapido', compact('modelos', 'voltajes', 'colores'));
+}
+
+public function generarPdfRapido(Request $request)
+{
+    $usuario = auth()->user();
+    abort_if($usuario->id_rol !== 5, 403);
+
+    $request->validate([
+        // ... tus validaciones se mantienen igual ...
+    ]);
+
+    $datos = [
+        'fecha'       => $request->fecha,
+        'cliente'     => $request->cliente,
+        'distancia'   => $request->distancia  ?? '/',
+        'transporte'  => $request->transporte ?? '/',
+        'costo_envio' => $request->costo_envio ?? '/',
+        'items'       => [],
+    ];
+
+    $cargadores = [];
+    $baterias   = [];
+
+    foreach ($request->items as $item) {
+        $modelo  = CatalogService::getModeloById($item['id_modelo']);
+        $voltaje = CatalogService::getVoltajeById($item['id_voltaje']);
+        $color   = CatalogService::getColorById($item['id_color']);
+
+        $nombreModelo  = $modelo->nombre_modelo ?? 'N/D';
+        $nombreVoltaje = $voltaje->voltaje ?? 'N/D';
+        $cantidad      = count($item['series']);
+
+        $datos['items'][] = [
+            'modelo'   => $nombreModelo,
+            'voltaje'  => $nombreVoltaje,
+            'color'    => $color->color ?? 'N/D',
+            'cantidad' => $cantidad,
+            'series'   => $item['series'],
+        ];
+
+        if ($nombreModelo === 'VmpS5') {
+            $cargadores['48V/12Ah'] = ($cargadores['48V/12Ah'] ?? 0) + $cantidad;
+            $baterias['12V/12Ah']   = ($baterias['12V/12Ah']   ?? 0) + ($cantidad * 4);
+        } else {
+            $volts       = intval($nombreVoltaje);
+            $numBaterias = intval($volts / 12);
+            if ($volts === 48)     $cargadores['48V/20Ah'] = ($cargadores['48V/20Ah'] ?? 0) + $cantidad;
+            elseif ($volts === 60) $cargadores['60V']      = ($cargadores['60V']      ?? 0) + $cantidad;
+            elseif ($volts === 72) $cargadores['72V']      = ($cargadores['72V']      ?? 0) + $cantidad;
+            $baterias['12V/20Ah'] = ($baterias['12V/20Ah'] ?? 0) + ($cantidad * $numBaterias);
+        }
+    }
+
+    $html = view('pedidos.pdf_rapido', compact('datos', 'cargadores', 'baterias'))->render();
+
+    $mpdf = new \Mpdf\Mpdf(['mode' => 'utf-8', 'format' => 'A4']);
+    $mpdf->WriteHTML($html);
+
+    return response($mpdf->Output("emision_rapida.pdf", 'S'))
+        ->header('Content-Type', 'application/pdf')
+        ->header('Content-Disposition', 'inline; filename="emision_rapida.pdf"');
+}
 }

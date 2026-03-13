@@ -142,6 +142,9 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
         Route::patch('/enlaces/{id}/activar', [EnlaceController::class, 'activar'])->name('enlaces.activar');
         Route::get('/enlaces/pedidos', [EnlaceController::class, 'pedidosDeEnlaces'])->name('enlaces.pedidos');
         Route::post('/enlaces/aceptar', [EnlaceController::class, 'aceptar'])->name('enlaces.aceptar');
+
+        Route::get('/pedidos/rapido/crear', [PedidoController::class, 'crearRapido'])->name('pedidos.rapido.crear');
+        Route::post('/pedidos/rapido/pdf', [PedidoController::class, 'generarPdfRapido'])->name('pedidos.rapido.pdf');
     });
 
 
