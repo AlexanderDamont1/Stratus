@@ -64,6 +64,7 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::post('/admin/setup/completar', [SetupController::class, 'completar'])->name('admin.setup.completar');
+    
 
     /*
     |--------------------------------------------------------------------------
