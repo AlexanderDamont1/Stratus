@@ -124,7 +124,7 @@ class BicicletaController extends Controller
         'id_voltaje' => $request->id_voltaje,
         'id_color'   => $request->id_color,
         'id_pedido'  => $request->id_pedido ?? null,
-        'status'     => 'STOCK',
+        
     ]);
 
     $completo = false;

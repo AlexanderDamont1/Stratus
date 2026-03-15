@@ -10,15 +10,17 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Carbon\Carbon;
+use Illuminate\Support\Str;
 
 class SetupController extends Controller
 {
-    private function generarIdUsuario(): string
+        private function generarIdUsuario(): string
     {
-        $fecha  = Carbon::now()->format('ymd');
-        $random = random_int(100000000, 999999999);
+        $fecha  = Carbon::now()->format('ymd'); // Ejemplo: 260314
+        $letras = Str::upper(Str::random(3));   // Genera exactamente 3 letras
+        $random = random_int(100, 999);         // Bajé a 3 dígitos para que el ID sea simétrico, pero puedes dejar 9999 si prefieres.
 
-        return 'USR' . $fecha . $random;
+        return 'USR' . $fecha . $letras . $random;
     }
 
     public function completar(Request $request)

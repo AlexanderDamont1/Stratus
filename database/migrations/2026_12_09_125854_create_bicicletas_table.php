@@ -14,6 +14,7 @@ return new class extends Migration {
 
             // Multinegocio
             $table->char('id_negocio', 36);
+            $table->char('id_usuario', 36);
 
             // Atributos físicos
             $table->char('id_modelo', 15);
@@ -21,11 +22,7 @@ return new class extends Migration {
             $table->char('id_color', 15);
 
             // Estado de la bicicleta
-            $table->enum('status', [
-                'STOCK',
-                'VENDIDA',
-                'REPARACION'
-            ])->default('STOCK');
+            $table->char('status', 1)->default(1);
 
             $table->char('id_pedido', 15);
 
@@ -40,6 +37,10 @@ return new class extends Migration {
             $table->foreign('id_pedido')
                   ->references('id_pedido')
                   ->on('pedidos');
+
+            $table->foreign('id_usuario')
+                  ->references('id_usuario')
+                  ->on('usuarios');
 
             $table->foreign('id_negocio')
                   ->references('id_negocio')

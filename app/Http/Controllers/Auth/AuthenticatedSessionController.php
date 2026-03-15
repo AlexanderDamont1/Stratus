@@ -9,6 +9,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use App\Events\SessionTokenUpdated;
+
 
 class AuthenticatedSessionController extends Controller
 {
@@ -40,22 +42,25 @@ class AuthenticatedSessionController extends Controller
 
         $usuario = Auth::user();
 
-        // ── Sesión única para Admin (1) y Vendedor (2) ──────────────────────
         if ($usuario->requiereSesionUnica()) {
 
             $newToken = Str::uuid()->toString();
 
-            // Guardar en BD (invalida cualquier sesión anterior)
             $usuario->session_token = $newToken;
             $usuario->save();
 
-            // Guardar en la sesión actual
             session(['session_token' => $newToken]);
+
+            // 🔴 Notificar a otros dispositivos
+            broadcast(new SessionTokenUpdated(
+                $usuario->id_usuario,
+                $newToken
+            ));
         }
-        // ────────────────────────────────────────────────────────────────────
 
         return redirect()->intended(route('dashboard'));
     }
+
 
     /**
      * Cerrar sesión.

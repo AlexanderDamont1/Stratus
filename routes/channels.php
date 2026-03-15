@@ -29,3 +29,9 @@ Broadcast::channel('vendedor.{idVendedor}', function ($user, $idVendedor) {
 Broadcast::channel('enlace-vendedor.{idVendedor}', function ($user, $idVendedor) {
     return $user->id_rol === 1 && $user->id_usuario == $idVendedor;
 });
+
+
+Broadcast::channel('user.{id}', function ($user, $id) {
+    return $user->id_usuario === $id;
+});
+

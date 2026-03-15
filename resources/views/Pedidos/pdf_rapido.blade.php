@@ -60,7 +60,7 @@
                 'color'    => $item['color'],
                 'cantidad' => $cantidad,
                 'serie'    => $series[$i] ?? '',
-                'lote'     => '',
+                'lote' => $item['lote'] ?? '',
             ];
         }
     }

@@ -95,47 +95,43 @@
                 <strong>Código:</strong><br>{{ $pedido->id_pedido }}
             </td>
             <td style="width:21%; text-align:center;">
-                <strong>Cliente:</strong><br>{{ optional($pedido->usuario)->nombre_usuario ?? '' }}
+                <strong>Cliente:</strong><br>{{ $cliente }}
             </td>
             <td style="width:10%; text-align:center;">
-                <strong>Distancia:</strong><br>/
+                <strong>Distancia:</strong><br>{{ $distancia }}
             </td>
             <td style="width:25%; text-align:center;">
-                <strong>Transporte:</strong><br>{{ $pedido->notas ?? 'Recoge en fabrica' }}
+                <strong>Transporte:</strong><br>{{ $transporte }}
             </td>
             <td style="width:16%; text-align:center;">
-                <strong>Costo Envío:</strong><br>/
+                <strong>Costo Envío:</strong><br>{{ $costo_envio }}
             </td>
         </tr>
     </table>
 
     @php
-    // -------------------------------------------------------
-    // 1) Construir lista plana de filas
-    // -------------------------------------------------------
+    
     $modelGroups = [];
+
     foreach ($pedido->items as $item) {
     $m = optional($item->modelo)->nombre_modelo ?? 'N/D';
-    $v = optional($item->voltaje)->voltaje ?? 'Sin Pilas';
     $c = optional($item->color)->color ?? 'N/D';
-    $modelGroups[$m]['voltajes'][$v]['colores'][$c][] = $item;
-    }
 
+    $modelGroups[$m]['colores'][$c][] = $item;
+    }
     $bicGroups = [];
     foreach ($pedido->bicicletas as $bic) {
     $m = optional($bic->modelo)->nombre_modelo ?? 'N/D';
-    $v = optional($bic->voltaje)->voltaje ?? 'Sin Pilas';
     $c = optional($bic->color)->color ?? 'N/D';
-    $bicGroups[$m][$v][$c][] = $bic->num_serie;
+    $bicGroups[$m][$c][] = $bic->num_serie;
     }
 
     // Construir lista plana de filas
     $filas = [];
     foreach ($modelGroups as $modelName => $modelGroup) {
-    foreach ($modelGroup['voltajes'] as $voltajeName => $voltGroup) {
-    foreach ($voltGroup['colores'] as $colorName => $items) {
-    $cantidad = $items[0]->cantidad;
-    $numSeries = $bicGroups[$modelName][$voltajeName][$colorName] ?? [];
+    foreach ($modelGroup['colores'] as $colorName => $items) {
+    $cantidad = collect($items)->sum('cantidad');
+    $numSeries = $bicGroups[$modelName][$colorName] ?? [];
     $totalFilas = max(1, $cantidad);
 
     for ($i = 0; $i < $totalFilas; $i++) {
@@ -148,14 +144,9 @@
         }
         }
         }
-        }
+        
 
-        // -------------------------------------------------------
-        // 2) Pre-calcular rowspans
-        // - modeloRowspan[i]: cuántas filas consecutivas desde i tienen el mismo modelo
-        // - colorRowspan[i]: cuántas filas consecutivas desde i tienen mismo modelo Y color
-        // (colorRowspan solo se calcula si también comparten modelo)
-        // -------------------------------------------------------
+        
         $n = count($filas);
         $modeloRowspan = array_fill(0, $n, 0);
         $colorRowspan = array_fill(0, $n, 0);

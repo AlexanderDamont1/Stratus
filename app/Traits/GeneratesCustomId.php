@@ -11,9 +11,11 @@ trait GeneratesCustomId
         static::creating(function ($model) {
             if (empty($model->{$model->getKeyName()})) {
                 $prefix  = method_exists($model, 'idPrefix') ? $model->idPrefix() : 'ID';
-                $date    = now()->format('ymdHis');
+                $date    = now()->format('ymd');
                 $rand    = rand(100, 999);
-                $model->{$model->getKeyName()} = $prefix . $date . $rand;
+                $letras = Str::upper(Str::random(3));
+
+                $model->{$model->getKeyName()} = $prefix . $date . $letras . $rand;
             }
         });
     }

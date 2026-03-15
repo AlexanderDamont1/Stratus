@@ -351,69 +351,81 @@ class PedidoController extends Controller
     }
 
     public function pdf(Request $request, string $id_pedido)
-    {
-        $pedido = Pedido::with([
-            'usuario',
-            'negocio',
-            'items.modelo',
-            'items.voltaje',
-            'items.color',
-            'bicicletas.modelo',
-            'bicicletas.voltaje',
-            'bicicletas.color',
-        ])->findOrFail($id_pedido);
+{
+    $pedido = Pedido::with([
+        'usuario',
+        'negocio',
+        'items.modelo',
+        'items.voltaje',
+        'items.color',
+        'bicicletas.modelo',
+        'bicicletas.voltaje',
+        'bicicletas.color',
+    ])->findOrFail($id_pedido);
 
-        // ==> Calcular complementarios 
-        $cargadores = [];
-        $baterias   = [];
+    // ==> Recibir datos del formulario
+    $cliente = $request->input('cliente', optional($pedido->usuario)->nombre_usuario ?? '');
+    $distancia = $request->input('distancia');
+    $transporte = $request->input('transporte');
+    $costo_envio = $request->input('costo_envio');
 
-        foreach ($pedido->items as $item) {
-            $modelo   = optional($item->modelo)->nombre_modelo ?? '';
-            $voltaje  = optional($item->voltaje)->voltaje ?? '';
-            $cantidad = $item->cantidad;
+    // ==> Calcular complementarios 
+    $cargadores = [];
+    $baterias   = [];
 
-            if ($modelo === 'VmpS5') {
-                // Siempre 48V/12Ah — 4 baterías de 12V/12Ah
-                $cargadores['48V/12Ah']  = ($cargadores['48V/12Ah']  ?? 0) + $cantidad;
-                $baterias['12V/12Ah']    = ($baterias['12V/12Ah']    ?? 0) + ($cantidad * 4);
-            } else {
+    foreach ($pedido->items as $item) {
+        $modelo   = optional($item->modelo)->nombre_modelo ?? '';
+        $voltaje  = optional($item->voltaje)->voltaje ?? '';
+        $cantidad = $item->cantidad;
 
-                $volts = intval($voltaje);
-                $numBaterias = intval($volts / 12);
+        if ($modelo === 'VmpS5') {
+            // Siempre 48V/12Ah — 4 baterías de 12V/12Ah
+            $cargadores['48V/12Ah']  = ($cargadores['48V/12Ah']  ?? 0) + $cantidad;
+            $baterias['12V/12Ah']    = ($baterias['12V/12Ah']    ?? 0) + ($cantidad * 4);
+        } else {
+            $volts = intval($voltaje);
+            $numBaterias = intval($volts / 12);
 
-                // Cargador según voltaje
-                if ($volts === 48) {
-                    $cargadores['48V/20Ah'] = ($cargadores['48V/20Ah'] ?? 0) + $cantidad;
-                } elseif ($volts === 60) {
-                    $cargadores['60V']      = ($cargadores['60V']      ?? 0) + $cantidad;
-                } elseif ($volts === 72) {
-                    $cargadores['72V']      = ($cargadores['72V']      ?? 0) + $cantidad;
-                }
-
-                // Baterías siempre 12V/20Ah para los demás modelos
-                $baterias['12V/20Ah'] = ($baterias['12V/20Ah'] ?? 0) + ($cantidad * $numBaterias);
+            // Cargador según voltaje
+            if ($volts === 48) {
+                $cargadores['48V/20Ah'] = ($cargadores['48V/20Ah'] ?? 0) + $cantidad;
+            } elseif ($volts === 60) {
+                $cargadores['60V/20Ah']      = ($cargadores['60V/20Ah']      ?? 0) + $cantidad;
+            } elseif ($volts === 72) {
+                $cargadores['72V/20Ah']      = ($cargadores['72V/20Ah']      ?? 0) + $cantidad;
             }
+
+            // Baterías siempre 12V/20Ah para los demás modelos
+            $baterias['12V/20Ah'] = ($baterias['12V/20Ah'] ?? 0) + ($cantidad * $numBaterias);
         }
-
-        // ─── Lotes de batería desde query params ──────────────────────
-        $lotesRaw = $request->input('lotes', []);
-        $lotes = [];
-        foreach ($lotesRaw as $idx => $valor) {
-            $lotes[(int)$idx] = $valor;
-        }
-        // ─────────────────────────────────────────────────────────────
-
-        $html = view('pedidos.pdf_create', compact('pedido', 'cargadores', 'baterias', 'lotes'))->render();
-
-
-        $mpdf = new \Mpdf\Mpdf(['mode' => 'utf-8', 'format' => 'A4']);
-        $mpdf->WriteHTML($html);
-
-        return response($mpdf->Output("emision_{$pedido->id_pedido}.pdf", 'S'))
-            ->header('Content-Type', 'application/pdf')
-            ->header('Content-Disposition', 'inline; filename="emision_' . $pedido->id_pedido . '.pdf"');
     }
 
+    // ─── Lotes de batería desde query params ──────────────────────
+    $lotesRaw = $request->input('lotes', []);
+    $lotes = [];
+    foreach ($lotesRaw as $idx => $valor) {
+        $lotes[(int)$idx] = $valor;
+    }
+    // ─────────────────────────────────────────────────────────────
+
+    $html = view('pedidos.pdf_create', compact(
+        'pedido', 
+        'cargadores', 
+        'baterias', 
+        'lotes',
+        'cliente',
+        'distancia',
+        'transporte',
+        'costo_envio'
+    ))->render();
+
+    $mpdf = new \Mpdf\Mpdf(['mode' => 'utf-8', 'format' => 'A4']);
+    $mpdf->WriteHTML($html);
+
+    return response($mpdf->Output("emision_{$pedido->id_pedido}.pdf", 'S'))
+        ->header('Content-Type', 'application/pdf')
+        ->header('Content-Disposition', 'inline; filename="emision_' . $pedido->id_pedido . '.pdf"');
+}
 
     public function completarEntrega(Request $request, string $id_pedido)
     {
@@ -568,6 +580,7 @@ public function generarPdfRapido(Request $request)
             'color'    => $color->color ?? 'N/D',
             'cantidad' => $cantidad,
             'series'   => $item['series'],
+            'lote'     => $item['lote'] ?? '',
         ];
 
         if ($nombreModelo === 'VmpS5') {
