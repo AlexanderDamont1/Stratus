@@ -1,10 +1,13 @@
 <style>
-    [x-cloak] { display: none !important; }
+    [x-cloak] {
+        display: none !important;
+    }
 </style>
+
 
 <div
     x-data="{ open: false }"
-    class="flex min-h-screen bg-gray-50 dark:bg-gray-900">
+    class="flex min-h-screen bg-gray-50 dark:bg-gray-950">
     {{-- Overlay móvil --}}
     <div
         x-show="open"
@@ -23,7 +26,7 @@
         x-cloak
         class="fixed lg:static inset-y-0 left-0 z-40
                w-64 sm:w-72 lg:w-64
-               bg-white dark:bg-gray-800
+               bg-white dark:bg-gray-900
                border-r border-gray-200 dark:border-gray-700
                flex flex-col
                transition-transform duration-300 ease-in-out
@@ -99,6 +102,8 @@
                 </svg>
                 <span class="truncate">Stock</span>
             </a>
+
+
             @endif
 
             {{-- Gestor --}}
@@ -246,7 +251,10 @@
                     </a>
                 </div>
             </div>
+
+
             @endif
+
 
             @if(in_array(auth()->user()->id_rol, [1,5]))
             <a href="{{ route('pedidos.index') }}"
@@ -261,6 +269,7 @@
                 <span class="truncate">Pedidos</span>
             </a>
             @endif
+
 
             {{-- Perfil --}}
             <a href="{{ route('profile.edit') }}"
@@ -306,33 +315,52 @@
         </div>
     </aside>
 
-         {{-- MODALES PARA ROL 44 CON PASOS --}}
-@php
-    $debeMostrarWelcome = false;
-    if(Auth::check() && Auth::user()->id_rol === 44) {
-        // Si el negocio no está activo, forzamos la vista del modal
-        $debeMostrarWelcome = (Auth::user()->welcome_pending ?? true) || (Auth::user()->negocio && Auth::user()->negocio->status !== 'activo');
-    }
-@endphp
+    {{-- CONTENIDO --}}
+    <div class="flex-1 flex flex-col min-w-0 ">
+        <header class="lg:hidden h-16 flex items-center px-4 bg-white dark:bg-gray-800 border-b dark:border-gray-700 shrink-0 sticky top-0 z-20">
+            <button
+                @click="open = !open"
+                class="p-2 -ml-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition"
+                aria-label="Menú">
+                <svg x-show="!open" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+                <svg x-show="open" x-cloak class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+            <span class="flex-1 text-center font-semibold text-gray-900 dark:text-white pr-8">
+                ArrowK
+            </span>
+        </header>
 
-@if(Auth::check() && Auth::user()->id_rol === 44 && $debeMostrarWelcome)
-    <div 
-        x-data="{ step: {{ (Auth::user()->welcome_pending ?? true) ? 1 : 2 }} }" 
+        <main class="flex-1 p-4 sm:p-6 overflow-y-auto">
+            {{ $slot }}
+        </main>
+    </div>
+
+    {{-- MODAL SETUP (ROL 44) --}}
+    @if(auth()->user()->id_rol === 44 && auth()->user()->negocio)
+    @php
+    $max = auth()->user()->negocio->max_users ?? 1;
+    @endphp
+
+    <div
+        x-data="{ step: {{ (Auth::user()->welcome_pending ?? true) ? 1 : 2 }} }"
         class="fixed inset-0 z-[100] overflow-y-auto"
-        x-cloak
-    >
+        x-cloak>
         {{-- Backdrop (Fondo oscuro) --}}
         <div class="fixed inset-0 bg-gray-950/80 backdrop-blur-sm"></div>
 
         <div class="flex min-h-full items-center justify-center p-4">
-            
+
             {{-- PASO 1: BIENVENIDA --}}
-            <div x-show="step === 1" 
-                 x-transition:enter="transition ease-out duration-300"
-                 x-transition:enter-start="opacity-0 scale-95"
-                 x-transition:enter-end="opacity-100 scale-100"
-                 class="relative w-full max-w-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-xl rounded-2xl p-8">
-                
+            <div x-show="step === 1"
+                x-transition:enter="transition ease-out duration-300"
+                x-transition:enter-start="opacity-0 scale-95"
+                x-transition:enter-end="opacity-100 scale-100"
+                class="relative w-full max-w-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-xl rounded-2xl p-8">
+
                 <div class="text-center mb-8">
                     <div class="mx-auto w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
                         <x-application-logo class="h-8 w-8" />
@@ -347,16 +375,16 @@
             </div>
 
             {{-- PASO 2: SETUP DE VENDEDORES --}}
-            <div x-show="step === 2" 
-                 x-transition:enter="transition ease-out duration-300"
-                 x-transition:enter-start="opacity-0 scale-95"
-                 x-transition:enter-end="opacity-100 scale-100"
-                 class="relative w-full max-w-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-2xl rounded-2xl p-8">
-                
+            <div x-show="step === 2"
+                x-transition:enter="transition ease-out duration-300"
+                x-transition:enter-start="opacity-0 scale-95"
+                x-transition:enter-end="opacity-100 scale-100"
+                class="relative w-full max-w-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-2xl rounded-2xl p-8">
+
                 <div class="flex justify-between items-start mb-6">
                     <div>
                         <h2 class="text-xl font-bold text-gray-900 dark:text-white">Configuración inicial</h2>
-                        <p class="text-sm text-gray-500">Registra a tus vendedores para activar el panel.</p>
+                        <p class="text-sm text-gray-500">Registra a tus sucursales para activar el panel.</p>
                     </div>
                     <button @click="step = 1" class="text-xs text-gray-400 hover:text-gray-600">← Volver</button>
                 </div>
@@ -364,35 +392,53 @@
                 <form method="POST" action="{{ route('admin.setup.completar') }}" class="space-y-6">
                     @csrf
                     @php $max = Auth::user()->negocio->max_users ?? 1; @endphp
-                    
+
                     <div class="max-h-[50vh] overflow-y-auto pr-2 space-y-6">
                         @for($i = 0; $i < $max; $i++)
                             <div class="p-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50">
-                                <h4 class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4">Vendedor {{ $i + 1 }}</h4>
-                                <div class="grid gap-4 sm:grid-cols-2">
-                                    <div class="sm:col-span-2">
-                                        <input type="text" name="vendedores[{{ $i }}][nombre]" placeholder="Nombre completo" class="w-full rounded-lg border-gray-300 dark:bg-gray-700 dark:text-white focus:ring-gray-900" required>
-                                    </div>
-                                    <input type="email" name="vendedores[{{ $i }}][correo]" placeholder="Email de acceso" class="w-full rounded-lg border-gray-300 dark:bg-gray-700 dark:text-white focus:ring-gray-900" required>
-                                    <input type="password" name="vendedores[{{ $i }}][password]" placeholder="Contraseña temporal" class="w-full rounded-lg border-gray-300 dark:bg-gray-700 dark:text-white focus:ring-gray-900" required>
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4">Vendedor {{ $i + 1 }}</h4>
+                            <div class="grid gap-4 sm:grid-cols-2">
+                                <div class="sm:col-span-2">
+                                    <input type="text" name="vendedores[{{ $i }}][nombre]" placeholder="Nombre Sucursal" class="w-full rounded-lg border-gray-300 dark:bg-gray-700 dark:text-white focus:ring-gray-900 text-sm sm:text-base" required>
+                                </div>
+                                <input type="email" name="vendedores[{{ $i }}][correo]" placeholder="Email de acceso" class="w-full rounded-lg border-gray-300 dark:bg-gray-700 dark:text-white focus:ring-gray-900 text-sm sm:text-base" required>
+
+                                <!-- Campo de contraseña con Alpine.js -->
+                                <div class="relative" x-data="{ showPassword: false }">
+                                    <input :type="showPassword ? 'text' : 'password'"
+                                        name="vendedores[{{ $i }}][password]"
+                                        placeholder="Contraseña"
+                                        class="w-full rounded-lg border-gray-300 dark:bg-gray-700 dark:text-white focus:ring-gray-900 text-sm sm:text-base pr-10"
+                                        required>
+                                    <button type="button"
+                                        @click="showPassword = !showPassword"
+                                        class="absolute inset-y-0 right-0 flex items-center px-3 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                                        <svg x-show="!showPassword" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                        <svg x-show="showPassword" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                        </svg>
+                                    </button>
                                 </div>
                             </div>
-                        @endfor
                     </div>
-
-                    <div class="pt-4 border-t dark:border-gray-800 flex gap-3">
-                        <button type="submit" class="flex-1 bg-gray-900 dark:bg-white dark:text-gray-900 text-white py-4 rounded-xl font-bold shadow-xl hover:scale-[1.01] transition-transform">
-                            Finalizar y Activar Cuenta
-                        </button>
-                    </div>
-                </form>
-            </div>
-
+                    @endfor
+            
         </div>
-    </div>
-@endif
 
-{{-- Scripts necesarios --}}
-<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+        <div class="pt-4 border-t dark:border-gray-800 flex gap-3">
+            <button type="submit" class="flex-1 bg-gray-900 dark:bg-white dark:text-gray-900 text-white py-4 rounded-xl font-bold shadow-xl hover:scale-[1.01] transition-transform">
+                Finalizar y Activar Cuenta
+            </button>
+        </div>
+        </form>
+    </div>
+
+</div>
+</div>
+@endif
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
