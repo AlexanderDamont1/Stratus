@@ -559,6 +559,8 @@ public function generarPdfRapido(Request $request)
         'distancia'   => $request->distancia  ?? '/',
         'transporte'  => $request->transporte ?? '/',
         'costo_envio' => $request->costo_envio ?? '/',
+        'Nchofer'     => $request->Nchofer ?? '',
+        'Tchofer'     => $request->Tchofer ?? '',
         'items'       => [],
     ];
 
@@ -590,8 +592,8 @@ public function generarPdfRapido(Request $request)
             $volts       = intval($nombreVoltaje);
             $numBaterias = intval($volts / 12);
             if ($volts === 48)     $cargadores['48V/20Ah'] = ($cargadores['48V/20Ah'] ?? 0) + $cantidad;
-            elseif ($volts === 60) $cargadores['60V']      = ($cargadores['60V']      ?? 0) + $cantidad;
-            elseif ($volts === 72) $cargadores['72V']      = ($cargadores['72V']      ?? 0) + $cantidad;
+            elseif ($volts === 60) $cargadores['60V/20Ah']      = ($cargadores['60V/20Ah']      ?? 0) + $cantidad;
+            elseif ($volts === 72) $cargadores['72V/20Ah']      = ($cargadores['72V/20Ah']      ?? 0) + $cantidad;
             $baterias['12V/20Ah'] = ($baterias['12V/20Ah'] ?? 0) + ($cantidad * $numBaterias);
         }
     }

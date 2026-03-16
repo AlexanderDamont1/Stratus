@@ -396,53 +396,53 @@
 
                 {{-- Token de entrega — solo rol 1, solo status 3 --}}
                 @if(auth()->user()->id_rol == 1)
-                <div x-show="detailPedido?.status_num == 3" x-cloak
-                    class="px-4 sm:px-6 py-4 border-b dark:border-gray-700 bg-green-50 dark:bg-green-900/10">
-                    <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Token de Entrega</p>
+    <div x-show="detailPedido?.status_num == 3" x-cloak
+        class="px-4 sm:px-6 py-4 border-b dark:border-gray-700 bg-green-50 dark:bg-green-900/10">
+        <p class="text-xs text-gray-400 uppercase tracking-wider mb-2 text-center">Token de Entrega</p> {{-- Centrado --}}
 
-                    <div x-show="!detailToken && !detailTokenCargando" class="flex items-center gap-2">
-                        <button @click="cargarToken(detailPedido.id_pedido)"
-                            class="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold transition">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                            Ver Token
-                        </button>
-                        <p class="text-xs text-gray-400">Haz clic para revelar el token de entrega</p>
-                    </div>
+        <div x-show="!detailToken && !detailTokenCargando" class="flex items-center justify-center gap-2"> {{-- Centrado --}}
+            <button @click="cargarToken(detailPedido.id_pedido)"
+                class="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                Ver Token
+            </button>
+            <p class="text-xs text-gray-400">Haz clic para revelar el token de entrega</p>
+        </div>
 
-                    <div x-show="detailTokenCargando" class="flex items-center gap-2">
-                        <svg class="w-4 h-4 animate-spin text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        <span class="text-xs text-gray-400">Cargando...</span>
-                    </div>
+        <div x-show="detailTokenCargando" class="flex items-center justify-center gap-2"> {{-- Centrado --}}
+            <svg class="w-4 h-4 animate-spin text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span class="text-xs text-gray-400">Cargando...</span>
+        </div>
 
-                    <div x-show="detailToken" class="flex items-center gap-3">
-                        <span class="font-mono text-lg font-bold tracking-widest text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-4 py-2 rounded-lg"
-                            x-text="detailToken"></span>
-                        <button @click="copiarToken()"
-                            class="flex items-center gap-1 px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
-                            <span x-text="tokenCopiado ? '¡Copiado!' : 'Copiar'"></span>
-                        </button>
-                        <button @click="detailToken = null"
-                            class="text-xs text-gray-400 hover:text-gray-600 transition">
-                            Ocultar
-                        </button>
-                    </div>
+        <div x-show="detailToken" class="flex items-center justify-center gap-3 flex-wrap"> {{-- Centrado y con wrap para móvil --}}
+            <span class="font-mono text-lg font-bold tracking-widest text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-4 py-2 rounded-lg"
+                x-text="detailToken"></span>
+            <button @click="copiarToken()"
+                class="flex items-center gap-1 px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                <span x-text="tokenCopiado ? '¡Copiado!' : 'Copiar'"></span>
+            </button>
+            <button @click="detailToken = null"
+                class="text-xs text-gray-400 hover:text-gray-600 transition">
+                Ocultar
+            </button>
+        </div>
 
-                    <p x-show="detailTokenError" x-text="detailTokenError"
-                        class="text-xs text-red-500 mt-1"></p>
-                </div>
-                @endif
+        <p x-show="detailTokenError" x-text="detailTokenError"
+            class="text-xs text-red-500 mt-1 text-center"></p> {{-- Centrado --}}
+    </div>
+@endif
 
                 {{-- Tabla de items --}}
                 <div class="px-4 sm:px-6 py-4 max-h-64 overflow-y-auto">

@@ -146,6 +146,8 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
 
         Route::get('/pedidos/rapido/crear', [PedidoController::class, 'crearRapido'])->name('pedidos.rapido.crear');
         Route::post('/pedidos/rapido/pdf', [PedidoController::class, 'generarPdfRapido'])->name('pedidos.rapido.pdf');
+
+        Route::post('/pedidos/{id_pedido}/status', [PedidoController::class, 'updateStatus'])->name('pedidos.status');
     });
 
 

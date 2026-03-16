@@ -1513,59 +1513,108 @@
                 console.log('Información de envío aplicada al PDF');
             },
 
-            async finalizarPedido() {
-                    // Primero verificamos si el pedido está completo
-                    if (this.totalEscaneado < {{ $totalRequerido }}) {
-                        alert('El pedido no está completo aún');
+          async finalizarPedido() {
+                // Primero verificamos si el pedido está completo
+                if (this.totalEscaneado < {{ $totalRequerido }}) {
+                    alert('El pedido no está completo aún');
+                    return;
+                }
+                
+                // Mostrar indicador de carga
+                this.guardando = true;
+                
+                try {
+                    // PASO 1: Actualizar el status del pedido a 3
+                    const statusResponse = await fetch('{{ route("pedidos.status", $pedido->id_pedido) }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({
+                            status: 3 // 3 = completado/listo para entregar
+                        })
+                    });
+                    
+                    // Verificar si la respuesta es JSON
+                    const contentType = statusResponse.headers.get('content-type');
+                    
+                    if (!contentType || !contentType.includes('application/json')) {
+                        // Si no es JSON, mostrar el texto de error
+                        const text = await statusResponse.text();
+                        console.error('Respuesta no JSON:', text);
+                        alert('Error: El servidor no devolvió una respuesta válida. Verifica que la ruta exista y devuelva JSON.');
+                        this.guardando = false;
                         return;
                     }
                     
-                    // Construir URL con los parámetros de información general
+                    const statusData = await statusResponse.json();
+                    
+                    if (!statusResponse.ok || !statusData.ok) {
+                        alert('Error al actualizar el status: ' + (statusData.mensaje || 'Error desconocido'));
+                        this.guardando = false;
+                        return;
+                    }
+                    
+                    console.log('Status actualizado correctamente:', statusData);
+                    
+                    // PASO 2: Generar el PDF con los datos actuales
                     const params = new URLSearchParams();
                     
-                    // Agregar distancia si tiene valor
+                    // Agregar distancia
                     if (this.distancia && this.distancia.trim() !== '') {
                         params.append('distancia', this.distancia);
                     }
                     
-                    // Agregar transporte si tiene valor
+                    // Agregar transporte
                     if (this.transporte && this.transporte.trim() !== '') {
                         params.append('transporte', this.transporte);
                     }
                     
-                    // Agregar costo_envio si tiene valor
+                    // Agregar costo_envio
                     if (this.costo_envio && this.costo_envio.toString().trim() !== '') {
                         params.append('costo_envio', this.costo_envio);
                     }
                     
-                    // Agregar cliente (opcional, si lo necesitas)
+                    // Agregar cliente
                     params.append('cliente', '{{ optional($pedido->usuario)->nombre_usuario ?? '' }}');
                     
-                    // Agregar los lotes de batería (igual que en aplicarLotes)
+                    // Agregar lotes
                     const lotesFiltrados = this.loteBaterias.map(l => l.trim()).filter(l => l !== '');
                     lotesFiltrados.forEach((l, i) => {
                         params.append('lotes[' + i + ']', l);
                     });
                     
-                    // Construir la URL final
                     const base = '{{ route("pedidos.pdf", $pedido->id_pedido) }}';
                     const url = params.toString() ? base + '?' + params.toString() : base;
                     
-                    // Actualizar el iframe del PDF
+                    // Actualizar el iframe
                     if (this.$refs.pdfFrame) {
                         this.$refs.pdfFrame.src = url;
                     }
                     this.pdfUrl = url;
                     
-                    // Abrir el PDF en una nueva pestaña (opcional)
+                    // Abrir PDF en nueva pestaña
                     window.open(url, '_blank');
                     
                     // Mostrar modal de completado
                     this.completoModal = true;
                     
-                    // Opcional: cerrar el modal de información si estaba abierto
+                    // Cerrar modales
                     this.infoModal = false;
-                },
+                    this.loteModal = false;
+                    
+                    console.log('Pedido finalizado y status actualizado a 3');
+                    
+                } catch (e) {
+                    console.error('Error al finalizar pedido:', e);
+                    alert('Error de conexión al finalizar el pedido: ' + e.message);
+                } finally {
+                    this.guardando = false;
+                }
+            },
 
             async onModeloChange() {
                 const modeloId = this.formBic.id_modelo;
@@ -1665,6 +1714,7 @@
                         }
                         this.pdfUrl = '{{ route("pedidos.pdf", $pedido->id_pedido) }}' + '?t=' + Date.now();
                     }, 500);
+
 
                 } catch (e) {
                     console.error(e);

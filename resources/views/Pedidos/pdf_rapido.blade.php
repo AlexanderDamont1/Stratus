@@ -21,50 +21,73 @@
     <table class="table header-table">
         <tr>
             <td colspan="7" style="text-align:center;">
-                <img src="{{ public_path('images/logo.jpg') }}" style="height:50px;" alt="Logo">
+                <img src="{{ public_path('/logo.jpg') }}" style="height:50px;" alt="Logo">
             </td>
         </tr>
         <tr>
             <td colspan="7" class="title">Formulario de Emisión de Fábrica</td>
         </tr>
         <tr>
-            <td style="width:10%; text-align:center;"><strong>Fecha:</strong><br>{{ $datos['fecha'] }}</td>
-            <td style="width:18%; text-align:center;"><strong>Código:</strong><br>/</td>
-            <td style="width:21%; text-align:center;"><strong>Cliente:</strong><br>{{ $datos['cliente'] }}</td>
-            <td style="width:10%; text-align:center;"><strong>Distancia:</strong><br>{{ $datos['distancia'] }}</td>
-            <td style="width:25%; text-align:center;"><strong>Transporte:</strong><br>{{ $datos['transporte'] }}</td>
-            <td style="width:16%; text-align:center;"><strong>Costo Envío:</strong><br>{{ $datos['costo_envio'] }}</td>
+            <td style="width:8%; text-align:center;">
+                <strong>Fecha:</strong><br>
+                <span style="font-size: 8px;">{{ $datos['fecha'] }}</span>
+            </td>
+            <td style="width:16%; text-align:center;">
+                <strong>Código:</strong><br>/
+            </td>
+            <td style="width:26%; text-align:center;">
+                <strong>Cliente:</strong><br>{{ $datos['cliente'] }}
+            </td>
+            <td style="width:22%; text-align:center;">
+                <strong>Distancia:</strong><br>{{ $datos['distancia'] }}
+            </td>
+            <td style="width:12%; text-align:center;">
+                <strong>Transporte:</strong><br>{{ $datos['transporte'] }}
+            </td>
+            <td style="width:16%; text-align:center;">
+                <strong>Costo Envío:</strong><br>{{ $datos['costo_envio'] }}
+            </td>
         </tr>
     </table>
 
     @php
-    // Construir filas agrupadas
+    // Agrupar por modelo y color, manteniendo cada serie con su lote
     $grupos = [];
     foreach ($datos['items'] as $item) {
-        $key = $item['modelo'] . '||' . $item['voltaje'] . '||' . $item['color'];
-        if (!isset($grupos[$key])) {
-            $grupos[$key] = $item;
-        } else {
-            $grupos[$key]['cantidad'] += $item['cantidad'];
-        }
-    }
-
-
-    $filas = [];
-    foreach ($datos['items'] as $item) {
+        $key = $item['modelo'] . '||' . $item['color'];
         $series = $item['series'] ?? [];
-        $cantidad = $item['cantidad'];
-        for ($i = 0; $i < $cantidad; $i++) {
-            $filas[] = [
-                'modelo'   => $item['modelo'],
-                'color'    => $item['color'],
-                'cantidad' => $cantidad,
-                'serie'    => $series[$i] ?? '',
-                'lote' => $item['lote'] ?? '',
+        $lote = $item['lote'] ?? '';
+        foreach ($series as $serie) {
+            if (!isset($grupos[$key])) {
+                $grupos[$key] = [
+                    'modelo' => $item['modelo'],
+                    'color' => $item['color'],
+                    'items' => []
+                ];
+            }
+            $grupos[$key]['items'][] = [
+                'serie' => $serie,
+                'lote' => $lote
             ];
         }
     }
 
+    // Construir filas: una por cada ítem (serie)
+    $filas = [];
+    foreach ($grupos as $grupo) {
+        $cantidadTotal = count($grupo['items']);
+        foreach ($grupo['items'] as $item) {
+            $filas[] = [
+                'modelo'   => $grupo['modelo'],
+                'color'    => $grupo['color'],
+                'cantidad' => $cantidadTotal,
+                'serie'    => $item['serie'],
+                'lote'     => $item['lote'],
+            ];
+        }
+    }
+
+    // Calcular rowspans para modelo y color
     $n = count($filas);
     $modeloRowspan = array_fill(0, $n, 0);
     $colorRowspan  = array_fill(0, $n, 0);
@@ -92,12 +115,12 @@
     <table class="table header-table">
         <thead>
             <tr>
-                <th class="small center" style="width:5%;">No.</th>
-                <th class="small center" style="width:18%;">Modelo</th>
-                <th class="small center" style="width:21%;">Color</th>
-                <th class="small center" style="width:10%;">Cantidad</th>
-                <th class="small center" style="width:25%;">No. Serie</th>
-                <th class="small center" style="width:5%;">No. Motor</th>
+                <th class="small center" style="width:8%;">No.</th>
+                <th class="small center" style="width:15%;">Modelo</th>
+                <th class="small center" style="width:16%;">Color</th>
+                <th class="small center" style="width:11%;">Cantidad</th>
+                <th class="small center" style="width:22%;">No. Serie</th>
+                <th class="small center" style="width:12%;">No. Motor</th>
                 <th class="small center" style="width:16%;">Lote de Bateria</th>
             </tr>
         </thead>
@@ -118,11 +141,10 @@
             </tr>
             @endforeach
 
-            {{-- Cargadores --}}
-            @php $globalIdx = count($filas); @endphp
+            {{-- Cargadores (sin numeración) --}}
             @foreach ($cargadores as $spec => $qty)
             <tr>
-                <td class="center">{{ $globalIdx + 1 }}</td>
+                <td class="center"></td>
                 <td class="center">Cargadores</td>
                 <td class="center">{{ $spec }}</td>
                 <td class="center">{{ $qty }}</td>
@@ -130,13 +152,12 @@
                 <td class="center"></td>
                 <td class="center"></td>
             </tr>
-            @php $globalIdx++; @endphp
             @endforeach
 
-            {{-- Baterías --}}
+            {{-- Baterías (sin numeración) --}}
             @foreach ($baterias as $spec => $qty)
             <tr>
-                <td class="center">{{ $globalIdx + 1 }}</td>
+                <td class="center"></td>
                 <td class="center">Baterías</td>
                 <td class="center">{{ $spec }}</td>
                 <td class="center">{{ $qty }}</td>
@@ -144,29 +165,35 @@
                 <td class="center"></td>
                 <td class="center"></td>
             </tr>
-            @php $globalIdx++; @endphp
             @endforeach
         </tbody>
     </table>
 
+    <!-- Firmas y footer (igual que antes) -->
     <table class="table header-table">
         <tr>
-            <td style="width:59%; height:90px; font-size:11px; padding:4px; font-style:italic; text-align:center; font-weight:bold;">
+            <td style="width:72%; height:60px; font-size:9px; padding:3px; font-style:italic; text-align:center; font-weight:bold; line-height:1.2;">
                 Este pedido es por duplicado, uno se enviará al destino con la mercancía, otro se guardará en fábrica y el archivo electrónico se enviará al departamento comercial.
             </td>
-            <td rowspan="2" style="width:41%; vertical-align:top; font-size:11px; padding:4px; font-style:italic; text-align:center; font-weight:bold;">
+            <td rowspan="2" style="width:28%; vertical-align:top; font-size:10px; padding:3px; font-style:italic; text-align:center; font-weight:bold;">
                 Sello o firma del responsable de fábrica:
             </td>
         </tr>
         <tr>
-            <td style="padding:2px; font-size:10px; height:20px; line-height:1;">Firma del inspector de calidad:</td>
+            <td style="padding:4px; font-size:10px; height:15px; line-height:1;">Firma del inspector de calidad:</td>
         </tr>
     </table>
 
-    <table class="table header-table">
+   <table class="table header-table">
         <tr>
-            <td style="width:40%; padding:5px;">Firma del chofer:<br></td>
-            <td style="width:60%; padding:5px;">Teléfono chofer:<br></td>
+            <td style="width:40%; padding:5px;">
+                Firma del chofer:<br>
+                <span style="font-weight:normal;">{{ $datos['Nchofer'] }}</span>
+            </td>
+            <td style="width:60%; padding:5px;">
+                Teléfono chofer:<br>
+                <span style="font-weight:normal;">{{ $datos['Tchofer'] }}</span>
+            </td>
         </tr>
     </table>
 
@@ -187,26 +214,23 @@
     </table>
 
     <table style="width:100%; border-collapse:collapse; border:none;">
-        <tr><td style="border:1px solid #000; padding:5px;">Observación:</td></tr>
         <tr>
-            <td style="border:1px solid #000; padding:5px;">
+            <td style="border:1px solid #000; padding:5px; height:50px; font-size:11px; vertical-align:top;">Observación:</td>
+        </tr>
+        <tr>
+            <td style="border:1px solid #000; padding:5px; font-size:9px;">
                 Para cualquier aclaración o informe de daños comuníquese al siguiente número &nbsp; 56 7716 5697
             </td>
         </tr>
         <tr>
-            <td style="border:1px solid #000; padding:5px; height:25px; color:red;">
+            <td style="border:1px solid #000; padding:8px; color:red; font-size:9px; line-height:1.4; vertical-align:top;">
                 El pedido deberá ser supervisado por el cliente, una vez firmado este documento la empresa no se hace responsable de cualquier daño o pérdida que pueda ocurrir durante el transporte o después de la entrega.
             </td>
         </tr>
     </table>
 
     <div class="footer" style="display:flex; align-items:center; height:22px; position:relative;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="#4a6baf" viewBox="0 0 16 16" style="vertical-align:middle; margin-right:5px;">
-            <path d="M8 1a5.53 5.53 0 0 0-3.594 1.343A5.49 5.49 0 0 0 8 0a5.49 5.49 0 0 0 3.594 2.343A5.53 5.53 0 0 0 8 1z"/>
-            <path d="M4.406 3.3C2.664 4.045 1.5 5.897 1.5 8c0 2.485 2.015 4.5 4.5 4.5H11a4.5 4.5 0 0 0 0-9 5.53 5.53 0 0 0-3.594 1.3z"/>
-        </svg>
-        <span style="line-height:22px;">Powered By: CloudLabs</span>
-        <img src="{{ public_path('images/CloudLabs.png') }}" style="height:15px; width:auto; display:block; position:relative; top:3px; margin-left:1px;">
+        <span style="font-size: 8px;">Powered By: CloudLabs</span>
     </div>
 
 </body>
