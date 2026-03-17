@@ -70,132 +70,127 @@
         </div>
 
         {{-- ===== TABLA ===== --}}
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-            <div class="px-6 py-4 border-b dark:border-gray-700 flex items-center justify-between">
-                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Bicicletas registradas en {{ $bicicletas->total() }}</h3>
-                <span class="text-xs text-gray-400">{{ $bicicletas->total() }} total</span>
-            </div>
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+    <div class="px-6 py-4 border-b dark:border-gray-700 flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Bicicletas registradas</h3>
+        <span class="text-xs text-gray-400">{{ $bicicletas->total() }} total</span>
+    </div>
 
-            {{-- Vista PC --}}
-            <div class="hidden md:block overflow-x-auto">
-                <table class="min-w-full text-sm border border-gray-200 dark:border-gray-700">
-                    <thead class="bg-gray-100 dark:bg-gray-800">
-                        <tr>
-                             <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
-                                <input type="checkbox" id="selectAll">
-                            </th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">N° Serie</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Modelo</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Voltaje</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Color</th>
-                            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Status</th>
+    @php
+        // Mapeo de estados: número BD => texto mostrado y clase de color
+        $estados = [
+            '1' => ['texto' => 'En Stock', 'color' => 'green'],
+            '2' => ['texto' => 'Reparación', 'color' => 'yellow'],
+            '3' => ['texto' => 'Vendido', 'color' => 'blue'],
+            'VENDIDA' => ['texto' => 'Vendido', 'color' => 'blue'], // por si acaso
+        ];
+    @endphp
 
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900">
-                        @forelse($bicicletas as $bicicleta)
+    {{-- Vista PC --}}
+    <div class="hidden md:block overflow-x-auto">
+        <table class="min-w-full text-sm border border-gray-200 dark:border-gray-700">
+            <thead class="bg-gray-100 dark:bg-gray-800">
+                <tr>
+                    
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">N° Serie</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Modelo</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Voltaje</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Color</th>
+                    <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Status</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900">
+                @forelse($bicicletas as $bicicleta)
+                    @php
+                        $statusKey = $bicicleta->status;
+                        $estado = $estados[$statusKey] ?? ['texto' => ucfirst(str_replace('_', ' ', $statusKey)), 'color' => 'red'];
+                        $color = $estado['color'];
+                    @endphp
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                        
+                        <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">{{ $bicicleta->num_serie }}</td>
+                        <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ $bicicleta->modelo->nombre_modelo ?? '—' }}</td>
+                        <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ $bicicleta->voltaje->voltaje ?? '—' }}</td>
+                        <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ $bicicleta->color->color ?? '—' }}</td>
+                        <td class="px-4 py-3 text-center">
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full
+                                @switch($color)
+                                    @case('green') bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-400 @break
+                                    @case('yellow') bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-400 @break
+                                    @case('blue') bg-blue-100 text-blue-800 dark:bg-blue-800/30 dark:text-blue-400 @break
+                                    @default bg-red-100 text-red-800 dark:bg-red-800/30 dark:text-red-400
+                                @endswitch
+                            ">
+                                {{ $estado['texto'] }}
+                            </span>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="6" class="px-6 py-10 text-center text-gray-500 dark:text-gray-400">
+                            No se encontraron bicicletas.
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
 
-                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
-                            <td class="px-4 py-3">
-                                <input
-                                    type="checkbox"
-                                    class="bike-checkbox rounded border-gray-300"
-                                    value="{{ $bicicleta->id_bicicleta }}">
-                            </td>
-                            <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">{{ $bicicleta->num_serie }}</td>
-                            <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ $bicicleta->modelo->nombre_modelo ?? '—' }}</td>
-                            <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ $bicicleta->voltaje->voltaje ?? '—' }}</td>
-                            <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ $bicicleta->color->color ?? '—' }}</td>
-                            <td class="px-4 py-3 text-center">
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full
-                                    @if($bicicleta->status == 'STOCK') bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-400
-                                    @elseif($bicicleta->status == 'REPARACION') bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-400
-                                    @elseif($bicicleta->status == 'VENDIDA') bg-blue-100 text-blue-800 dark:bg-blue-800/30 dark:text-blue-400
-                                    @else bg-red-100 text-red-800 dark:bg-red-800/30 dark:text-red-400
-                                    @endif">
-                                    {{ ucfirst(str_replace('_', ' ', $bicicleta->status)) }}
-                                </span>
-                            </td>
+    {{-- Vista móvil --}}
+    <div class="block md:hidden overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="bg-gray-50 dark:bg-gray-700/50">
+                <tr>
+                   
+                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">N° Serie</th>
+                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Voltaje</th>
+                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Color</th>
+                    <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                @forelse($bicicletas as $bicicleta)
+                    @php
+                        $statusKey = $bicicleta->status;
+                        $estado = $estados[$statusKey] ?? ['texto' => ucfirst(str_replace('_', ' ', $statusKey)), 'color' => 'red'];
+                        $color = $estado['color'];
+                    @endphp
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                       
+                        <td class="px-3 py-3">
+                            <div class="text-xs font-medium text-gray-900 dark:text-white">{{ $bicicleta->num_serie }}</div>
+                            <div class="text-xs text-gray-400">{{ $bicicleta->modelo->nombre_modelo ?? '—' }}</div>
+                        </td>
+                        <td class="px-3 py-3 text-xs text-gray-500">{{ $bicicleta->voltaje->voltaje ?? '—' }}</td>
+                        <td class="px-3 py-3 text-xs text-gray-500">{{ $bicicleta->color->color ?? '—' }}</td>
+                        <td class="px-3 py-3 text-center">
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full
+                                @switch($color)
+                                    @case('green') bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-400 @break
+                                    @case('yellow') bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-400 @break
+                                    @case('blue') bg-blue-100 text-blue-800 dark:bg-blue-800/30 dark:text-blue-400 @break
+                                    @default bg-red-100 text-red-800 dark:bg-red-800/30 dark:text-red-400
+                                @endswitch
+                            ">
+                                {{ $estado['texto'] }}
+                            </span>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="5" class="px-3 py-8 text-center text-gray-500 text-xs">No hay bicicletas</td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
 
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="7" class="px-6 py-10 text-center text-gray-500 dark:text-gray-400">
-                                No se encontraron bicicletas.
-                            </td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-
-            {{-- Vista móvil --}}
-            <div class="block md:hidden overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="bg-gray-50 dark:bg-gray-700/50">
-                        <tr>
-                            <th class="px-3 py-2"></th>
-
-                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">N° Serie</th>
-                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Voltaje</th>
-                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Color</th>
-                            <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                        </tr>
-
-                    </thead>
-                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                        @forelse($bicicletas as $bicicleta)
-
-                       <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                            <td class="px-4 py-3">
-                                <input
-                                    type="checkbox"
-                                    class="bike-checkbox rounded border-gray-300"
-                                    value="{{ $bicicleta->id_bicicleta }}">
-                            </td>
-
-    
-                            <td class="px-3 py-3">
-                                <div class="text-xs font-medium text-gray-900 dark:text-white">{{ $bicicleta->num_serie }}</div>
-                                <div class="text-xs text-gray-400">{{ $bicicleta->modelo->nombre_modelo ?? '—' }}</div>
-                            </td>
-
-                            <td class="px-3 py-3 text-xs text-gray-500">
-                                {{ $bicicleta->voltaje->voltaje ?? '—' }}
-                            </td>
-
-                            <td class="px-3 py-3 text-xs text-gray-500">
-                                {{ $bicicleta->color->color ?? '—' }}
-                            </td>
-
-                            <td class="px-3 py-3 text-center">
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full
-                                    @if($bicicleta->status == 'STOCK') bg-green-100 text-green-800
-                                    @elseif($bicicleta->status == ' REPARACION') bg-yellow-100 text-yellow-800
-                                    @elseif($bicicleta->status == 'VENDIDA') bg-blue-100 text-blue-800
-                                    @else bg-red-100 text-red-800
-                                    @endif">
-                                    {{ ucfirst(str_replace('_', ' ', $bicicleta->status)) }}
-                                </span>
-                            </td>
-
-                        </tr>
-
-                        @empty
-                        <tr>
-                            <td colspan="3" class="px-3 py-8 text-center text-gray-500 text-xs">No hay bicicletas</td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-
-            @if($bicicletas->hasPages())
-            <div class="px-6 py-4 border-t dark:border-gray-700">
-                {{ $bicicletas->withQueryString()->links() }}
-            </div>
-            @endif
+    @if($bicicletas->hasPages())
+        <div class="px-6 py-4 border-t dark:border-gray-700">
+            {{ $bicicletas->withQueryString()->links() }}
         </div>
+    @endif
+</div>
 
 
 
@@ -223,9 +218,7 @@
 
         selectAll.addEventListener('change', function () {
 
-            document.querySelectorAll('.bike-checkbox')
-                .forEach(cb => cb.checked = this.checked);
-
+            
         });
 
     }

@@ -773,7 +773,7 @@
         <div class="aws-card s3">
             <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
                 <p class="aws-label">Formulario de Emisión</p>
-                <a href="{{ route('pedidos.pdf', $pedido->id_pedido) }}" target="_blank"
+                <a :href="pdfUrl" target="_blank"
                     class="flex items-center gap-1.5 text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400 transition-colors border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10 px-3 py-1.5 rounded-md">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
@@ -1298,7 +1298,8 @@
                     Todas las bicicletas han sido registradas.
                 </p>
                 <div class="flex flex-col gap-2">
-                    <a href="{{ route('pedidos.pdf', $pedido->id_pedido) }}" target="_blank"
+                 
+                        <a :href="pdfUrl" target="_blank"
                         class="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition flex items-center justify-center gap-2 shadow-sm">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"

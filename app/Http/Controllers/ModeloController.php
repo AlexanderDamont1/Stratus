@@ -4,17 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Modelo;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use App\Services\CatalogService;
 
 class ModeloController extends Controller
 {
     public function index()
     {
-        // Lista paginada (necesitamos paginar, no cachear la página)
         $modelosPag = Modelo::orderBy('nombre_modelo')->paginate(15);
-
-        // Lista completa para selects/otros: desde cache (Redis)
         $modelosAll = CatalogService::getModelos();
 
         return view('gestor.Vehiculos.modelo.index', [
@@ -38,10 +34,10 @@ class ModeloController extends Controller
             'nombre_modelo' => $request->nombre_modelo,
         ]);
 
-        // Invalidar cache de modelos y relaciones afectadas
+        // Invalidar lista global de modelos
         CatalogService::clearCache('modelos');
+        // Invalidar posibles cachés del modelo (aunque es nuevo, por consistencia)
         CatalogService::invalidateModelo($modelo->id_modelo);
-        CatalogService::incrementVersion();
 
         return redirect()
             ->route('gestor.vehiculos.modelos.index')
@@ -63,10 +59,9 @@ class ModeloController extends Controller
             'nombre_modelo' => $request->nombre_modelo
         ]);
 
-        // Invalidar cache del modelo afectado y de la lista global
+        // Invalidar lista global y cachés del modelo
         CatalogService::clearCache('modelos');
         CatalogService::invalidateModelo($modelo->id_modelo);
-        CatalogService::incrementVersion();
 
         return redirect()
             ->route('gestor.vehiculos.modelos.index')
@@ -81,13 +76,11 @@ class ModeloController extends Controller
                 ->with('error', 'No se puede eliminar: tiene colores asociados.');
         }
 
-        // Guardar id para invalidar después de borrar
         $idModelo = $modelo->id_modelo;
         $modelo->delete();
 
         CatalogService::clearCache('modelos');
         CatalogService::invalidateModelo($idModelo);
-        CatalogService::incrementVersion();
 
         return redirect()
             ->route('gestor.vehiculos.modelos.index')

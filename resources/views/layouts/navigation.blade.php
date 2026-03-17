@@ -7,7 +7,7 @@
 
 <div
     x-data="{ open: false }"
-    class="flex min-h-screen bg-gray-50 dark:bg-gray-950">
+    class="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
     {{-- Overlay móvil --}}
     <div
         x-show="open"

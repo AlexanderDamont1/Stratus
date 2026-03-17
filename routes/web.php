@@ -200,7 +200,7 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
 
         Route::get('/Inicio', function () {
             $enlace = \App\Models\Enlace::where('id_usuario1', auth()->user()->id_usuario)
-                ->whereIn('estado', ['pendiente', 'activo'])
+                ->whereIn('estado', ['pendiente', 'activo', 'cancelado'])
                 ->with('usuarioDestino:id_usuario,nombre_usuario')
                 ->first();
 
