@@ -11,6 +11,7 @@ use App\Models\Enlace;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use App\Events\PedidoUpdated;
 
 class PedidoController extends Controller
@@ -28,9 +29,9 @@ class PedidoController extends Controller
         $status  = $request->input('status', 'all');
         $search  = $request->input('search', 'all');
 
+        // ✅ Pedidos siempre usan atributos públicos (id_negocio = null)
         $modelos = CatalogService::getModelos();
 
-        // ─── Calcular canales WebSocket ───────────────────────────────
         $canalesVendedor = [];
 
         if ($usuario->id_rol === 1) {
@@ -76,14 +77,16 @@ class PedidoController extends Controller
     // ─── CREAR PEDIDO ────────────────────────────────────────────────
     public function create()
     {
-        $modelos = CatalogService::getModelos();
+        $usuario = auth()->user();
 
+        // ✅ Pedidos siempre usan atributos públicos (id_negocio = null)
+        $modelos  = CatalogService::getModelos();
         $voltajes = [];
         $colores  = [];
 
         foreach ($modelos as $modelo) {
-            $voltajes[$modelo->id_modelo] = CatalogService::getVoltajesByModelo($modelo->id_modelo, true);
-            $colores[$modelo->id_modelo]  = CatalogService::getColoresByModelo($modelo->id_modelo, true);
+            $voltajes[$modelo->id_modelo] = CatalogService::getVoltajesByModelo($modelo->id_modelo, null, true);
+            $colores[$modelo->id_modelo]  = CatalogService::getColoresByModelo($modelo->id_modelo, null, true);
         }
 
         return view('pedidos.create', compact('modelos', 'voltajes', 'colores'));
@@ -92,12 +95,24 @@ class PedidoController extends Controller
     // ─── GUARDAR PEDIDO ──────────────────────────────────────────────
     public function store(Request $request)
     {
+        $usuario   = auth()->user();
+
         $validator = Validator::make($request->all(), [
             'notas'               => 'nullable|string|max:500',
             'items'               => 'required|array|min:1',
-            'items.*.id_modelo'   => 'required|exists:modelos,id_modelo',
-            'items.*.id_voltaje'  => 'required|exists:voltajes,id_voltaje',
-            'items.*.id_color'    => 'required|exists:colores,id_color',
+            // ✅ Pedidos siempre usan atributos públicos (id_negocio = null)
+            'items.*.id_modelo'   => [
+                'required',
+                Rule::exists('modelos', 'id_modelo')->whereNull('id_negocio'),
+            ],
+            'items.*.id_voltaje'  => [
+                'required',
+                Rule::exists('voltajes', 'id_voltaje')->whereNull('id_negocio'),
+            ],
+            'items.*.id_color'    => [
+                'required',
+                Rule::exists('colores', 'id_color')->whereNull('id_negocio'),
+            ],
             'items.*.cantidad'    => 'required|integer|min:1|max:999',
         ]);
 
@@ -105,7 +120,6 @@ class PedidoController extends Controller
             return back()->withErrors($validator)->withInput();
         }
 
-        $usuario = auth()->user();
         $nuevoPedidoId = null;
 
         DB::transaction(function () use ($request, $usuario, &$nuevoPedidoId) {
@@ -126,7 +140,6 @@ class PedidoController extends Controller
                 ]);
             }
 
-            // Invalidar cachés
             CatalogService::invalidatePedido($pedido->id_pedido, $pedido->id_negocio);
             CatalogService::invalidateNegocio($pedido->id_negocio);
             Cache::forget("pedidos:index:{$usuario->id_usuario}:all:all:page:1");
@@ -166,16 +179,23 @@ class PedidoController extends Controller
         abort_if($pedido->id_usuario !== $usuario->id_usuario, 403);
         abort_if($pedido->status !== 1, 403, 'Solo se puede editar un pedido en estado Solicitado.');
 
-        $modelos = CatalogService::getModelos();
+        // ✅ Pedidos siempre usan atributos públicos (id_negocio = null)
+        $modelos  = CatalogService::getModelos();
+        $voltajes = [];
+        $colores  = [];
+        foreach ($modelos as $modelo) {
+            $voltajes[$modelo->id_modelo] = CatalogService::getVoltajesByModelo($modelo->id_modelo, null, true);
+            $colores[$modelo->id_modelo]  = CatalogService::getColoresByModelo($modelo->id_modelo, null, true);
+        }
 
-        return view('pedidos.edit', compact('pedido', 'modelos'));
+        return view('pedidos.edit', compact('pedido', 'modelos', 'voltajes', 'colores'));
     }
 
     // ─── ACTUALIZAR PEDIDO ───────────────────────────────────────────
     public function update(Request $request, string $id_pedido)
     {
-        $usuario = auth()->user();
-        $pedido = Pedido::findOrFail($id_pedido);
+        $usuario   = auth()->user();
+        $pedido    = Pedido::findOrFail($id_pedido);
 
         abort_if($usuario->id_rol !== 1, 403);
         abort_if($pedido->id_usuario !== $usuario->id_usuario, 403);
@@ -184,9 +204,19 @@ class PedidoController extends Controller
         $validator = Validator::make($request->all(), [
             'notas'               => 'nullable|string|max:500',
             'items'               => 'required|array|min:1',
-            'items.*.id_modelo'   => 'required|exists:modelos,id_modelo',
-            'items.*.id_voltaje'  => 'required|exists:voltajes,id_voltaje',
-            'items.*.id_color'    => 'required|exists:colores,id_color',
+            // ✅ Pedidos siempre usan atributos públicos (id_negocio = null)
+            'items.*.id_modelo'   => [
+                'required',
+                Rule::exists('modelos', 'id_modelo')->whereNull('id_negocio'),
+            ],
+            'items.*.id_voltaje'  => [
+                'required',
+                Rule::exists('voltajes', 'id_voltaje')->whereNull('id_negocio'),
+            ],
+            'items.*.id_color'    => [
+                'required',
+                Rule::exists('colores', 'id_color')->whereNull('id_negocio'),
+            ],
             'items.*.cantidad'    => 'required|integer|min:1|max:999',
         ]);
 
@@ -208,7 +238,6 @@ class PedidoController extends Controller
                 ]);
             }
 
-            // Invalidar cachés
             CatalogService::invalidatePedido($pedido->id_pedido, $pedido->id_negocio);
             CatalogService::invalidateNegocio($pedido->id_negocio);
             Cache::forget("pedidos:index:{$usuario->id_usuario}:all:all:page:1");
@@ -232,7 +261,6 @@ class PedidoController extends Controller
 
         $pedido->update(['status' => $request->status]);
 
-        // Invalidar cachés
         CatalogService::invalidatePedido($id_pedido, $pedido->id_negocio);
         Cache::forget("pedidos:index:" . auth()->user()->id_usuario . ":all:all:page:1");
 
@@ -251,12 +279,11 @@ class PedidoController extends Controller
         abort_if($pedido->status > 1, 403, 'No se puede eliminar un pedido que ya fue preparado o entregado.');
 
         $usuarioId = $pedido->id_usuario;
-        $pedidoId = $pedido->id_pedido;
+        $pedidoId  = $pedido->id_pedido;
         $idNegocio = $pedido->id_negocio;
 
         $pedido->delete();
 
-        // Invalidar cachés
         CatalogService::invalidatePedido($pedidoId, $idNegocio);
         CatalogService::invalidateNegocio($idNegocio);
         Cache::forget("pedidos:index:" . auth()->user()->id_usuario . ":all:all:page:1");
@@ -275,14 +302,9 @@ class PedidoController extends Controller
         abort_if($usuario->id_rol !== 5, 403);
 
         $pedido = Pedido::with([
-            'usuario',
-            'negocio',
-            'items.modelo',
-            'items.voltaje',
-            'items.color',
-            'bicicletas.modelo',
-            'bicicletas.voltaje',
-            'bicicletas.color',
+            'usuario', 'negocio',
+            'items.modelo', 'items.voltaje', 'items.color',
+            'bicicletas.modelo', 'bicicletas.voltaje', 'bicicletas.color',
         ])->findOrFail($id_pedido);
 
         abort_if(!in_array($pedido->status, [1, 2]), 403, 'Este pedido no puede ser realizado.');
@@ -291,9 +313,9 @@ class PedidoController extends Controller
         foreach ($pedido->items as $item) {
             $key = $item->id_modelo . '-' . $item->id_voltaje . '-' . $item->id_color;
             $resumen[$key] = [
-                'modelo'    => $item->modelo->nombre_modelo ?? 'N/D',
-                'voltaje'   => $item->voltaje->voltaje ?? 'N/D',
-                'color'     => $item->color->color ?? 'N/D',
+                'modelo'     => $item->modelo->nombre_modelo ?? 'N/D',
+                'voltaje'    => $item->voltaje->voltaje       ?? 'N/D',
+                'color'      => $item->color->color           ?? 'N/D',
                 'id_modelo'  => $item->id_modelo,
                 'id_voltaje' => $item->id_voltaje,
                 'id_color'   => $item->id_color,
@@ -309,6 +331,7 @@ class PedidoController extends Controller
             }
         }
 
+        // ✅ Rol 5 siempre usa modelos públicos
         $modelos = CatalogService::getModelos();
 
         return view('pedidos.realizar', compact('pedido', 'resumen', 'modelos'));
@@ -320,10 +343,9 @@ class PedidoController extends Controller
         $pedido = CatalogService::getPedidoById($id_pedido);
         abort_if(!$pedido, 404);
 
-        // Parámetros desde el request (sobrescriben los del pedido si vienen)
-        $cliente     = $request->input('cliente', optional($pedido->usuario)->nombre_usuario ?? '');
-        $distancia   = $request->input('distancia', $pedido->distancia);
-        $transporte  = $request->input('transporte', $pedido->transporte);
+        $cliente     = $request->input('cliente',     optional($pedido->usuario)->nombre_usuario ?? '');
+        $distancia   = $request->input('distancia',   $pedido->distancia);
+        $transporte  = $request->input('transporte',  $pedido->transporte);
         $costo_envio = $request->input('costo_envio', $pedido->costo_envio);
         $lotesRaw    = $request->input('lotes', []);
 
@@ -332,29 +354,24 @@ class PedidoController extends Controller
             $lotes[(int)$idx] = $valor;
         }
 
-        // Calcular cargadores y baterías
         $cargadores = [];
         $baterias   = [];
 
         foreach ($pedido->items as $item) {
             $modelo   = optional($item->modelo)->nombre_modelo ?? '';
-            $voltaje  = optional($item->voltaje)->voltaje ?? '';
+            $voltaje  = optional($item->voltaje)->voltaje       ?? '';
             $cantidad = $item->cantidad;
 
             if ($modelo === 'VmpS5') {
                 $cargadores['48V/12Ah'] = ($cargadores['48V/12Ah'] ?? 0) + $cantidad;
-                $baterias['12V/12Ah']   = ($baterias['12V/12Ah'] ?? 0) + ($cantidad * 4);
+                $baterias['12V/12Ah']   = ($baterias['12V/12Ah']   ?? 0) + ($cantidad * 4);
             } else {
-                $volts = intval($voltaje);
+                $volts       = intval($voltaje);
                 $numBaterias = intval($volts / 12);
 
-                if ($volts === 48) {
-                    $cargadores['48V/20Ah'] = ($cargadores['48V/20Ah'] ?? 0) + $cantidad;
-                } elseif ($volts === 60) {
-                    $cargadores['60V/20Ah'] = ($cargadores['60V/20Ah'] ?? 0) + $cantidad;
-                } elseif ($volts === 72) {
-                    $cargadores['72V/20Ah'] = ($cargadores['72V/20Ah'] ?? 0) + $cantidad;
-                }
+                if ($volts === 48)      $cargadores['48V/20Ah'] = ($cargadores['48V/20Ah'] ?? 0) + $cantidad;
+                elseif ($volts === 60)  $cargadores['60V/20Ah'] = ($cargadores['60V/20Ah'] ?? 0) + $cantidad;
+                elseif ($volts === 72)  $cargadores['72V/20Ah'] = ($cargadores['72V/20Ah'] ?? 0) + $cantidad;
 
                 $baterias['12V/20Ah'] = ($baterias['12V/20Ah'] ?? 0) + ($cantidad * $numBaterias);
             }
@@ -375,73 +392,67 @@ class PedidoController extends Controller
 
     // ─── COMPLETAR ENTREGA ───────────────────────────────────────
     public function completarEntrega(Request $request, string $id_pedido)
-{
-    $usuario = auth()->user();
-    abort_if($usuario->id_rol !== 5, 403);
+    {
+        $usuario = auth()->user();
+        abort_if($usuario->id_rol !== 5, 403);
 
-    $request->validate(['token' => 'required|string|size:10']);
+        $request->validate(['token' => 'required|string|size:10']);
 
-    $pedido = Pedido::with(['bicicletas'])->findOrFail($id_pedido);
-    abort_if($pedido->status !== 3, 422, 'El pedido no está listo para entregar.');
+        $pedido = Pedido::with(['bicicletas'])->findOrFail($id_pedido);
+        abort_if($pedido->status !== 3, 422, 'El pedido no está listo para entregar.');
 
-    $tokenRecord = \App\Models\PedidoToken::where('id_pedido', $id_pedido)
-        ->where('id_usuario2', $usuario->id_usuario)
-        ->where('token', strtoupper($request->token))
-        ->where('estado', 0)
-        ->first();
+        $tokenRecord = \App\Models\PedidoToken::where('id_pedido', $id_pedido)
+            ->where('id_usuario2', $usuario->id_usuario)
+            ->where('token', strtoupper($request->token))
+            ->where('estado', 0)
+            ->first();
 
-    if (!$tokenRecord) {
+        if (!$tokenRecord) {
+            return response()->json([
+                'ok'      => false,
+                'mensaje' => 'Token inválido o ya utilizado.',
+            ], 422);
+        }
+
+        $idNegocioGestor = $usuario->id_negocio;
+
+        DB::transaction(function () use ($pedido, $tokenRecord, $idNegocioGestor) {
+            $pedido->update(['status' => 4]);
+
+            foreach ($pedido->bicicletas as $bici) {
+                CatalogService::invalidateBicicleta($bici->num_serie, $bici->id_negocio);
+                $bici->update(['id_negocio' => $pedido->id_negocio]);
+                CatalogService::invalidateBicicleta($bici->num_serie, $pedido->id_negocio);
+
+                // ✅ Invalidar caché del vendedor si la bici tiene uno asignado
+                if ($bici->id_usuario) {
+                    CatalogService::invalidateBicicletasPorUsuario($bici->id_usuario, $pedido->id_negocio);
+                }
+            }
+
+            $tokenRecord->delete();
+
+            CatalogService::invalidateNegocio($pedido->id_negocio);
+            CatalogService::invalidateNegocio($idNegocioGestor);
+            CatalogService::invalidatePedido($pedido->id_pedido, $pedido->id_negocio);
+            // ✅ Invalidar stock de vendedores del negocio destino
+            CatalogService::invalidateStockVendedores($pedido->id_negocio);
+
+            $pedidoFresh = Pedido::with([
+                'negocio', 'usuario',
+                'items.modelo', 'items.voltaje', 'items.color',
+            ])->find($pedido->id_pedido);
+
+            if ($pedidoFresh && $pedidoFresh->id_usuario) {
+                event(new PedidoUpdated($pedidoFresh, 'updated'));
+            }
+        });
+
         return response()->json([
-            'ok'      => false,
-            'mensaje' => 'Token inválido o ya utilizado.',
-        ], 422);
+            'ok'      => true,
+            'mensaje' => 'Pedido entregado correctamente.',
+        ]);
     }
-
-    DB::transaction(function () use ($pedido, $tokenRecord) {
-        $pedido->update(['status' => 4]);
-
-        // Obtener las bicicletas antes de actualizar su negocio
-        $bicicletas = $pedido->bicicletas; // ya vienen con la relación
-
-        // Actualizar el negocio de cada bicicleta e invalidar su caché individual
-        foreach ($bicicletas as $bici) {
-            // Invalidar caché de la bicicleta en el negocio anterior
-            CatalogService::invalidateBicicleta($bici->num_serie, $bici->id_negocio);
-
-            // Actualizar el negocio
-            $bici->update(['id_negocio' => $pedido->id_negocio]);
-
-            // Invalidar caché en el nuevo negocio (por si ya había sido cacheada antes)
-            CatalogService::invalidateBicicleta($bici->num_serie, $pedido->id_negocio);
-        }
-
-        $tokenRecord->delete();
-
-        // Invalidar estadísticas de ambos negocios (gestor y vendedor)
-        CatalogService::invalidateNegocio($pedido->id_negocio); // negocio del vendedor (destino)
-        CatalogService::invalidateNegocio(auth()->user()->id_negocio); // negocio del gestor (origen)
-
-        // Opcional: también podrías invalidar el pedido y las stats de pedidos
-        CatalogService::invalidatePedido($pedido->id_pedido, $pedido->id_negocio);
-
-        $pedidoFresh = Pedido::with([
-            'negocio',
-            'usuario',
-            'items.modelo',
-            'items.voltaje',
-            'items.color',
-        ])->find($pedido->id_pedido);
-
-        if ($pedidoFresh && $pedidoFresh->id_usuario) {
-            event(new PedidoUpdated($pedidoFresh, 'updated'));
-        }
-    });
-
-    return response()->json([
-        'ok'      => true,
-        'mensaje' => 'Pedido entregado correctamente.',
-    ]);
-}
 
     // ─── OBTENER TOKEN DE ENTREGA ─────────────────────────────────
     public function token(string $id_pedido)
@@ -477,14 +488,14 @@ class PedidoController extends Controller
         $usuario = auth()->user();
         abort_if($usuario->id_rol !== 5, 403);
 
-        $modelos = CatalogService::getModelos();
-
+        // ✅ Rol 5 siempre usa modelos públicos
+        $modelos  = CatalogService::getModelos();
         $voltajes = [];
         $colores  = [];
 
         foreach ($modelos as $modelo) {
-            $voltajes[$modelo->id_modelo] = CatalogService::getVoltajesByModelo($modelo->id_modelo);
-            $colores[$modelo->id_modelo]  = CatalogService::getColoresByModelo($modelo->id_modelo);
+            $voltajes[$modelo->id_modelo] = CatalogService::getVoltajesByModelo($modelo->id_modelo, null);
+            $colores[$modelo->id_modelo]  = CatalogService::getColoresByModelo($modelo->id_modelo, null);
         }
 
         return view('pedidos.rapido', compact('modelos', 'voltajes', 'colores'));
@@ -497,7 +508,7 @@ class PedidoController extends Controller
         abort_if($usuario->id_rol !== 5, 403);
 
         $request->validate([
-            // tus validaciones
+            // tus validaciones aquí
         ]);
 
         $datos = [
@@ -515,12 +526,13 @@ class PedidoController extends Controller
         $baterias   = [];
 
         foreach ($request->items as $item) {
+            // ✅ Rol 5 usa modelos/voltajes/colores públicos (id_negocio = null)
             $modelo  = CatalogService::getModeloById($item['id_modelo']);
             $voltaje = CatalogService::getVoltajeById($item['id_voltaje']);
             $color   = CatalogService::getColorById($item['id_color']);
 
             $nombreModelo  = $modelo->nombre_modelo ?? 'N/D';
-            $nombreVoltaje = $voltaje->voltaje ?? 'N/D';
+            $nombreVoltaje = $voltaje->voltaje       ?? 'N/D';
             $cantidad      = count($item['series']);
 
             $datos['items'][] = [
@@ -538,9 +550,11 @@ class PedidoController extends Controller
             } else {
                 $volts       = intval($nombreVoltaje);
                 $numBaterias = intval($volts / 12);
-                if ($volts === 48)     $cargadores['48V/20Ah'] = ($cargadores['48V/20Ah'] ?? 0) + $cantidad;
-                elseif ($volts === 60) $cargadores['60V/20Ah'] = ($cargadores['60V/20Ah'] ?? 0) + $cantidad;
-                elseif ($volts === 72) $cargadores['72V/20Ah'] = ($cargadores['72V/20Ah'] ?? 0) + $cantidad;
+
+                if ($volts === 48)      $cargadores['48V/20Ah'] = ($cargadores['48V/20Ah'] ?? 0) + $cantidad;
+                elseif ($volts === 60)  $cargadores['60V/20Ah'] = ($cargadores['60V/20Ah'] ?? 0) + $cantidad;
+                elseif ($volts === 72)  $cargadores['72V/20Ah'] = ($cargadores['72V/20Ah'] ?? 0) + $cantidad;
+
                 $baterias['12V/20Ah'] = ($baterias['12V/20Ah'] ?? 0) + ($cantidad * $numBaterias);
             }
         }

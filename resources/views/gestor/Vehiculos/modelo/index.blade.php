@@ -68,6 +68,9 @@
                         <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">
                             Modelo
                         </th>
+                        @if(auth()->user()->id_rol === 1)
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Marca</th>
+                        @endif
                         <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">
                             Creado
                         </th>
@@ -104,6 +107,10 @@
                                 </div>
                             </td>
 
+                            @if(auth()->user()->id_rol === 1)
+                             <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ $modelo->marca->nombre_marca ?? '—' }}</td>
+                            @endif
+
                             {{-- FECHA --}}
                             <td class="px-4 py-3 text-center text-gray-500 dark:text-gray-400">
                                 {{ $modelo->created_at?->format('d/m/Y') ?? '—' }}
@@ -112,7 +119,7 @@
                             {{-- ACCIONES --}}
                             <td class="px-4 py-3 text-center">
                                 <div class="flex items-center justify-center gap-2">
-                                    <a href="#s" 
+                                    <a href="{{ auth()->user()->id_rol === 1 ? route('admin.catalogo.modelos.edit', $modelo) : route('gestor.vehiculos.modelos.edit', $modelo) }}"  
                                        class="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 text-xs font-semibold">
                                         Editar
                                     </a>
@@ -140,6 +147,9 @@
                 <thead class="bg-gray-50 dark:bg-gray-700/50">
                     <tr>
                         <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Modelo</th>
+                        @if(auth()->user()->id_rol === 1)
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Marca</th>
+                        @endif
                         <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fecha</th>
                         <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
                     </tr>
@@ -162,6 +172,9 @@
                                     </div>
                                 </div>
                             </td>
+                             @if(auth()->user()->id_rol === 1)
+                             <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ $modelo->marca->nombre_marca ?? '—' }}</td>
+                            @endif
                             <td class="px-3 py-3 text-center">
                                 <div class="flex items-center justify-center text-xs text-gray-500 dark:text-gray-400">
                                     <svg class="flex-shrink-0 mr-1 h-3.5 w-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -170,16 +183,13 @@
                                     {{ $modelo->created_at ? $modelo->created_at->format('d/m/y') : '—' }}
                                 </div>
                             </td>
-                            <td class="px-3 py-3 text-center">
-                                <div class="flex flex-col items-center justify-center space-y-1">
+                            <td class="px-4 py-3 text-center">
+                                <div class="flex items-center justify-center gap-2">
+                                    <a href="{{ auth()->user()->id_rol === 1 ? route('admin.catalogo.modelos.edit', $modelo) : route('gestor.vehiculos.modelos.edit', $modelo) }}"  
+                                       class="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 text-xs font-semibold">
+                                        Editar
+                                    </a>
                                     
-                                    <button
-                                        type="button"
-                                        
-                                        class="text-red-600 hover:text-red-900 dark:text-red-400 text-xs"
-                                    >
-                                        Actualizar
-                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -253,7 +263,7 @@
                 </button>
             </div>
 
-            <form method="POST" action="{{ route('gestor.vehiculos.modelos.store') }}">
+            <form method="POST" action="{{ auth()->user()->id_rol === 1 ? route('admin.catalogo.modelos.store') : route('gestor.vehiculos.modelos.store') }}">
                 @csrf
                 <div class="mb-5">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
@@ -273,8 +283,29 @@
                     @enderror
                 </div>
 
+                @if(auth()->user()->id_rol === 1)
+                    <div class="mb-5">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                            Marca <span class="text-red-500">*</span>
+                        </label>
+                        <select
+                            name="id_marca"
+                            class="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 transition"
+                            required
+                        >
+                            <option value="">Seleccione una marca</option>
+                            @foreach($marcas ?? [] as $marca)
+                                <option value="{{ $marca->id_marca }}" {{ old('id_marca') == $marca->id_marca ? 'selected' : '' }}>
+                                    {{ $marca->nombre_marca }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('id_marca')
+                            <p class="text-xs text-red-500 mt-1.5">{{ $message }}</p>
+                        @enderror
+                    </div>
+                    @endif
 
-                
 
                 <div class="flex justify-end gap-2">
                     <button
@@ -296,6 +327,6 @@
     </div>
 
     {{-- ===== MODAL: CONFIRMAR ELIMINACIÓN ===== --}}
-    </x-delete-modal />
+    <x-delete-modal />
 </div>
 </x-app-layout>     

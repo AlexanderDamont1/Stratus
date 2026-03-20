@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('producto_modelo', function (Blueprint $table) {
-            $table->id(); // id único de la relación
+            $table->char('id_producto_modelo', 15)->primary();
             $table->char('id_producto', 15);
             $table->char('id_modelo', 15);
             $table->timestamps();

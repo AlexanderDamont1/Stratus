@@ -13,7 +13,13 @@ return new class extends Migration
     {
         Schema::create('voltajes', function (Blueprint $table) {
     $table->char('id_voltaje', 15)->primary();
+    $table->char('id_negocio', 36)->nullable();
     $table->string('voltaje');
+
+    
+    $table->foreign('id_negocio')
+            ->references('id_negocio')
+            ->on('negocios');
 });
 
     }

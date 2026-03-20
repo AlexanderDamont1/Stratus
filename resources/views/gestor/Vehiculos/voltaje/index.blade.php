@@ -107,7 +107,7 @@
                             {{-- Acciones --}}
                             <td class="px-4 py-3 text-center">
                                 <div class="flex items-center justify-center gap-2">
-                                    <a href="{{ route('gestor.vehiculos.voltajes.edit', $voltaje) }}" 
+                                    <a href="{{ auth()->user()->id_rol === 1 ? route('admin.catalogo.voltajes.edit', $voltaje) : route('gestor.vehiculos.voltajes.edit', $voltaje) }}" 
                                        class="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 text-xs font-semibold">
                                         Editar
                                     </a>
@@ -159,7 +159,7 @@
                                 </td>
                                 <td class="px-3 py-3 text-center">
                                     <div class="flex flex-col items-center justify-center space-y-1">
-                                        <a href="{{ route('gestor.vehiculos.voltajes.edit', $voltaje) }}" 
+                                        <a href="{{ auth()->user()->id_rol === 1 ? route('admin.catalogo.voltajes.edit', $voltaje) : route('gestor.vehiculos.voltajes.edit', $voltaje) }}"
                                            class="text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 text-xs">
                                             Editar
                                         </a>
@@ -234,7 +234,7 @@
                 </button>
             </div>
 
-            <form method="POST" action="{{ route('gestor.vehiculos.voltajes.store') }}">
+            <form method="POST" action="{{ auth()->user()->id_rol === 1 ? route('admin.catalogo.voltajes.store') : route('gestor.vehiculos.voltajes.store') }}">
                 @csrf
                 <div class="mb-5">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">

@@ -14,22 +14,26 @@ return new class extends Migration
         Schema::create('modelo_voltaje', function (Blueprint $table) {
 
             $table->char('id_mvoltaje', 15)->primary();
-
             $table->char('id_modelo', 15);
             $table->char('id_voltaje', 15);
+            $table->char('id_negocio', 36)->nullable();
 
             $table->timestamps();
 
             // Foreign Keys
             $table->foreign('id_modelo')
                 ->references('id_modelo')
-                ->on('modelos')
-                ->onDelete('cascade');
+                ->on('modelos');
+           
 
             $table->foreign('id_voltaje')
                 ->references('id_voltaje')
-                ->on('voltajes')
-                ->onDelete('cascade');
+                ->on('voltajes');
+
+            $table->foreign('id_negocio')
+                ->references('id_negocio')
+                ->on('negocios');
+             
         });
     }
 

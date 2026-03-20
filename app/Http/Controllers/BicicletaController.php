@@ -7,9 +7,10 @@ use App\Models\Enlace;
 use App\Models\Usuario;
 use App\Services\CatalogService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Cache;
-
+use Illuminate\Support\Facades\Log;
 
 class BicicletaController extends Controller
 {
@@ -18,14 +19,30 @@ class BicicletaController extends Controller
      ===================================================== */
     public function index(Request $request)
     {
-        $id_negocio = auth()->user()->id_negocio;
-        $page = $request->get('page', 1);
-        $search = $request->get('search');
+        if (!in_array(auth()->user()->id_rol, [1, 5])) {
+            abort(403);
+        }
 
+        $user       = auth()->user();
+        $id_negocio = $user->id_negocio;
+        $page       = $request->get('page', 1);
+        $search     = $request->get('search');
+
+        if ($user->id_rol === 1) {
+            return view('gestor.Vehiculos.Bicicleta.index', [
+                'stockPorVendedor' => CatalogService::getStockPorVendedores($id_negocio),
+                'stats'            => CatalogService::getBicicletaStats($id_negocio),
+                // ✅ Rol 1 ve modelos de su negocio, no los públicos
+                'modelos'          => CatalogService::getModelosByNegocio($id_negocio),
+                'negocios'         => CatalogService::getNegocios(),
+            ]);
+        }
+
+        // Rol 5
         return view('gestor.Vehiculos.Bicicleta.index', [
             'bicicletas' => CatalogService::getBicicletasPaginadas($id_negocio, $page, $search),
             'stats'      => CatalogService::getBicicletaStats($id_negocio),
-            'modelos'    => CatalogService::getModelos(),
+            'modelos'    => CatalogService::getModelos(), // públicos
             'negocios'   => CatalogService::getNegocios(),
         ]);
     }
@@ -40,9 +57,14 @@ class BicicletaController extends Controller
         if (!$user) abort(401, 'Sesión no válida.');
         if (!$user->id_negocio) abort(403, 'No tienes un negocio asignado.');
 
+        // ✅ Modelos según rol
+        $modelos = $user->id_rol === 1
+            ? CatalogService::getModelosByNegocio($user->id_negocio)
+            : CatalogService::getModelos();
+
         return view('gestor.Vehiculos.Bicicleta.create', [
             'negocio' => $user->negocio,
-            'modelos' => CatalogService::getModelos(),
+            'modelos' => $modelos,
         ]);
     }
 
@@ -51,11 +73,33 @@ class BicicletaController extends Controller
      ===================================================== */
     public function store(Request $request)
     {
+        $user      = auth()->user();
+        $idNegocio = $user->id_negocio;
+
         $validator = Validator::make($request->all(), [
             'num_serie'  => 'required|string|size:17|unique:bicicletas,num_serie',
-            'id_modelo'  => 'required|exists:modelos,id_modelo',
-            'id_voltaje' => 'required|exists:voltajes,id_voltaje',
-            'id_color'   => 'required|exists:colores,id_color',
+            // ✅ Validar que modelo, voltaje y color pertenezcan al negocio correcto
+            'id_modelo'  => [
+                'required',
+                Rule::exists('modelos', 'id_modelo')->where(
+                    'id_negocio',
+                    $user->id_rol === 1 ? $idNegocio : null
+                ),
+            ],
+            'id_voltaje' => [
+                'required',
+                Rule::exists('voltajes', 'id_voltaje')->where(
+                    'id_negocio',
+                    $user->id_rol === 1 ? $idNegocio : null
+                ),
+            ],
+            'id_color'   => [
+                'required',
+                Rule::exists('colores', 'id_color')->where(
+                    'id_negocio',
+                    $user->id_rol === 1 ? $idNegocio : null
+                ),
+            ],
             'id_pedido'  => 'nullable|exists:pedidos,id_pedido',
         ]);
 
@@ -70,26 +114,19 @@ class BicicletaController extends Controller
         }
 
         if ($request->id_pedido) {
-            // Usar el servicio cacheado para obtener el pedido con relaciones
             $pedido = CatalogService::getPedidoById($request->id_pedido);
 
             if (!$pedido) {
-                return response()->json([
-                    'ok'      => false,
-                    'mensaje' => 'Pedido no encontrado.',
-                ], 404);
+                return response()->json(['ok' => false, 'mensaje' => 'Pedido no encontrado.'], 404);
             }
 
-            $tieneAcceso = Enlace::where('id_usuario2', auth()->user()->id_usuario)
+            $tieneAcceso = Enlace::where('id_usuario2', $user->id_usuario)
                 ->where('id_usuario1', $pedido->id_usuario)
                 ->where('estado', 'activo')
                 ->exists();
 
             if (!$tieneAcceso) {
-                return response()->json([
-                    'ok'      => false,
-                    'mensaje' => 'No tienes acceso a este pedido.',
-                ], 403);
+                return response()->json(['ok' => false, 'mensaje' => 'No tienes acceso a este pedido.'], 403);
             }
 
             $item = $pedido->items->first(
@@ -100,10 +137,7 @@ class BicicletaController extends Controller
             );
 
             if (!$item) {
-                return response()->json([
-                    'ok'      => false,
-                    'mensaje' => 'Esta combinación no está en el pedido.',
-                ], 422);
+                return response()->json(['ok' => false, 'mensaje' => 'Esta combinación no está en el pedido.'], 422);
             }
 
             $yaEscaneadas = Bicicleta::where('id_pedido',  $request->id_pedido)
@@ -122,15 +156,13 @@ class BicicletaController extends Controller
 
         $bicicleta = Bicicleta::create([
             'num_serie'  => strtoupper($request->num_serie),
-            'id_negocio' => auth()->user()->id_negocio,
+            'id_negocio' => $idNegocio,
             'id_modelo'  => $request->id_modelo,
             'id_voltaje' => $request->id_voltaje,
             'id_color'   => $request->id_color,
             'id_pedido'  => $request->id_pedido ?? null,
         ]);
 
-        // Invalidar caché de la bicicleta recién creada (por si acaso) y stats del negocio
-        $idNegocio = auth()->user()->id_negocio;
         CatalogService::invalidateBicicleta($bicicleta->num_serie, $idNegocio);
 
         $completo = false;
@@ -140,17 +172,12 @@ class BicicletaController extends Controller
             $pedidoActual = \App\Models\Pedido::find($request->id_pedido);
             if ($pedidoActual && $pedidoActual->status == 1) {
                 $pedidoActual->update(['status' => 2]);
-                // Invalidar caché del pedido y stats
                 CatalogService::invalidatePedido($pedidoActual->id_pedido, $pedidoActual->id_negocio);
-                // También invalidar el índice de pedidos del usuario (se podría hacer con invalidateNegocio, pero el índice es manual)
                 Cache::forget("pedidos:index:{$pedidoActual->id_usuario}:all:all:page:1");
 
                 $pedidoFresh = \App\Models\Pedido::with([
-                    'negocio',
-                    'usuario',
-                    'items.modelo',
-                    'items.voltaje',
-                    'items.color'
+                    'negocio', 'usuario',
+                    'items.modelo', 'items.voltaje', 'items.color'
                 ])->find($pedidoActual->id_pedido);
 
                 event(new \App\Events\PedidoUpdated($pedidoFresh, 'updated'));
@@ -178,17 +205,14 @@ class BicicletaController extends Controller
                         'id_token'    => self::generarIdToken(),
                         'id_pedido'   => $pedidoFull->id_pedido,
                         'id_usuario1' => $pedidoFull->id_usuario,
-                        'id_usuario2' => auth()->user()->id_usuario,
+                        'id_usuario2' => $user->id_usuario,
                         'token'       => self::generarToken(),
                         'estado'      => 0,
                     ]);
 
                     $pedidoFullFresh = \App\Models\Pedido::with([
-                        'negocio',
-                        'usuario',
-                        'items.modelo',
-                        'items.voltaje',
-                        'items.color'
+                        'negocio', 'usuario',
+                        'items.modelo', 'items.voltaje', 'items.color'
                     ])->find($pedidoFull->id_pedido);
 
                     event(new \App\Events\PedidoUpdated($pedidoFullFresh, 'updated'));
@@ -209,45 +233,42 @@ class BicicletaController extends Controller
     }
 
     /* =====================================================
-     | EDIT
-     ===================================================== */
-    public function edit(string $num_serie)
-    {
-        $bicicleta = CatalogService::getBicicletaBySerie($num_serie);
-        if (!$bicicleta) {
-            abort(404);
-        }
-
-        $modelos = CatalogService::getModelos();
-        $voltajes = CatalogService::getVoltajesByModelo($bicicleta->id_modelo);
-        $colores  = CatalogService::getColoresByModelo($bicicleta->id_modelo);
-
-        return view('gestor.Vehiculos.Bicicleta.edit', [
-            'bicicleta' => $bicicleta,
-            'modelos'   => $modelos,
-            'voltajes'  => $voltajes,
-            'colores'   => $colores,
-        ]);
-    }
-
-    /* =====================================================
      | UPDATE
      ===================================================== */
     public function update(Request $request, string $num_serie)
     {
+        $user      = auth()->user();
         $bicicleta = Bicicleta::where('num_serie', $num_serie)->firstOrFail();
+        $idNegocio = $bicicleta->id_negocio;
 
+        // ✅ Validar que los atributos pertenezcan al negocio correcto
         $validator = Validator::make($request->all(), [
-            'id_modelo'  => 'required|exists:modelos,id_modelo',
-            'id_voltaje' => 'required|exists:voltajes,id_voltaje',
-            'id_color'   => 'required|exists:colores,id_color',
+            'id_modelo'  => [
+                'required',
+                Rule::exists('modelos', 'id_modelo')->where(
+                    'id_negocio',
+                    $user->id_rol === 1 ? $idNegocio : null
+                ),
+            ],
+            'id_voltaje' => [
+                'required',
+                Rule::exists('voltajes', 'id_voltaje')->where(
+                    'id_negocio',
+                    $user->id_rol === 1 ? $idNegocio : null
+                ),
+            ],
+            'id_color'   => [
+                'required',
+                Rule::exists('colores', 'id_color')->where(
+                    'id_negocio',
+                    $user->id_rol === 1 ? $idNegocio : null
+                ),
+            ],
         ]);
 
         if ($validator->fails()) {
             return back()->withErrors($validator)->withInput();
         }
-
-        $oldNegocio = $bicicleta->id_negocio; // para invalidar stats del negocio original si cambia? (no cambia en este update)
 
         $bicicleta->update([
             'id_modelo'  => $request->id_modelo,
@@ -255,9 +276,12 @@ class BicicletaController extends Controller
             'id_color'   => $request->id_color,
         ]);
 
-        // Invalidar caché de la bicicleta actualizada y stats del negocio
-        CatalogService::invalidateBicicleta($bicicleta->num_serie, $bicicleta->id_negocio);
-        // Si el negocio pudiera cambiar, también habría que invalidar el anterior, pero no es el caso.
+        CatalogService::invalidateBicicleta($bicicleta->num_serie, $idNegocio);
+
+        // ✅ Invalidar también caché del vendedor si tiene uno asignado
+        if ($bicicleta->id_usuario) {
+            CatalogService::invalidateBicicletasPorUsuario($bicicleta->id_usuario, $idNegocio);
+        }
 
         return redirect()
             ->route('gestor.vehiculos.bicicletas.index')
@@ -278,16 +302,21 @@ class BicicletaController extends Controller
             ], 422);
         }
 
-        $id_pedido = $bicicleta->id_pedido;
-        $idNegocio = $bicicleta->id_negocio;
-        $numSerie  = $bicicleta->num_serie;
+        $id_pedido  = $bicicleta->id_pedido;
+        $idNegocio  = $bicicleta->id_negocio;
+        $numSerie   = $bicicleta->num_serie;
+        $idUsuario  = $bicicleta->id_usuario; // ✅ guardar antes de eliminar
 
         $bicicleta->delete();
 
-        // Invalidar caché de la bicicleta eliminada y stats del negocio
         CatalogService::invalidateBicicleta($numSerie, $idNegocio);
+
+        // ✅ Invalidar caché del vendedor si tenía uno asignado
+        if ($idUsuario) {
+            CatalogService::invalidateBicicletasPorUsuario($idUsuario, $idNegocio);
+        }
+
         if ($id_pedido) {
-            // También invalidar el pedido si estaba asociado
             $pedido = \App\Models\Pedido::find($id_pedido);
             if ($pedido) {
                 CatalogService::invalidatePedido($id_pedido, $pedido->id_negocio);
@@ -295,8 +324,8 @@ class BicicletaController extends Controller
         }
 
         return response()->json([
-            'ok'       => true,
-            'mensaje'  => 'Bicicleta eliminada.',
+            'ok'        => true,
+            'mensaje'   => 'Bicicleta eliminada.',
             'id_pedido' => $id_pedido,
         ]);
     }
@@ -309,13 +338,18 @@ class BicicletaController extends Controller
         $bicicleta = Bicicleta::where('num_serie', $num_serie)->firstOrFail();
 
         $request->validate([
-            'status' => 'required|in:disponible,en_mantenimiento,prestado,danada',
+            // ✅ Status ahora es numérico
+            'status' => 'required|in:1,2,3',
         ]);
 
         $bicicleta->update(['status' => $request->status]);
 
-        // Invalidar caché de la bicicleta y stats
         CatalogService::invalidateBicicleta($bicicleta->num_serie, $bicicleta->id_negocio);
+
+        // ✅ Invalidar caché del vendedor si tiene uno asignado
+        if ($bicicleta->id_usuario) {
+            CatalogService::invalidateBicicletasPorUsuario($bicicleta->id_usuario, $bicicleta->id_negocio);
+        }
 
         return response()->json([
             'success' => true,
@@ -328,26 +362,18 @@ class BicicletaController extends Controller
      ===================================================== */
     public function getByCliente(string $id_cliente)
     {
-        // Se puede cachear con una clave específica por cliente (TTL corto)
-        $cacheKey = "bicicletas:cliente:{$id_cliente}";
-        $bicicletas = Cache::remember($cacheKey, 300, function () use ($id_cliente) {
-            return Bicicleta::with(['modelo', 'color'])
-                ->where('id_cliente', $id_cliente)
-                ->where('status', '!=', 'danada')
-                ->get();
-        });
-        return $bicicletas;
+        return CatalogService::getBicicletasByCliente($id_cliente);
     }
 
     /* =====================================================
      | AJAX: COLORES POR MODELO
      ===================================================== */
     public function coloresPorModelo(string $id_modelo)
-    {
-        return response()->json(
-            CatalogService::getColoresByModelo($id_modelo)
-        );
-    }
+{
+    return response()->json(
+        CatalogService::getColoresByModelo($id_modelo, null)
+    );
+}
 
     /* =====================================================
      | API: BUSCAR BICICLETA POR NUM_SERIE
@@ -367,15 +393,121 @@ class BicicletaController extends Controller
             'id_voltaje' => $bicicleta->id_voltaje,
             'id_color'   => $bicicleta->id_color,
             'modelo'     => optional($bicicleta->modelo)->nombre_modelo ?? 'N/D',
-            'voltaje'    => optional($bicicleta->voltaje)->tipo_voltaje  ?? 'N/D', // ¿tipo_voltaje o voltaje?
-            'color'      => optional($bicicleta->color)->nombre_color   ?? 'N/D',
+            'voltaje'    => optional($bicicleta->voltaje)->voltaje       ?? 'N/D', // ✅ era tipo_voltaje, corregido
+            'color'      => optional($bicicleta->color)->color           ?? 'N/D', // ✅ era nombre_color, corregido
             'id_pedido'  => $bicicleta->id_pedido,
             'status'     => $bicicleta->status,
         ]);
     }
 
     /* =====================================================
-     | MÉTODOS PRIVADOS PARA GENERAR TOKEN
+     | VENDEDOR: DASHBOARD
+     ===================================================== */
+    public function showB(Request $request)
+    {
+        $user = auth()->user();
+
+        if ($user->id_rol != 2) abort(403);
+
+        return view('vendedor.dashboard', [
+            'bicicletas' => CatalogService::getBicicletasPorUsuarioPaginadas(
+                $user->id_negocio,
+                $user->id_usuario,
+                $request->get('page', 1),
+                $request->get('search')
+            ),
+        ]);
+    }
+
+    /* =====================================================
+     | VENDEDOR: ASIGNAR USUARIO
+     ===================================================== */
+    public function asignarUsuario(Request $request)
+    {
+        $user = auth()->user();
+
+        if ($user->id_rol != 2) abort(403);
+
+        try {
+            $bici = Bicicleta::where('num_serie', $request->num_serie)->first();
+
+            if (!$bici) {
+                return response()->json(['ok' => false, 'message' => 'Bicicleta no encontrada'], 404);
+            }
+
+            if ($bici->id_usuario) {
+                return response()->json(['ok' => false, 'message' => 'Ya está asignada'], 400);
+            }
+
+            if ($bici->id_negocio != $user->id_negocio) {
+                return response()->json(['ok' => false, 'message' => 'No tienes acceso a esta bicicleta'], 403);
+            }
+
+            $bici->id_usuario = $user->id_usuario;
+            $guardado         = $bici->save();
+
+            if (!$guardado) {
+                Log::error('No se pudo guardar la bicicleta', ['num_serie' => $bici->num_serie]);
+                return response()->json(['ok' => false, 'message' => 'No se pudo asignar'], 500);
+            }
+
+            CatalogService::invalidateBicicleta($bici->num_serie, $bici->id_negocio);
+            CatalogService::invalidateBicicletasPorUsuario($user->id_usuario, $bici->id_negocio);
+            // ✅ Invalidar también el stock del admin para que vea el cambio
+            CatalogService::invalidateStockVendedores($bici->id_negocio);
+
+            return response()->json(['ok' => true]);
+
+        } catch (\Exception $e) {
+            Log::error('Error al asignar usuario a bicicleta', [
+                'num_serie' => $request->num_serie,
+                'error'     => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'ok'      => false,
+                'message' => 'Error interno: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /* =====================================================
+     | VENDEDOR: BUSCAR POR QR
+     ===================================================== */
+    public function buscarPorSerieQr($num_serie)
+    {
+        $user = auth()->user();
+
+        if ($user->id_rol != 2) abort(403);
+
+        // ✅ Usar caché en lugar de query directa
+        $bici = CatalogService::getBicicletaBySerie($num_serie);
+
+        if (!$bici) {
+            return response()->json(['ok' => false, 'message' => 'Bicicleta no encontrada'], 404);
+        }
+
+        if ($bici->id_negocio != $user->id_negocio) {
+            return response()->json(['ok' => false, 'message' => 'No tienes acceso a esta bicicleta'], 403);
+        }
+
+        if ($bici->id_usuario) {
+            return response()->json(['ok' => false, 'message' => 'La bicicleta ya está asignada'], 400);
+        }
+
+        return response()->json([
+            'ok'        => true,
+            'bicicleta' => [
+                'num_serie' => $bici->num_serie,
+                'modelo'    => $bici->modelo->nombre_modelo ?? '—',
+                'voltaje'   => $bici->voltaje->voltaje       ?? '—',
+                'color'     => $bici->color->color           ?? '—',
+            ],
+        ]);
+    }
+
+    /* =====================================================
+     | MÉTODOS PRIVADOS
      ===================================================== */
     private static function generarToken(): string
     {

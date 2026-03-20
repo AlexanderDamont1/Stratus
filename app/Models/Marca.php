@@ -3,29 +3,26 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
-class Voltaje extends Model
+class Marca extends Model
 {
-    use HasUuids;
-
-    protected $table      = 'voltajes';
-    protected $primaryKey = 'id_voltaje';
+    protected $table      = 'marcas';
+    protected $primaryKey = 'id_marca';
 
     public $incrementing = false;
     protected $keyType   = 'string';
-    public $timestamps   = false;
+    public $timestamps   = true;
 
     protected $fillable = [
-        'id_voltaje',
-        'id_negocio',  // ← nuevo
-        'voltaje',
+        'id_marca',
+        'id_negocio',
+        'nombre_marca',
     ];
 
     protected $casts = [
-        'id_voltaje' => 'string',
-        'id_negocio' => 'string',
-        'voltaje'    => 'string',
+        'id_marca'     => 'string',
+        'id_negocio'   => 'string',
+        'nombre_marca' => 'string',
     ];
 
     protected static function boot()
@@ -37,7 +34,7 @@ class Voltaje extends Model
             $letras = strtoupper(substr(str_shuffle('ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 0, 3));
             $nums   = random_int(100, 999);
 
-            $model->id_voltaje = "VOL{$fecha}{$letras}{$nums}";
+            $model->id_marca = "MRC{$fecha}{$letras}{$nums}";
         });
     }
 
@@ -54,11 +51,6 @@ class Voltaje extends Model
 
     public function modelos()
     {
-        return $this->belongsToMany(
-            Modelo::class,
-            'modelo_voltaje',
-            'id_voltaje',
-            'id_modelo'
-        )->withPivot('id_mvoltaje');
+        return $this->hasMany(Modelo::class, 'id_marca', 'id_marca');
     }
 }

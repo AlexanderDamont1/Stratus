@@ -20,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
         'gestor'       => \App\Http\Middleware\Gestor::class,
         'enlace'       => \App\Http\Middleware\Enlace::class,
         'administrador' => \App\Http\Middleware\Administrador::class,
+        'ventas' => \App\Http\Middleware\Ventas::class,
     ]);
 
   

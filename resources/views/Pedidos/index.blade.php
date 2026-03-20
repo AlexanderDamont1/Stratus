@@ -125,7 +125,7 @@
                         <tr>
                             <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">N° Pedido</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Negocio</th>
-                            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Items</th>
+                            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Cantidad</th>
                             <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Status</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Fecha</th>
                             @if(auth()->user()->id_rol == 1 || auth()->user()->id_rol == 5)
@@ -211,12 +211,14 @@
             </div>
 
             {{-- Vista móvil --}}
-            <div class="block md:hidden">
+           <div class="block md:hidden overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead class="bg-gray-50 dark:bg-gray-700/50">
                         <tr>
                             <th class="px-3 py-2 text-left text-xs font-medium text-gray-900 dark:text-white uppercase">Pedido</th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-900 dark:text-white uppercase">Cantidad</th>
                             <th class="px-3 py-2 text-center text-xs font-medium text-gray-900 dark:text-white uppercase">Status</th>
+                            <th class="px-3 py-2 text-center text-xs font-medium text-gray-900 dark:text-white uppercase">Fecha</th>
                             @if(auth()->user()->id_rol == 1 || auth()->user()->id_rol == 5)
                             <th class="px-3 py-2 text-center text-xs font-medium text-gray-900 dark:text-white uppercase">Acciones</th>
                             @endif
@@ -230,17 +232,21 @@
                                     <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="pedido.negocio"></div>
                                     <div class="text-xs text-gray-400" x-text="pedido.id_pedido"></div>
                                 </td>
+                                <td class="px-4 py-3 text-center text-gray-900 dark:text-white"
+                                    x-text="pedido.items.reduce((sum, item) => sum + item.cantidad, 0)"></td>
                                 <td class="px-3 py-3 text-center">
-                                    <span class="px-2 py-1 text-xs font-semibold rounded-full"
+                                     <span class="px-2 py-1 text-xs font-semibold rounded-full"
                                         :class="{
-                                            'bg-yellow-100 text-yellow-800': pedido.status_num == 1,
-                                            'bg-blue-100 text-blue-800': pedido.status_num == 2,
-                                            'bg-green-100 text-green-800': pedido.status_num == 3,
-                                            'bg-purple-100 text-purple-800': pedido.status_num == 4
+                                            'bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-400': pedido.status_num == 1,
+                                            'bg-blue-100 text-blue-800 dark:bg-blue-800/30 dark:text-blue-400': pedido.status_num == 2,
+                                            'bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-400': pedido.status_num == 3,
+                                            'bg-purple-100 text-purple-800 dark:bg-purple-800/30 dark:text-purple-400': pedido.status_num == 4
                                         }"
                                         x-text="pedido.status">
                                     </span>
                                 </td>
+                                <td class="px-4 py-3 text-gray-900 dark:text-white text-xs"
+                                    x-text="pedido.fecha.split(' ')[0]"></td>
 
                                 @if(auth()->user()->id_rol == 1 || auth()->user()->id_rol == 5)
                                 <td class="px-3 py-3 text-center" @click.stop>
@@ -396,53 +402,53 @@
 
                 {{-- Token de entrega — solo rol 1, solo status 3 --}}
                 @if(auth()->user()->id_rol == 1)
-    <div x-show="detailPedido?.status_num == 3" x-cloak
-        class="px-4 sm:px-6 py-4 border-b dark:border-gray-700 bg-green-50 dark:bg-green-900/10">
-        <p class="text-xs text-gray-400 uppercase tracking-wider mb-2 text-center">Token de Entrega</p> {{-- Centrado --}}
+                    <div x-show="detailPedido?.status_num == 3" x-cloak
+                        class="px-4 sm:px-6 py-4 border-b dark:border-gray-700 bg-green-50 dark:bg-green-900/10">
+                        <p class="text-xs text-gray-400 uppercase tracking-wider mb-2 text-center">Token de Entrega</p> {{-- Centrado --}}
 
-        <div x-show="!detailToken && !detailTokenCargando" class="flex items-center justify-center gap-2"> {{-- Centrado --}}
-            <button @click="cargarToken(detailPedido.id_pedido)"
-                class="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold transition">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                Ver Token
-            </button>
-            <p class="text-xs text-gray-400">Haz clic para revelar el token de entrega</p>
-        </div>
+                        <div x-show="!detailToken && !detailTokenCargando" class="flex items-center justify-center gap-2"> {{-- Centrado --}}
+                            <button @click="cargarToken(detailPedido.id_pedido)"
+                                class="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold transition">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                                Ver Token
+                            </button>
+                            <p class="text-xs text-gray-400">Haz clic para revelar el token de entrega</p>
+                        </div>
 
-        <div x-show="detailTokenCargando" class="flex items-center justify-center gap-2"> {{-- Centrado --}}
-            <svg class="w-4 h-4 animate-spin text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            <span class="text-xs text-gray-400">Cargando...</span>
-        </div>
+                        <div x-show="detailTokenCargando" class="flex items-center justify-center gap-2"> {{-- Centrado --}}
+                            <svg class="w-4 h-4 animate-spin text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            <span class="text-xs text-gray-400">Cargando...</span>
+                        </div>
 
-        <div x-show="detailToken" class="flex items-center justify-center gap-3 flex-wrap"> {{-- Centrado y con wrap para móvil --}}
-            <span class="font-mono text-lg font-bold tracking-widest text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-4 py-2 rounded-lg"
-                x-text="detailToken"></span>
-            <button @click="copiarToken()"
-                class="flex items-center gap-1 px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
-                <span x-text="tokenCopiado ? '¡Copiado!' : 'Copiar'"></span>
-            </button>
-            <button @click="detailToken = null"
-                class="text-xs text-gray-400 hover:text-gray-600 transition">
-                Ocultar
-            </button>
-        </div>
+                        <div x-show="detailToken" class="flex items-center justify-center gap-3 flex-wrap"> {{-- Centrado y con wrap para móvil --}}
+                            <span class="font-mono text-lg font-bold tracking-widest text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-4 py-2 rounded-lg"
+                                x-text="detailToken"></span>
+                            <button @click="copiarToken()"
+                                class="flex items-center gap-1 px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                                <span x-text="tokenCopiado ? '¡Copiado!' : 'Copiar'"></span>
+                            </button>
+                            <button @click="detailToken = null"
+                                class="text-xs text-gray-400 hover:text-gray-600 transition">
+                                Ocultar
+                            </button>
+                        </div>
 
-        <p x-show="detailTokenError" x-text="detailTokenError"
-            class="text-xs text-red-500 mt-1 text-center"></p> {{-- Centrado --}}
-    </div>
-@endif
+                        <p x-show="detailTokenError" x-text="detailTokenError"
+                            class="text-xs text-red-500 mt-1 text-center"></p> {{-- Centrado --}}
+                    </div>
+                @endif
 
                 {{-- Tabla de items --}}
                 <div class="px-4 sm:px-6 py-4 max-h-64 overflow-y-auto">

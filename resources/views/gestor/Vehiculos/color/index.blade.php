@@ -89,7 +89,7 @@
                             {{-- Acciones --}}
                             <td class="px-4 py-3 text-center">
                                 <div class="flex items-center justify-center gap-2">
-                                    <a href="{{ route('gestor.vehiculos.colores.edit', $color) }}" 
+                                    <a href="{{ auth()->user()->id_rol === 1 ? route('admin.catalogo.colores.edit', $color) : route('gestor.vehiculos.colores.edit', $color) }}" 
                                        class="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 text-xs font-semibold">
                                         Editar
                                     </a>
@@ -136,7 +136,7 @@
                                 </td>
                                 <td class="px-3 py-3 text-center">
                                     <div class="flex flex-col items-center justify-center space-y-1">
-                                        <a href="{{ route('gestor.vehiculos.colores.edit', $color) }}" 
+                                        <a href="{{ auth()->user()->id_rol === 1 ? route('admin.catalogo.colores.edit', $color) : route('gestor.vehiculos.colores.edit', $color) }}" 
                                            class="text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 text-xs">
                                             Editar
                                         </a>
@@ -211,7 +211,7 @@
                 </button>
             </div>
 
-            <form method="POST" action="{{ route('gestor.vehiculos.colores.store') }}">
+            <form method="POST" action="{{ auth()->user()->id_rol === 1 ? route('admin.catalogo.colores.store') : route('gestor.vehiculos.colores.store') }}">
                 @csrf
                 <div class="mb-5">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
@@ -241,8 +241,8 @@
                     >
                         <option value="">Seleccione un modelo</option>
                         @foreach($modelos as $modelo)
-                            <option value="{{ $modelo->id_modelo }}" {{ old('id_modelo') == $modelo->id_modelo ? 'selected' : '' }}>
-                                {{ $modelo->nombre_modelo }}
+                            <option value="{{ $modelo->id_modelo }}">
+                                {{ $modelo->marca->nombre_marca ?? 'Sin marca' }} ~ {{ $modelo->nombre_modelo }}
                             </option>
                         @endforeach
                     </select>

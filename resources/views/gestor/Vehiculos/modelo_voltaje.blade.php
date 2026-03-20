@@ -133,10 +133,10 @@
                         <td class="px-4 py-3 text-center">
                             <button
                                 type="button"
-                                
-                                class="text-red-600 hover:text-red-800 dark:text-red-400 font-semibold text-sm"
+                                @click="openDelete('{{ $rel->id_mvoltaje }}', '{{ $rel->modelo->nombre_modelo ?? '' }}', '{{ $rel->voltaje->voltaje ?? '' }}', '{{ auth()->user()->id_rol === 1 ? route('admin.catalogo.modelo-voltaje.destroy', $rel->id_mvoltaje) : route('modelo-voltaje.destroy', $rel->id_mvoltaje) }}')"
+                                class="text-red-600 hover:text-red-800 dark:text-red-400 font-semibold text-xs"
                             >
-                                Editar
+                                Eliminar
                             </button>
                         </td>
 
@@ -197,10 +197,10 @@
                             <td class="px-3 py-3 text-center">
                                 <button
                                     type="button"
-                                   
-                                    class="text-red-600 hover:text-red-900 dark:text-red-400 text-xs font-semibold"
+                                    @click="openDelete('{{ $rel->id_mvoltaje }}', '{{ $rel->modelo->nombre_modelo ?? '' }}', '{{ $rel->voltaje->voltaje ?? '' }}', '{{ auth()->user()->id_rol === 1 ? route('admin.catalogo.modelo-voltaje.destroy', $rel->id_mvoltaje) : route('modelo-voltaje.destroy', $rel->id_mvoltaje) }}')"
+                                    class="text-red-600 hover:text-red-800 dark:text-red-400 font-semibold text-xs"
                                 >
-                                    Editar
+                                    Eliminar
                                 </button>
                             </td>
                         </tr>
@@ -274,30 +274,10 @@
             </button>
         </div>
 
-        <form method="POST" action="{{ route('modelo-voltaje.store') }}">
+        <form method="POST" action="{{ auth()->user()->id_rol === 1 ? route('admin.catalogo.modelo-voltaje.store') : route('modelo-voltaje.store') }}">
             @csrf
 
-            {{-- MODELO --}}
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                    Modelo <span class="text-red-500">*</span>
-                </label>
-                <select 
-                    name="id_modelo" 
-                    class="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 transition"
-                    required
-                >
-                    <option value="">Seleccionar modelo</option>
-                    @foreach($modelos as $modelo)
-                        <option value="{{ $modelo->id_modelo }}" {{ old('id_modelo') == $modelo->id_modelo ? 'selected' : '' }}>
-                            {{ $modelo->nombre_modelo }}
-                        </option>
-                    @endforeach
-                </select>
-                @error('id_modelo')
-                    <p class="text-xs text-red-500 mt-1.5">{{ $message }}</p>
-                @enderror
-            </div>
+            
 
             {{-- VOLTAJE --}}
             <div class="mb-5">
@@ -317,6 +297,28 @@
                     @endforeach
                 </select>
                 @error('id_voltaje')
+                    <p class="text-xs text-red-500 mt-1.5">{{ $message }}</p>
+                @enderror
+            </div>
+
+            {{-- MODELO --}}
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                    Modelo <span class="text-red-500">*</span>
+                </label>
+                <select 
+                    name="id_modelo" 
+                    class="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 transition"
+                    required
+                >
+                    <option value="">Seleccionar modelo</option>
+                    @foreach($modelos as $modelo)
+                        <option value="{{ $modelo->id_modelo }}">
+                            {{ $modelo->marca->nombre_marca ?? 'Sin marca' }} ~ {{ $modelo->nombre_modelo }}
+                        </option>
+                    @endforeach
+                </select>
+                @error('id_modelo')
                     <p class="text-xs text-red-500 mt-1.5">{{ $message }}</p>
                 @enderror
             </div>
