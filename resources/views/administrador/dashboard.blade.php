@@ -4,8 +4,8 @@
         tokenModal: false,
         cancelModal: false,
         cancelId: null,
-        enlaceEstado: '{{ $enlace->estado ?? '' }}',
-        enlaceCancelado: false,
+        enlaceEstado: '{{ in_array($enlace->estado ?? '', ['pendiente', 'activo']) ? $enlace->estado : '' }}',
+        enlaceCancelado: {{ ($enlace->estado ?? '') === 'cancelado' ? 'true' : 'false' }},
         enlaceGestor: '{{ $enlace->usuarioDestino->nombre_usuario ?? '' }}',
         enlaceGestorCorreo: '{{ $enlace->usuarioDestino->correo ?? '' }}',
         enlaceToken: '{{ $enlace->token_enlace ?? '' }}',
@@ -80,6 +80,7 @@
         {{-- Botón solo visible si no hay enlace Y no fue cancelado por el gestor --}}
         <button
             x-show="!enlaceEstado && !enlaceCancelado"
+            x-cloak
             @click="tokenModal = true"
             class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-md text-sm hover:opacity-90 transition"
         >

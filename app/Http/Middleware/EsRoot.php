@@ -11,7 +11,7 @@ class EsRoot
     public function handle(Request $request, Closure $next): Response
     {
         if (! auth()->check() || auth()->user()->id_rol !== 0) {
-            abort(403, 'Acceso restringido.');
+            abort(404);
         }
 
         return $next($request);

@@ -95,59 +95,80 @@
 ════════════════════════════════════════════════════════════ --}}
         @if(auth()->user()->id_rol === 1)
 
-        @foreach($stockPorVendedor as $seccion)
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+        @php
+        $estadosAdmin = [
+            '1' => ['texto' => 'En Stock',      'color' => 'green'],
+            '2' => ['texto' => 'Vendido',       'color' => 'purple'],
+            '3' => ['texto' => 'En Reparación', 'color' => 'yellow'],
+        ];
+        @endphp
 
-            {{-- Header de sección (con truncamiento para móvil) --}}
-            <div class="px-6 py-4 border-b dark:border-gray-700 flex items-center justify-between space-x-2">
+        @foreach($stockPorVendedor as $seccion)
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden"
+            x-data="{ abierto: false }">
+
+            {{-- Header desplegable --}}
+            <div class="px-6 py-4 border-b dark:border-gray-700 flex items-center justify-between space-x-2 cursor-pointer select-none"
+                @click="abierto = !abierto">
+                 <svg class="w-4 h-4 text-gray-400 transition-transform duration-200"
+                        :class="abierto ? 'rotate-90' : ''"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
                 <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 flex-1 min-w-0 truncate">
                     @if($seccion['vendedor'])
-                    Sucursal: {{ $seccion['vendedor']->nombre_usuario }}
+                        Sucursal: {{ $seccion['vendedor']->nombre_usuario }}
                     @else
-                    *Sin Sucursal Asignado*
+                        *Sin Sucursal Asignado*
                     @endif
                 </h3>
-                <span class="text-xs text-gray-400 whitespace-nowrap">
-                    {{ $seccion['bicicletas']->count() }} unidades
-                </span>
+                <div class="flex items-center gap-3 shrink-0">
+                    <span class="text-xs text-gray-400 whitespace-nowrap">
+                        {{ $seccion['bicicletas']->count() }} unidades
+                    </span>
+                   
+                </div>
             </div>
 
-            @if($seccion['bicicletas']->isEmpty())
-            <p class="text-sm text-gray-400 italic px-6 py-4">Sin bicicletas registradas.</p>
-            @else
-            {{-- Vista escritorio (original) --}}
-            <div class="hidden md:block overflow-x-auto">
-                <table class="min-w-full text-sm border border-gray-200 dark:border-gray-700">
-                    <thead class="bg-gray-100 dark:bg-gray-800">
-                        <tr>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">N° Serie</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Modelo</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Voltaje</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Color</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-700">
-                        @php
-                        $estadosAdmin = [
-                        '1' => ['texto' => 'En Stock', 'color' => 'green'],
-                        '2' => ['texto' => 'Vendido', 'color' => 'purple'],
-                        '3' => ['texto' => 'En Reparación', 'color' => 'yellow'],
-                        ];
-                        @endphp
-                        @foreach($seccion['bicicletas'] as $bici)
-                        @php
-                        $est = $estadosAdmin[$bici->status] ?? ['texto' => 'Desconocido', 'color' => 'red'];
-                        $color = $est['color'];
-                        @endphp
-                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
-                            <td class="px-4 py-3 font-medium text-gray-800 dark:text-white">{{ $bici->num_serie }}</td>
-                            <td class="px-4 py-3 text-gray-600 dark:text-gray-400">{{ $bici->modelo->nombre_modelo ?? '—' }}</td>
-                            <td class="px-4 py-3 text-gray-600 dark:text-gray-400">{{ $bici->voltaje->voltaje ?? '—' }}</td>
-                            <td class="px-4 py-3 text-gray-600 dark:text-gray-400">{{ $bici->color->color ?? '—' }}</td>
-                            <td class="px-4 py-3">
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full
+            {{-- Contenido desplegable --}}
+            <div x-show="abierto"
+                x-transition:enter="transition ease-out duration-200"
+                x-transition:enter-start="opacity-0 -translate-y-1"
+                x-transition:enter-end="opacity-100 translate-y-0"
+                x-transition:leave="transition ease-in duration-150"
+                x-transition:leave-start="opacity-100 translate-y-0"
+                x-transition:leave-end="opacity-0 -translate-y-1">
+
+                @if($seccion['bicicletas']->isEmpty())
+                    <p class="text-sm text-gray-400 italic px-6 py-4">Sin bicicletas registradas.</p>
+                @else
+
+                    {{-- Vista escritorio --}}
+                    <div class="hidden md:block overflow-x-auto">
+                        <table class="min-w-full text-sm border border-gray-200 dark:border-gray-700">
+                            <thead class="bg-gray-100 dark:bg-gray-800">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">N° Serie</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Modelo</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Voltaje</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Color</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-700">
+                                @foreach($seccion['bicicletas'] as $bici)
+                                @php
+                                    $est   = $estadosAdmin[$bici->status] ?? ['texto' => 'Desconocido', 'color' => 'red'];
+                                    $color = $est['color'];
+                                @endphp
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                                    <td class="px-4 py-3 font-medium text-gray-800 dark:text-white">{{ $bici->num_serie }}</td>
+                                    <td class="px-4 py-3 text-gray-600 dark:text-gray-400">{{ $bici->modelo->nombre_modelo ?? '—' }}</td>
+                                    <td class="px-4 py-3 text-gray-600 dark:text-gray-400">{{ $bici->voltaje->voltaje ?? '—' }}</td>
+                                    <td class="px-4 py-3 text-gray-600 dark:text-gray-400">{{ $bici->color->color ?? '—' }}</td>
+                                    <td class="px-4 py-3">
+                                        <span class="px-2 py-1 text-xs font-semibold rounded-full
                                             @switch($color)
                                                 @case('green')  bg-green-100  text-green-800  dark:bg-green-800/30  dark:text-green-400  @break
                                                 @case('purple') bg-purple-100 text-purple-800 dark:bg-purple-800/30 dark:text-purple-400 @break
@@ -155,64 +176,66 @@
                                                 @default        bg-red-100    text-red-800    dark:bg-red-800/30    dark:text-red-400
                                             @endswitch
                                         ">
-                                    {{ $est['texto'] }}
-                                </span>
-                            </td>
-                            <td class="px-4 py-3 text-gray-400 text-xs">{{ $bici->updated_at->format('d/m/Y') }}</td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
+                                            {{ $est['texto'] }}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-3 text-gray-400 text-xs">{{ $bici->updated_at->format('d/m/Y') }}</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
 
-            {{-- Vista móvil (nueva) --}}
-            <div class="block md:hidden overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="bg-gray-50 dark:bg-gray-700/50">
-                        <tr>
-                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Bicicleta</th>
-                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Voltaje</th>
-                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Color</th>
-                            <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                        @foreach($seccion['bicicletas'] as $bici)
-                        @php
-                            $est = $estadosAdmin[$bici->status] ?? ['texto' => 'Desconocido', 'color' => 'red'];
-                            $color = $est['color'];
-                        @endphp
-                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                            <td class="px-3 py-3">
-                                <div class="text-xs font-medium text-gray-900 dark:text-white">{{ $bici->num_serie }}</div>
-                                <div class="text-xs text-gray-400">{{ $bici->modelo->nombre_modelo ?? '—' }}</div>
-                            </td>
-                            <td class="px-3 py-3 text-xs text-gray-500">{{ $bici->voltaje->voltaje ?? '—' }}</td>
-                            <td class="px-3 py-3 text-xs text-gray-500">{{ $bici->color->color ?? '—' }}</td>
-                            <td class="px-3 py-3 text-center">
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full whitespace-nowrap
-                                    @switch($color)
-                                        @case('green')  bg-green-100  text-green-800  dark:bg-green-800/30  dark:text-green-400  @break
-                                        @case('purple') bg-purple-100 text-purple-800 dark:bg-purple-800/30 dark:text-purple-400 @break
-                                        @case('yellow') bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-400 @break
-                                        @default        bg-red-100    text-red-800    dark:bg-red-800/30    dark:text-red-400
-                                    @endswitch
-                                ">
-                                    {{ $est['texto'] }}
-                                </span>
-                            </td>
-                            <td class="px-3 py-3 text-xs text-gray-500">{{ $bici->updated_at->format('d/m/Y') }}</td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                    {{-- Vista móvil --}}
+                    <div class="block md:hidden overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50 dark:bg-gray-700/50">
+                                <tr>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Bicicleta</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Voltaje</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Color</th>
+                                    <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                                @foreach($seccion['bicicletas'] as $bici)
+                                @php
+                                    $est   = $estadosAdmin[$bici->status] ?? ['texto' => 'Desconocido', 'color' => 'red'];
+                                    $color = $est['color'];
+                                @endphp
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                                    <td class="px-3 py-3">
+                                        <div class="text-xs font-medium text-gray-900 dark:text-white">{{ $bici->num_serie }}</div>
+                                        <div class="text-xs text-gray-400">{{ $bici->modelo->nombre_modelo ?? '—' }}</div>
+                                    </td>
+                                    <td class="px-3 py-3 text-xs text-gray-500">{{ $bici->voltaje->voltaje ?? '—' }}</td>
+                                    <td class="px-3 py-3 text-xs text-gray-500">{{ $bici->color->color ?? '—' }}</td>
+                                    <td class="px-3 py-3 text-center">
+                                        <span class="px-2 py-1 text-xs font-semibold rounded-full whitespace-nowrap
+                                            @switch($color)
+                                                @case('green')  bg-green-100  text-green-800  dark:bg-green-800/30  dark:text-green-400  @break
+                                                @case('purple') bg-purple-100 text-purple-800 dark:bg-purple-800/30 dark:text-purple-400 @break
+                                                @case('yellow') bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-400 @break
+                                                @default        bg-red-100    text-red-800    dark:bg-red-800/30    dark:text-red-400
+                                            @endswitch
+                                        ">
+                                            {{ $est['texto'] }}
+                                        </span>
+                                    </td>
+                                    <td class="px-3 py-3 text-xs text-gray-500">{{ $bici->updated_at->format('d/m/Y') }}</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+
+                @endif
             </div>
-            @endif
+            {{-- fin desplegable --}}
 
         </div>
         @endforeach
-
         {{-- ═══════════════════════════════════════════════════════════
              ROL 5 — TABLA PAGINADA ORIGINAL
         ════════════════════════════════════════════════════════════ --}}

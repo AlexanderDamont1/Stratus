@@ -35,3 +35,7 @@ Broadcast::channel('user.{id}', function ($user, $id) {
     return $user->id_usuario === $id;
 });
 
+Broadcast::channel('catalogo.{idNegocio}', function ($user, $idNegocio) {
+    return $user->id_rol === 1 && (int) $user->id_negocio === (int) $idNegocio;
+});
+ 

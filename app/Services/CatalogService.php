@@ -670,4 +670,31 @@ class CatalogService
         }
         self::incrementVersion();
     }
+
+    // En CatalogService, agrega este método:
+
+public static function getCatalogoCompleto(string $idNegocio): \Illuminate\Support\Collection
+{
+    return self::remember("catalogo:completo:{$idNegocio}", self::CACHE_TTL['marcas'], function () use ($idNegocio) {
+        return Marca::where('id_negocio', $idNegocio)
+            ->withCount('modelos')
+            ->with(['modelos' => function ($q) use ($idNegocio) {
+                $q->where('id_negocio', $idNegocio)
+                  ->with([
+                      'colores'  => fn($q) => $q->where('id_negocio', $idNegocio),
+                      'voltajes' => fn($q) => $q->wherePivot('id_negocio', $idNegocio)
+                                               ->orderBy('voltaje'),
+                  ])
+                  ->orderBy('nombre_modelo');
+            }])
+            ->orderBy('nombre_marca')
+            ->get();
+    });
+}
+
+public static function invalidateCatalogoCompleto(string $idNegocio): void
+{
+    $version = self::getVersion();
+    Cache::forget(self::key("catalogo:completo:{$idNegocio}") . ":v{$version}");
+}
 }

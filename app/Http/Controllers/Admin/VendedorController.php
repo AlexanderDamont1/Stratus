@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\View\View;
+use App\Services\CatalogService;
 
 class VendedorController extends Controller
 {
@@ -54,6 +55,9 @@ class VendedorController extends Controller
             'password'       => Hash::make($request->password),
             'id_rol'         => 2,
         ]);
+           
+            CatalogService::invalidateStockVendedores($admin->id_negocio);
+
 
         return redirect()->route('admin.vendedores.create')
             ->with('success', 'Vendedor creado correctamente.');

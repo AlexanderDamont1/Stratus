@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use App\Services\CatalogService;
 use App\Traits\ResolvesAdminRoute;
+use Illuminate\View\View;
+use App\Events\CatalogoActualizado;
 
 class MarcaController extends Controller
 {
@@ -47,7 +49,9 @@ class MarcaController extends Controller
 
         $request->validate([
             'nombre_marca' => [
-                'required', 'string', 'max:50',
+                'required',
+                'string',
+                'max:50',
                 // Unicidad dentro del mismo negocio
                 Rule::unique('marcas', 'nombre_marca')
                     ->where('id_negocio', $user->id_negocio),
@@ -59,11 +63,27 @@ class MarcaController extends Controller
             'id_negocio'   => $user->id_negocio,
         ]);
 
-        CatalogService::invalidateMarca($marca->id_marca, $user->id_negocio);
+        CatalogoActualizado::dispatch(
+            $user->id_negocio,
+            'marca',
+            'creado',
+            $marca->id_marca,
+        );
 
-        return redirect()
-            ->route($this->routeByRol('marcas'))
-            ->with('success', 'Marca creada correctamente.');
+        CatalogService::invalidateMarca($marca->id_marca, $user->id_negocio);
+        CatalogService::invalidateCatalogoCompleto($user->id_negocio);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok'      => true,
+                'mensaje' => 'Marca creada correctamente.',
+                'marca'   => [
+                    'id_marca'     => $marca->id_marca,
+                    'nombre_marca' => $marca->nombre_marca,
+                ],
+            ]);
+        }
+        return redirect()->route($this->routeByRol('marcas'))->with('success', 'Marca creada correctamente.');
     }
 
     // ─── EDIT ────────────────────────────────────────────────────────────────
@@ -92,7 +112,9 @@ class MarcaController extends Controller
 
         $request->validate([
             'nombre_marca' => [
-                'required', 'string', 'max:50',
+                'required',
+                'string',
+                'max:50',
                 Rule::unique('marcas', 'nombre_marca')
                     ->where('id_negocio', $user->id_negocio)
                     ->ignore($marca->id_marca, 'id_marca'),
@@ -103,11 +125,27 @@ class MarcaController extends Controller
             'nombre_marca' => $request->nombre_marca,
         ]);
 
-        CatalogService::invalidateMarca($marca->id_marca, $user->id_negocio);
+        CatalogoActualizado::dispatch(
+            $user->id_negocio,
+            'marca',
+            'actualizado',
+            $marca->id_marca,
+        );
 
-        return redirect()
-            ->route($this->routeByRol('marcas'))
-            ->with('success', 'Marca actualizada correctamente.');
+        CatalogService::invalidateMarca($marca->id_marca, $user->id_negocio);
+        CatalogService::invalidateCatalogoCompleto($user->id_negocio);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok'      => true,
+                'mensaje' => 'Marca actualizada correctamente.',
+                'marca'   => [
+                    'id_marca'     => $marca->id_marca,
+                    'nombre_marca' => $marca->nombre_marca,
+                ],
+            ]);
+        }
+        return redirect()->route($this->routeByRol('marcas'))->with('success', 'Marca actualizada correctamente.');
     }
 
     // ─── DESTROY ─────────────────────────────────────────────────────────────
@@ -130,10 +168,55 @@ class MarcaController extends Controller
 
         $marca->delete();
 
+        CatalogoActualizado::dispatch(
+            $user->id_negocio,
+            'marca',
+            'eliminado',
+            $idMarca, // ya lo tienes guardado antes del delete
+        );
+
         CatalogService::invalidateMarca($idMarca, $idNegocio);
+        CatalogService::invalidateCatalogoCompleto($user->id_negocio);
 
         return redirect()
             ->route($this->routeByRol('marcas'))
             ->with('success', 'Marca eliminada correctamente.');
     }
+
+
+    
+
+    // En MarcaController, agrega este método:
+    public function catalogo(): View
+    {
+        $user      = auth()->user();
+        if ($user->id_rol !== 1) abort(403);
+
+        $idNegocio = $user->id_negocio;
+        $marcas    = CatalogService::getCatalogoCompleto($idNegocio);
+
+        return view('administrador.catalogo.index', compact(
+            'marcas',
+            'idNegocio',
+        ))->with([
+            'totalMarcas'  => $marcas->count(),
+            'limiteMarcas' => 10,
+        ]);
+    }
+
+
+    public function card(string $idMarca): \Illuminate\Http\Response
+{
+    $user  = auth()->user();
+    if ($user->id_rol !== 1) abort(403);
+
+    $marca = \App\Models\Marca::with([
+        'modelos.colores',
+        'modelos.voltajes',
+    ])
+    ->where('id_negocio', $user->id_negocio)
+    ->findOrFail($idMarca);
+
+    return response(view('administrador.catalogo._marca_card', compact('marca'))->render());
+}
 }

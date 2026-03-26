@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use App\Services\CatalogService;
 use App\Traits\ResolvesAdminRoute;
+use App\Events\CatalogoActualizado;
 
 class ModeloController extends Controller
 {
@@ -74,7 +75,7 @@ class ModeloController extends Controller
     public function store(Request $request)
     {
 
-    
+
         $user = auth()->user();
 
         if (!in_array($user->id_rol, [1, 5])) {
@@ -85,9 +86,11 @@ class ModeloController extends Controller
 
         $rules = [
             'nombre_modelo' => [
-                'required', 'string', 'max:255',
+                'required',
+                'string',
+                'max:255',
                 // Unicidad dentro del mismo negocio (null para públicos)
-                Rule::unique('modelos', 'nombre_modelo')
+                Rule::unique('modelos')
                     ->where('id_negocio', $idNegocio),
             ],
         ];
@@ -108,7 +111,26 @@ class ModeloController extends Controller
             'id_negocio'    => $idNegocio,
         ]);
 
+        CatalogoActualizado::dispatch(
+            $user->id_negocio,
+            'modelo',
+            'creado',
+            $modelo->id_marca,
+        );
+
         CatalogService::invalidateModelo($modelo->id_modelo, $idNegocio);
+        CatalogService::invalidateCatalogoCompleto($user->id_negocio);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok'     => true,
+                'modelo' => [
+                    'id_modelo'     => $modelo->id_modelo,
+                    'nombre_modelo' => $modelo->nombre_modelo,
+                    'id_marca'      => $modelo->id_marca,
+                ],
+            ]);
+        }
 
         return redirect()->route($this->routeByRol('modelos'))
             ->with('success', 'Modelo creado correctamente.');
@@ -139,6 +161,7 @@ class ModeloController extends Controller
 
     public function update(Request $request, Modelo $modelo)
     {
+
         $user = auth()->user();
 
         if (!in_array($user->id_rol, [1, 5])) abort(403);
@@ -153,7 +176,9 @@ class ModeloController extends Controller
 
         $rules = [
             'nombre_modelo' => [
-                'required', 'string', 'max:255',
+                'required',
+                'string',
+                'max:255',
                 Rule::unique('modelos', 'nombre_modelo')
                     ->where('id_negocio', $idNegocio)
                     ->ignore($modelo->id_modelo, 'id_modelo'),
@@ -174,7 +199,25 @@ class ModeloController extends Controller
             'id_marca'      => $user->id_rol === 1 ? $request->id_marca : $modelo->id_marca,
         ]);
 
+        CatalogoActualizado::dispatch(
+            $user->id_negocio,
+            'modelo',
+            'actualizado',
+            $modelo->id_marca,
+        );
+
         CatalogService::invalidateModelo($modelo->id_modelo, $idNegocio);
+        CatalogService::invalidateCatalogoCompleto($user->id_negocio);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok'     => true,
+                'modelo' => [
+                    'id_modelo'     => $modelo->id_modelo,
+                    'nombre_modelo' => $modelo->nombre_modelo,
+                ],
+            ]);
+        }
 
         return redirect()
             ->route($this->routeByRol('modelos'))
@@ -188,12 +231,9 @@ class ModeloController extends Controller
         $user = auth()->user();
 
         if (!in_array($user->id_rol, [1, 5])) abort(403);
-
         if ($user->id_rol === 1 && $modelo->id_negocio !== $user->id_negocio) abort(403);
-
         if ($user->id_rol === 5 && !is_null($modelo->id_negocio)) abort(403);
 
-        // Verificar que no tenga bicicletas asociadas
         if ($modelo->bicicletas()->exists()) {
             return back()->with('error', 'No se puede eliminar: tiene bicicletas asociadas.');
         }
@@ -201,12 +241,35 @@ class ModeloController extends Controller
         $idModelo  = $modelo->id_modelo;
         $idNegocio = $modelo->id_negocio;
 
+        // ── Eliminar en cascada desde PHP ──────────────────────────────
+        // 1. Colores del modelo
+        \App\Models\Color::where('id_modelo', $idModelo)->delete();
+
+        // 2. Relaciones modelo-voltaje
+        \App\Models\ModeloVoltaje::where('id_modelo', $idModelo)->delete();
+
+        // 3. Invalidar cache de cada color eliminado (opcional pero recomendado)
+       
+
+        // ── Eliminar el modelo ─────────────────────────────────────────
         $modelo->delete();
 
+        $idMarca = $modelo->id_marca; 
+
+
+        CatalogoActualizado::dispatch(
+            $user->id_negocio,
+            'modelo',
+            'eliminado',
+             $idMarca,
+        );
+        
+        
         CatalogService::invalidateModelo($idModelo, $idNegocio);
+        CatalogService::invalidateCatalogoCompleto($user->id_negocio);
 
         return redirect()
-            ->route($this->routeByRol('modelos'))
-            ->with('success', 'Modelo eliminado correctamente.');
+            ->route('admin.catalogo.index')
+            ->with('success', 'Modelo y sus datos asociados eliminados correctamente.');
     }
 }

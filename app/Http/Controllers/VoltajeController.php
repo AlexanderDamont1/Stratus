@@ -68,6 +68,8 @@ class VoltajeController extends Controller
         $voltaje = Voltaje::create([
             'voltaje'    => $request->voltaje,
             'id_negocio' => $idNegocio,
+            'created_at'  => now(),
+            'updated_at'  => now(),
         ]);
 
         CatalogService::invalidateVoltaje($voltaje->id_voltaje, $idNegocio);

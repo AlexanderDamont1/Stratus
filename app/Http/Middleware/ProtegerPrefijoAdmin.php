@@ -5,22 +5,16 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
-use App\Models\Usuario;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Usuario;
 
-class Gestor
+class ProtegerPrefijoAdmin
 {
     public function handle(Request $request, Closure $next): Response
     {
-         $usuario = Auth::user();
+        $usuario = Auth::user();
 
-
-        // 🔒 Blindaje total
-        if (! $usuario instanceof Usuario) {
-            abort(404);
-        }
-
-        if ($usuario->id_rol !== 5) {
+        if (!$usuario instanceof Usuario || $usuario->id_rol !== 1) {
             abort(404);
         }
 

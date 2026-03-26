@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
         'enlace'       => \App\Http\Middleware\Enlace::class,
         'administrador' => \App\Http\Middleware\Administrador::class,
         'ventas' => \App\Http\Middleware\Ventas::class,
+        'prefijo.admin' => \App\Http\Middleware\ProtegerPrefijoAdmin::class, //Proteje todo dentro de /admin
     ]);
 
   

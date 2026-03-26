@@ -8,11 +8,11 @@ trait ResolvesAdminRoute
         $rol = auth()->user()->id_rol;
 
         $rutas = [
-            'modelos'        => $rol === 1 ? 'admin.catalogo.modelos.index'       : 'gestor.vehiculos.modelos.index',
-            'colores'        => $rol === 1 ? 'admin.catalogo.colores.index'       : 'gestor.vehiculos.colores.index',
+            'modelos'        => $rol === 1 ? 'admin.catalogo.index'       : 'gestor.vehiculos.modelos.index',
+            'colores'        => $rol === 1 ? 'admin.catalogo.index'       : 'gestor.vehiculos.colores.index',
             'voltajes'       => $rol === 1 ? 'admin.catalogo.voltajes.index'      : 'gestor.vehiculos.voltajes.index',
-            'marcas'         => 'admin.catalogo.marcas.index', // solo rol 1
-            'modelo-voltaje' => $rol === 1 ? 'admin.catalogo.modelo-voltaje.index': 'modelo-voltaje',
+            'marcas'         => 'admin.catalogo.index', // solo rol 1
+            'modelo-voltaje' => $rol === 1 ? 'admin.catalogo.index': 'modelo-voltaje',
         ];
 
         return $rutas[$recurso];

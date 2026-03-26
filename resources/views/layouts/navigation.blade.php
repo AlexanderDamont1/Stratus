@@ -7,7 +7,7 @@
 
 <div
     x-data="{ open: false }"
-    class="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
+   class="flex overflow-hidden bg-gray-50 dark:bg-gray-950" style="height: calc(100vh / 0.9);">
     {{-- Overlay móvil --}}
     <div
         x-show="open"
@@ -142,43 +142,17 @@
                         x-transition:leave-end="opacity-0 -translate-y-1"
                         class="mt-1 ml-4 pl-3 border-l-2 border-gray-200 dark:border-gray-600 space-y-1">
 
-                        {{-- Marcas --}}
-                        <a href="{{ route('admin.catalogo.marcas.index') }}"
+                        {{-- Catalogo --}}
+                        <a href="{{ route('admin.catalogo.index') }}"
                             class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition
-                                {{ request()->routeIs('admin.catalogo.marcas.*')
+                                {{ request()->routeIs('admin.catalogo.index')
                                     ? 'bg-gray-100 dark:bg-gray-700 font-semibold text-gray-900 dark:text-white'
                                     : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700' }}"
                             @click="open = false">
                             <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                             </svg>
-                            Marcas
-                        </a>
-
-                        {{-- Modelos --}}
-                        <a href="{{ route('admin.catalogo.modelos.index') }}"
-                            class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition
-                                {{ request()->routeIs('admin.catalogo.modelos.*')
-                                    ? 'bg-gray-100 dark:bg-gray-700 font-semibold text-gray-900 dark:text-white'
-                                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700' }}"
-                            @click="open = false">
-                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                            </svg>
-                            Modelos
-                        </a>
-
-                        {{-- Colores --}}
-                        <a href="{{ route('admin.catalogo.colores.index') }}"
-                            class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition
-                                {{ request()->routeIs('admin.catalogo.colores.*')
-                                    ? 'bg-gray-100 dark:bg-gray-700 font-semibold text-gray-900 dark:text-white'
-                                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700' }}"
-                            @click="open = false">
-                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-                            </svg>
-                            Colores
+                            Catalogo
                         </a>
 
                         {{-- Voltajes --}}
@@ -193,20 +167,6 @@
                             </svg>
                             Voltajes
                         </a>
-
-                        {{-- Modelo - Voltaje --}}
-                        <a href="{{ route('admin.catalogo.modelo-voltaje.index') }}"
-                            class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition
-                                {{ request()->routeIs('admin.catalogo.modelo-voltaje.*')
-                                    ? 'bg-gray-100 dark:bg-gray-700 font-semibold text-gray-900 dark:text-white'
-                                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700' }}"
-                            @click="open = false">
-                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                            </svg>
-                            Definir Voltaje
-                        </a>
-
                     </div>
                 </div>
 

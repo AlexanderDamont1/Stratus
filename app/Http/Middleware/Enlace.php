@@ -16,11 +16,11 @@ class Enlace
 
         // 🔒 Blindaje total
         if (! $usuario instanceof Usuario) {
-            abort(403, 'Acceso restringido.');
+            abort(404);
         }
 
         if (! in_array($usuario->id_rol, [1, 5])) {
-            abort(403, 'Acceso restringido.');
+            abort(404);
         }
 
         return $next($request);

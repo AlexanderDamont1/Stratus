@@ -3,11 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
 class Color extends Model
 {
-    use HasUuids;
+   
 
     protected $table      = 'colores';
     protected $primaryKey = 'id_color';
@@ -58,4 +57,9 @@ class Color extends Model
     {
         return $this->belongsTo(Negocio::class, 'id_negocio', 'id_negocio');
     }
+    
+    public function bicicletas()
+{
+    return $this->hasMany(Bicicleta::class, 'id_color', 'id_color');
+}
 }

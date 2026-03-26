@@ -157,7 +157,7 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
     */
     Route::middleware('enlace')->group(function () {
 
-        Route::get('/enlaces', [EnlaceController::class, 'index'])->name('enlaces.index');
+       // Route::get('/enlaces', [EnlaceController::class, 'index'])->name('enlaces.index');
         Route::post('/enlaces/generar', [EnlaceController::class, 'generar'])->name('enlaces.generar');
         Route::patch('/enlaces/{id}/cancelar', [EnlaceController::class, 'cancelar'])->name('enlaces.cancelar');
 
@@ -206,6 +206,23 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
             return view('administrador.dashboard', ['enlace' => $enlace]);
         })->name('administrador.dashboard');
 
+
+        // En web.php dentro del grupo administrador
+        Route::get('/admin/catalogo/voltajes-disponibles/{modelo}', function (\App\Models\Modelo $modelo) {
+            $user = auth()->user();
+            if ($user->id_rol !== 1 || $modelo->id_negocio !== $user->id_negocio) abort(403);
+
+            $asignados = \App\Models\ModeloVoltaje::where('id_modelo', $modelo->id_modelo)
+                ->pluck('id_voltaje');
+
+            return response()->json(
+                \App\Models\Voltaje::where('id_negocio', $user->id_negocio)
+                    ->whereNotIn('id_voltaje', $asignados)
+                    ->orderBy('voltaje')
+                    ->get(['id_voltaje', 'voltaje'])
+            );
+        })->name('admin.catalogo.voltajes.disponibles');
+
         Route::get('/pedidos/crear', [PedidoController::class, 'create'])->name('pedidos.create');
         Route::get('/pedidos/{id_pedido}/edit', [PedidoController::class, 'edit'])->name('pedidos.edit');
         Route::put('/pedidos/{id_pedido}', [PedidoController::class, 'update'])->name('pedidos.update');
@@ -213,8 +230,8 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
         Route::get('/ver/{id_pedido}/token', [PedidoController::class, 'token'])->name('pedidos.token');
 
         // ── Marcas (exclusivo rol 1) ──────────────────────────────────────────
-        Route::prefix('admin/catalogo')->name('admin.catalogo.')->group(function () {
-            Route::get('/marcas', [MarcaController::class, 'index'])->name('marcas.index');
+        Route::prefix('admin/catalogo')->name('admin.catalogo.')->middleware('prefijo.admin')->group(function () {
+
             Route::get('/marcas/crear', [MarcaController::class, 'create'])->name('marcas.create');
             Route::post('/marcas', [MarcaController::class, 'store'])->name('marcas.store');
             Route::get('/marcas/{marca}/editar', [MarcaController::class, 'edit'])->name('marcas.edit');
@@ -222,14 +239,14 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
             Route::delete('/marcas/{marca}', [MarcaController::class, 'destroy'])->name('marcas.destroy');
 
             // Modelos, colores y voltajes del admin (mismo controlador, distinto prefijo)
-            Route::get('/modelos', [ModeloController::class, 'index'])->name('modelos.index');
+            Route::get('/modelos', fn() => redirect()->route('admin.catalogo.index'));
             Route::get('/modelos/crear', [ModeloController::class, 'create'])->name('modelos.create');
             Route::post('/modelos', [ModeloController::class, 'store'])->name('modelos.store');
             Route::get('/modelos/{modelo}/editar', [ModeloController::class, 'edit'])->name('modelos.edit');
             Route::put('/modelos/{modelo}', [ModeloController::class, 'update'])->name('modelos.update');
             Route::delete('/modelos/{modelo}', [ModeloController::class, 'destroy'])->name('modelos.destroy');
 
-            Route::get('/colores', [ColorController::class, 'index'])->name('colores.index');
+            Route::get('/colores', fn() => redirect()->route('admin.catalogo.index'));
             Route::get('/colores/crear', [ColorController::class, 'create'])->name('colores.create');
             Route::post('/colores', [ColorController::class, 'store'])->name('colores.store');
             Route::get('/colores/{color}/editar', [ColorController::class, 'edit'])->name('colores.edit');
@@ -243,9 +260,41 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
             Route::put('/voltajes/{voltaje}', [VoltajeController::class, 'update'])->name('voltajes.update');
             Route::delete('/voltajes/{voltaje}', [VoltajeController::class, 'destroy'])->name('voltajes.destroy');
 
-            Route::get('/modelo-voltaje', [ModeloVoltajeController::class, 'modeloVoltaje'])->name('modelo-voltaje.index');
             Route::post('/modelo-voltaje', [ModeloVoltajeController::class, 'store'])->name('modelo-voltaje.store');
             Route::delete('/modelo-voltaje/{id}', [ModeloVoltajeController::class, 'destroy'])->name('modelo-voltaje.destroy');
+
+            Route::get('/', [MarcaController::class, 'catalogo'])->name('index');
+
+            Route::get('/admin/catalogo/marca-card/{idMarca}', [MarcaController::class, 'card'])->name('admin.catalogo.marca.card')->middleware('auth');
+
+            Route::post('/sugerir-hex', function (Request $request) {
+                $request->validate(['nombre' => 'required|string|max:50']);
+
+                $response = \Illuminate\Support\Facades\Http::withHeaders([
+                    'Authorization' => 'Bearer ' . config('services.groq.key'),
+                    'Content-Type'  => 'application/json',
+                ])->post('https://api.groq.com/openai/v1/chat/completions', [
+                    'model'      => 'llama-3.1-8b-instant', // gratis y rapidísimo
+                    'max_tokens' => 10,
+                    'messages'   => [
+                        [
+                            'role'    => 'system',
+                            'content' => 'Eres un asistente que SOLO responde con colores hexadecimales en formato #RRGGBB. Sin explicaciones, sin texto extra, solo el hex.',
+                        ],
+                        [
+                            'role'    => 'user',
+                            'content' => "¿Qué color hexadecimal representa \"{$request->nombre}\"?",
+                        ],
+                    ],
+                ]);
+
+                $hex = trim($response->json('choices.0.message.content') ?? '');
+
+                if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $hex)) {
+                    return response()->json(['hex' => null]);
+                }
+
+                return response()->json(['hex' => $hex]);})->name('admin.catalogo.sugerir-hex');
         });
     });
 

@@ -3,12 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\ModeloVoltaje;
-use App\Models\Modelo;
-use App\Models\Voltaje;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use App\Services\CatalogService;
 use App\Traits\ResolvesAdminRoute;
+use App\Events\CatalogoActualizado;
 
 class ModeloVoltajeController extends Controller
 {
@@ -82,8 +81,29 @@ class ModeloVoltajeController extends Controller
             'id_negocio'  => $idNegocio,
         ]);
 
+        $idMarca = \App\Models\Modelo::find($request->id_modelo)?->id_marca ?? '';
+        CatalogoActualizado::dispatch(
+            $user->id_negocio,
+            'voltaje',
+            'creado',
+            $idMarca,
+        );
+
+        $mv = ModeloVoltaje::with('voltaje')->find("MV{$fecha}{$letras}{$nums}");
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok'      => true,
+                'pivote'  => [
+                    'id_mvoltaje' => $mv->id_mvoltaje,
+                    'id_voltaje'  => $mv->id_voltaje,
+                    'voltaje'     => $mv->voltaje->voltaje,
+                ],
+            ]);
+        }
+
         CatalogService::invalidateModelo($request->id_modelo, $idNegocio);
         CatalogService::invalidateVoltaje($request->id_voltaje, $idNegocio);
+        CatalogService::invalidateCatalogoCompleto($user->id_negocio);
 
         return redirect()
             ->route($this->routeByRol('modelo-voltaje'))
@@ -118,8 +138,19 @@ class ModeloVoltajeController extends Controller
 
         $relacion->delete();
 
+        $idMarca = \App\Models\Modelo::find($relacion->id_modelo)?->id_marca ?? '';
+        CatalogoActualizado::dispatch(
+            $user->id_negocio,
+            'voltaje',
+            'eliminado',
+            $idMarca,
+        );
+
         CatalogService::invalidateModelo($idModelo, $idNegocio);
         CatalogService::invalidateVoltaje($idVoltaje, $idNegocio);
+        CatalogService::invalidateCatalogoCompleto($user->id_negocio);
+
+        
 
         return redirect()
             ->route($this->routeByRol('modelo-voltaje'))
@@ -129,9 +160,9 @@ class ModeloVoltajeController extends Controller
     // ─── AJAX: VOLTAJES POR MODELO ───────────────────────────────────────────
 
     public function voltajesPorModelo(string $id_modelo)
-{
-    return response()->json(
-        CatalogService::getVoltajesByModelo($id_modelo, null)->values()
-    );
-}
+    {
+        return response()->json(
+            CatalogService::getVoltajesByModelo($id_modelo, null)->values()
+        );
+    }
 }
