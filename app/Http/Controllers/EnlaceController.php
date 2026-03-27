@@ -50,13 +50,13 @@ public function generar(Request $request)
         ->first();
 
     if ($existente) {
-        return redirect()->route('enlaces.index')
+        return redirect()->route('administrador.dashboard')
             ->with('error', 'Ya tienes un enlace activo o pendiente.');
     }
 
     Enlace::create(['id_usuario1' => $usuario->id_usuario]);
 
-    return redirect()->route('enlaces.index')
+    return redirect()->route('administrador.dashboard')
         ->with('success', 'Token generado correctamente. Compártelo con el gestor.');
 }
 

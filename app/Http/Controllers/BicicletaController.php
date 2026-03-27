@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Log;
 
 class BicicletaController extends Controller
 {
+    use \App\Traits\ResolvesAdminRoute;
     /* =====================================================
      | INDEX
      ===================================================== */
@@ -29,24 +30,45 @@ class BicicletaController extends Controller
         $search     = $request->get('search');
 
         if ($user->id_rol === 1) {
+            // Construir el JSON del catálogo en cascada (cacheado por CatalogService)
+            $catalogoJson = CatalogService::getCatalogoCompleto($id_negocio)
+                ->map(fn($marca) => [
+                    'id_marca'     => $marca->id_marca,
+                    'nombre_marca' => $marca->nombre_marca,
+                    'modelos'      => $marca->modelos->map(fn($modelo) => [
+                        'id_modelo'     => $modelo->id_modelo,
+                        'nombre_modelo' => $modelo->nombre_modelo,
+                        'colores'       => $modelo->colores->map(fn($c) => [
+                            'id_color' => $c->id_color,
+                            'color'    => $c->color,
+                        ])->values(),
+                        'voltajes'      => $modelo->voltajes->map(fn($v) => [
+                            'id_voltaje' => $v->id_voltaje,
+                            'voltaje'    => $v->voltaje,
+                        ])->values(),
+                    ])->values(),
+                ])->values()->toJson();
+
             return view('gestor.Vehiculos.Bicicleta.index', [
                 'stockPorVendedor' => CatalogService::getStockPorVendedores($id_negocio),
                 'stats'            => CatalogService::getBicicletaStats($id_negocio),
-                // ✅ Rol 1 ve modelos de su negocio, no los públicos
                 'modelos'          => CatalogService::getModelosByNegocio($id_negocio),
                 'negocios'         => CatalogService::getNegocios(),
+                'marcas'           => CatalogService::getMarcasByNegocio($id_negocio),
+                'colores'          => CatalogService::getColoresByNegocio($id_negocio),
+                'voltajes'         => CatalogService::getVoltajesByNegocio($id_negocio),
+                'catalogoJson'     => $catalogoJson, // 👈 único cambio
             ]);
         }
 
-        // Rol 5
+        // Rol 5 — no necesita catalogoJson (no tiene modal de creación)
         return view('gestor.Vehiculos.Bicicleta.index', [
             'bicicletas' => CatalogService::getBicicletasPaginadas($id_negocio, $page, $search),
             'stats'      => CatalogService::getBicicletaStats($id_negocio),
-            'modelos'    => CatalogService::getModelos(), // públicos
+            'modelos'    => CatalogService::getModelos(),
             'negocios'   => CatalogService::getNegocios(),
         ]);
     }
-
     /* =====================================================
      | CREATE
      ===================================================== */
@@ -54,18 +76,74 @@ class BicicletaController extends Controller
     {
         $user = auth()->user();
 
-        if (!$user) abort(401, 'Sesión no válida.');
-        if (!$user->id_negocio) abort(403, 'No tienes un negocio asignado.');
+        if ($user->id_rol !== 1) abort(403);
 
-        // ✅ Modelos según rol
-        $modelos = $user->id_rol === 1
-            ? CatalogService::getModelosByNegocio($user->id_negocio)
-            : CatalogService::getModelos();
+        $id_negocio = $user->id_negocio;
 
-        return view('gestor.Vehiculos.Bicicleta.create', [
-            'negocio' => $user->negocio,
-            'modelos' => $modelos,
+        $catalogoJson = CatalogService::getCatalogoCompleto($id_negocio)
+            ->map(fn($marca) => [
+                'id_marca'     => $marca->id_marca,
+                'nombre_marca' => $marca->nombre_marca,
+                'modelos'      => $marca->modelos->map(fn($modelo) => [
+                    'id_modelo'     => $modelo->id_modelo,
+                    'nombre_modelo' => $modelo->nombre_modelo,
+                    'colores'       => $modelo->colores->map(fn($c) => [
+                        'id_color' => $c->id_color,
+                        'color'    => $c->color,
+                    ])->values(),
+                    'voltajes'      => $modelo->voltajes->map(fn($v) => [
+                        'id_voltaje' => $v->id_voltaje,
+                        'voltaje'    => $v->voltaje,
+                    ])->values(),
+                ])->values(),
+            ])->values()->toJson();
+
+        return view('administrador.bicicletas.create', compact('catalogoJson'));
+    }
+
+
+
+
+    public function storeMasivo(Request $request)
+    {
+        if (auth()->user()->id_rol !== 1) abort(403);
+
+        $request->validate([
+            'bicicletas'                => 'required|array|min:1',
+            'bicicletas.*.num_serie'    => 'required|string|size:17|distinct|unique:bicicletas,num_serie',
+            'bicicletas.*.id_modelo'    => 'required|exists:modelos,id_modelo',
+            'bicicletas.*.id_color'     => 'required|exists:colores,id_color',
+            'bicicletas.*.id_voltaje'   => 'required|exists:voltajes,id_voltaje',
+        ], [
+            'bicicletas.*.num_serie.size'     => 'El N° de serie debe tener exactamente 17 caracteres.',
+            'bicicletas.*.num_serie.distinct' => 'Hay números de serie repetidos en el listado.',
+            'bicicletas.*.num_serie.unique'   => 'El N° de serie ya existe en el sistema.',
         ]);
+
+        $user       = auth()->user();
+        $id_negocio = $user->id_negocio;
+        $ahora      = now();
+
+        $inserts = collect($request->bicicletas)->map(fn($b) => [
+            'id_bicicleta' => \Illuminate\Support\Str::uuid(),
+            'num_serie'    => strtoupper(trim($b['num_serie'])),
+            'id_modelo'    => $b['id_modelo'],
+            'id_color'     => $b['id_color'],
+            'id_voltaje'   => $b['id_voltaje'],
+            'id_negocio'   => $id_negocio,
+            'status'       => 1,
+            'created_at'   => $ahora,
+            'updated_at'   => $ahora,
+        ])->toArray();
+
+        \App\Models\Bicicleta::insert($inserts);
+
+        // Invalidar caché
+        CatalogService::invalidateBicicleta('masivo', $id_negocio);
+        CatalogService::invalidateStockVendedores($id_negocio);
+
+        return redirect()->route('bicicletas.index')
+            ->with('success', count($inserts) . ' bicicleta(s) registradas correctamente.');
     }
 
     /* =====================================================
@@ -228,7 +306,7 @@ class BicicletaController extends Controller
         }
 
         return redirect()
-            ->route('gestor.vehiculos.bicicletas.index')
+            ->route($this->routeByRol('bicicletas'))
             ->with('success', 'Bicicleta registrada correctamente.');
     }
 

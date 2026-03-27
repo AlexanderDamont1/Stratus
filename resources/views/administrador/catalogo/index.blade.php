@@ -1,6 +1,38 @@
 <x-app-layout>
 <div class="space-y-6" x-data="catalogoPage" data-negocio-id="{{ $idNegocio }}">
 
+{{-- ===== ENCABEZADO ===== --}}
+<div class="flex flex-wrap items-start justify-between gap-4 sm:gap-2">
+    <div>
+        <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Catálogo de productos</h2>
+        <p class="text-xs text-gray-400 mt-0.5">Gestiona marcas, modelos, colores y voltajes</p>
+    </div>
+    <div class="flex flex-col items-end gap-2 sm:flex-row-reverse sm:items-center">
+        @if($totalMarcas < $limiteMarcas)
+            <button @click="marcaModal = true"
+                class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-md text-sm hover:opacity-90 transition whitespace-nowrap hover:scale-105 transform duration-200">
+                + Nueva marca
+            </button>
+        @else
+            <span class="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-1.5 rounded-md whitespace-nowrap">
+                Límite de marcas alcanzado
+            </span>
+        @endif
+        <span class="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-md border border-gray-200 dark:border-gray-600 whitespace-nowrap">
+            {{ $totalMarcas }} / {{ $limiteMarcas }} marcas
+        </span>
+    </div>
+</div>
+
+{{-- ===== MARCAS ===== --}}
+@forelse($marcas as $marca)
+@php
+    $totalModelos  = $marca->modelos->count();
+    $limiteModelos = 20;
+    $pct           = $limiteModelos > 0 ? round(($totalModelos / $limiteModelos) * 100) : 0;
+@endphp
+
+
 {{-- ===== FLASH ALPINE (dinámico para AJAX) ===== --}}
 <div x-show="flashVisible" x-cloak
     x-transition:enter="transition ease-out duration-300"
@@ -55,38 +87,8 @@
 </div>
 @endif
 
-{{-- ===== ENCABEZADO ===== --}}
-<div class="flex flex-wrap items-start justify-between gap-4 sm:gap-2">
-    <div>
-        <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Catálogo de productos</h2>
-        <p class="text-xs text-gray-400 mt-0.5">Gestiona marcas, modelos, colores y voltajes</p>
-    </div>
-    <div class="flex flex-col items-end gap-2 sm:flex-row-reverse sm:items-center">
-        @if($totalMarcas < $limiteMarcas)
-            <button @click="marcaModal = true"
-                class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-md text-sm hover:opacity-90 transition whitespace-nowrap">
-                + Nueva marca
-            </button>
-        @else
-            <span class="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-1.5 rounded-md whitespace-nowrap">
-                Límite de marcas alcanzado
-            </span>
-        @endif
-        <span class="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-md border border-gray-200 dark:border-gray-600 whitespace-nowrap">
-            {{ $totalMarcas }} / {{ $limiteMarcas }} marcas
-        </span>
-    </div>
-</div>
 
-{{-- ===== MARCAS ===== --}}
-@forelse($marcas as $marca)
-@php
-    $totalModelos  = $marca->modelos->count();
-    $limiteModelos = 20;
-    $pct           = $limiteModelos > 0 ? round(($totalModelos / $limiteModelos) * 100) : 0;
-@endphp
-
-<div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden"
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden transition-all duration-300 hover:shadow-md"
      data-marca-id="{{ $marca->id_marca }}"
      id="marca-card-{{ $marca->id_marca }}"
      data-limit="{{ $limiteModelos }}"
@@ -99,7 +101,7 @@
         {{-- Lado izquierdo: toggle --}}
         <button type="button" @click="abierto = !abierto"
             class="flex items-center gap-2.5 flex-1 min-w-0 text-left">
-            <svg class="w-4 h-4 text-gray-400 transition-transform duration-200 shrink-0"
+            <svg class="w-4 h-4 text-gray-400 transition-transform duration-300 shrink-0"
                 :class="abierto ? 'rotate-90' : ''"
                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
@@ -113,13 +115,13 @@
         <div class="flex items-center gap-2 shrink-0 ml-3">
             <button @click.stop="abrirEditMarca('{{ $marca->id_marca }}', '{{ addslashes($marca->nombre_marca) }}')"
                 class="text-xs text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-600 rounded-md px-3 py-1.5 transition
-                    hover:border-yellow-500 dark:hover:border-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20">
+                    hover:border-yellow-500 dark:hover:border-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 hover:scale-105 transform duration-200">
                 Editar
             </button>
             @if($totalModelos < $limiteModelos)
             <button @click.stop="abrirModeloModal('{{ $marca->id_marca }}', '{{ $marca->nombre_marca }}')"
                 class="text-xs text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-600 rounded-md px-3 py-1.5 transition
-                    hover:border-green-500 dark:hover:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 btn-add-modelo">
+                    hover:border-green-500 dark:hover:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 btn-add-modelo hover:scale-105 transform duration-200">
                 + Modelo
             </button>
             @else
@@ -128,7 +130,7 @@
             </button>
             @endif
             <button @click.stop="abrirDeleteModal('marca', '{{ $marca->id_marca }}', '{{ addslashes($marca->nombre_marca) }}', '{{ route('admin.catalogo.marcas.destroy', $marca->id_marca) }}')"
-                class="text-xs text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 border border-red-200 dark:border-red-800 rounded-md px-3 py-1.5 transition">
+                class="text-xs text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 border border-red-200 dark:border-red-800 rounded-md px-3 py-1.5 transition hover:scale-105 transform duration-200">
                 Eliminar
             </button>
         </div>
@@ -143,33 +145,43 @@
         x-transition:leave-start="opacity-100 translate-y-0"
         x-transition:leave-end="opacity-0 -translate-y-1">
 
-        {{-- Contenedor con scroll horizontal (solo aparece si el contenido desborda) --}}
+        {{-- Contenedor con scroll horizontal --}}
         <div class="overflow-x-auto overflow-y-visible">
-            {{-- Columnas header (sticky al hacer scroll vertical) --}}
-            <div class="grid grid-cols-3 border-b dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/40 sticky top-0 z-10">
-                <div class="px-5 py-2.5 text-[11px] font-medium uppercase tracking-wider text-gray-400 border-r dark:border-gray-700">Modelo</div>
-                <div class="px-4 py-2.5 text-[11px] font-medium uppercase tracking-wider text-gray-400 border-r dark:border-gray-700">Colores</div>
-                <div class="px-4 py-2.5 text-[11px] font-medium uppercase tracking-wider text-gray-400">Voltajes</div>
+            {{-- Columnas header (sticky) --}}
+            <div class="grid grid-cols-[minmax(180px,auto)_minmax(160px,auto)_minmax(140px,auto)] sm:grid-cols-3 border-b dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/40 sticky top-0 z-10">
+                <div class="px-5 py-2.5 text-[11px] font-medium uppercase tracking-wider text-gray-400 border-r dark:border-gray-700">
+                    Modelo
+                </div>
+                <div class="px-4 py-2.5 text-[11px] font-medium uppercase tracking-wider text-gray-400 border-r dark:border-gray-700">
+                    Colores
+                </div>
+                <div class="px-4 py-2.5 text-[11px] font-medium uppercase tracking-wider text-gray-400">
+                    Voltajes
+                </div>
             </div>
 
-            {{-- Contenedor scrollable vertical (altura para 4 filas aprox) --}}
+            {{-- Contenedor scrollable vertical --}}
             <div class="max-h-[320px] overflow-y-auto">
                 <div class="modelos-tbody">
                 @forelse($marca->modelos as $modelo)
-                <div class="grid grid-cols-3 border-b dark:border-gray-700 last:border-b-0"
+                <div class="grid grid-cols-[minmax(180px,auto)_minmax(160px,auto)_minmax(140px,auto)] sm:grid-cols-3 border-b dark:border-gray-700 last:border-b-0"
                      data-modelo-id="{{ $modelo->id_modelo }}">
                     {{-- Nombre modelo --}}
-                    <div class="px-5 py-3 border-r dark:border-gray-700 flex items-center justify-between group">
-                        <span class="text-sm text-gray-800 dark:text-gray-200 modelo-nombre">{{ $modelo->nombre_modelo }}</span>
+                    <div class="px-5 py-3 border-r dark:border-gray-700 flex items-center justify-between group
+                                min-w-0">
+                        <span class="text-sm text-gray-800 dark:text-gray-200 modelo-nombre break-words"
+                              title="{{ $modelo->nombre_modelo }}">
+                            {{ $modelo->nombre_modelo }}
+                        </span>
                         <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button @click="abrirEditModelo('{{ $modelo->id_modelo }}', '{{ addslashes($modelo->nombre_modelo) }}', '{{ $modelo->id_marca }}')"
-                                class="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-white transition">
+                                class="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-white transition hover:scale-110 transform duration-150">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                 </svg>
                             </button>
                             <button @click="abrirDeleteModal('modelo', '{{ $modelo->id_modelo }}', '{{ addslashes($modelo->nombre_modelo) }}', '{{ route('admin.catalogo.modelos.destroy', $modelo->id_modelo) }}')"
-                                class="p-1 text-gray-400 hover:text-red-500 transition">
+                                class="p-1 text-gray-400 hover:text-red-500 transition hover:scale-110 transform duration-150">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                 </svg>
@@ -186,7 +198,7 @@
                                 $nombre = colorNombre($color->color);
                                 $esComb = colorEsCombinado($color->color);
                             @endphp
-                            <div class="relative group/chip w-7 h-7 rounded-md border border-black/10 dark:border-white/10 overflow-hidden cursor-pointer flex-shrink-0"
+                            <div class="relative group/chip w-7 h-7 rounded-md border border-black/10 dark:border-white/10 overflow-hidden cursor-pointer flex-shrink-0 transition-all duration-200 hover:scale-110"
                                 title="{{ $nombre }}"
                                 data-color-id="{{ $color->id_color }}">
                                 @if($esComb)
@@ -204,7 +216,7 @@
                             </div>
                             @endforeach
                             <button @click="abrirColorModal('{{ $marca->id_marca }}', '{{ $modelo->id_modelo }}', '{{ addslashes($modelo->nombre_modelo) }}', '{{ addslashes($marca->nombre_marca) }}')"
-                                class="w-7 h-7 rounded-md border border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:border-gray-400 transition text-sm">
+                                class="w-7 h-7 rounded-md border border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:border-gray-400 transition text-sm hover:scale-110 transform duration-200">
                                 +
                             </button>
                         </div>
@@ -214,7 +226,7 @@
                     <div class="px-4 py-3">
                         <div class="flex items-center gap-1.5 flex-wrap voltajes-container">
                             @foreach($modelo->voltajes as $voltaje)
-                            <span class="group/pill inline-flex items-center gap-1 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full px-2.5 py-0.5 text-xs text-gray-700 dark:text-gray-300"
+                            <span class="group/pill inline-flex items-center gap-1 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full px-2.5 py-0.5 text-xs text-gray-700 dark:text-gray-300 transition-all duration-200 hover:scale-105"
                                   data-mvoltaje-id="{{ $voltaje->pivot->id_mvoltaje }}">
                                 {{ $voltaje->voltaje }}
                                 <button @click="abrirDeleteModal('voltaje', '{{ $voltaje->pivot->id_mvoltaje }}', '{{ $voltaje->voltaje }}', '{{ route('admin.catalogo.modelo-voltaje.destroy', $voltaje->pivot->id_mvoltaje) }}')"
@@ -222,7 +234,7 @@
                             </span>
                             @endforeach
                             <button @click="abrirVoltajeModal('{{ $marca->id_marca }}', '{{ $modelo->id_modelo }}', '{{ addslashes($modelo->nombre_modelo) }}', '{{ addslashes($marca->nombre_marca) }}')"
-                                class="inline-flex items-center gap-1 border border-dashed border-gray-300 dark:border-gray-600 rounded-full px-2.5 py-0.5 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:border-gray-400 transition">
+                                class="inline-flex items-center gap-1 border border-dashed border-gray-300 dark:border-gray-600 rounded-full px-2.5 py-0.5 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:border-gray-400 transition hover:scale-105 transform duration-200">
                                 + voltaje
                             </button>
                         </div>
@@ -241,7 +253,7 @@
         <div class="px-5 py-2.5 border-t dark:border-gray-700 flex items-center gap-3 bg-gray-50/50 dark:bg-gray-800/40">
             <span class="text-[11px] text-gray-400 whitespace-nowrap progress-label">{{ $totalModelos }} / {{ $limiteModelos }} modelos</span>
             <div class="flex-1 h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                <div class="h-full rounded-full transition-all progress-fill {{ $pct >= 80 ? 'bg-amber-400' : 'bg-emerald-500' }}"
+                <div class="h-full rounded-full transition-all duration-500 progress-fill {{ $pct >= 80 ? 'bg-amber-400' : 'bg-emerald-500' }}"
                     style="width: {{ $pct }}%"></div>
             </div>
         </div>
@@ -254,6 +266,7 @@
     <p class="text-xs text-gray-400 mt-1">Crea tu primera marca con el botón "+ Nueva marca".</p>
 </div>
 @endforelse
+
 
 {{-- ===================================================
      MODALES (con submitting y spinners) - igual que antes
@@ -779,6 +792,59 @@
     </div>
 </div>
 @endforeach
+
+
+
+{{-- ===== WEBSOCKET: Reverb listener ===== --}}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const idNegocio = document.querySelector('[data-negocio-id]')?.dataset?.negocioId;
+    if (!idNegocio || !window.Echo) return;
+
+    window.Echo.private(`catalogo.${idNegocio}`)
+        .listen('.catalogo.actualizado', async (e) => {
+            const idMarca = e.id_marca;
+            if (!idMarca) return;
+
+            const card = document.getElementById(`marca-card-${idMarca}`);
+
+            try {
+                const res = await fetch(`/admin/catalogo/marca-card/${idMarca}`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'text/html',
+                    }
+                });
+
+                if (!res.ok) {
+                    if (res.status === 404 && card) {
+                        card.remove();
+                    }
+                    return;
+                }
+
+                const html = await res.text();
+
+                if (card) {
+                    card.outerHTML = html;
+                } else {
+                    const contenedor = document.querySelector('[data-negocio-id]');
+                    const primerModal = contenedor.querySelector('[x-cloak]');
+                    if (primerModal) {
+                        primerModal.insertAdjacentHTML('beforebegin', html);
+                    } else {
+                        contenedor.insertAdjacentHTML('beforeend', html);
+                    }
+                }
+
+                Alpine.initTree(document.getElementById(`marca-card-${idMarca}`));
+
+            } catch (err) {
+                console.error('Error recargando card:', err);
+            }
+        });
+});
+</script>
 
 </div>
 </x-app-layout>

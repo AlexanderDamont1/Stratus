@@ -17,6 +17,7 @@ return new class extends Migration {
             $table->char('id_usuario', 36);
 
             // Atributos físicos
+            $table->char('id_marca', 15);
             $table->char('id_modelo', 15);
             $table->char('id_voltaje', 15);
             $table->char('id_color', 15);
@@ -46,6 +47,9 @@ return new class extends Migration {
                   ->references('id_negocio')
                   ->on('negocios');
 
+            $table->foreign('id_marca')
+                  ->references('id_marca')
+                  ->on('marcas');      
 
             $table->foreign('id_modelo')
                   ->references('id_modelo')

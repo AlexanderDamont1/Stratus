@@ -100,7 +100,6 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
             Route::prefix('vehiculos')->name('vehiculos.')->group(function () {
 
                 // Bicicletas
-                Route::get('/bicicletas/crear', [BicicletaController::class, 'create'])->name('bicicletas.create');
                 Route::post('/bicicletas', [BicicletaController::class, 'store'])->name('bicicletas.store');
                 Route::get('/bicicletas/{id}/editar', [BicicletaController::class, 'edit'])->name('bicicletas.edit');
                 Route::put('/bicicletas/{id}', [BicicletaController::class, 'update'])->name('bicicletas.update');
@@ -223,6 +222,11 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
             );
         })->name('admin.catalogo.voltajes.disponibles');
 
+        // ── Crear bicicleta desde stock admin ────────────────────────────────
+        Route::get('/admin/bicicletas/crear', [BicicletaController::class, 'create'])->name('admin.bicicletas.create');
+        Route::post('/admin/bicicletas', [BicicletaController::class, 'store'])->name('admin.bicicletas.store');
+        Route::post('/admin/bicicletas/masivo', [BicicletaController::class, 'storeMasivo'])->name('admin.bicicletas.storeMasivo');
+
         Route::get('/pedidos/crear', [PedidoController::class, 'create'])->name('pedidos.create');
         Route::get('/pedidos/{id_pedido}/edit', [PedidoController::class, 'edit'])->name('pedidos.edit');
         Route::put('/pedidos/{id_pedido}', [PedidoController::class, 'update'])->name('pedidos.update');
@@ -265,7 +269,7 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
 
             Route::get('/', [MarcaController::class, 'catalogo'])->name('index');
 
-            Route::get('/admin/catalogo/marca-card/{idMarca}', [MarcaController::class, 'card'])->name('admin.catalogo.marca.card')->middleware('auth');
+            Route::get('/marca-card/{idMarca}', [MarcaController::class, 'card'])->name('marca.card');
 
             Route::post('/sugerir-hex', function (Request $request) {
                 $request->validate(['nombre' => 'required|string|max:50']);
