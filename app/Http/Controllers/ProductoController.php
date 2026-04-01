@@ -2,101 +2,208 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Producto;
-use App\Services\CatalogService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use App\Models\Producto;
+use App\Models\ProductoModelo;
+use App\Services\CatalogService;
 
 class ProductoController extends Controller
 {
-    /**
-     * Lista paginada de productos.
-     */
     public function index()
     {
-        $productos = Producto::with('negocio')->paginate(10);
-        $negocios = CatalogService::getNegocios();
+        $user      = Auth::user();
+        $idNegocio = $user->id_negocio;
+        $esRol1    = $user->id_rol == 1;
 
-        return view('productos.index', compact('productos', 'negocios'));
+        $productos = CatalogService::getProductosConRelaciones(
+            $idNegocio,
+            $esRol1 ? null : $user->id_usuario
+        );
+
+        // Agrupar bicicletas por id_modelo
+        $bicicletas = $productos
+            ->where('tipo', '2')
+            ->groupBy(fn($p) => $p->productoModelo?->first()?->id_modelo ?? $p->id_producto);
+
+        $accesorios = $productos->where('tipo', '1')->values();
+
+        $sucursales = $esRol1
+            ? CatalogService::getSucursalesByNegocio($idNegocio)
+            : collect();
+
+        // Marcas del negocio (para el selector de marcas en el modal crear)
+        $marcas  = CatalogService::getMarcasByNegocio($idNegocio);
+        $modelos = CatalogService::getModelosByNegocio($idNegocio);
+
+        return view('productos.index', compact('bicicletas', 'accesorios', 'sucursales', 'marcas', 'modelos', 'esRol1'));
     }
 
-    /**
-     * Muestra formulario de creación.
-     */
-    public function create()
+    // ── STORE ACCESORIO (tipo 1) ──
+    public function storeAccesorio(Request $request)
     {
-        $negocios = CatalogService::getNegocios();
-        return view('productos.create', compact('negocios'));
-    }
+        $user      = Auth::user();
+        $idNegocio = $user->id_negocio;
+        $esRol1    = $user->id_rol === 1;
 
-    /**
-     * Guarda un nuevo producto.
-     */
-    public function store(Request $request)
-    {
-        $request->validate([
-            'nombre_producto' => 'required|string|max:255|unique:productos,nombre_producto',
-        ]);
+        $rules = [
+            'nombre_producto' => 'required|string|max:255',
+            'precio'          => 'required|min:0',
+        ];
 
-        $producto = Producto::create([
-            'id_producto'     => 'PDT' . str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT),
-            'id_negocio'      => auth()->user()->id_negocio,
-            'nombre_producto' => $request->nombre_producto,
-        ]);
-
-        // Invalidar caché del producto y listas asociadas
-        CatalogService::invalidateProducto($producto->id_producto, $producto->id_negocio);
-
-        return redirect()->route('productos.index')
-            ->with('success', 'Producto creado correctamente.');
-    }
-
-    /**
-     * Muestra formulario de edición.
-     */
-    public function edit(Producto $producto)
-    {
-        $negocios = CatalogService::getNegocios();
-        return view('productos.edit', compact('producto', 'negocios'));
-    }
-
-    /**
-     * Actualiza un producto existente.
-     */
-    public function update(Request $request, Producto $producto)
-    {
-        $request->validate([
-            'nombre_producto' => 'required|string|max:255|unique:productos,nombre_producto,' . $producto->id_producto . ',id_producto',
-            'id_negocio'      => 'required|exists:negocios,id_negocio',
-        ]);
-
-        $oldNegocio = $producto->id_negocio;
-        $producto->update([
-            'id_negocio'      => $request->id_negocio,
-            'nombre_producto' => $request->nombre_producto,
-        ]);
-
-        // Invalidar caché del producto (tanto para el negocio anterior como para el nuevo si cambió)
-        CatalogService::invalidateProducto($producto->id_producto, $oldNegocio);
-        if ($oldNegocio != $request->id_negocio) {
-            CatalogService::invalidateProducto($producto->id_producto, $request->id_negocio);
+        if ($esRol1) {
+            $rules['id_usuario'] = 'required|exists:usuarios,id_usuario';
         }
 
-        return redirect()->route('productos.index')
-            ->with('success', 'Producto actualizado correctamente.');
+        $request->validate($rules);
+
+        $idUsuario  = $esRol1 ? $request->id_usuario : $user->id_usuario;
+        $idProducto = 'PDT' . str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        Producto::create([
+            'id_producto'     => $idProducto,
+            'id_negocio'      => $idNegocio,
+            'id_usuario'      => $idUsuario,
+            'nombre_producto' => $request->nombre_producto,
+            'precio'          => $request->precio,
+            'tipo'            => '1',
+        ]);
+
+        CatalogService::invalidateProducto($idProducto, $idNegocio);
+        CatalogService::invalidateProductosConRelaciones($idNegocio, $idUsuario);
+
+        return response()->json(['message' => 'Accesorio creado correctamente.']);
     }
 
-    /**
-     * Elimina un producto.
-     */
-    public function destroy(Producto $producto)
+    // ── STORE BICICLETA (tipo 2) ──
+    public function storeBicicleta(Request $request)
     {
-        $id = $producto->id_producto;
-        $idNegocio = $producto->id_negocio;
+        $user      = Auth::user();
+        $idNegocio = $user->id_negocio;
+        $esRol1    = $user->id_rol === 1;
+
+        $rules = [
+            'id_modelo'  => 'required|exists:modelos,id_modelo',
+            'id_voltaje' => 'required|exists:voltajes,id_voltaje',
+            'precio'     => 'required|min:0',
+        ];
+
+        if ($esRol1) {
+            $rules['id_usuario'] = 'required|exists:usuarios,id_usuario';
+        }
+
+        $request->validate($rules);
+
+        $idUsuario  = $esRol1 ? $request->id_usuario : $user->id_usuario;
+        $modelo     = CatalogService::getModeloById($request->id_modelo);
+        $idProducto = 'PDT' . str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        Producto::create([
+            'id_producto'     => $idProducto,
+            'id_negocio'      => $idNegocio,
+            'id_usuario'      => $idUsuario,
+            'nombre_producto' => $modelo->nombre_modelo ?? $request->id_modelo,
+            'precio'          => $request->precio,
+            'tipo'            => '2',
+        ]);
+
+        ProductoModelo::create([
+            'id_producto_modelo' => 'PM' . str_pad(rand(0, 9999999), 7, '0', STR_PAD_LEFT),
+            'id_producto'        => $idProducto,
+            'id_negocio'         => $idNegocio,
+            'id_usuario'         => $idUsuario,
+            'id_modelo'          => $request->id_modelo,
+            'id_voltaje'         => $request->id_voltaje,
+            'activo'             => true,
+        ]);
+
+        CatalogService::invalidateProducto($idProducto, $idNegocio);
+        CatalogService::invalidateProductosConRelaciones($idNegocio, $idUsuario);
+
+        return response()->json(['message' => 'Bicicleta creada correctamente.']);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $user      = Auth::user();
+        $idNegocio = $user->id_negocio;
+        $idUsuario = $user->id_usuario;
+
+        $producto = Producto::where('id_producto', $id)
+            ->where('id_negocio', $idNegocio)
+            ->firstOrFail();
+
+        $request->validate([
+            'nombre_producto' => 'required|string|max:255',
+            'precio'          => 'required|min:0',
+        ]);
+
+        $producto->update([
+            'nombre_producto' => $request->nombre_producto,
+            'precio'          => $request->precio,
+        ]);
+
+        CatalogService::invalidateProducto($id, $idNegocio);
+        CatalogService::invalidateProductosConRelaciones($idNegocio, $idUsuario);
+
+        return response()->json(['message' => 'Producto actualizado correctamente.']);
+    }
+
+    public function destroy($id)
+    {
+        $user      = Auth::user();
+        $idNegocio = $user->id_negocio;
+        $idUsuario = $user->id_usuario;
+
+        $producto = Producto::where('id_producto', $id)
+            ->where('id_negocio', $idNegocio)
+            ->firstOrFail();
+
         $producto->delete();
 
         CatalogService::invalidateProducto($id, $idNegocio);
+        CatalogService::invalidateProductosConRelaciones($idNegocio, $idUsuario);
 
-        return redirect()->route('productos.index')
-            ->with('success', 'Producto eliminado correctamente.');
+        return response()->json(['message' => 'Producto eliminado correctamente.']);
+    }
+
+    // ── MODELOS POR MARCA ──
+    // GET /productos/modelos-por-marca/{idMarca}
+    public function modelosPorMarca($idMarca)
+    {
+        $idNegocio = Auth::user()->id_negocio;
+
+        $modelos = CatalogService::getModelosByMarca($idMarca, $idNegocio);
+
+        return response()->json($modelos);
+    }
+
+    // ── VOLTAJES DISPONIBLES POR MODELO (excluye los ya asignados a precio) ──
+    public function voltajesPorModelo($idModelo)
+    {
+        $user      = Auth::user();
+        $idNegocio = $user->id_negocio;
+        $idUsuario = $user->id_rol === 1 ? null : $user->id_usuario;
+
+        // Voltajes del catálogo para este modelo
+        $voltajes = CatalogService::getVoltajesByModelo($idModelo, $idNegocio);
+
+        // IDs de voltajes que ya tienen un producto/precio asignado para este modelo
+        // en este negocio (y sucursal si aplica)
+        $usadosQuery = ProductoModelo::where('id_modelo', $idModelo)
+            ->where('id_negocio', $idNegocio);
+
+        if ($idUsuario) {
+            $usadosQuery->where('id_usuario', $idUsuario);
+        }
+
+        $voltajesUsados = $usadosQuery->pluck('id_voltaje')->toArray();
+
+        // Filtrar los ya usados
+        $voltajesDisponibles = $voltajes->reject(
+            fn($v) => in_array($v->id_voltaje, $voltajesUsados)
+        )->values();
+
+        return response()->json($voltajesDisponibles);
     }
 }

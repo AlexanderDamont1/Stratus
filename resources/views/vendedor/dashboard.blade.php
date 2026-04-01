@@ -309,6 +309,10 @@
                 </table>
             </div>
 
+            
+
+            
+
             @if($bicicletas->hasPages())
             <div class="px-6 py-4 border-t dark:border-gray-700">
                 {{ $bicicletas->withQueryString()->links() }}

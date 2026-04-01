@@ -5,9 +5,9 @@
 </style>
 
 
-<div
-    x-data="{ open: false }"
-   class="flex overflow-hidden bg-gray-50 dark:bg-gray-950" style="height: calc(100vh / 0.9);">
+<div x-data="{ open: false }"
+     class="flex overflow-hidden bg-gray-50 dark:bg-gray-950" 
+     style="height: calc(100vh / 0.9);">
     {{-- Overlay móvil --}}
     <div
         x-show="open"
@@ -59,7 +59,7 @@
                 <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1h3a1 1 0 001-1V10" />
                 </svg>
-                <span class="truncate">Inicio</span>
+                <span class="truncate">Welcome</span>
             </a>
 
             {{-- Panel Root --}}
@@ -94,18 +94,75 @@
                     <span class="truncate">Inicio</span>
                 </a>
 
-                {{-- Stock --}}
-                <a href="{{ route('bicicletas.index') }}"
-                    class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition
-                        {{ request()->routeIs('bicicletas.index')
-                            ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
-                            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}"
-                    @click="open = false">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
-                        <path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5l2.404.961L10.404 2zm3.564 1.426L5.596 5 8 5.961 14.154 3.5zm3.25 1.7-6.5 2.6v7.922l6.5-2.6V4.24zM7.5 14.762V6.838L1 4.239v7.923zM7.443.184a1.5 1.5 0 0 1 1.114 0l7.129 2.852A.5.5 0 0 1 16 3.5v8.662a1 1 0 0 1-.629.928l-7.185 2.874a.5.5 0 0 1-.372 0L.63 13.09a1 1 0 0 1-.63-.928V3.5a.5.5 0 0 1 .314-.464z"/>
-                    </svg>
-                    <span class="truncate">Stock</span>
-                </a>
+                {{-- Inventario con submenú desplegable --}}
+                @php
+                    $inventarioActivo = request()->routeIs('bicicletas.index')
+                    || request()->routeIs('productos.index')
+                    || request()->routeIs('gestor.vehiculos.modelos.*');
+
+                @endphp
+
+                <div x-data="{ InventarioOpen: {{ $inventarioActivo ? 'true' : 'false' }} }">
+
+                    <button
+                        @click="InventarioOpen = !InventarioOpen"
+                        class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition
+                            {{ $inventarioActivo
+                                ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+                                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6.429 9.75 2.25 12l4.179 2.25m0-4.5 5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0L21.75 12l-4.179 2.25m0 0 4.179 2.25L12 21.75 2.25 16.5l4.179-2.25m11.142 0-5.571 3-5.571-3" />
+                        </svg>
+                        <span class="truncate flex-1 text-left">Inventario</span>
+                        <svg class="w-4 h-4 flex-shrink-0 transition-transform duration-200"
+                            :class="InventarioOpen ? 'rotate-180' : ''"
+                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+
+                    <div
+                        x-show="InventarioOpen"
+                        x-cloak
+                        x-transition:enter="transition ease-out duration-200"
+                        x-transition:enter-start="opacity-0 -translate-y-1"
+                        x-transition:enter-end="opacity-100 translate-y-0"
+                        x-transition:leave="transition ease-in duration-150"
+                        x-transition:leave-start="opacity-100 translate-y-0"
+                        x-transition:leave-end="opacity-0 -translate-y-1"
+                        class="mt-1 ml-4 pl-3 border-l-2 border-gray-200 dark:border-gray-600 space-y-1">
+
+                        {{-- Productos --}}
+                        <a href="{{ route('admin.productos.index') }}"
+                            class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition
+                                {{ request()->routeIs('admin.productos.index')
+                                    ? 'bg-gray-100 dark:bg-gray-700 font-semibold text-gray-900 dark:text-white'
+                                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700' }}"
+                            @click="open = false">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" />
+                            </svg>
+                            <span class="truncate">Precios</span>
+                        </a>
+
+                        {{-- Stock --}}
+                        <a href="{{ route('bicicletas.index') }}"
+                            class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition
+                                {{ request()->routeIs('bicicletas.index')
+                                    ? 'bg-gray-100 dark:bg-gray-700 font-semibold text-gray-900 dark:text-white'
+                                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700' }}"
+                            @click="open = false">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 0 0 3.75-.615A2.993 2.993 0 0 0 9.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 0 0 2.25 1.016c.896 0 1.7-.393 2.25-1.015a3.001 3.001 0 0 0 3.75.614m-16.5 0a3.004 3.004 0 0 1-.621-4.72l1.189-1.19A1.5 1.5 0 0 1 5.378 3h13.243a1.5 1.5 0 0 1 1.06.44l1.19 1.189a3 3 0 0 1-.621 4.72M6.75 18h3.75a.75.75 0 0 0 .75-.75V13.5a.75.75 0 0 0-.75-.75H6.75a.75.75 0 0 0-.75.75v3.75c0 .414.336.75.75.75Z" />
+                            </svg>
+
+
+                            <span class="truncate">Stock</span>
+                        </a>
+                    </div>
+                </div>
+
+
 
                 {{-- Catálogo con submenú desplegable --}}
                 @php
@@ -189,6 +246,20 @@
                 <span class="truncate">Stock</span>
             </a>
 
+             <a href="{{ route('sucursal.productos.index') }}"
+                class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition
+                          {{ request()->routeIs('stock.index') 
+                             ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' 
+                             : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}"
+                @click="open = false">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+                <span class="truncate">Stock</span>
+            </a>
+
+            
+
 
             @endif
 
@@ -206,15 +277,6 @@
                 <span class="truncate">Clientes</span>
             </a>
 
-            <a href="#"
-                class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition
-                          text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                @click="open = false">
-                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                </svg>
-                <span class="truncate">Clientes</span>
-            </a>
 
             {{-- Stock con submenú desplegable --}}
             @php

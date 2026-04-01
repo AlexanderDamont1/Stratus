@@ -9,12 +9,19 @@ use Symfony\Component\HttpFoundation\Response;
 use App\Models\Usuario;
 
 class SingleSessionMiddleware
+
 {
     public function handle(Request $request, Closure $next): Response
     {
+        // Broadcasting maneja su propia autenticación en channels.php
+        // No necesita validación de sesión única
+        if ($request->is('broadcasting/auth')) {
+           // \Log::info('broadcasting/auth bypass activado');
+            return $next($request);
+        }
+
         $usuario = Auth::user();
 
-        // 🔒 Blindaje TOTAL (la clave del bug)
         if (! $usuario instanceof Usuario) {
             return $next($request);
         }
@@ -29,7 +36,6 @@ class SingleSessionMiddleware
             $tokenEnBD     = $usuario->session_token;
 
             if (! $tokenEnSesion || $tokenEnSesion !== $tokenEnBD) {
-
                 Auth::logout();
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();

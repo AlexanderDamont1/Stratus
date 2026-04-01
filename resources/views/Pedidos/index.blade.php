@@ -234,7 +234,7 @@
                                 </td>
                                 <td class="px-4 py-3 text-center text-gray-900 dark:text-white"
                                     x-text="pedido.items.reduce((sum, item) => sum + item.cantidad, 0)"></td>
-                                <td class="px-3 py-3 text-center">
+                                <td class="px-3 py-3 text-center whitespace-nowrap">
                                      <span class="px-2 py-1 text-xs font-semibold rounded-full"
                                         :class="{
                                             'bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-400': pedido.status_num == 1,
@@ -255,7 +255,7 @@
                                     <template x-if="'{{ auth()->user()->id_rol }}' == 1 && pedido.status_num == 1">
                                         <button type="button"
                                             @click="openDelete(pedido.id_pedido, `{{ route('pedidos.destroy', 'REEMPLAZAR_ID') }}`.replace('REEMPLAZAR_ID', pedido.id_pedido))"
-                                            class="text-red-600 hover:text-red-800 dark:text-red-400 text-xs font-semibold">
+                                            class="text-red-600 hover:text-red-800 dark:text-red-400 text-xs font-semibold  whitespace-nowrap">
                                             Eliminar
                                         </button>
                                     </template>
@@ -263,7 +263,7 @@
                                     {{-- ROL 5: realizar pedido en status 1 o 2 --}}
                                     <template x-if="'{{ auth()->user()->id_rol }}' == 5 && (pedido.status_num == 1 || pedido.status_num == 2)">
                                         <a :href="`/pedidos/${pedido.id_pedido}/realizar`"
-                                            class="text-green-600 hover:text-green-800 dark:text-green-400 text-xs font-semibold">
+                                            class="text-green-600 hover:text-green-800 dark:text-green-400 text-xs font-semibold  whitespace-nowrap">
                                             Realizar pedido
                                         </a>
                                     </template>
@@ -272,7 +272,7 @@
                                     <template x-if="'{{ auth()->user()->id_rol }}' == 5 && pedido.status_num == 3">
                                         <button type="button"
                                             @click="openCompletar(pedido.id_pedido)"
-                                            class="text-blue-600 hover:text-blue-800 dark:text-blue-400 text-xs font-semibold">
+                                            class="text-blue-600 hover:text-blue-800 dark:text-blue-400 text-xs font-semibold  whitespace-nowrap">
                                             Completar Pedido
                                         </button>
                                     </template>
@@ -316,7 +316,7 @@
             x-transition:leave="transition ease-in duration-150"
             x-transition:leave-start="opacity-100"
             x-transition:leave-end="opacity-0"
-            class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4"
+            class="fixed inset-0 bg-black/50 flex items-center backdrop-blur-[1px] justify-center z-50 px-4"
             @click.self="detailModal = false">
             <div
                 x-show="detailModal"
@@ -332,8 +332,8 @@
                 {{-- Header --}}
                 <div class="flex items-center justify-between px-4 sm:px-6 py-4 border-b dark:border-gray-700">
                     <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
-                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="w-10 h-10 rounded-xl bg-gray-900 dark:bg-gray-100 flex items-center justify-center shrink-0">
+                            <svg class="w-5 h-5 text-gray-100 dark:text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                             </svg>
@@ -429,7 +429,7 @@
                         </div>
 
                         <div x-show="detailToken" class="flex items-center justify-center gap-3 flex-wrap"> {{-- Centrado y con wrap para móvil --}}
-                            <span class="font-mono text-lg font-bold tracking-widest text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-4 py-2 rounded-lg"
+                            <span class=" text-lg font-bold tracking-widest text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-4 py-2 rounded-lg"
                                 x-text="detailToken"></span>
                             <button @click="copiarToken()"
                                 class="flex items-center gap-1 px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
@@ -478,360 +478,391 @@
                 </div>
 
                 {{-- Footer --}}
-                <div class="px-4 sm:px-6 py-4 border-t dark:border-gray-700 flex justify-between items-center">
+                <div class="px-4 sm:px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+                    <div class="grid grid-cols-3 items-center gap-4">
+                        
+                        {{-- IZQUIERDA: PDF o Token --}}
+                        <div class="flex justify-start">
+                            @if(auth()->user()->id_rol == 5)
+                            {{-- PDF para status 3 o 4 --}}
+                            <template x-if="detailPedido?.status_num == 3 || detailPedido?.status_num == 4">
+                                <a :href="`/pedidos/${detailPedido?.id_pedido}/pdf`" target="_blank"
+                                    class="bg-red-600 hover:bg-red-700 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 whitespace-nowrap">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    <span class="hidden sm:inline">Descargar PDF</span>
+                                    <span class="sm:hidden">PDF</span>
+                                </a>
+                            </template>
 
-                    {{-- Lado izquierdo: PDF para rol 5 status 3 o 4 --}}
-                    <div>
-                        @if(auth()->user()->id_rol == 5)
-                        <template x-if="detailPedido?.status_num == 3 || detailPedido?.status_num == 4">
-                            <a :href="`/pedidos/${detailPedido?.id_pedido}/pdf`" target="_blank"
-                                class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-1.5">
+                            
+                            @endif
+                        </div>
+
+                        
+                        <div class="flex justify-center">
+                            @if(auth()->user()->id_rol == 5)        
+                                <template x-if="detailPedido?.status_num == 3">
+                                    <button
+                                        @click="openCompletar(detailPedido?.id_pedido)"
+                                        class="bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 whitespace-nowrap">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                                        </svg>
+                                        <span class="hidden sm:inline">Ingresar Token</span>
+                                        <span class="sm:hidden">Ingresar Token</span>
+                                    </button>
+                                </template>
+                            @endif        
+                        </div>
+                        
+
+                        
+                        <div class="flex justify-end items-center gap-2">
+                            <button @click="detailModal = false; detailToken = null; detailTokenError = ''"
+                                class="px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 whitespace-nowrap">
+                                Cerrar
+                            </button>
+                            
+                            @if(auth()->user()->id_rol == 1)
+                            <button
+                                x-show="detailPedido?.status_num == 1"
+                                x-cloak
+                                @click="openEdit(detailPedido)"
+                                class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 whitespace-nowrap">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                 </svg>
-                                Descargar PDF
-                            </a>
-                        </template>
-                        @endif
+                                <span class="hidden sm:inline">Editar</span>
+                                <span class="sm:hidden">Editar</span>
+                            </button>
+                            @endif
+
+                            @if(auth()->user()->id_rol == 5)
+                            <template x-if="detailPedido?.status_num == 1 || detailPedido?.status_num == 2">
+                                <a :href="`/pedidos/${detailPedido?.id_pedido}/realizar`"
+                                    class="bg-green-600 hover:bg-green-700 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 whitespace-nowrap">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span class="hidden sm:inline">Realizar</span>
+                                    <span class="sm:hidden">Realizar</span>
+                                </a>
+                            </template>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if(auth()->user()->id_rol == 1)    
+
+            {{-- MODAL: EDITAR PEDIDO --}}
+            <div
+                x-show="editModal"
+                x-cloak
+                x-transition:enter="transition ease-out duration-200"
+                x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100"
+                x-transition:leave="transition ease-in duration-150"
+                x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0"
+                class="fixed inset-0 bg-black/50 flex items-center backdrop-blur-[1px] justify-center z-50 px-4"
+                @click.self="editModal = false">
+                <div
+                    x-show="editModal"
+                    x-transition:enter="transition ease-out duration-200"
+                    x-transition:enter-start="opacity-0 scale-95"
+                    x-transition:enter-end="opacity-100 scale-100"
+                    x-transition:leave="transition ease-in duration-150"
+                    x-transition:leave-start="opacity-100 scale-100"
+                    x-transition:leave-end="opacity-0 scale-95"
+                    class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto"
+                    @click.stop>
+
+                    {{-- Header --}}
+                    <div class="flex items-center justify-between px-4 sm:px-6 py-4 border-b dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-lg bg-gray-900 dark:bg-white flex items-center justify-center shrink-0">
+                                <svg class="w-4 h-4 text-white dark:text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-semibold text-gray-900 dark:text-white"
+                                    x-text="'Editar Pedido #' + (editPedido?.id_pedido || '')"></h3>
+                                <p class="text-xs text-gray-400" x-text="editPedido?.fecha"></p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-400">
+                                Solicitado
+                            </span>
+                            <button @click="editModal = false"
+                                class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
 
-                    {{-- Lado derecho: acciones --}}
-                    <div class="flex items-center gap-2">
-                        <button @click="detailModal = false; detailToken = null; detailTokenError = ''"
-                            class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-                            Cerrar
-                        </button>
+                    <form x-ref="editForm" method="POST" :action="`/pedidos/${editPedido?.id_pedido}`">
+                        @csrf
+                        @method('PUT')
 
-                        @if(auth()->user()->id_rol == 1)
-                        <button
-                            x-show="detailPedido?.status_num == 1"
-                            x-cloak
-                            @click="openEdit(detailPedido)"
-                            class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-1.5">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                            Editar
-                        </button>
-                        @endif
+                        {{-- Notas --}}
+                        <div class="px-4 sm:px-6 py-4 border-b dark:border-gray-700">
+                            <label class="block text-xs text-gray-400 uppercase tracking-wider mb-1.5 font-medium">Notas</label>
+                            <textarea name="notas" rows="2" x-model="editNotas"
+                                class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition"
+                                placeholder="Observaciones opcionales..."></textarea>
+                        </div>
 
-                        @if(auth()->user()->id_rol == 5)
-                        <template x-if="detailPedido?.status_num == 1 || detailPedido?.status_num == 2">
-                            <a :href="`/pedidos/${detailPedido?.id_pedido}/realizar`"
-                                class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-1.5">
+                        {{-- Agregar artículo --}}
+                        <div class="px-4 sm:px-6 py-4 border-b dark:border-gray-700">
+                            <p class="text-xs text-gray-400 uppercase tracking-wider mb-3 font-medium">Agregar artículo</p>
+                            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 items-end">
+                                <div>
+                                    <label class="block text-xs text-gray-900 dark:text-white mb-1">Modelo</label>
+                                    <select x-model="editForm.id_modelo" @change="onModeloChange()"
+                                        class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
+                                        <option value="">Seleccionar</option>
+                                        @foreach($modelos as $modelo)
+                                        <option value="{{ $modelo->id_modelo }}">{{ $modelo->nombre_modelo }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-900 dark:text-white mb-1">Voltaje</label>
+                                    <select x-model="editForm.id_voltaje" :disabled="!editForm.voltajes.length"
+                                        class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                        <option value="">— voltaje —</option>
+                                        <template x-for="v in editForm.voltajes" :key="v.id_voltaje">
+                                            <option :value="v.id_voltaje" x-text="v.voltaje"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-900 dark:text-white mb-1">Color</label>
+                                    <select x-model="editForm.id_color" :disabled="!editForm.colores.length"
+                                        class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                        <option value="">— color —</option>
+                                        <template x-for="c in editForm.colores" :key="c.id_color">
+                                            <option :value="c.id_color" x-text="c.color"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-900 dark:text-white mb-1">Cantidad</label>
+                                    <input type="number" x-model="editForm.cantidad" min="1" max="999"
+                                        class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
+                                </div>
+                                <div>
+                                    <button type="button" @click="addEditItem()"
+                                        :disabled="!editForm.id_modelo || !editForm.id_voltaje || !editForm.id_color || editForm.cantidad < 1"
+                                        class="w-full px-4 py-2 bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-sm font-semibold rounded-lg hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                        </svg>
+                                        Agregar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Tabla de items editables --}}
+                        <div class="px-4 sm:px-6 py-4 border-b dark:border-gray-700">
+                            <div class="flex items-center justify-between mb-3">
+                                <p class="text-xs text-gray-400 uppercase tracking-wider font-medium">Artículos</p>
+                                <span class="text-xs text-gray-500"
+                                    x-text="editItems.length ? `${editItems.length} línea${editItems.length > 1 ? 's' : ''}` : ''"></span>
+                            </div>
+
+                            <div x-show="editItems.length === 0" class="flex flex-col items-center justify-center py-8 text-center">
+                                <div class="h-10 w-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-2">
+                                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                            d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.5 6h11M10 19a1 1 0 100 2 1 1 0 000-2zm7 0a1 1 0 100 2 1 1 0 000-2z" />
+                                    </svg>
+                                </div>
+                                <p class="text-sm text-gray-900 dark:text-white">No hay artículos en el pedido</p>
+                            </div>
+
+                            <div x-show="editItems.length > 0" x-cloak class="overflow-x-auto -mx-4 sm:-mx-6 px-4 sm:px-6">
+                                <table class="w-full text-sm min-w-[400px]">
+                                    <thead>
+                                        <tr class="border-b dark:border-gray-700">
+                                            <th class="pb-2 text-left text-xs font-semibold text-gray-900 dark:text-white uppercase pr-3">#</th>
+                                            <th class="pb-2 text-left text-xs font-semibold text-gray-900 dark:text-white uppercase pr-3">Modelo</th>
+                                            <th class="pb-2 text-left text-xs font-semibold text-gray-900 dark:text-white uppercase pr-3">Color</th>
+                                            <th class="pb-2 text-left text-xs font-semibold text-gray-900 dark:text-white uppercase pr-3">Voltaje</th>
+                                            <th class="pb-2 text-center text-xs font-semibold text-gray-900 dark:text-white uppercase pr-3">Cantidad</th>
+                                            <th class="pb-2 text-center text-xs font-semibold text-gray-900 dark:text-white uppercase">Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                        <template x-for="(item, index) in editItems" :key="index">
+                                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                                                <input type="hidden" :name="`items[${index}][id_modelo]`" :value="item.id_modelo">
+                                                <input type="hidden" :name="`items[${index}][id_voltaje]`" :value="item.id_voltaje">
+                                                <input type="hidden" :name="`items[${index}][id_color]`" :value="item.id_color">
+                                                <input type="hidden" :name="`items[${index}][cantidad]`" :value="item.cantidad">
+
+                                                <td class="py-2.5 pr-3 text-gray-400 text-xs" x-text="index + 1"></td>
+                                                <td class="py-2.5 pr-3 font-medium text-gray-900 dark:text-white text-xs" x-text="item.modelo_nombre"></td>
+                                                <td class="py-2.5 pr-3 text-gray-900 dark:text-white text-xs" x-text="item.color_nombre"></td>
+                                                <td class="py-2.5 pr-3 text-gray-900 dark:text-white text-xs" x-text="item.voltaje_nombre"></td>
+                                                <td class="py-2.5 pr-3">
+                                                    <div class="flex items-center justify-center gap-1">
+                                                        <button type="button" @click="decrementQuantity(index)"
+                                                            class="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center justify-center transition">
+                                                            <svg class="w-3 h-3 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
+                                                            </svg>
+                                                        </button>
+                                                        <input type="number" x-model="item.cantidad"
+                                                            @input="updateItemQuantity(index, $event.target.value)"
+                                                            min="1" max="999"
+                                                            class="w-16 text-center border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg px-1 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
+                                                        <button type="button" @click="incrementQuantity(index)"
+                                                            class="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center justify-center transition">
+                                                            <svg class="w-3 h-3 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                                <td class="py-2.5 text-center">
+                                                    <button type="button" @click="removeEditItem(index)"
+                                                        class="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-400 font-medium px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition">
+                                                        Quitar
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                    <tfoot x-show="editItems.length > 0" class="border-t dark:border-gray-700">
+                                        <tr>
+                                            <td colspan="4" class="pt-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">Total artículos:</td>
+                                            <td class="pt-3 text-center"
+                                                x-text="editItems.reduce((sum, item) => sum + Number(item.cantidad), 0)"></td>
+                                            <td></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+
+                        {{-- Footer --}}
+                        <div class="px-4 sm:px-6 py-4 flex justify-end gap-2">
+                            <button type="button" @click="editModal = false; detailModal = true"
+                                class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                                ← Volver
+                            </button>
+                            <button type="button" @click="submitEdit()" :disabled="editItems.length === 0"
+                                class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
-                                Realizar pedido
-                            </a>
-                        </template>
-                        @endif
-                    </div>
+                                Guardar cambios
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
-        </div>
+        @endif
 
-        {{-- MODAL: EDITAR PEDIDO --}}
-        <div
-            x-show="editModal"
-            x-cloak
-            x-transition:enter="transition ease-out duration-200"
-            x-transition:enter-start="opacity-0"
-            x-transition:enter-end="opacity-100"
-            x-transition:leave="transition ease-in duration-150"
-            x-transition:leave-start="opacity-100"
-            x-transition:leave-end="opacity-0"
-            class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4"
-            @click.self="editModal = false">
+
+        @if(auth()->user()->id_rol == 5)   
+            {{-- MODAL: COMPLETAR ENTREGA --}}
             <div
-                x-show="editModal"
+                x-show="completarModal"
+                x-cloak
                 x-transition:enter="transition ease-out duration-200"
-                x-transition:enter-start="opacity-0 scale-95"
-                x-transition:enter-end="opacity-100 scale-100"
+                x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100"
                 x-transition:leave="transition ease-in duration-150"
-                x-transition:leave-start="opacity-100 scale-100"
-                x-transition:leave-end="opacity-0 scale-95"
-                class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto"
-                @click.stop>
+                x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0"
+                class="fixed inset-0 bg-black/50 flex items-center backdrop-blur-[1px] justify-center z-50 px-4"
+                @click.self="completarModal = false">
+                <div
+                    x-show="completarModal"
+                    x-transition:enter="transition ease-out duration-200"
+                    x-transition:enter-start="opacity-0 scale-95"
+                    x-transition:enter-end="opacity-100 scale-100"
+                    x-transition:leave="transition ease-in duration-150"
+                    x-transition:leave-start="opacity-100 scale-100"
+                    x-transition:leave-end="opacity-0 scale-95"
+                    class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-sm"
+                    @click.stop>
 
-                {{-- Header --}}
-                <div class="flex items-center justify-between px-4 sm:px-6 py-4 border-b dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
-                    <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-lg bg-gray-900 dark:bg-white flex items-center justify-center shrink-0">
-                            <svg class="w-4 h-4 text-white dark:text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 class="text-sm font-semibold text-gray-900 dark:text-white"
-                                x-text="'Editar Pedido #' + (editPedido?.id_pedido || '')"></h3>
-                            <p class="text-xs text-gray-400" x-text="editPedido?.fecha"></p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-400">
-                            Solicitado
-                        </span>
-                        <button @click="editModal = false"
-                            class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-
-                <form x-ref="editForm" method="POST" :action="`/pedidos/${editPedido?.id_pedido}`">
-                    @csrf
-                    @method('PUT')
-
-                    {{-- Notas --}}
-                    <div class="px-4 sm:px-6 py-4 border-b dark:border-gray-700">
-                        <label class="block text-xs text-gray-400 uppercase tracking-wider mb-1.5 font-medium">Notas</label>
-                        <textarea name="notas" rows="2" x-model="editNotas"
-                            class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition"
-                            placeholder="Observaciones opcionales..."></textarea>
-                    </div>
-
-                    {{-- Agregar artículo --}}
-                    <div class="px-4 sm:px-6 py-4 border-b dark:border-gray-700">
-                        <p class="text-xs text-gray-400 uppercase tracking-wider mb-3 font-medium">Agregar artículo</p>
-                        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 items-end">
-                            <div>
-                                <label class="block text-xs text-gray-900 dark:text-white mb-1">Modelo</label>
-                                <select x-model="editForm.id_modelo" @change="onModeloChange()"
-                                    class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
-                                    <option value="">Seleccionar</option>
-                                    @foreach($modelos as $modelo)
-                                    <option value="{{ $modelo->id_modelo }}">{{ $modelo->nombre_modelo }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-xs text-gray-900 dark:text-white mb-1">Voltaje</label>
-                                <select x-model="editForm.id_voltaje" :disabled="!editForm.voltajes.length"
-                                    class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition disabled:opacity-50 disabled:cursor-not-allowed">
-                                    <option value="">— voltaje —</option>
-                                    <template x-for="v in editForm.voltajes" :key="v.id_voltaje">
-                                        <option :value="v.id_voltaje" x-text="v.voltaje"></option>
-                                    </template>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-xs text-gray-900 dark:text-white mb-1">Color</label>
-                                <select x-model="editForm.id_color" :disabled="!editForm.colores.length"
-                                    class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition disabled:opacity-50 disabled:cursor-not-allowed">
-                                    <option value="">— color —</option>
-                                    <template x-for="c in editForm.colores" :key="c.id_color">
-                                        <option :value="c.id_color" x-text="c.color"></option>
-                                    </template>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-xs text-gray-900 dark:text-white mb-1">Cantidad</label>
-                                <input type="number" x-model="editForm.cantidad" min="1" max="999"
-                                    class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
-                            </div>
-                            <div>
-                                <button type="button" @click="addEditItem()"
-                                    :disabled="!editForm.id_modelo || !editForm.id_voltaje || !editForm.id_color || editForm.cantidad < 1"
-                                    class="w-full px-4 py-2 bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-sm font-semibold rounded-lg hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                                    </svg>
-                                    Agregar
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- Tabla de items editables --}}
-                    <div class="px-4 sm:px-6 py-4 border-b dark:border-gray-700">
-                        <div class="flex items-center justify-between mb-3">
-                            <p class="text-xs text-gray-400 uppercase tracking-wider font-medium">Artículos</p>
-                            <span class="text-xs text-gray-500"
-                                x-text="editItems.length ? `${editItems.length} línea${editItems.length > 1 ? 's' : ''}` : ''"></span>
-                        </div>
-
-                        <div x-show="editItems.length === 0" class="flex flex-col items-center justify-center py-8 text-center">
-                            <div class="h-10 w-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-2">
-                                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                        d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.5 6h11M10 19a1 1 0 100 2 1 1 0 000-2zm7 0a1 1 0 100 2 1 1 0 000-2z" />
-                                </svg>
-                            </div>
-                            <p class="text-sm text-gray-900 dark:text-white">No hay artículos en el pedido</p>
-                        </div>
-
-                        <div x-show="editItems.length > 0" x-cloak class="overflow-x-auto -mx-4 sm:-mx-6 px-4 sm:px-6">
-                            <table class="w-full text-sm min-w-[400px]">
-                                <thead>
-                                    <tr class="border-b dark:border-gray-700">
-                                        <th class="pb-2 text-left text-xs font-semibold text-gray-900 dark:text-white uppercase pr-3">#</th>
-                                        <th class="pb-2 text-left text-xs font-semibold text-gray-900 dark:text-white uppercase pr-3">Modelo</th>
-                                        <th class="pb-2 text-left text-xs font-semibold text-gray-900 dark:text-white uppercase pr-3">Color</th>
-                                        <th class="pb-2 text-left text-xs font-semibold text-gray-900 dark:text-white uppercase pr-3">Voltaje</th>
-                                        <th class="pb-2 text-center text-xs font-semibold text-gray-900 dark:text-white uppercase pr-3">Cantidad</th>
-                                        <th class="pb-2 text-center text-xs font-semibold text-gray-900 dark:text-white uppercase">Acción</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                                    <template x-for="(item, index) in editItems" :key="index">
-                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                                            <input type="hidden" :name="`items[${index}][id_modelo]`" :value="item.id_modelo">
-                                            <input type="hidden" :name="`items[${index}][id_voltaje]`" :value="item.id_voltaje">
-                                            <input type="hidden" :name="`items[${index}][id_color]`" :value="item.id_color">
-                                            <input type="hidden" :name="`items[${index}][cantidad]`" :value="item.cantidad">
-
-                                            <td class="py-2.5 pr-3 text-gray-400 text-xs" x-text="index + 1"></td>
-                                            <td class="py-2.5 pr-3 font-medium text-gray-900 dark:text-white text-xs" x-text="item.modelo_nombre"></td>
-                                            <td class="py-2.5 pr-3 text-gray-900 dark:text-white text-xs" x-text="item.color_nombre"></td>
-                                            <td class="py-2.5 pr-3 text-gray-900 dark:text-white text-xs" x-text="item.voltaje_nombre"></td>
-                                            <td class="py-2.5 pr-3">
-                                                <div class="flex items-center justify-center gap-1">
-                                                    <button type="button" @click="decrementQuantity(index)"
-                                                        class="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center justify-center transition">
-                                                        <svg class="w-3 h-3 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
-                                                        </svg>
-                                                    </button>
-                                                    <input type="number" x-model="item.cantidad"
-                                                        @input="updateItemQuantity(index, $event.target.value)"
-                                                        min="1" max="999"
-                                                        class="w-16 text-center border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg px-1 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
-                                                    <button type="button" @click="incrementQuantity(index)"
-                                                        class="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center justify-center transition">
-                                                        <svg class="w-3 h-3 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                                                        </svg>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                            <td class="py-2.5 text-center">
-                                                <button type="button" @click="removeEditItem(index)"
-                                                    class="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-400 font-medium px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition">
-                                                    Quitar
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    </template>
-                                </tbody>
-                                <tfoot x-show="editItems.length > 0" class="border-t dark:border-gray-700">
-                                    <tr>
-                                        <td colspan="4" class="pt-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">Total artículos:</td>
-                                        <td class="pt-3 text-center"
-                                            x-text="editItems.reduce((sum, item) => sum + Number(item.cantidad), 0)"></td>
-                                        <td></td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
-                    </div>
-
-                    {{-- Footer --}}
-                    <div class="px-4 sm:px-6 py-4 flex justify-end gap-2">
-                        <button type="button" @click="editModal = false; detailModal = true"
-                            class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-                            ← Volver
-                        </button>
-                        <button type="button" @click="submitEdit()" :disabled="editItems.length === 0"
-                            class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="flex items-center gap-3 mb-5">
+                        <div class="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
+                            <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            Guardar cambios
+                        </div>
+                        <div>
+                            <h3 class="text-base font-semibold text-gray-900 dark:text-white">Completar Entrega</h3>
+                            <p class="text-xs text-gray-400" x-text="'Pedido #' + (completarPedidoId ?? '')"></p>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+                            Token de entrega
+                        </label>
+                        <input
+                            type="text"
+                            x-model="completarToken"
+                            @input="completarToken = $event.target.value.toUpperCase()"
+                            maxlength="10"
+                            placeholder="Ej: ABCD1234WS"
+                            autocomplete="off"
+                            class="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm  tracking-widest focus:outline-none focus:ring-2 focus:ring-green-500 transition">
+                        <p class="text-xs text-gray-400 mt-1" x-text="completarToken.length + '/10 caracteres'"></p>
+                    </div>
+
+                    <p x-show="completarError" x-text="completarError"
+                        class="text-xs text-red-500 mb-3 font-medium"></p>
+
+                    <div class="flex gap-2">
+                        <button type="button" @click="completarModal = false; completarToken = ''; completarError = ''"
+                            class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                            Cancelar
+                        </button>
+                        <button type="button"
+                            @click="submitCompletar()"
+                            :disabled="completarToken.length !== 10 || completarGuardando"
+                            class="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition disabled:opacity-40 disabled:cursor-not-allowed">
+                            <template x-if="!completarGuardando">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </template>
+                            <template x-if="completarGuardando">
+                                <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                            </template>
+                            <span x-text="completarGuardando ? 'Procesando...' : 'Confirmar Entrega'"></span>
                         </button>
                     </div>
-                </form>
-            </div>
-        </div>
-
-        <x-delete-modal />
-
-        {{-- MODAL: COMPLETAR ENTREGA --}}
-        <div
-            x-show="completarModal"
-            x-cloak
-            x-transition:enter="transition ease-out duration-200"
-            x-transition:enter-start="opacity-0"
-            x-transition:enter-end="opacity-100"
-            x-transition:leave="transition ease-in duration-150"
-            x-transition:leave-start="opacity-100"
-            x-transition:leave-end="opacity-0"
-            class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4"
-            @click.self="completarModal = false">
-            <div
-                x-show="completarModal"
-                x-transition:enter="transition ease-out duration-200"
-                x-transition:enter-start="opacity-0 scale-95"
-                x-transition:enter-end="opacity-100 scale-100"
-                x-transition:leave="transition ease-in duration-150"
-                x-transition:leave-start="opacity-100 scale-100"
-                x-transition:leave-end="opacity-0 scale-95"
-                class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-sm"
-                @click.stop>
-
-                <div class="flex items-center gap-3 mb-5">
-                    <div class="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
-                        <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                    <div>
-                        <h3 class="text-base font-semibold text-gray-900 dark:text-white">Completar Entrega</h3>
-                        <p class="text-xs text-gray-400" x-text="'Pedido #' + (completarPedidoId ?? '')"></p>
-                    </div>
-                </div>
-
-                <div class="mb-4">
-                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
-                        Token de entrega
-                    </label>
-                    <input
-                        type="text"
-                        x-model="completarToken"
-                        @input="completarToken = $event.target.value.toUpperCase()"
-                        maxlength="10"
-                        placeholder="Ej: ABCD1234WS"
-                        autocomplete="off"
-                        class="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-green-500 transition">
-                    <p class="text-xs text-gray-400 mt-1" x-text="completarToken.length + '/10 caracteres'"></p>
-                </div>
-
-                <p x-show="completarError" x-text="completarError"
-                    class="text-xs text-red-500 mb-3 font-medium"></p>
-
-                <div class="flex gap-2">
-                    <button type="button" @click="completarModal = false; completarToken = ''; completarError = ''"
-                        class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-                        Cancelar
-                    </button>
-                    <button type="button"
-                        @click="submitCompletar()"
-                        :disabled="completarToken.length !== 10 || completarGuardando"
-                        class="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition disabled:opacity-40 disabled:cursor-not-allowed">
-                        <template x-if="!completarGuardando">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                            </svg>
-                        </template>
-                        <template x-if="completarGuardando">
-                            <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                        </template>
-                        <span x-text="completarGuardando ? 'Procesando...' : 'Confirmar Entrega'"></span>
-                    </button>
                 </div>
             </div>
-        </div>
+        @endif    
 
     </div>
 

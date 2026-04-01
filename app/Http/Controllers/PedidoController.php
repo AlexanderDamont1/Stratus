@@ -225,8 +225,9 @@ class PedidoController extends Controller
         }
 
         DB::transaction(function () use ($request, $pedido, $usuario) {
-            $pedido->update(['notas' => $request->notas]);
-            $pedido->items()->delete();
+        $pedido->update(['notas' => $request->notas]);
+        $pedido->items()->delete();
+        $pedido->touch();
 
             foreach ($request->items as $item) {
                 PedidoItem::create([

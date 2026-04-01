@@ -11,6 +11,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use App\Events\BicicletaActualizada;
 
 class BicicletaController extends Controller
 {
@@ -18,7 +19,7 @@ class BicicletaController extends Controller
     /* =====================================================
      | INDEX
      ===================================================== */
-    public function index(Request $request)
+    public function index()
     {
         if (!in_array(auth()->user()->id_rol, [1, 5])) {
             abort(403);
@@ -26,8 +27,6 @@ class BicicletaController extends Controller
 
         $user       = auth()->user();
         $id_negocio = $user->id_negocio;
-        $page       = $request->get('page', 1);
-        $search     = $request->get('search');
 
         if ($user->id_rol === 1) {
             // Construir el JSON del catálogo en cascada (cacheado por CatalogService)
@@ -63,12 +62,43 @@ class BicicletaController extends Controller
 
         // Rol 5 — no necesita catalogoJson (no tiene modal de creación)
         return view('gestor.Vehiculos.Bicicleta.index', [
-            'bicicletas' => CatalogService::getBicicletasPaginadas($id_negocio, $page, $search),
+            'bicicletas' => CatalogService::getBicicletasPaginadas($id_negocio),
             'stats'      => CatalogService::getBicicletaStats($id_negocio),
             'modelos'    => CatalogService::getModelos(),
             'negocios'   => CatalogService::getNegocios(),
         ]);
     }
+
+
+
+
+   public function stockSeccion(Request $request)
+    {
+        $user = auth()->user();
+        if ($user->id_rol !== 1) abort(404);
+
+        $idNegocio = $user->id_negocio;
+        $idUsuario = $request->get('id_usuario') ?: null;
+        $page      = (int) $request->get('page', 1);
+
+        $data = CatalogService::getBicicletasSeccion($idNegocio, $idUsuario, $page);
+
+        // Modelos ya están en Redis, sin query adicional
+        $modelos = CatalogService::getModelosByNegocio($idNegocio)
+            ->keyBy('id_modelo');
+
+        // Inyectar marca en cada bicicleta desde cache
+        $data['data'] = collect($data['data'])->map(function ($bici) use ($modelos) {
+            $modelo = $modelos->get($bici->id_modelo ?? $bici['id_modelo'] ?? null);
+            $bici->marca_nombre = $modelo?->marca?->nombre_marca ?? '—';
+            return $bici;
+        })->all();
+
+        return response()->json($data);
+    }
+
+
+
     /* =====================================================
      | CREATE
      ===================================================== */
@@ -125,7 +155,6 @@ class BicicletaController extends Controller
         $ahora      = now();
 
         $inserts = collect($request->bicicletas)->map(fn($b) => [
-            'id_bicicleta' => \Illuminate\Support\Str::uuid(),
             'num_serie'    => strtoupper(trim($b['num_serie'])),
             'id_modelo'    => $b['id_modelo'],
             'id_color'     => $b['id_color'],
@@ -138,9 +167,29 @@ class BicicletaController extends Controller
 
         \App\Models\Bicicleta::insert($inserts);
 
-        // Invalidar caché
+        // ✅ Invalidar caché
         CatalogService::invalidateBicicleta('masivo', $id_negocio);
         CatalogService::invalidateStockVendedores($id_negocio);
+        CatalogService::invalidateSeccion(null, $id_negocio);
+
+        // ✅ Broadcast por cada bicicleta insertada
+        $series = collect($inserts)->pluck('num_serie');
+
+        Bicicleta::with(['modelo', 'voltaje', 'color'])
+            ->whereIn('num_serie', $series)
+            ->get()
+            ->each(function ($bici) use ($user, $id_negocio) {
+                event(new BicicletaActualizada(
+                    numSerie:       $bici->num_serie,
+                    idNegocio:      $id_negocio,
+                    idUsuario:      '',  // sin asignar
+                    nombreVendedor: $user->nombre_usuario,
+                    modelo:         $bici->modelo->nombre_modelo ?? '—',
+                    voltaje:        $bici->voltaje->voltaje       ?? '—',
+                    color:          $bici->color->color           ?? '—',
+                    status:         $bici->status,
+                ));
+            });
 
         return redirect()->route('bicicletas.index')
             ->with('success', count($inserts) . ' bicicleta(s) registradas correctamente.');
@@ -156,7 +205,6 @@ class BicicletaController extends Controller
 
         $validator = Validator::make($request->all(), [
             'num_serie'  => 'required|string|size:17|unique:bicicletas,num_serie',
-            // ✅ Validar que modelo, voltaje y color pertenezcan al negocio correcto
             'id_modelo'  => [
                 'required',
                 Rule::exists('modelos', 'id_modelo')->where(
@@ -210,8 +258,8 @@ class BicicletaController extends Controller
             $item = $pedido->items->first(
                 fn($i) =>
                 $i->id_modelo  == $request->id_modelo &&
-                $i->id_voltaje == $request->id_voltaje &&
-                $i->id_color   == $request->id_color
+                    $i->id_voltaje == $request->id_voltaje &&
+                    $i->id_color   == $request->id_color
             );
 
             if (!$item) {
@@ -241,7 +289,10 @@ class BicicletaController extends Controller
             'id_pedido'  => $request->id_pedido ?? null,
         ]);
 
+        // ✅ Invalidar caché
         CatalogService::invalidateBicicleta($bicicleta->num_serie, $idNegocio);
+        CatalogService::invalidateSeccion($bicicleta->id_usuario, $idNegocio);
+        CatalogService::invalidateSeccion(null, $idNegocio);
 
         $completo = false;
 
@@ -254,8 +305,11 @@ class BicicletaController extends Controller
                 Cache::forget("pedidos:index:{$pedidoActual->id_usuario}:all:all:page:1");
 
                 $pedidoFresh = \App\Models\Pedido::with([
-                    'negocio', 'usuario',
-                    'items.modelo', 'items.voltaje', 'items.color'
+                    'negocio',
+                    'usuario',
+                    'items.modelo',
+                    'items.voltaje',
+                    'items.color'
                 ])->find($pedidoActual->id_pedido);
 
                 event(new \App\Events\PedidoUpdated($pedidoFresh, 'updated'));
@@ -289,8 +343,11 @@ class BicicletaController extends Controller
                     ]);
 
                     $pedidoFullFresh = \App\Models\Pedido::with([
-                        'negocio', 'usuario',
-                        'items.modelo', 'items.voltaje', 'items.color'
+                        'negocio',
+                        'usuario',
+                        'items.modelo',
+                        'items.voltaje',
+                        'items.color'
                     ])->find($pedidoFull->id_pedido);
 
                     event(new \App\Events\PedidoUpdated($pedidoFullFresh, 'updated'));
@@ -380,16 +437,18 @@ class BicicletaController extends Controller
             ], 422);
         }
 
-        $id_pedido  = $bicicleta->id_pedido;
-        $idNegocio  = $bicicleta->id_negocio;
-        $numSerie   = $bicicleta->num_serie;
-        $idUsuario  = $bicicleta->id_usuario; // ✅ guardar antes de eliminar
+        $id_pedido = $bicicleta->id_pedido;
+        $idNegocio = $bicicleta->id_negocio;
+        $numSerie  = $bicicleta->num_serie;
+        $idUsuario = $bicicleta->id_usuario; // ✅ guardar antes de eliminar
 
         $bicicleta->delete();
 
+        // ✅ Invalidar caché
         CatalogService::invalidateBicicleta($numSerie, $idNegocio);
+        CatalogService::invalidateSeccion($idUsuario, $idNegocio);
+        CatalogService::invalidateSeccion(null, $idNegocio);
 
-        // ✅ Invalidar caché del vendedor si tenía uno asignado
         if ($idUsuario) {
             CatalogService::invalidateBicicletasPorUsuario($idUsuario, $idNegocio);
         }
@@ -447,11 +506,11 @@ class BicicletaController extends Controller
      | AJAX: COLORES POR MODELO
      ===================================================== */
     public function coloresPorModelo(string $id_modelo)
-{
-    return response()->json(
-        CatalogService::getColoresByModelo($id_modelo, null)
-    );
-}
+    {
+        return response()->json(
+            CatalogService::getColoresByModelo($id_modelo, null)
+        );
+    }
 
     /* =====================================================
      | API: BUSCAR BICICLETA POR NUM_SERIE
@@ -507,7 +566,9 @@ class BicicletaController extends Controller
         if ($user->id_rol != 2) abort(403);
 
         try {
-            $bici = Bicicleta::where('num_serie', $request->num_serie)->first();
+            $bici = Bicicleta::where('num_serie', $request->num_serie)
+                ->with(['modelo', 'voltaje', 'color'])
+                ->first();
 
             if (!$bici) {
                 return response()->json(['ok' => false, 'message' => 'Bicicleta no encontrada'], 404);
@@ -521,18 +582,34 @@ class BicicletaController extends Controller
                 return response()->json(['ok' => false, 'message' => 'No tienes acceso a esta bicicleta'], 403);
             }
 
+            $idNegocio        = $bici->id_negocio;
             $bici->id_usuario = $user->id_usuario;
             $guardado         = $bici->save();
+            $bici->touch();
 
             if (!$guardado) {
                 Log::error('No se pudo guardar la bicicleta', ['num_serie' => $bici->num_serie]);
                 return response()->json(['ok' => false, 'message' => 'No se pudo asignar'], 500);
             }
 
-            CatalogService::invalidateBicicleta($bici->num_serie, $bici->id_negocio);
-            CatalogService::invalidateBicicletasPorUsuario($user->id_usuario, $bici->id_negocio);
-            // ✅ Invalidar también el stock del admin para que vea el cambio
-            CatalogService::invalidateStockVendedores($bici->id_negocio);
+            // ✅ Invalidar caché
+            CatalogService::invalidateBicicleta($bici->num_serie, $idNegocio);
+            CatalogService::invalidateSeccion($user->id_usuario, $idNegocio);
+            CatalogService::invalidateSeccion(null, $idNegocio);
+            CatalogService::invalidateBicicletasPorUsuario($user->id_usuario, $idNegocio);
+            CatalogService::invalidateStockVendedores($idNegocio);
+
+            // ✅ Broadcast al admin
+            event(new BicicletaActualizada(
+                numSerie:       $bici->num_serie,
+                idNegocio:      $idNegocio,
+                idUsuario:      $user->id_usuario,
+                nombreVendedor: $user->nombre_usuario,
+                modelo:         $bici->modelo->nombre_modelo ?? '—',
+                voltaje:        $bici->voltaje->voltaje       ?? '—',
+                color:          $bici->color->color           ?? '—',
+                status:         $bici->status,
+            ));
 
             return response()->json(['ok' => true]);
 

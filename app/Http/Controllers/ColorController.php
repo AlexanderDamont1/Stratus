@@ -204,6 +204,9 @@ class ColorController extends Controller
 
         CatalogService::invalidateColor($color->id_color, $oldModeloId, $idNegocio);
         CatalogService::invalidateCatalogoCompleto($user->id_negocio);
+        CatalogService::invalidateModelo( $request->id_modelo, $idNegocio);
+        
+        
         if ($oldModeloId !== $request->id_modelo) {
             CatalogService::invalidateColor($color->id_color, $request->id_modelo, $idNegocio);
         }

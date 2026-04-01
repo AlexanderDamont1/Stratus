@@ -14,21 +14,23 @@ return new class extends Migration
         Schema::create('producto_modelo', function (Blueprint $table) {
             $table->char('id_producto_modelo', 15)->primary();
             $table->char('id_producto', 15);
+            $table->char('id_negocio', 36);
+            $table->char('id_usuario', 36);        // Rol 2 = sucursal
             $table->char('id_modelo', 15);
+            $table->char('id_voltaje', 15);        // La variante elegida
+            $table->boolean('activo')->default(true);
             $table->timestamps();
 
-            // Llaves foráneas
             $table->foreign('id_producto')->references('id_producto')->on('productos')->cascadeOnDelete();
+            $table->foreign('id_negocio')->references('id_negocio')->on('negocios')->cascadeOnDelete();
+            $table->foreign('id_usuario')->references('id_usuario')->on('usuarios')->cascadeOnDelete();
             $table->foreign('id_modelo')->references('id_modelo')->on('modelos')->cascadeOnDelete();
+            $table->foreign('id_voltaje')->references('id_voltaje')->on('voltajes')->cascadeOnDelete();
 
-            // Evita duplicados
-            $table->unique(['id_producto', 'id_modelo']);
+            // Una sucursal no puede duplicar el mismo modelo+voltaje
+            $table->unique(['id_usuario', 'id_modelo', 'id_voltaje']);
         });
     }
-
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('producto_modelo');

@@ -55,21 +55,16 @@ class ModeloVoltajeController extends Controller
             'id_modelo' => [
                 'required',
                 Rule::exists('modelos', 'id_modelo')->where('id_negocio', $idNegocio),
+                Rule::unique('modelo_voltaje', 'id_modelo')
+                    ->where('id_voltaje', $request->id_voltaje)
+                    ->where('id_negocio', $idNegocio),
             ],
             'id_voltaje' => [
                 'required',
                 Rule::exists('voltajes', 'id_voltaje')->where('id_negocio', $idNegocio),
             ],
-            // Evitar duplicados: mismo modelo + voltaje + negocio
-            'id_modelo' => [
-                'required',
-                Rule::unique('modelo_voltaje', 'id_modelo')
-                    ->where('id_voltaje', $request->id_voltaje)
-                    ->where('id_negocio', $idNegocio),
-            ],
         ]);
 
-        // Generar ID con el mismo patrón que el resto del sistema
         $fecha  = now()->format('ymd');
         $letras = strtoupper(substr(str_shuffle('ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 0, 3));
         $nums   = random_int(100, 999);
@@ -82,6 +77,7 @@ class ModeloVoltajeController extends Controller
         ]);
 
         $idMarca = \App\Models\Modelo::find($request->id_modelo)?->id_marca ?? '';
+
         CatalogoActualizado::dispatch(
             $user->id_negocio,
             'voltaje',
@@ -89,21 +85,23 @@ class ModeloVoltajeController extends Controller
             $idMarca,
         );
 
+        // ✅ Invalidación ANTES del return, aplica tanto a JSON como a redirect
+        CatalogService::invalidateModelo($request->id_modelo, $idNegocio);
+        CatalogService::invalidateVoltaje($request->id_voltaje, $idNegocio);
+        CatalogService::invalidateCatalogoCompleto($user->id_negocio);
+
         $mv = ModeloVoltaje::with('voltaje')->find("MV{$fecha}{$letras}{$nums}");
+
         if ($request->expectsJson()) {
             return response()->json([
-                'ok'      => true,
-                'pivote'  => [
+                'ok'     => true,
+                'pivote' => [
                     'id_mvoltaje' => $mv->id_mvoltaje,
                     'id_voltaje'  => $mv->id_voltaje,
                     'voltaje'     => $mv->voltaje->voltaje,
                 ],
             ]);
         }
-
-        CatalogService::invalidateModelo($request->id_modelo, $idNegocio);
-        CatalogService::invalidateVoltaje($request->id_voltaje, $idNegocio);
-        CatalogService::invalidateCatalogoCompleto($user->id_negocio);
 
         return redirect()
             ->route($this->routeByRol('modelo-voltaje'))

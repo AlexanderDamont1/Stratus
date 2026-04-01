@@ -1,5 +1,5 @@
 <x-app-layout>
-<div class="space-y-6" x-data="catalogoPage" data-negocio-id="{{ $idNegocio }}">
+<div class="mx-auto space-y-7" x-data="catalogoPage" data-negocio-id="{{ $idNegocio }}">
 
 {{-- ===== ENCABEZADO ===== --}}
 <div class="flex flex-wrap items-start justify-between gap-4 sm:gap-2">
@@ -276,7 +276,7 @@
 <div x-show="marcaModal" x-cloak
     x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0"
     x-transition:leave="transition ease-in duration-150" x-transition:leave-end="opacity-0"
-    class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4"
+    class="fixed inset-0 bg-black/50 flex items-center backdrop-blur-[2px] justify-center z-50 px-4"
     @click.self="marcaModal = false">
     <div x-show="marcaModal"
         x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95"
@@ -313,7 +313,7 @@
 <div x-show="modeloModal" x-cloak
     x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0"
     x-transition:leave="transition ease-in duration-150" x-transition:leave-end="opacity-0"
-    class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4"
+    class="fixed inset-0 bg-black/50 flex items-center backdrop-blur-[2px] justify-center z-[9999] px-4"
     @click.self="modeloModal = false">
     <div x-show="modeloModal"
         x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95"
@@ -361,7 +361,7 @@
 <div x-show="colorModal" x-cloak
     x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0"
     x-transition:leave="transition ease-in duration-150" x-transition:leave-end="opacity-0"
-    class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4"
+    class="fixed inset-0 bg-black/50 flex items-center backdrop-blur-[2px] justify-center z-50 px-4"
     @click.self="colorModal = false">
     <div x-show="colorModal"
         x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95"
@@ -459,7 +459,7 @@
 <div x-show="voltajeModal" x-cloak
     x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0"
     x-transition:leave="transition ease-in duration-150" x-transition:leave-end="opacity-0"
-    class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4"
+    class="fixed inset-0 bg-black/50 flex items-center backdrop-blur-[2px] justify-center z-50 px-4"
     @click.self="voltajeModal = false">
     <div x-show="voltajeModal"
         x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95"
@@ -535,7 +535,7 @@
 <div x-show="editMarcaModal" x-cloak
     x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0"
     x-transition:leave="transition ease-in duration-150" x-transition:leave-end="opacity-0"
-    class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4"
+    class="fixed inset-0 bg-black/50 flex items-center backdrop-blur-[2px] justify-center z-50 px-4"
     @click.self="editMarcaModal = false">
     <div x-show="editMarcaModal"
         x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95"
@@ -583,7 +583,7 @@
 <div x-show="editModeloModal" x-cloak
     x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0"
     x-transition:leave="transition ease-in duration-150" x-transition:leave-end="opacity-0"
-    class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4"
+    class="fixed inset-0 bg-black/50 flex items-center backdrop-blur-[2px] justify-center z-50 px-4"
     @click.self="editModeloModal = false">
     <div x-show="editModeloModal"
         x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95"
@@ -631,7 +631,7 @@
 <div x-show="editColorModal" x-cloak
     x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0"
     x-transition:leave="transition ease-in duration-150" x-transition:leave-end="opacity-0"
-    class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4"
+    class="fixed inset-0 bg-black/50 flex items-center backdrop-blur-[2px] justify-center z-50 px-4"
     @click.self="editColorModal = false">
     <div x-show="editColorModal"
         x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95"
@@ -742,7 +742,7 @@
     x-transition:enter-end="opacity-100"
     x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100"
     x-transition:leave-end="opacity-0"
-    class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4"
+    class="fixed inset-0 bg-black/50 flex items-center backdrop-blur-[2px] justify-center z-50 px-4"
     @click.self="{{ $modalVar }} = false">
     <div x-show="{{ $modalVar }}"
         x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95"
@@ -751,7 +751,7 @@
         x-transition:leave-end="opacity-0 scale-95"
         class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-sm" @click.stop>
         <div class="flex items-start gap-4 mb-5">
-            <div class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0">
+            <div class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center  justify-center shrink-0">
                 <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                 </svg>

@@ -36,6 +36,6 @@ Broadcast::channel('user.{id}', function ($user, $id) {
 });
 
 Broadcast::channel('catalogo.{idNegocio}', function ($user, $idNegocio) {
-    return $user->id_rol === 1 && (int) $user->id_negocio === (int) $idNegocio;
+    return $user->id_rol === 1 
+        && (string) $user->id_negocio === (string) $idNegocio;
 });
- 

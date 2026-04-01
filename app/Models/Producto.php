@@ -3,25 +3,25 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Traits\GeneratesCustomId;
-
 
 class Producto extends Model
 {
-    protected $table = 'productos';
     protected $primaryKey = 'id_producto';
-    public $incrementing = false;
-    protected $keyType = 'string';
+    public $incrementing  = false;
+    protected $keyType    = 'string';
 
     protected $fillable = [
         'id_producto',
         'id_negocio',
+        'id_usuario',
         'nombre_producto',
+        'precio',
+        'tipo',
     ];
 
-    protected function idPrefix(): string
+    public function productoModelo()
     {
-        return 'PRO';
+        return $this->hasMany(ProductoModelo::class, 'id_producto', 'id_producto');
     }
 
     public function negocio()
@@ -29,13 +29,8 @@ class Producto extends Model
         return $this->belongsTo(Negocio::class, 'id_negocio', 'id_negocio');
     }
 
-    public function precios()
+    public function usuario()
     {
-        return $this->hasMany(Precio::class, 'id_producto', 'id_producto');
-    }
-
-    public function bicicletas()
-    {
-        return $this->hasMany(Bicicleta::class, 'id_producto', 'id_producto');
+        return $this->belongsTo(Usuario::class, 'id_usuario', 'id_usuario');
     }
 }
