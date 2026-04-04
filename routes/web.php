@@ -18,6 +18,7 @@ use App\Http\Controllers\ModeloVoltajeController;
 use App\Http\Controllers\MarcaController;
 use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\EnlaceController;
+use App\Http\Controllers\ContactController;
 
 /*
 |--------------------------------------------------------------------------
@@ -26,6 +27,11 @@ use App\Http\Controllers\EnlaceController;
 */
 
 Route::get('/', fn () => view('welcome'));
+
+//Formulario de contacto
+Route::post('/contact', [ContactController::class, 'send'])
+    ->name('contact.send')
+    ->middleware('throttle:5,1'); // máx 5 envíos por minuto por IP
 
 Route::get('/registro/{token}',  [RegistroController::class, 'show'])->name('registro.show');
 Route::post('/registro/{token}', [RegistroController::class, 'store'])->name('registro.store');
