@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use App\Events\PedidoUpdated;
+use App\Http\Controllers\InventarioController;
 
 class PedidoController extends Controller
 {
@@ -75,11 +76,15 @@ class PedidoController extends Controller
     }
 
     // ─── CREAR PEDIDO ────────────────────────────────────────────────
-    public function create()
+   public function create()
     {
-        $usuario = auth()->user();
+        // Bloqueo directo: Si el rol no es 1, lanza un 403 (Prohibido)
+        if (auth()->user()->id_rol !== 1) {
+            abort(403, 'No tienes permisos para crear pedidos.');
+        }
 
-        // ✅ Pedidos siempre usan atributos públicos (id_negocio = null)
+        $usuario = auth()->user();
+        
         $modelos  = CatalogService::getModelos();
         $voltajes = [];
         $colores  = [];
@@ -423,6 +428,19 @@ class PedidoController extends Controller
             foreach ($pedido->bicicletas as $bici) {
                 CatalogService::invalidateBicicleta($bici->num_serie, $bici->id_negocio);
                 $bici->update(['id_negocio' => $pedido->id_negocio]);
+
+                foreach ($pedido->bicicletas as $bici) {
+                    CatalogService::invalidateBicicleta($bici->num_serie, $bici->id_negocio);
+                    $bici->update(['id_negocio' => $pedido->id_negocio]);
+                    CatalogService::invalidateBicicleta($bici->num_serie, $pedido->id_negocio);
+
+                    // ✅ Nuevo — mover stock negocio origen → negocio destino
+                    CatalogService::invalidateInventario($pedido->id_negocio);
+
+                    if ($bici->id_usuario) {
+                        CatalogService::invalidateBicicletasPorUsuario($bici->id_usuario, $pedido->id_negocio);
+                    }
+                }
                 CatalogService::invalidateBicicleta($bici->num_serie, $pedido->id_negocio);
 
                 // ✅ Invalidar caché del vendedor si la bici tiene uno asignado

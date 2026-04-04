@@ -52,7 +52,7 @@
             @if(auth()->user()->id_rol == 5)
             <a href="{{ route('pedidos.rapido.crear') }}"
                 class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-md text-sm hover:opacity-90 transition">
-                + Nuevo Pedido
+                + Pedido Rápido
             </a>
             @endif
         </div>

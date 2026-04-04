@@ -12,6 +12,7 @@ use App\Models\Bicicleta;
 use App\Models\Pedido;
 use App\Models\Usuario;
 use App\Models\Producto;
+use App\Models\Inventario;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -723,5 +724,32 @@ class CatalogService
             return;
         }
         self::incrementVersion();
+    }
+
+    public static function invalidateInventario(string $idNegocio): void
+    {
+        $version = self::getVersion();
+        Cache::forget(self::key("inventario:negocio:{$idNegocio}") . ":v{$version}");
+        Cache::forget(self::key("inventario:sucursales:{$idNegocio}") . ":v{$version}");
+    }
+
+    public static function getInventarioByNegocio(string $idNegocio)
+    {
+        return self::remember("inventario:negocio:{$idNegocio}", self::CACHE_TTL['productos'], fn() =>
+            Inventario::with(['productoModelo.producto', 'sucursal'])
+                ->where('id_negocio', $idNegocio)
+                ->orderBy('id_usuario')
+                ->get()
+        );
+    }
+
+    public static function getInventarioBySucursal(string $idNegocio, string $idUsuario)
+    {
+        return self::remember("inventario:sucursal:{$idNegocio}:{$idUsuario}", self::CACHE_TTL['productos'], fn() =>
+            Inventario::with(['productoModelo.producto'])
+                ->where('id_negocio', $idNegocio)
+                ->where('id_usuario', $idUsuario)
+                ->get()
+        );
     }
 }

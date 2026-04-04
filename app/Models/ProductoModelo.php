@@ -40,4 +40,10 @@ class ProductoModelo extends Model
     {
         return $this->belongsTo(Usuario::class, 'id_usuario', 'id_usuario');
     }
+
+    public function inventario()
+    {
+        return $this->hasOne(Inventario::class, 'id_producto_modelo', 'id_producto_modelo');
+    }
+
 }

@@ -21,6 +21,7 @@ class Bicicleta extends Model
         'id_producto',
         'id_modelo',
         'id_voltaje',
+        'id_marca',
         'id_color',
         'status',
         'id_pedido',
@@ -31,6 +32,11 @@ class Bicicleta extends Model
     public function negocio()
     {
         return $this->belongsTo(Negocio::class, 'id_negocio', 'id_negocio');
+    }
+
+    public function marca()
+    {
+        return $this->belongsTo(Marca::class, 'id_marca', 'id_marca');
     }
 
     public function pedido()
@@ -57,4 +63,5 @@ class Bicicleta extends Model
     {
         return $this->hasMany(Mantenimiento::class, 'num_serie', 'num_serie');
     }
+    
 }

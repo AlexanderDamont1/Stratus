@@ -97,7 +97,7 @@
                 {{-- Inventario con submenú desplegable --}}
                 @php
                     $inventarioActivo = request()->routeIs('bicicletas.index')
-                    || request()->routeIs('productos.index')
+                    || request()->routeIs('admin.productos.index')
                     || request()->routeIs('gestor.vehiculos.modelos.*');
 
                 @endphp
@@ -131,6 +131,21 @@
                         x-transition:leave-start="opacity-100 translate-y-0"
                         x-transition:leave-end="opacity-0 -translate-y-1"
                         class="mt-1 ml-4 pl-3 border-l-2 border-gray-200 dark:border-gray-600 space-y-1">
+
+                        {{-- Inventario --}}
+                        <a href="#"
+                            class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition
+                                {{ request()->routeIs('#')
+                                    ? 'bg-gray-100 dark:bg-gray-700 font-semibold text-gray-900 dark:text-white'
+                                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700' }}"
+                            @click="open = false">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" fill="currentColor" class="bi bi-ui-checks" viewBox="0 0 16 16">
+                                <path d="M7 2.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5zM2 1a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm0 8a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2zm.854-3.646a.5.5 0 0 1-.708 0l-1-1a.5.5 0 1 1 .708-.708l.646.647 1.646-1.647a.5.5 0 1 1 .708.708zm0 8a.5.5 0 0 1-.708 0l-1-1a.5.5 0 0 1 .708-.708l.646.647 1.646-1.647a.5.5 0 0 1 .708.708zM7 10.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5zm0-5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m0 8a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5"/>
+                            </svg>
+
+
+                            <span class="truncate">Inventario</span>
+                        </a>
 
                         {{-- Productos --}}
                         <a href="{{ route('admin.productos.index') }}"
@@ -206,9 +221,10 @@
                                     ? 'bg-gray-100 dark:bg-gray-700 font-semibold text-gray-900 dark:text-white'
                                     : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700' }}"
                             @click="open = false">
-                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
                             </svg>
+
                             Catalogo
                         </a>
 
@@ -266,7 +282,7 @@
             {{-- Gestor --}}
             @if(auth()->user()->id_rol === 5)
             <a href="{{ route('gestor.dashboard') }}"
-                class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition
+                class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition active:scale-95
                           {{ request()->routeIs('gestor.dashboard') 
                              ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' 
                              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}"
@@ -284,8 +300,7 @@
             || request()->routeIs('gestor.vehiculos.modelos.*')
             || request()->routeIs('gestor.vehiculos.colores.*')
             || request()->routeIs('gestor.vehiculos.voltajes.*')
-            || request()->routeIs('modelo-voltaje')
-            || request()->routeIs('productos.index');
+            || request()->routeIs('modelo-voltaje');
             @endphp
 
             <div x-data="{ stockOpen: {{ $stockActivo ? 'true' : 'false' }} }">
@@ -385,18 +400,7 @@
                         Definir Voltaje
                     </a>                   
 
-                    {{-- Productos --}}
-                    <a href="{{ route('productos.index') }}"
-                        class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition
-                                {{ request()->routeIs('productos.*')
-                                    ? 'bg-gray-100 dark:bg-gray-700 font-semibold text-gray-900 dark:text-white'
-                                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700' }}"
-                        @click="open = false">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-boxes" viewBox="0 0 16 16">
-                            <path d="M7.752.066a.5.5 0 0 1 .496 0l3.75 2.143a.5.5 0 0 1 .252.434v3.995l3.498 2A.5.5 0 0 1 16 9.07v4.286a.5.5 0 0 1-.252.434l-3.75 2.143a.5.5 0 0 1-.496 0l-3.502-2-3.502 2.001a.5.5 0 0 1-.496 0l-3.75-2.143A.5.5 0 0 1 0 13.357V9.071a.5.5 0 0 1 .252-.434L3.75 6.638V2.643a.5.5 0 0 1 .252-.434zM4.25 7.504 1.508 9.071l2.742 1.567 2.742-1.567zM7.5 9.933l-2.75 1.571v3.134l2.75-1.571zm1 3.134 2.75 1.571v-3.134L8.5 9.933zm.508-3.996 2.742 1.567 2.742-1.567-2.742-1.567zm2.242-2.433V3.504L8.5 5.076V8.21zM7.5 8.21V5.076L4.75 3.504v3.134zM5.258 2.643 8 4.21l2.742-1.567L8 1.076zM15 9.933l-2.75 1.571v3.134L15 13.067zM3.75 14.638v-3.134L1 9.933v3.134z"/>
-                        </svg>
-                        Productos
-                    </a>
+                   
                 </div>
             </div>
 

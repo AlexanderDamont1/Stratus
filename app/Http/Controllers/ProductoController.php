@@ -14,14 +14,13 @@ class ProductoController extends Controller
     {
         $user      = Auth::user();
         $idNegocio = $user->id_negocio;
-        $esRol1    = $user->id_rol == 1;
+        $esRol1    = $user->id_rol === 1;
 
         $productos = CatalogService::getProductosConRelaciones(
             $idNegocio,
             $esRol1 ? null : $user->id_usuario
         );
 
-        // Agrupar bicicletas por id_modelo
         $bicicletas = $productos
             ->where('tipo', '2')
             ->groupBy(fn($p) => $p->productoModelo?->first()?->id_modelo ?? $p->id_producto);
@@ -32,13 +31,30 @@ class ProductoController extends Controller
             ? CatalogService::getSucursalesByNegocio($idNegocio)
             : collect();
 
-        // Marcas del negocio (para el selector de marcas en el modal crear)
         $marcas  = CatalogService::getMarcasByNegocio($idNegocio);
         $modelos = CatalogService::getModelosByNegocio($idNegocio);
 
-        return view('productos.index', compact('bicicletas', 'accesorios', 'sucursales', 'marcas', 'modelos', 'esRol1'));
-    }
+        // ── Inventario ──────────────────────────────────────────
+        if ($esRol1) {
+            // Admin: inventario de todas las sucursales agrupado por id_producto_modelo
+            $inventario = CatalogService::getInventarioByNegocio($idNegocio)
+                ->groupBy('id_producto_modelo');
+        } else {
+            // Sucursal: solo su propio inventario, indexado por id_producto_modelo
+            $inventario = CatalogService::getInventarioBySucursal($idNegocio, $user->id_usuario)
+                ->keyBy('id_producto_modelo');
+        }
 
+        return view('productos.index', compact(
+            'bicicletas',
+            'accesorios',
+            'sucursales',
+            'marcas',
+            'modelos',
+            'esRol1',
+            'inventario'
+        ));
+    }
     // ── STORE ACCESORIO (tipo 1) ──
     public function storeAccesorio(Request $request)
     {

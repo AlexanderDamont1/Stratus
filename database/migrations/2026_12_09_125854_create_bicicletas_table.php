@@ -14,10 +14,10 @@ return new class extends Migration {
 
             // Multinegocio
             $table->char('id_negocio', 36);
-            $table->char('id_usuario', 36);
+            $table->char('id_usuario', 36)->nullable();
 
             // Atributos físicos
-            $table->char('id_marca', 15);
+            $table->char('id_marca', 15)->nullable();
             $table->char('id_modelo', 15);
             $table->char('id_voltaje', 15);
             $table->char('id_color', 15);
@@ -25,7 +25,7 @@ return new class extends Migration {
             // Estado de la bicicleta
             $table->char('status', 1)->default(1);
 
-            $table->char('id_pedido', 15);
+            $table->char('id_pedido', 15)->nullable();
 
 
             $table->timestamps();

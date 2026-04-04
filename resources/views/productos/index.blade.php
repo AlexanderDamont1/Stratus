@@ -1,7 +1,7 @@
 <x-app-layout>
 <div class="mx-auto space-y-7" x-data="productosPage()" x-init="init()">
 
- {{-- ===== ENCABEZADO ===== --}}
+    {{-- ===== ENCABEZADO ===== --}}
     <div class="flex flex-wrap items-start justify-between gap-4 sm:gap-2">
         <div>
             <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Precios</h2>
@@ -11,10 +11,21 @@
                 @endif
             </p>
         </div>
-        <button @click="abrirCrear()"
-            class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-md text-sm hover:opacity-90 transition whitespace-nowrap hover:scale-105 transform duration-200 active:scale-95">
-            + Nuevo producto
-        </button>
+        <div class="flex items-center gap-2">
+            @if($esRol1)
+            <select x-model="sucursalSeleccionada"
+                class="border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-400">
+                <option value="">Todas las sucursales</option>
+                @foreach($sucursales as $s)
+                <option value="{{ $s->id_usuario }}">{{ $s->nombre_usuario }}</option>
+                @endforeach
+            </select>
+            @endif
+            <button @click="abrirCrear()"
+                class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-md text-sm hover:opacity-90 transition whitespace-nowrap hover:scale-105 transform duration-200 active:scale-95">
+                + Nuevo producto
+            </button>
+        </div>
     </div>
 
     {{-- ===== FLASH ALPINE ===== --}}
@@ -53,7 +64,24 @@
     @if($bicicletas->count())
     <div>
         <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Bicicletas</p>
-        <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+
+        <div x-show="loading" x-cloak class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            @for ($i = 0; $i < min(5, $bicicletas->count()); $i++)
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 sm:p-3.5 flex flex-col gap-2.5 animate-pulse">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+                    <div class="h-5 w-12 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+                </div>
+                <div class="h-5 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                <div class="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                <div class="flex justify-end mt-auto">
+                    <div class="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                </div>
+            </div>
+            @endfor
+        </div>
+
+        <div x-show="!loading" x-cloak class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             @foreach($bicicletas as $idModelo => $variantes)
             @php
                 $primera = $variantes->first();
@@ -63,11 +91,9 @@
                 $max     = $precios->max();
             @endphp
 
-            {{-- Tarjeta con efecto de elevación y sombra --}}
             <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 sm:p-3.5 flex flex-col gap-2.5 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5"
                  x-data="{ variantesOpen: false }">
 
-                {{-- TOP: badge + contador variantes (mejorado) --}}
                 <div class="flex items-start justify-between gap-2">
                     <span class="inline-flex items-center gap-1.5 bg-purple-100/80 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-purple-200/50 dark:border-purple-700/50">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
@@ -78,41 +104,33 @@
                     </span>
                 </div>
 
-                {{-- NOMBRE MODELO --}}
                 <p class="text-sm font-semibold text-gray-800 dark:text-white leading-snug">
-                    
-                    {{$pm?->modelo->marca->nombre_marca ?? 'Error' }}
+                    {{ $pm?->modelo->marca->nombre_marca ?? '—' }}
                     <span class="text-sm text-gray-400">~</span>
                     {{ $pm?->modelo->nombre_modelo ?? $primera->nombre_producto }}
-
                 </p>
 
-                {{-- RANGO DE PRECIOS con indicador "Desde" --}}
                 <p class="text-lg font-semibold text-gray-900 dark:text-white">
                     @if($min == $max)
-                        ${{ number_format($min, 2) }}
+                        ${{ number_format($min, 0) }}
                     @else
-                        
-                        ${{ number_format($min, 2) }}
+                        ${{ number_format($min, 0) }}
                         <span class="text-sm text-gray-400">~</span>
-                        ${{ number_format($max, 2) }}
+                        ${{ number_format($max, 0) }}
                     @endif
                 </p>
 
-                {{-- BOTTOM: variantes (con texto dinámico) --}}
-                <div class="flex items-center gap-2 mt-auto">
-                    <button @click="variantesOpen = !variantesOpen"
-                        class="flex items-center gap-1.5 flex-1 text-[11px] font-medium text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-600 rounded-lg px-2.5 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition active:scale-95">
-                        <span x-text="variantesOpen ? 'Ocultar variantes' : 'Variantes'"></span>
-                        <svg class="w-3.5 h-3.5 ml-auto transition-transform duration-200 flex-shrink-0"
-                            :class="variantesOpen ? 'rotate-90' : ''"
-                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                        </svg>
-                    </button>
-                </div>
+                <button @click="variantesOpen = !variantesOpen"
+                    class="flex items-center gap-1.5 text-[11px] font-medium text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-600 rounded-lg px-2.5 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition active:scale-95 mt-auto">
+                    <span x-text="variantesOpen ? 'Ocultar variantes' : 'Variantes'"></span>
+                    <svg class="w-3.5 h-3.5 ml-auto transition-transform duration-200 flex-shrink-0"
+                        :class="variantesOpen ? 'rotate-90' : ''"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
 
-                {{-- VARIANTES DESPLEGABLES (con animación más suave) --}}
+                {{-- VARIANTES DESPLEGABLES --}}
                 <div x-show="variantesOpen" x-cloak
                     x-transition:enter="transition ease-out duration-200"
                     x-transition:enter-start="opacity-0 scale-95 -translate-y-2"
@@ -123,32 +141,58 @@
                     class="border border-gray-100 dark:border-gray-700 rounded-lg overflow-hidden">
 
                     @foreach($variantes as $v)
-                    @php $vpm = $v->productoModelo?->first(); @endphp
-                    <div class="flex items-center gap-2 px-2.5 py-2 border-b border-gray-100 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                    @php
+                        $vpm     = $v->productoModelo?->first();
+                        $idPm    = $vpm?->id_producto_modelo;
+
+                        $stockRows = $idPm && isset($inventario[$idPm])
+                            ? (is_iterable($inventario[$idPm]) ? collect($inventario[$idPm]) : collect([$inventario[$idPm]]))
+                            : collect();
+
+                        $stockItem   = $stockRows->first();
+                        $cantidad    = $stockItem?->cantidad    ?? 0;
+                        $stockMinimo = $stockItem?->stock_minimo ?? 3;
+
+                        $stockJson = $stockRows->map(fn($s) => [
+                            'id_usuario'   => $s->id_usuario ?? '',
+                            'cantidad'     => $s->cantidad,
+                            'stock_minimo' => $s->stock_minimo,
+                        ])->values()->toJson();
+                    @endphp
+
+                    <div class="flex items-center gap-2 px-2.5 py-2 border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                         x-data="varianteStock({{ $esRol1 ? 'true' : 'false' }}, {{ $stockJson }}, {{ $cantidad }}, {{ $stockMinimo }})"
+                         x-init="init()"
+                         :class="colorBorde">
+
                         <span class="text-[10px] font-medium bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-2 py-0.5 rounded-full flex-shrink-0">
                             {{ $vpm?->voltaje?->voltaje ?? '—' }}
                         </span>
-                        <span class="text-xs font-semibold text-gray-700 dark:text-gray-200 flex-1">
-                            ${{ number_format($v->precio, 2) }}
+
+                        <span class="text-xs font-semibold text-gray-700 dark:text-gray-200">
+                            ${{ number_format($v->precio, 0) }}
                         </span>
-                        {{-- GEAR por variante (con efecto hover ampliado) --}}
+
+                        <span class="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
+                              :class="colorBadge"
+                              x-text="stockLabel">
+                        </span>
+
                         <button @click.stop="abrirEditar(
                                 '{{ $v->id_producto }}',
                                 '{{ addslashes($v->nombre_producto) }}',
                                 '{{ $v->tipo }}',
                                 '{{ $v->precio }}'
                             )"
-                            class="w-7 h-7 sm:w-6 sm:h-6 flex items-center justify-center rounded-md border border-gray-200 dark:border-gray-600 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300 transition hover:scale-105 active:scale-95">
-                            <svg class="w-4 h-4 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            class="w-7 h-7 flex items-center justify-center rounded-md border border-gray-200 dark:border-gray-600 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition hover:scale-105 active:scale-95 flex-shrink-0">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
                                 <circle cx="12" cy="12" r="3" stroke-width="2"/>
                             </svg>
                         </button>
                     </div>
                     @endforeach
-
                 </div>
-
             </div>
             @endforeach
         </div>
@@ -159,33 +203,73 @@
     @if($accesorios->count())
     <div>
         <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Accesorios</p>
-        <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            
-            @foreach($accesorios as $producto)
 
-            {{-- Tarjeta con efecto de elevación y sombra --}}
-            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 sm:p-3.5 flex flex-col gap-2.5 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5"
+        <div x-show="loading" x-cloak class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            @for ($i = 0; $i < min(5, $accesorios->count()); $i++)
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 sm:p-3.5 flex flex-col gap-2.5 animate-pulse">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="h-6 w-20 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+                </div>
+                <div class="h-5 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                <div class="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                <div class="flex justify-end mt-auto">
+                    <div class="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                </div>
+            </div>
+            @endfor
+        </div>
+
+        <div x-show="!loading" x-cloak class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            @foreach($accesorios as $producto)
+            @php
+                $idPm      = $producto->productoModelo?->first()?->id_producto_modelo;
+                $stockItem = $idPm && isset($inventario[$idPm]) ? $inventario[$idPm] : null;
+
+                if ($esRol1 && $stockItem) {
+                    $stockItem = is_iterable($stockItem) ? collect($stockItem)->first() : $stockItem;
+                }
+
+                $cantidad    = $stockItem?->cantidad    ?? 0;
+                $stockMinimo = $stockItem?->stock_minimo ?? 3;
+
+                $colorCard = $cantidad == 0
+                    ? 'border-red-300 dark:border-red-700 bg-red-50/50 dark:bg-red-900/10'
+                    : ($cantidad < $stockMinimo
+                        ? 'border-yellow-300 dark:border-yellow-700 bg-yellow-50/50 dark:bg-yellow-900/10'
+                        : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800');
+
+                $badgeColor = $cantidad == 0
+                    ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
+                    : ($cantidad < $stockMinimo
+                        ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300');
+
+                $badgeLabel = $cantidad == 0
+                    ? 'Sin stock'
+                    : ($cantidad < $stockMinimo ? $cantidad . ' — bajo' : $cantidad . ' uds.');
+            @endphp
+
+            <div class="border rounded-xl p-4 sm:p-3.5 flex flex-col gap-2.5 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 {{ $colorCard }}"
                  id="producto-row-{{ $producto->id_producto }}">
 
-                {{-- TOP: badge mejorado --}}
                 <div class="flex items-start justify-between gap-2">
                     <span class="inline-flex items-center gap-1.5 bg-amber-100/80 dark:bg-amber-900/40 text-amber-900 dark:text-amber-400 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-amber-200/50 dark:border-amber-700/50">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                         Accesorio
                     </span>
+                    <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full {{ $badgeColor }}">
+                        {{ $badgeLabel }}
+                    </span>
                 </div>
 
-                {{-- NOMBRE --}}
                 <p class="text-sm font-semibold text-gray-800 dark:text-white leading-snug">
                     {{ $producto->nombre_producto }}
                 </p>
 
-                {{-- PRECIO (simple) --}}
                 <p class="text-lg font-semibold text-gray-900 dark:text-white">
                     ${{ number_format($producto->precio, 2) }}
                 </p>
 
-                {{-- GEAR con efecto hover y escalado --}}
                 <div class="flex justify-end mt-auto">
                     <button @click.stop="abrirEditar(
                             '{{ $producto->id_producto }}',
@@ -200,7 +284,6 @@
                         </svg>
                     </button>
                 </div>
-
             </div>
             @endforeach
         </div>
@@ -215,9 +298,8 @@
     </div>
     @endif
 
-
     {{-- ══════════════════════════════════════════
-         MODAL: CREAR (sin cambios visuales)
+         MODAL: CREAR
     ══════════════════════════════════════════ --}}
     <div x-show="crearModal" x-cloak
         x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0"
@@ -296,8 +378,7 @@
                         class="px-4 py-2 text-sm text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition">
                         Cancelar
                     </button>
-                    <button type="submit"
-                        :disabled="submitting || !accesorioValido"
+                    <button type="submit" :disabled="submitting || !accesorioValido"
                         class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed active:scale-95">
                         <span x-show="!submitting">Guardar</span>
                         <span x-show="submitting" class="inline-flex items-center gap-1">
@@ -326,7 +407,6 @@
                 </div>
                 @endif
 
-                {{-- PASO 1: MARCA --}}
                 <div>
                     <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Marca</label>
                     <select x-model="form.id_marca" @change="cargarModelos($event.target.value)"
@@ -338,45 +418,36 @@
                     </select>
                 </div>
 
-                {{-- PASO 2: MODELO --}}
                 <div>
                     <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Modelo</label>
                     <div x-show="loadingModelos" class="text-xs text-gray-400 py-2 px-1">Cargando modelos...</div>
-                    <select x-show="!loadingModelos"
-                        x-model="form.id_modelo"
+                    <select x-show="!loadingModelos" x-model="form.id_modelo"
                         @change="cargarVoltajes($event.target.value)"
                         :disabled="modelosDisponibles.length === 0"
                         class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-400 disabled:opacity-50">
-                        <option value="" x-text="!form.id_marca ? 'Primero selecciona una marca' : (modelosDisponibles.length === 0 && form.id_marca ? 'Sin modelos disponibles' : 'Selecciona un modelo')"></option>
+                        <option value="" x-text="!form.id_marca ? 'Primero selecciona una marca' : (modelosDisponibles.length === 0 ? 'Sin modelos disponibles' : 'Selecciona un modelo')"></option>
                         <template x-for="m in modelosDisponibles" :key="m.id_modelo">
                             <option :value="m.id_modelo" x-text="m.nombre_modelo"></option>
                         </template>
                     </select>
                 </div>
 
-                {{-- PASO 3: VOLTAJE --}}
                 <div>
                     <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Voltaje</label>
                     <div x-show="loadingVoltajes" class="text-xs text-gray-400 py-2 px-1">Cargando voltajes...</div>
-                    <select x-show="!loadingVoltajes"
-                        x-model="form.id_voltaje"
+                    <select x-show="!loadingVoltajes" x-model="form.id_voltaje"
                         :disabled="voltajesDisponibles.length === 0"
                         class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-400 disabled:opacity-50">
                         <option value=""
-                            x-text="!form.id_modelo
-                                ? 'Primero selecciona un modelo'
-                                : (voltajesDisponibles.length === 0
-                                    ? 'Todos los voltajes ya tienen precio asignado'
-                                    : 'Selecciona un voltaje')">
+                            x-text="!form.id_modelo ? 'Primero selecciona un modelo' : (voltajesDisponibles.length === 0 ? 'Todos los voltajes ya tienen precio' : 'Selecciona un voltaje')">
                         </option>
                         <template x-for="v in voltajesDisponibles" :key="v.id_voltaje">
                             <option :value="v.id_voltaje" x-text="v.voltaje"></option>
                         </template>
                     </select>
-                    {{-- Aviso cuando no hay voltajes disponibles --}}
                     <p x-show="form.id_modelo && !loadingVoltajes && voltajesDisponibles.length === 0"
                        class="text-[11px] text-amber-600 dark:text-amber-400 mt-1">
-                        Este modelo ya tiene precio asignado para todos sus voltajes.
+                        Este modelo ya tiene precio para todos sus voltajes.
                     </p>
                 </div>
 
@@ -393,8 +464,7 @@
                         class="px-4 py-2 text-sm text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition">
                         Cancelar
                     </button>
-                    <button type="submit"
-                        :disabled="submitting || !bicicletaValida"
+                    <button type="submit" :disabled="submitting || !bicicletaValida"
                         class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed active:scale-95">
                         <span x-show="!submitting">Guardar</span>
                         <span x-show="submitting" class="inline-flex items-center gap-1">
@@ -407,13 +477,11 @@
                     </button>
                 </div>
             </form>
-
         </div>
     </div>
 
-
     {{-- ══════════════════════════════════════════
-         MODAL: EDITAR (sin cambios visuales)
+         MODAL: EDITAR
     ══════════════════════════════════════════ --}}
     <div x-show="editarModal" x-cloak
         x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0"
@@ -471,8 +539,7 @@
                         class="px-4 py-2 text-sm text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition">
                         Cancelar
                     </button>
-                    <button type="submit"
-                        :disabled="submitting || !editFormModificado"
+                    <button type="submit" :disabled="submitting || !editFormModificado"
                         class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed active:scale-95">
                         <span x-show="!submitting">Guardar cambios</span>
                         <span x-show="submitting" class="inline-flex items-center gap-1">
@@ -488,9 +555,8 @@
         </div>
     </div>
 
-
     {{-- ══════════════════════════════════════════
-         MODAL: ELIMINAR (sin cambios visuales)
+         MODAL: ELIMINAR
     ══════════════════════════════════════════ --}}
     <div x-show="eliminarModal" x-cloak
         x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0"
@@ -539,17 +605,16 @@
         </div>
     </div>
 
-
     {{-- ══════════════════════════════════════════
-         ALPINE.JS (sin cambios)
+         ALPINE JS
     ══════════════════════════════════════════ --}}
     <script>
     function productosPage() {
         return {
-            crearModal:    false,
-            editarModal:   false,
-            eliminarModal: false,
-
+            loading:              true,
+            crearModal:           false,
+            editarModal:          false,
+            eliminarModal:        false,
             submitting:           false,
             flashVisible:         false,
             flashMsg:             '',
@@ -559,33 +624,16 @@
             loadingVoltajes:      false,
             modelosDisponibles:   [],
             voltajesDisponibles:  [],
+            sucursalSeleccionada: '',
 
             form: {
-                tipo:            '1',
-                id_usuario:      '',
-                nombre_producto: '',
-                id_marca:        '',
-                id_modelo:       '',
-                id_voltaje:      '',
-                precio:          '',
+                tipo: '1', id_usuario: '', nombre_producto: '',
+                id_marca: '', id_modelo: '', id_voltaje: '', precio: '',
             },
-
-            // Snapshot del form al abrir editar (para detectar cambios)
-            editFormOriginal: {
-                nombre_producto: '',
-                precio:          '',
-            },
-
-            editForm: {
-                id_producto:     '',
-                nombre_producto: '',
-                tipo:            '',
-                precio:          '',
-            },
-
+            editFormOriginal: { nombre_producto: '', precio: '' },
+            editForm: { id_producto: '', nombre_producto: '', tipo: '', precio: '' },
             deleteTarget: { id: '', nombre: '' },
 
-            // ── Computed: botón Guardar accesorio activo sólo si hay datos reales ──
             get accesorioValido() {
                 const tieneNombre = this.form.nombre_producto.trim().length > 0;
                 const tienePrecio = this.form.precio !== '' && Number(this.form.precio) >= 0;
@@ -596,7 +644,6 @@
                 @endif
             },
 
-            // ── Computed: botón Guardar bicicleta activo sólo si todo está seleccionado ──
             get bicicletaValida() {
                 const tieneMarca   = this.form.id_marca !== '';
                 const tieneModelo  = this.form.id_modelo !== '';
@@ -609,7 +656,6 @@
                 @endif
             },
 
-            // ── Computed: botón Guardar cambios activo sólo si algo cambió ──
             get editFormModificado() {
                 const nombreCambio = this.editForm.nombre_producto.trim() !== this.editFormOriginal.nombre_producto.trim();
                 const precioCambio = String(this.editForm.precio) !== String(this.editFormOriginal.precio);
@@ -627,7 +673,20 @@
                 modelosPorMarca: (id) => `{{ $esRol1 ? url("/productos/modelos-por-marca") : url("/sucursal/productos/modelos-por-marca") }}/${id}`,
             },
 
-            init() {},
+            init() {
+                const skeletonShown = sessionStorage.getItem('productPageSkeletonShown');
+                if (skeletonShown === 'true') {
+                    this.loading = false;
+                } else {
+                    setTimeout(() => {
+                        this.loading = false;
+                        sessionStorage.setItem('productPageSkeletonShown', 'true');
+                    }, 300);
+                }
+                this.$watch('sucursalSeleccionada', val => {
+                    window.dispatchEvent(new CustomEvent('sucursal-cambio', { detail: val }));
+                });
+            },
 
             flash(msg, tipo = 'success') {
                 this.flashMsg     = msg;
@@ -645,10 +704,9 @@
             },
 
             abrirEditar(id, nombre, tipo, precio) {
-                this.editForm = { id_producto: id, nombre_producto: nombre, tipo: tipo, precio: precio };
-                // Guardar snapshot para comparar cambios
-                this.editFormOriginal = { nombre_producto: nombre, precio: precio };
-                this.editarModal = true;
+                this.editForm         = { id_producto: id, nombre_producto: nombre, tipo, precio };
+                this.editFormOriginal = { nombre_producto: nombre, precio };
+                this.editarModal      = true;
             },
 
             abrirEliminar(id, nombre) {
@@ -656,53 +714,70 @@
                 this.eliminarModal = true;
             },
 
-            // ── Cargar modelos al elegir marca ──
             async cargarModelos(idMarca) {
-                this.form.id_modelo      = '';
-                this.form.id_voltaje     = '';
-                this.modelosDisponibles  = [];
-                this.voltajesDisponibles = [];
+                this.form.id_modelo = ''; this.form.id_voltaje = '';
+                this.modelosDisponibles = []; this.voltajesDisponibles = [];
                 if (!idMarca) return;
                 this.loadingModelos = true;
                 try {
                     const res = await fetch(this.routes.modelosPorMarca(idMarca), {
                         headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
                     });
-                    if (!res.ok) throw new Error('Error al cargar modelos');
+                    if (!res.ok) throw new Error();
                     this.modelosDisponibles = await res.json();
-                } catch (e) {
-                    this.flash('Error cargando modelos.', 'error');
-                } finally {
-                    this.loadingModelos = false;
-                }
+                } catch { this.flash('Error cargando modelos.', 'error'); }
+                finally { this.loadingModelos = false; }
             },
 
-            // ── Cargar voltajes disponibles al elegir modelo ──
             async cargarVoltajes(idModelo) {
-                this.form.id_voltaje     = '';
-                this.voltajesDisponibles = [];
+                this.form.id_voltaje = ''; this.voltajesDisponibles = [];
                 if (!idModelo) return;
                 this.loadingVoltajes = true;
                 try {
                     const res = await fetch(this.routes.voltajes(idModelo), {
                         headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
                     });
-                    if (!res.ok) throw new Error('Error al cargar voltajes');
+                    if (!res.ok) throw new Error();
                     this.voltajesDisponibles = await res.json();
-                } catch (e) {
-                    this.flash('Error cargando voltajes.', 'error');
-                } finally {
-                    this.loadingVoltajes = false;
-                }
+                } catch { this.flash('Error cargando voltajes.', 'error'); }
+                finally { this.loadingVoltajes = false; }
+            },
+
+            async postForm(url, payload) {
+                this.submitting = true;
+                try {
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type':     'application/json',
+                            'X-CSRF-TOKEN':     document.querySelector('meta[name="csrf-token"]').content,
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept':           'application/json',
+                        },
+                        body: JSON.stringify(payload),
+                    });
+                    let data = {};
+                    try { data = await res.json(); } catch (_) {}
+                    if (!res.ok) {
+                        const err = data.errors
+                            ? Object.values(data.errors).flat().join(' ')
+                            : (data.message || 'Error al guardar.');
+                        this.flash(err, 'error');
+                        return;
+                    }
+                    this.crearModal = false;
+                    this.flash(data.message || 'Guardado correctamente.');
+                    setTimeout(() => window.location.reload(), 800);
+                } catch { this.flash('Error de conexión.', 'error'); }
+                finally { this.submitting = false; }
             },
 
             async submitAccesorio() {
                 @if($esRol1)
-                if (!this.form.id_usuario)            { this.flash('Selecciona una sucursal.', 'error');          return; }
+                if (!this.form.id_usuario)            { this.flash('Selecciona una sucursal.', 'error'); return; }
                 @endif
-                if (!this.form.nombre_producto.trim()) { this.flash('Ingresa el nombre del accesorio.', 'error'); return; }
-                if (this.form.precio === '')            { this.flash('Ingresa el precio.', 'error');               return; }
-
+                if (!this.form.nombre_producto.trim()) { this.flash('Ingresa el nombre.', 'error');      return; }
+                if (this.form.precio === '')            { this.flash('Ingresa el precio.', 'error');      return; }
                 await this.postForm(this.routes.storeAccesorio, {
                     id_usuario:      this.form.id_usuario,
                     nombre_producto: this.form.nombre_producto,
@@ -718,7 +793,6 @@
                 if (!this.form.id_modelo)  { this.flash('Selecciona un modelo.', 'error');   return; }
                 if (!this.form.id_voltaje) { this.flash('Selecciona un voltaje.', 'error');  return; }
                 if (this.form.precio === '') { this.flash('Ingresa el precio.', 'error');     return; }
-
                 await this.postForm(this.routes.storeBicicleta, {
                     id_usuario: this.form.id_usuario,
                     id_modelo:  this.form.id_modelo,
@@ -727,50 +801,10 @@
                 });
             },
 
-            // ── Helper POST genérico ──
-            // Cierra el modal ANTES de la recarga para no mostrar errores de red
-            async postForm(url, payload) {
-                this.submitting = true;
-                try {
-                    const res  = await fetch(url, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type':     'application/json',
-                            'X-CSRF-TOKEN':     document.querySelector('meta[name="csrf-token"]').content,
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'Accept':           'application/json',
-                        },
-                        body: JSON.stringify(payload),
-                    });
-
-                    // Intentar parsear como JSON; si falla, es un error HTML del servidor
-                    let data = {};
-                    try { data = await res.json(); } catch (_) {}
-
-                    if (!res.ok) {
-                        const err = data.errors
-                            ? Object.values(data.errors).flat().join(' ')
-                            : (data.message || 'Error al guardar.');
-                        this.flash(err, 'error');
-                        return; // Modal sigue abierto para que el usuario corrija
-                    }
-
-                    // Éxito: cerrar modal primero, luego mostrar flash y recargar
-                    this.crearModal = false;
-                    this.flash(data.message || 'Guardado correctamente.');
-                    setTimeout(() => window.location.reload(), 800);
-                } catch (e) {
-                    // Error de red real (no errores SQL expuestos)
-                    this.flash('Error de conexión. Intenta de nuevo.', 'error');
-                } finally {
-                    this.submitting = false;
-                }
-            },
-
             async submitEditar() {
                 this.submitting = true;
                 try {
-                    const res  = await fetch(this.routes.update(this.editForm.id_producto), {
+                    const res = await fetch(this.routes.update(this.editForm.id_producto), {
                         method: 'PUT',
                         headers: {
                             'Content-Type':     'application/json',
@@ -780,32 +814,20 @@
                         },
                         body: JSON.stringify(this.editForm),
                     });
-
                     let data = {};
                     try { data = await res.json(); } catch (_) {}
-
-                    if (!res.ok) {
-                        const err = data.errors
-                            ? Object.values(data.errors).flat().join(' ')
-                            : (data.message || 'Error al actualizar.');
-                        this.flash(err, 'error');
-                        return; // Modal sigue abierto
-                    }
-
+                    if (!res.ok) { this.flash(data.message || 'Error al actualizar.', 'error'); return; }
                     this.editarModal = false;
                     this.flash(data.message || 'Actualizado correctamente.');
                     setTimeout(() => window.location.reload(), 800);
-                } catch (e) {
-                    this.flash('Error de conexión. Intenta de nuevo.', 'error');
-                } finally {
-                    this.submitting = false;
-                }
+                } catch { this.flash('Error de conexión.', 'error'); }
+                finally { this.submitting = false; }
             },
 
             async submitEliminar() {
                 this.submitting = true;
                 try {
-                    const res  = await fetch(this.routes.destroy(this.deleteTarget.id), {
+                    const res = await fetch(this.routes.destroy(this.deleteTarget.id), {
                         method: 'DELETE',
                         headers: {
                             'X-CSRF-TOKEN':     document.querySelector('meta[name="csrf-token"]').content,
@@ -813,22 +835,62 @@
                             'Accept':           'application/json',
                         },
                     });
-
                     let data = {};
                     try { data = await res.json(); } catch (_) {}
-
-                    if (!res.ok) {
-                        this.flash(data.message || 'Error al eliminar.', 'error');
-                        return; // Modal sigue abierto
-                    }
-
+                    if (!res.ok) { this.flash(data.message || 'Error al eliminar.', 'error'); return; }
                     this.eliminarModal = false;
                     this.flash(data.message || 'Eliminado correctamente.');
                     setTimeout(() => window.location.reload(), 800);
-                } catch (e) {
-                    this.flash('Error de conexión. Intenta de nuevo.', 'error');
-                } finally {
-                    this.submitting = false;
+                } catch { this.flash('Error de conexión.', 'error'); }
+                finally { this.submitting = false; }
+            },
+        }
+    }
+
+    function varianteStock(esAdmin, stockData, cantidadInicial, stockMinimoInicial) {
+        return {
+            esAdmin,
+            stockData,
+            cantidad:    cantidadInicial,
+            stockMinimo: stockMinimoInicial,
+            colorBorde:  '',
+            colorBadge:  '',
+            stockLabel:  '',
+
+            init() {
+                if (this.esAdmin) {
+                    window.addEventListener('sucursal-cambio', (e) => {
+                        this.aplicarFiltro(e.detail);
+                    });
+                }
+                this.calcular();
+            },
+
+            aplicarFiltro(idUsuario) {
+                if (!idUsuario) {
+                    this.cantidad    = this.stockData.reduce((acc, s) => acc + s.cantidad, 0);
+                    this.stockMinimo = this.stockData[0]?.stock_minimo ?? 3;
+                } else {
+                    const row        = this.stockData.find(s => s.id_usuario === idUsuario);
+                    this.cantidad    = row?.cantidad     ?? 0;
+                    this.stockMinimo = row?.stock_minimo ?? 3;
+                }
+                this.calcular();
+            },
+
+            calcular() {
+                if (this.cantidad === 0) {
+                    this.colorBorde = 'hover:bg-red-50 dark:hover:bg-red-900/10';
+                    this.colorBadge = 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300';
+                    this.stockLabel = 'Sin stock';
+                } else if (this.cantidad < this.stockMinimo) {
+                    this.colorBorde = 'hover:bg-yellow-50 dark:hover:bg-yellow-900/10';
+                    this.colorBadge = 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300';
+                    this.stockLabel = this.cantidad + ' — bajo';
+                } else {
+                    this.colorBorde = 'hover:bg-gray-50 dark:hover:bg-gray-700/30';
+                    this.colorBadge = 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300';
+                    this.stockLabel = this.cantidad + ' uds.';
                 }
             },
         }

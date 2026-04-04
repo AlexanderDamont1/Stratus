@@ -154,23 +154,39 @@ class BicicletaController extends Controller
         $id_negocio = $user->id_negocio;
         $ahora      = now();
 
-        $inserts = collect($request->bicicletas)->map(fn($b) => [
-            'num_serie'    => strtoupper(trim($b['num_serie'])),
-            'id_modelo'    => $b['id_modelo'],
-            'id_color'     => $b['id_color'],
-            'id_voltaje'   => $b['id_voltaje'],
-            'id_negocio'   => $id_negocio,
-            'status'       => 1,
-            'created_at'   => $ahora,
-            'updated_at'   => $ahora,
-        ])->toArray();
+        $inserts = collect($request->bicicletas)->map(function($b) use ($id_negocio, $ahora) {
+            
+           
+            return [
+                'num_serie'          => strtoupper(trim($b['num_serie'])),
+                'id_modelo'          => $b['id_modelo'],
+                'id_color'           => $b['id_color'],
+                'id_voltaje'         => $b['id_voltaje'],
+                'id_negocio'         => $id_negocio,
+                
+                'status'             => 1,
+                'created_at'         => $ahora,
+                'updated_at'         => $ahora,
+            ];
+        })->toArray();
 
         \App\Models\Bicicleta::insert($inserts);
+
+        // ✅ Evento por cada bici — el listener actualiza inventario
+        foreach ($request->bicicletas as $b) {
+            event(new \App\Events\BicicletaCreada(
+                idModelo:  $b['id_modelo'],
+                idVoltaje: $b['id_voltaje'],
+                idNegocio: $id_negocio,
+                idUsuario: null,
+            ));
+        }
 
         // ✅ Invalidar caché
         CatalogService::invalidateBicicleta('masivo', $id_negocio);
         CatalogService::invalidateStockVendedores($id_negocio);
         CatalogService::invalidateSeccion(null, $id_negocio);
+        CatalogService::invalidateInventario($id_negocio);
 
         // ✅ Broadcast por cada bicicleta insertada
         $series = collect($inserts)->pluck('num_serie');
@@ -182,7 +198,7 @@ class BicicletaController extends Controller
                 event(new BicicletaActualizada(
                     numSerie:       $bici->num_serie,
                     idNegocio:      $id_negocio,
-                    idUsuario:      '',  // sin asignar
+                    idUsuario:      '',
                     nombreVendedor: $user->nombre_usuario,
                     modelo:         $bici->modelo->nombre_modelo ?? '—',
                     voltaje:        $bici->voltaje->voltaje       ?? '—',
@@ -258,8 +274,8 @@ class BicicletaController extends Controller
             $item = $pedido->items->first(
                 fn($i) =>
                 $i->id_modelo  == $request->id_modelo &&
-                    $i->id_voltaje == $request->id_voltaje &&
-                    $i->id_color   == $request->id_color
+                $i->id_voltaje == $request->id_voltaje &&
+                $i->id_color   == $request->id_color
             );
 
             if (!$item) {
@@ -280,24 +296,33 @@ class BicicletaController extends Controller
             }
         }
 
+
         $bicicleta = Bicicleta::create([
-            'num_serie'  => strtoupper($request->num_serie),
-            'id_negocio' => $idNegocio,
-            'id_modelo'  => $request->id_modelo,
-            'id_voltaje' => $request->id_voltaje,
-            'id_color'   => $request->id_color,
-            'id_pedido'  => $request->id_pedido ?? null,
+            'num_serie'          => strtoupper($request->num_serie),
+            'id_negocio'         => $idNegocio,
+            'id_modelo'          => $request->id_modelo,
+            'id_voltaje'         => $request->id_voltaje,
+            'id_color'           => $request->id_color,
+            'id_pedido'          => $request->id_pedido ?? null,
+           
         ]);
+
+        event(new \App\Events\BicicletaCreada(
+            idModelo:  $request->id_modelo,
+            idVoltaje: $request->id_voltaje,
+            idNegocio: $idNegocio,
+            idUsuario: null,
+        ));
 
         // ✅ Invalidar caché
         CatalogService::invalidateBicicleta($bicicleta->num_serie, $idNegocio);
         CatalogService::invalidateSeccion($bicicleta->id_usuario, $idNegocio);
         CatalogService::invalidateSeccion(null, $idNegocio);
+        CatalogService::invalidateInventario($idNegocio);
 
         $completo = false;
 
         if ($request->id_pedido) {
-            // ── Status 1 → 2 ──────────────────────────────────────────
             $pedidoActual = \App\Models\Pedido::find($request->id_pedido);
             if ($pedidoActual && $pedidoActual->status == 1) {
                 $pedidoActual->update(['status' => 2]);
@@ -305,17 +330,13 @@ class BicicletaController extends Controller
                 Cache::forget("pedidos:index:{$pedidoActual->id_usuario}:all:all:page:1");
 
                 $pedidoFresh = \App\Models\Pedido::with([
-                    'negocio',
-                    'usuario',
-                    'items.modelo',
-                    'items.voltaje',
-                    'items.color'
+                    'negocio', 'usuario',
+                    'items.modelo', 'items.voltaje', 'items.color'
                 ])->find($pedidoActual->id_pedido);
 
                 event(new \App\Events\PedidoUpdated($pedidoFresh, 'updated'));
             }
 
-            // ── Verificar si completo → Status 2 → 3 ──────────────────
             $pedidoFull = \App\Models\Pedido::with(['items', 'bicicletas'])->find($request->id_pedido);
             if ($pedidoFull) {
                 $completo = $pedidoFull->items->every(
@@ -343,11 +364,8 @@ class BicicletaController extends Controller
                     ]);
 
                     $pedidoFullFresh = \App\Models\Pedido::with([
-                        'negocio',
-                        'usuario',
-                        'items.modelo',
-                        'items.voltaje',
-                        'items.color'
+                        'negocio', 'usuario',
+                        'items.modelo', 'items.voltaje', 'items.color'
                     ])->find($pedidoFull->id_pedido);
 
                     event(new \App\Events\PedidoUpdated($pedidoFullFresh, 'updated'));
@@ -590,6 +608,38 @@ class BicicletaController extends Controller
             if (!$guardado) {
                 Log::error('No se pudo guardar la bicicleta', ['num_serie' => $bici->num_serie]);
                 return response()->json(['ok' => false, 'message' => 'No se pudo asignar'], 500);
+            }
+            
+            if ($guardado) {
+                $pm = \App\Models\ProductoModelo::where('id_modelo',  $bici->id_modelo)
+                    ->where('id_voltaje', $bici->id_voltaje)
+                    ->first();
+
+                if ($pm) {
+                    // Restar del stock admin (donde venía)
+                    \App\Models\Inventario::where('id_producto_modelo', $pm->id_producto_modelo)
+                        ->where('id_negocio', $idNegocio)
+                        ->whereNull('id_usuario')
+                        ->where('cantidad', '>', 0)
+                        ->decrement('cantidad');
+
+                    // Crear registro de sucursal si no existe, luego sumar
+                    $invSucursal = \App\Models\Inventario::firstOrCreate(
+                        [
+                            'id_producto_modelo' => $pm->id_producto_modelo,
+                            'id_negocio'         => $idNegocio,
+                            'id_usuario'         => $user->id_usuario,
+                        ],
+                        [
+                            'id_inventario' => 'INV' . strtoupper(substr(md5(uniqid()), 0, 12)),
+                            'cantidad'       => 0,
+                            'stock_minimo'   => 3,
+                        ]
+                    );
+                    $invSucursal->increment('cantidad');
+                }
+
+                CatalogService::invalidateInventario($idNegocio); // ya lo tenías ✅
             }
 
             // ✅ Invalidar caché

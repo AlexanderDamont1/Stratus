@@ -56,6 +56,8 @@ async function recargarMarcaCard(idMarca) {
 document.addEventListener('alpine:init', () => {
     Alpine.data('catalogoPage', () => ({
 
+        loading: true,
+
         marcaModal:   false,
         modeloModal:  false,
         colorModal:   false,
@@ -96,6 +98,17 @@ document.addEventListener('alpine:init', () => {
         init() {
             window._catalogoPage = this;
             this._initWebSocket();
+
+            // ── Lógica del skeleton ──
+            const skeletonShown = sessionStorage.getItem('catalogoSkeletonShown');
+            if (skeletonShown === 'true') {
+                this.loading = false;               // ya se mostró → ocultar de inmediato
+            } else {
+                setTimeout(() => {
+                    this.loading = false;
+                    sessionStorage.setItem('catalogoSkeletonShown', 'true');
+                }, 300);                            // tiempo suficiente para que se vea
+            }
         },
 
         _initWebSocket() {

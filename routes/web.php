@@ -57,6 +57,7 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
     Route::get('/profile',    [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile',  [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::get('/modelo-voltaje', [ModeloVoltajeController::class, 'modeloVoltaje'])->name('modelo-voltaje');
 
     Route::post('/admin/setup/completar', [SetupController::class, 'completar'])->name('admin.setup.completar');
 
@@ -94,11 +95,7 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
     Route::get('/voltaje-por-modelo/{id_modelo}', [ModeloVoltajeController::class, 'voltajesPorModelo'])->name('voltajes.porModelo');
     Route::get('/colores-por-modelo/{id_modelo}', [BicicletaController::class, 'coloresPorModelo'])->name('colores.porModelo');
 
-    // Pedidos (accesibles para admin + gestor + ventas según lógica del controlador)
-    Route::get('/pedidos',                          [PedidoController::class, 'index'])->name('pedidos.index');
-    Route::post('/pedidos',                         [PedidoController::class, 'store'])->name('pedidos.store');
-    Route::get('/pedidos/{id_pedido}',              [PedidoController::class, 'show'])->name('pedidos.show');
-    Route::patch('/pedidos/{id_pedido}/status',     [PedidoController::class, 'updateStatus'])->name('pedidos.status');
+    
 
     /*
     |----------------------------------------------------------------------
@@ -127,6 +124,7 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
 
         // Pedidos (solo admin puede crear/editar/eliminar pedidos)
         Route::get('/pedidos/crear',              [PedidoController::class, 'create'])->name('pedidos.create');
+        Route::post('/pedidos',                   [PedidoController::class, 'store'])->name('pedidos.store');
         Route::get('/pedidos/{id_pedido}/edit',   [PedidoController::class, 'edit'])->name('pedidos.edit');
         Route::put('/pedidos/{id_pedido}',        [PedidoController::class, 'update'])->name('pedidos.update');
         Route::delete('/pedidos/{id_pedido}',     [PedidoController::class, 'destroy'])->name('pedidos.destroy');
@@ -184,6 +182,9 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
             Route::put('/voltajes/{voltaje}',    [VoltajeController::class, 'update'])->name('voltajes.update');
             Route::delete('/voltajes/{voltaje}', [VoltajeController::class, 'destroy'])->name('voltajes.destroy');
 
+             Route::post('/modelo-voltaje',       [ModeloVoltajeController::class, 'store'])->name('modelo-voltaje.store');
+            Route::delete('/modelo-voltaje/{id}',[ModeloVoltajeController::class, 'destroy'])->name('modelo-voltaje.destroy');
+
             // Voltajes disponibles para asignar a modelo (distintos de los de productos)
             Route::get('/voltajes-disponibles/{modelo}', function (\App\Models\Modelo $modelo) {
                 $user = auth()->user();
@@ -199,9 +200,7 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
                 );
             })->name('voltajes.disponibles');
 
-            // Modelo-Voltaje (relación catálogo, diferente a voltajesPorModelo de productos)
-            Route::post('/modelo-voltaje',       [ModeloVoltajeController::class, 'store'])->name('modelo-voltaje.store');
-            Route::delete('/modelo-voltaje/{id}',[ModeloVoltajeController::class, 'destroy'])->name('modelo-voltaje.destroy');
+           
 
             // Sugerir hex por IA
             Route::post('/sugerir-hex', function (Request $request) {
@@ -226,6 +225,8 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
                 ]);
             })->name('sugerir-hex');
         });
+
+        
     });
 
     /*
@@ -245,9 +246,11 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
                 Route::put('/bicicletas/{id}',                   [BicicletaController::class, 'update'])->name('bicicletas.update');
                 Route::delete('/bicicletas/{num_serie}/pedido',  [BicicletaController::class, 'destroyFromPedido'])->name('bicicletas.destroyFromPedido');
                 Route::get('bicicletas/cliente/{id_cliente}',    [BicicletaController::class, 'getByCliente'])->name('bicicletas.por-cliente');
+                
 
                 // Modelos
                 Route::get('/modelos/crear',          [ModeloController::class, 'create'])->name('modelos.create');
+                Route::get('/modelos',                [ModeloController::class, 'index'])->name('modelos.index');
                 Route::post('/modelos',               [ModeloController::class, 'store'])->name('modelos.store');
                 Route::get('/modelos/{modelo}/editar',[ModeloController::class, 'edit'])->name('modelos.edit');
                 Route::put('/modelos/{modelo}',       [ModeloController::class, 'update'])->name('modelos.update');
@@ -255,6 +258,7 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
 
                 // Colores
                 Route::get('/colores/crear',          [ColorController::class, 'create'])->name('colores.create');
+                Route::get('/colores',                [ColorController::class, 'index'])->name('colores.index');
                 Route::post('/colores',               [ColorController::class, 'store'])->name('colores.store');
                 Route::get('/colores/{color}/editar', [ColorController::class, 'edit'])->name('colores.edit');
                 Route::put('/colores/{color}',        [ColorController::class, 'update'])->name('colores.update');
@@ -294,6 +298,12 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
         Route::post('/enlaces/generar',          [EnlaceController::class, 'generar'])->name('enlaces.generar');
         Route::patch('/enlaces/{id}/cancelar',   [EnlaceController::class, 'cancelar'])->name('enlaces.cancelar');
         Route::get('gestor/vehiculos/bicicletas',[BicicletaController::class, 'index'])->name('bicicletas.index');
+        Route::post('/modelo-voltaje',       [ModeloVoltajeController::class, 'store'])->name('modelo-voltaje.store');
+        Route::delete('/modelo-voltaje/{id}',[ModeloVoltajeController::class, 'destroy'])->name('modelo-voltaje.destroy');
+        Route::get('/pedidos',                          [PedidoController::class, 'index'])->name('pedidos.index');
+        Route::get('/pedidos/{id_pedido}',              [PedidoController::class, 'show'])->name('pedidos.show');
+        Route::patch('/pedidos/{id_pedido}/status',     [PedidoController::class, 'updateStatus'])->name('pedidos.status');
+
     });
 
     /*
@@ -317,6 +327,8 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
             Route::get('/voltajes/{idModelo}',         [ProductoController::class, 'voltajesPorModelo'])->name('voltajes');
             Route::get('/modelos-por-marca/{idMarca}', [ProductoController::class, 'modelosPorMarca'])->name('modelosPorMarca');
         });
+
+        
     });
 
     /*
