@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use App\Services\CatalogService;
 use App\Traits\ResolvesAdminRoute;
+use App\Events\CatalogoActualizado;
+
 
 class VoltajeController extends Controller
 {
@@ -117,6 +119,8 @@ class VoltajeController extends Controller
         ]);
 
         $voltaje->update(['voltaje' => $request->voltaje]);
+
+        CatalogoActualizado::dispatch($user->id_negocio, 'voltaje', 'actualizado', '');
 
         CatalogService::invalidateVoltaje($voltaje->id_voltaje, $idNegocio);
 

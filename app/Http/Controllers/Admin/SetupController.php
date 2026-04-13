@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
+use App\Services\CatalogService;
 
 class SetupController extends Controller
 {
@@ -70,6 +71,9 @@ class SetupController extends Controller
 
             // salir del modo setup
             $admin->update(['id_rol' => 1]);
+
+            CatalogService::invalidateStockVendedores($admin->id_negocio);
+            CatalogService::invalidateSucursales($admin->id_negocio);
         });
 
         return redirect()

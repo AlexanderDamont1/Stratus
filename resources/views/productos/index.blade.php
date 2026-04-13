@@ -65,133 +65,186 @@
     <div>
         <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Bicicletas</p>
 
-        <div x-show="loading" x-cloak class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        {{-- Skeleton --}}
+        <div x-show="loading" x-cloak class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             @for ($i = 0; $i < min(5, $bicicletas->count()); $i++)
-            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 sm:p-3.5 flex flex-col gap-2.5 animate-pulse">
-                <div class="flex items-start justify-between gap-2">
-                    <div class="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
-                    <div class="h-5 w-12 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
-                </div>
-                <div class="h-5 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-                <div class="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-                <div class="flex justify-end mt-auto">
-                    <div class="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden animate-pulse">
+                <div class="bg-gray-100 dark:bg-gray-700 h-24"></div>
+                <div class="p-3 space-y-2">
+                    <div class="h-3 bg-gray-200 dark:bg-gray-600 rounded w-3/4"></div>
+                    <div class="h-3 bg-gray-200 dark:bg-gray-600 rounded w-1/2"></div>
+                    <div class="h-7 bg-gray-200 dark:bg-gray-600 rounded mt-2"></div>
                 </div>
             </div>
             @endfor
         </div>
 
-        <div x-show="!loading" x-cloak class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div x-show="!loading" x-cloak class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             @foreach($bicicletas as $idModelo => $variantes)
             @php
-                $primera = $variantes->first();
-                $pm      = $primera->productoModelo?->first();
-                $precios = $variantes->pluck('precio');
-                $min     = $precios->min();
-                $max     = $precios->max();
-            @endphp
+                $primera  = $variantes->first();
+                $vpm      = $primera->productoModelo?->first();
+                $marca    = $vpm?->modelo?->marca?->nombre_marca ?? '—';
+                $modelo   = $vpm?->modelo?->nombre_modelo ?? $primera->nombre_producto;
+                $colores  = $coloresPorModelo[$idModelo] ?? [];
 
-            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 sm:p-3.5 flex flex-col gap-2.5 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5"
-                 x-data="{ variantesOpen: false }">
+                $precios   = $variantes->pluck('precio')->map(fn($p) => (float)$p)->sort()->values();
+                $precioMin = $precios->first();
+                $precioMax = $precios->last();
 
-                <div class="flex items-start justify-between gap-2">
-                    <span class="inline-flex items-center gap-1.5 bg-purple-100/80 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-purple-200/50 dark:border-purple-700/50">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
-                        Bicicleta
-                    </span>
-                    <span class="text-[8px] sm:text-[10px] font-medium bg-emerald-100/80 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 px-1.5 sm:px-2 py-0.5 rounded-full">
-                        {{ $variantes->count() }} {{ $variantes->count() === 1 ? 'variante' : 'variantes' }}
-                    </span>
-                </div>
+                // Acumular stock de todas las variantes para el badge de la card
+                $stockTotalInicial = 0;
+                $stockMinimoRef    = 3;
+                $allStockJson      = [];
 
-                <p class="text-sm font-semibold text-gray-800 dark:text-white leading-snug">
-                    {{ $pm?->modelo->marca->nombre_marca ?? '—' }}
-                    <span class="text-sm text-gray-400">~</span>
-                    {{ $pm?->modelo->nombre_modelo ?? $primera->nombre_producto }}
-                </p>
-
-                <p class="text-lg font-semibold text-gray-900 dark:text-white">
-                    @if($min == $max)
-                        ${{ number_format($min, 0) }}
-                    @else
-                        ${{ number_format($min, 0) }}
-                        <span class="text-sm text-gray-400">~</span>
-                        ${{ number_format($max, 0) }}
-                    @endif
-                </p>
-
-                <button @click="variantesOpen = !variantesOpen"
-                    class="flex items-center gap-1.5 text-[11px] font-medium text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-600 rounded-lg px-2.5 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition active:scale-95 mt-auto">
-                    <span x-text="variantesOpen ? 'Ocultar variantes' : 'Variantes'"></span>
-                    <svg class="w-3.5 h-3.5 ml-auto transition-transform duration-200 flex-shrink-0"
-                        :class="variantesOpen ? 'rotate-90' : ''"
-                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                    </svg>
-                </button>
-
-                {{-- VARIANTES DESPLEGABLES --}}
-                <div x-show="variantesOpen" x-cloak
-                    x-transition:enter="transition ease-out duration-200"
-                    x-transition:enter-start="opacity-0 scale-95 -translate-y-2"
-                    x-transition:enter-end="opacity-100 scale-100 translate-y-0"
-                    x-transition:leave="transition ease-in duration-150"
-                    x-transition:leave-start="opacity-100 scale-100"
-                    x-transition:leave-end="opacity-0 scale-95 -translate-y-2"
-                    class="border border-gray-100 dark:border-gray-700 rounded-lg overflow-hidden">
-
-                    @foreach($variantes as $v)
-                    @php
-                        $vpm     = $v->productoModelo?->first();
-                        $idPm    = $vpm?->id_producto_modelo;
-
-                        $stockRows = $idPm && isset($inventario[$idPm])
-                            ? (is_iterable($inventario[$idPm]) ? collect($inventario[$idPm]) : collect([$inventario[$idPm]]))
-                            : collect();
-
-                        $stockItem   = $stockRows->first();
-                        $cantidad    = $stockItem?->cantidad    ?? 0;
-                        $stockMinimo = $stockItem?->stock_minimo ?? 3;
-
-                        $stockJson = $stockRows->map(fn($s) => [
+                foreach ($variantes as $v) {
+                    $idPm = $v->productoModelo?->first()?->id_producto_modelo;
+                    $rows = $idPm && isset($inventario[$idPm])
+                        ? (is_iterable($inventario[$idPm]) ? collect($inventario[$idPm]) : collect([$inventario[$idPm]]))
+                        : collect();
+                    foreach ($rows as $s) {
+                        $stockTotalInicial += $s->cantidad;
+                        $stockMinimoRef     = $s->stock_minimo ?? 3;
+                        $allStockJson[]     = [
                             'id_usuario'   => $s->id_usuario ?? '',
                             'cantidad'     => $s->cantidad,
                             'stock_minimo' => $s->stock_minimo,
-                        ])->values()->toJson();
-                    @endphp
+                        ];
+                    }
+                }
 
-                    <div class="flex items-center gap-2 px-2.5 py-2 border-b border-gray-100 dark:border-gray-700 last:border-b-0"
-                         x-data="varianteStock({{ $esRol1 ? 'true' : 'false' }}, {{ $stockJson }}, {{ $cantidad }}, {{ $stockMinimo }})"
-                         x-init="init()"
-                         :class="colorBorde">
+                $stockJsonStr = json_encode(array_values($allStockJson));
+            @endphp
 
-                        <span class="text-[10px] font-medium bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-2 py-0.5 rounded-full flex-shrink-0">
-                            {{ $vpm?->voltaje?->voltaje ?? '—' }}
-                        </span>
+            <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5"
+                 x-data="modeloStock({{ $esRol1 ? 'true' : 'false' }}, {{ $stockJsonStr }}, {{ $stockTotalInicial }}, {{ $stockMinimoRef }})"
+                 x-init="init()">
 
-                        <span class="text-xs font-semibold text-gray-700 dark:text-gray-200">
-                            ${{ number_format($v->precio, 0) }}
-                        </span>
+                {{-- Header con rango de precios — siempre gris --}}
+                <div class="px-4 py-5 text-center bg-gray-50 dark:bg-gray-700/50">
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mb-1">
+                        {{ $marca }} · {{ $modelo }}
+                    </p>
+                    <p class="text-2xl font-semibold text-gray-900 dark:text-white">
+                        @if($precioMin == $precioMax)
+                            ${{ number_format($precioMin, 0) }}
+                        @else
+                            ${{ number_format($precioMin, 0) }}<span class="text-base font-normal text-gray-400 mx-1">~</span>${{ number_format($precioMax, 0) }}
+                        @endif
+                    </p>
+                </div>
 
-                        <span class="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
+                {{-- Body --}}
+                <div class="bg-white dark:bg-gray-800 px-3 py-3 flex flex-col gap-2">
+
+                    {{-- Colores --}}
+                    @if(count($colores))
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] text-gray-400">Colores</span>
+                        <div class="flex items-center gap-1">
+                            @foreach(array_slice($colores, 0, 5) as $color)
+                                @if(count($color['hex']) === 2)
+                                <div class="relative w-3.5 h-3.5 rounded-full overflow-hidden border border-gray-200 dark:border-gray-600 flex-shrink-0"
+                                     title="{{ $color['nombre'] }}">
+                                    <div class="absolute inset-0 w-1/2" style="background:{{ $color['hex'][0] }}"></div>
+                                    <div class="absolute inset-0 left-1/2 w-1/2" style="background:{{ $color['hex'][1] }}"></div>
+                                </div>
+                                @else
+                                <div class="w-3.5 h-3.5 rounded-full border border-gray-200 dark:border-gray-600 flex-shrink-0"
+                                     style="background:{{ $color['hex'][0] }}"
+                                     title="{{ $color['nombre'] }}"></div>
+                                @endif
+                            @endforeach
+                            @if(count($colores) > 5)
+                            <span class="text-[10px] text-gray-400">+{{ count($colores) - 5 }}</span>
+                            @endif
+                        </div>
+                    </div>
+                    @endif
+
+                    {{-- Stock total del modelo (badge siempre gris) --}}
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] text-gray-400">Stock</span>
+                        <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full"
                               :class="colorBadge"
                               x-text="stockLabel">
                         </span>
+                    </div>
 
-                        <button @click.stop="abrirEditar(
-                                '{{ $v->id_producto }}',
-                                '{{ addslashes($v->nombre_producto) }}',
-                                '{{ $v->tipo }}',
-                                '{{ $v->precio }}'
-                            )"
-                            class="w-7 h-7 flex items-center justify-center rounded-md border border-gray-200 dark:border-gray-600 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition hover:scale-105 active:scale-95 flex-shrink-0">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                                <circle cx="12" cy="12" r="3" stroke-width="2"/>
+                    {{-- Botón desplegable de variantes --}}
+                    <div x-data="{ open: false }">
+                        <button @click="open = !open"
+                            class="w-full text-[11px] text-gray-400 border border-gray-200 dark:border-gray-600 rounded-lg py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition active:scale-95 flex items-center justify-center gap-1">
+                            <span x-text="open ? 'Ocultar' : '{{ $variantes->count() }} {{ $variantes->count() === 1 ? "variante" : "variantes" }}'"></span>
+                            <svg class="w-3 h-3 transition-transform duration-200" :class="open ? 'rotate-180' : ''"
+                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </button>
+
+                        {{-- Filas por variante --}}
+                        <div x-show="open" x-cloak
+                             x-transition:enter="transition ease-out duration-200"
+                             x-transition:enter-start="opacity-0 -translate-y-1"
+                             x-transition:enter-end="opacity-100 translate-y-0"
+                             x-transition:leave="transition ease-in duration-150"
+                             x-transition:leave-start="opacity-100"
+                             x-transition:leave-end="opacity-0 -translate-y-1"
+                             class="mt-2 border border-gray-100 dark:border-gray-700 rounded-lg overflow-hidden">
+
+                            @foreach($variantes as $v)
+                            @php
+                                $vpm2    = $v->productoModelo?->first();
+                                $idPm2   = $vpm2?->id_producto_modelo;
+                                $volt2   = $vpm2?->voltaje?->voltaje ?? '—';
+
+                                $rows2 = $idPm2 && isset($inventario[$idPm2])
+                                    ? (is_iterable($inventario[$idPm2]) ? collect($inventario[$idPm2]) : collect([$inventario[$idPm2]]))
+                                    : collect();
+
+                                $cant2   = $rows2->first()?->cantidad    ?? 0;
+                                $minimo2 = $rows2->first()?->stock_minimo ?? 3;
+                                $sJson2  = $rows2->map(fn($s) => [
+                                    'id_usuario'   => $s->id_usuario ?? '',
+                                    'cantidad'     => $s->cantidad,
+                                    'stock_minimo' => $s->stock_minimo,
+                                ])->values()->toJson();
+                            @endphp
+
+                            <div class="flex items-center gap-2 px-2.5 py-2 border-b border-gray-100 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition"
+                                 x-data="varianteStock({{ $esRol1 ? 'true' : 'false' }}, {{ $sJson2 }}, {{ $cant2 }}, {{ $minimo2 }})"
+                                 x-init="init()">
+
+                                <span class="text-[10px] font-medium bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-2 py-0.5 rounded-full flex-shrink-0">
+                                    {{ $volt2 }}
+                                </span>
+
+                                <span class="text-xs font-semibold text-gray-700 dark:text-gray-200">
+                                    ${{ number_format($v->precio, 0) }}
+                                </span>
+
+                                <span class="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
+                                      :class="colorBadge"
+                                      x-text="stockLabel">
+                                </span>
+
+                                <button @click.stop="abrirEditar(
+                                        '{{ $v->id_producto }}',
+                                        '{{ addslashes($v->nombre_producto) }}',
+                                        '{{ $v->tipo }}',
+                                        '{{ $v->precio }}'
+                                    )"
+                                    class="w-7 h-7 flex items-center justify-center rounded-md border border-gray-200 dark:border-gray-600 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition hover:scale-105 active:scale-95 flex-shrink-0"
+                                    title="Editar precio">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            @endforeach
+                        </div>
                     </div>
-                    @endforeach
+
                 </div>
             </div>
             @endforeach
@@ -204,22 +257,19 @@
     <div>
         <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Accesorios</p>
 
-        <div x-show="loading" x-cloak class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div x-show="loading" x-cloak class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             @for ($i = 0; $i < min(5, $accesorios->count()); $i++)
-            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 sm:p-3.5 flex flex-col gap-2.5 animate-pulse">
-                <div class="flex items-start justify-between gap-2">
-                    <div class="h-6 w-20 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
-                </div>
-                <div class="h-5 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-                <div class="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-                <div class="flex justify-end mt-auto">
-                    <div class="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden animate-pulse">
+                <div class="bg-gray-100 dark:bg-gray-700 h-24"></div>
+                <div class="p-3 space-y-2">
+                    <div class="h-3 bg-gray-200 dark:bg-gray-600 rounded w-3/4"></div>
+                    <div class="h-7 bg-gray-200 dark:bg-gray-600 rounded mt-2"></div>
                 </div>
             </div>
             @endfor
         </div>
 
-        <div x-show="!loading" x-cloak class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div x-show="!loading" x-cloak class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             @foreach($accesorios as $producto)
             @php
                 $idPm      = $producto->productoModelo?->first()?->id_producto_modelo;
@@ -232,12 +282,7 @@
                 $cantidad    = $stockItem?->cantidad    ?? 0;
                 $stockMinimo = $stockItem?->stock_minimo ?? 3;
 
-                $colorCard = $cantidad == 0
-                    ? 'border-red-300 dark:border-red-700 bg-red-50/50 dark:bg-red-900/10'
-                    : ($cantidad < $stockMinimo
-                        ? 'border-yellow-300 dark:border-yellow-700 bg-yellow-50/50 dark:bg-yellow-900/10'
-                        : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800');
-
+                // Card siempre gris — solo el badge conserva colores
                 $badgeColor = $cantidad == 0
                     ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
                     : ($cantidad < $stockMinimo
@@ -249,39 +294,35 @@
                     : ($cantidad < $stockMinimo ? $cantidad . ' — bajo' : $cantidad . ' uds.');
             @endphp
 
-            <div class="border rounded-xl p-4 sm:p-3.5 flex flex-col gap-2.5 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 {{ $colorCard }}"
-                 id="producto-row-{{ $producto->id_producto }}">
+            <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
 
-                <div class="flex items-start justify-between gap-2">
-                    <span class="inline-flex items-center gap-1.5 bg-amber-100/80 dark:bg-amber-900/40 text-amber-900 dark:text-amber-400 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-amber-200/50 dark:border-amber-700/50">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-                        Accesorio
-                    </span>
-                    <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full {{ $badgeColor }}">
-                        {{ $badgeLabel }}
-                    </span>
+                {{-- Header — siempre gris --}}
+                <div class="bg-gray-50 dark:bg-gray-700/50 px-4 py-5 text-center">
+                    <div class="w-8 h-8 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center mx-auto mb-2">
+                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                        </svg>
+                    </div>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mb-1 truncate px-2">{{ $producto->nombre_producto }}</p>
+                    <p class="text-2xl font-semibold text-gray-900 dark:text-white">${{ number_format($producto->precio, 0) }}</p>
                 </div>
 
-                <p class="text-sm font-semibold text-gray-800 dark:text-white leading-snug">
-                    {{ $producto->nombre_producto }}
-                </p>
-
-                <p class="text-lg font-semibold text-gray-900 dark:text-white">
-                    ${{ number_format($producto->precio, 2) }}
-                </p>
-
-                <div class="flex justify-end mt-auto">
+                {{-- Body --}}
+                <div class="bg-white dark:bg-gray-800 px-3 py-3 flex flex-col gap-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] text-gray-400">Stock</span>
+                        <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full {{ $badgeColor }}">
+                            {{ $badgeLabel }}
+                        </span>
+                    </div>
                     <button @click.stop="abrirEditar(
                             '{{ $producto->id_producto }}',
                             '{{ addslashes($producto->nombre_producto) }}',
                             '{{ $producto->tipo }}',
                             '{{ $producto->precio }}'
                         )"
-                        class="w-9 h-9 sm:w-8 sm:h-8 flex items-center justify-center border border-gray-200 dark:border-gray-600 rounded-lg text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-600 dark:hover:text-gray-300 transition hover:scale-105 active:scale-95">
-                        <svg class="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                            <circle cx="12" cy="12" r="3" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-                        </svg>
+                        class="w-full text-[11px] text-gray-400 border border-gray-200 dark:border-gray-600 rounded-lg py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition active:scale-95 mt-1">
+                        Editar precio
                     </button>
                 </div>
             </div>
@@ -406,7 +447,6 @@
                     </select>
                 </div>
                 @endif
-
                 <div>
                     <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Marca</label>
                     <select x-model="form.id_marca" @change="cargarModelos($event.target.value)"
@@ -417,7 +457,6 @@
                         @endforeach
                     </select>
                 </div>
-
                 <div>
                     <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Modelo</label>
                     <div x-show="loadingModelos" class="text-xs text-gray-400 py-2 px-1">Cargando modelos...</div>
@@ -431,7 +470,6 @@
                         </template>
                     </select>
                 </div>
-
                 <div>
                     <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Voltaje</label>
                     <div x-show="loadingVoltajes" class="text-xs text-gray-400 py-2 px-1">Cargando voltajes...</div>
@@ -450,7 +488,6 @@
                         Este modelo ya tiene precio para todos sus voltajes.
                     </p>
                 </div>
-
                 <div>
                     <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Precio</label>
                     <div class="relative">
@@ -507,7 +544,8 @@
                 </div>
                 <button type="button"
                     @click="editarModal = false; abrirEliminar(editForm.id_producto, editForm.nombre_producto)"
-                    class="w-8 h-8 flex items-center justify-center border border-red-200 dark:border-red-800 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition active:scale-95">
+                    class="w-8 h-8 flex items-center justify-center border border-red-200 dark:border-red-800 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition active:scale-95"
+                    title="Eliminar producto">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                     </svg>
@@ -624,15 +662,15 @@
             loadingVoltajes:      false,
             modelosDisponibles:   [],
             voltajesDisponibles:  [],
-            sucursalSeleccionada: '',
+            sucursalSeleccionada: '{{ $idSucursalFiltro ?? "" }}',
 
             form: {
                 tipo: '1', id_usuario: '', nombre_producto: '',
                 id_marca: '', id_modelo: '', id_voltaje: '', precio: '',
             },
-            editFormOriginal: { nombre_producto: '', precio: '' },
-            editForm: { id_producto: '', nombre_producto: '', tipo: '', precio: '' },
-            deleteTarget: { id: '', nombre: '' },
+                editFormOriginal: { nombre_producto: '', precio: '' },
+                editForm: { id_producto: '', nombre_producto: '', tipo: '', precio: '' },
+                deleteTarget: { id: '', nombre: '' },
 
             get accesorioValido() {
                 const tieneNombre = this.form.nombre_producto.trim().length > 0;
@@ -683,8 +721,19 @@
                         sessionStorage.setItem('productPageSkeletonShown', 'true');
                     }, 300);
                 }
+
+                // ✅ Antes solo disparaba el evento Alpine (solo actualizaba números).
+                // Ahora navega al servidor para que PHP filtre los productos correctos.
                 this.$watch('sucursalSeleccionada', val => {
-                    window.dispatchEvent(new CustomEvent('sucursal-cambio', { detail: val }));
+                    const url = new URL(window.location.href);
+                    if (val) {
+                        url.searchParams.set('sucursal', val);
+                    } else {
+                        url.searchParams.delete('sucursal');
+                    }
+                    // ✅ Resetear el skeleton para que se vea la transición
+                    sessionStorage.removeItem('productPageSkeletonShown');
+                    window.location.href = url.toString();
                 });
             },
 
@@ -847,21 +896,55 @@
         }
     }
 
+    // Card principal del modelo: badge de stock siempre gris (sin alerta de color)
+    function modeloStock(esAdmin, stockData, cantidadInicial, stockMinimoInicial) {
+        return {
+            esAdmin,
+            stockData,
+            cantidad:    cantidadInicial,
+            stockMinimo: stockMinimoInicial,
+            colorBadge:  '',
+            stockLabel:  '',
+
+            init() {
+                if (this.esAdmin) {
+                    window.addEventListener('sucursal-cambio', (e) => this.aplicarFiltro(e.detail));
+                }
+                this.calcular();
+            },
+
+            aplicarFiltro(idUsuario) {
+                if (!idUsuario) {
+                    this.cantidad    = this.stockData.reduce((acc, s) => acc + s.cantidad, 0);
+                    this.stockMinimo = this.stockData[0]?.stock_minimo ?? 3;
+                } else {
+                    const rows = this.stockData.filter(s => s.id_usuario === idUsuario);
+                    this.cantidad    = rows.reduce((acc, s) => acc + s.cantidad, 0);
+                    this.stockMinimo = rows[0]?.stock_minimo ?? 3;
+                }
+                this.calcular();
+            },
+
+            calcular() {
+                this.colorBadge = 'bg-purple-100 text-purple-800 dark:bg-purple-800/30 dark:text-purple-400';
+                this.stockLabel = this.cantidad === 0 ? 'Sin stock' : this.cantidad + ' uds.';
+            },
+        }
+    }
+
+    // Filas de variante desplegable: badge con colores según stock
     function varianteStock(esAdmin, stockData, cantidadInicial, stockMinimoInicial) {
         return {
             esAdmin,
             stockData,
             cantidad:    cantidadInicial,
             stockMinimo: stockMinimoInicial,
-            colorBorde:  '',
             colorBadge:  '',
             stockLabel:  '',
 
             init() {
                 if (this.esAdmin) {
-                    window.addEventListener('sucursal-cambio', (e) => {
-                        this.aplicarFiltro(e.detail);
-                    });
+                    window.addEventListener('sucursal-cambio', (e) => this.aplicarFiltro(e.detail));
                 }
                 this.calcular();
             },
@@ -880,15 +963,9 @@
 
             calcular() {
                 if (this.cantidad === 0) {
-                    this.colorBorde = 'hover:bg-red-50 dark:hover:bg-red-900/10';
                     this.colorBadge = 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300';
                     this.stockLabel = 'Sin stock';
-                } else if (this.cantidad < this.stockMinimo) {
-                    this.colorBorde = 'hover:bg-yellow-50 dark:hover:bg-yellow-900/10';
-                    this.colorBadge = 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300';
-                    this.stockLabel = this.cantidad + ' — bajo';
                 } else {
-                    this.colorBorde = 'hover:bg-gray-50 dark:hover:bg-gray-700/30';
                     this.colorBadge = 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300';
                     this.stockLabel = this.cantidad + ' uds.';
                 }
@@ -898,4 +975,4 @@
     </script>
 
 </div>
-</x-app-layout>
+</x-app-layout> 

@@ -16,7 +16,7 @@ return new class extends Migration
             $table->char('id_negocio', 36);
             $table->char('id_usuario', 36);
             $table->string('nombre_producto');
-            $table->decimal('precio', 10, 2);      // El precio que pone la sucursal
+            $table->decimal('precio', 10, 2)->nullable();      // El precio que pone la sucursal
             $table->char('tipo', 3)->default('1');
             $table->timestamps();
 

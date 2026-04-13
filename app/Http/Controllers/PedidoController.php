@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use App\Events\PedidoUpdated;
-use App\Http\Controllers\InventarioController;
+use App\Events\BicicletaActualizada;
 
 class PedidoController extends Controller
 {
@@ -425,38 +425,47 @@ class PedidoController extends Controller
         DB::transaction(function () use ($pedido, $tokenRecord, $idNegocioGestor) {
             $pedido->update(['status' => 4]);
 
+            // ✅ Loop limpio, sin anidado
             foreach ($pedido->bicicletas as $bici) {
+                // Invalida caché en negocio ORIGEN antes de mover
                 CatalogService::invalidateBicicleta($bici->num_serie, $bici->id_negocio);
+                CatalogService::invalidateSeccion($bici->id_usuario, $idNegocioGestor);
+
+                // Mover la bici al negocio destino
                 $bici->update(['id_negocio' => $pedido->id_negocio]);
 
-                foreach ($pedido->bicicletas as $bici) {
-                    CatalogService::invalidateBicicleta($bici->num_serie, $bici->id_negocio);
-                    $bici->update(['id_negocio' => $pedido->id_negocio]);
-                    CatalogService::invalidateBicicleta($bici->num_serie, $pedido->id_negocio);
-
-                    // ✅ Nuevo — mover stock negocio origen → negocio destino
-                    CatalogService::invalidateInventario($pedido->id_negocio);
-
-                    if ($bici->id_usuario) {
-                        CatalogService::invalidateBicicletasPorUsuario($bici->id_usuario, $pedido->id_negocio);
-                    }
-                }
+                // Invalida caché en negocio DESTINO después de mover
                 CatalogService::invalidateBicicleta($bici->num_serie, $pedido->id_negocio);
+                CatalogService::invalidateSeccion($bici->id_usuario, $pedido->id_negocio);
 
-                // ✅ Invalidar caché del vendedor si la bici tiene uno asignado
                 if ($bici->id_usuario) {
+                    CatalogService::invalidateBicicletasPorUsuario($bici->id_usuario, $idNegocioGestor);
                     CatalogService::invalidateBicicletasPorUsuario($bici->id_usuario, $pedido->id_negocio);
                 }
+                event(new BicicletaActualizada(
+                    numSerie:       $bici->num_serie,
+                    idNegocio:      $pedido->id_negocio,
+                    idUsuario:      $bici->id_usuario ?? '',
+                    nombreVendedor: '', // ← no aplica, la bici aún no tiene vendedor asignada en destino
+                    modelo:         $bici->modelo->nombre_modelo ?? '—',
+                    voltaje:        $bici->voltaje->voltaje       ?? '—',
+                    color:          $bici->color->color           ?? '—',
+                    status:         $bici->status,
+                ));
             }
 
             $tokenRecord->delete();
 
-            CatalogService::invalidateNegocio($pedido->id_negocio);
-            CatalogService::invalidateNegocio($idNegocioGestor);
-            CatalogService::invalidatePedido($pedido->id_pedido, $pedido->id_negocio);
-            // ✅ Invalidar stock de vendedores del negocio destino
+            // ✅ Invalidar ambos negocios completos
+            CatalogService::invalidateSeccion(null, $idNegocioGestor);    // sin asignar origen
+            CatalogService::invalidateSeccion(null, $pedido->id_negocio); // sin asignar destino
+            CatalogService::invalidateStockVendedores($idNegocioGestor);
             CatalogService::invalidateStockVendedores($pedido->id_negocio);
-
+            CatalogService::invalidateInventario($idNegocioGestor);
+            CatalogService::invalidateInventario($pedido->id_negocio);
+            CatalogService::invalidateNegocio($idNegocioGestor);
+            CatalogService::invalidateNegocio($pedido->id_negocio);
+            CatalogService::invalidatePedido($pedido->id_pedido, $pedido->id_negocio);
             $pedidoFresh = Pedido::with([
                 'negocio', 'usuario',
                 'items.modelo', 'items.voltaje', 'items.color',

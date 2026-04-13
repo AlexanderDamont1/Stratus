@@ -23,22 +23,11 @@ class RootSeeder extends Seeder
         Usuario::create([
             'id_negocio'     => null,           // Root no pertenece a ningún negocio
             'nombre_usuario' => 'Root',
-            'correo'         => 'root@evobike.com',
+            'correo'         => 'root@sistema.com',
             'password'       => Hash::make('root1234'),   // ← Cambiar en producción
             'id_rol'         => 0,
         ]);
 
         $this->command->info('✓ Root creado: root@sistema.com / root1234');
-
-        
-        Usuario::create([
-            'id_negocio'     => null,           // Root no pertenece a ningún negocio
-            'nombre_usuario' => 'Brandon',
-            'correo'         => 'brandon@gmail.com',
-            'password'       => Hash::make('root1234'),   // ← Cambiar en producción
-            'id_rol'         => 5,
-        ]);
-
-        $this->command->info('✓ Root creado: brandon@gmail.com / root1234');
     }
     }

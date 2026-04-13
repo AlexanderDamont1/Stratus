@@ -77,15 +77,8 @@ class ModeloVoltajeController extends Controller
         ]);
 
         $idMarca = \App\Models\Modelo::find($request->id_modelo)?->id_marca ?? '';
+        CatalogoActualizado::dispatch($user->id_negocio, 'voltaje', 'creado', $idMarca);
 
-        CatalogoActualizado::dispatch(
-            $user->id_negocio,
-            'voltaje',
-            'creado',
-            $idMarca,
-        );
-
-        // ✅ Invalidación ANTES del return, aplica tanto a JSON como a redirect
         CatalogService::invalidateModelo($request->id_modelo, $idNegocio);
         CatalogService::invalidateVoltaje($request->id_voltaje, $idNegocio);
         CatalogService::invalidateCatalogoCompleto($user->id_negocio);

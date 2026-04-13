@@ -10,16 +10,30 @@ use App\Services\CatalogService;
 
 class ProductoController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $user      = Auth::user();
         $idNegocio = $user->id_negocio;
         $esRol1    = $user->id_rol === 1;
 
+     
+        $idSucursalFiltro = $esRol1
+            ? $request->get('sucursal')   // null = sin filtro (ve todo), string = sucursal específica
+            : $user->id_usuario;
+
         $productos = CatalogService::getProductosConRelaciones(
             $idNegocio,
-            $esRol1 ? null : $user->id_usuario
+            $idSucursalFiltro
         );
+
+        // ✅ Si el admin tiene una sucursal seleccionada, solo mostrar productos activos de ella
+        if ($esRol1 && $idSucursalFiltro) {
+            $productos = $productos->filter(function ($producto) {
+                if ($producto->tipo === '1') return true;
+
+                return $producto->productoModelo->contains('activo', true);
+            });
+        }
 
         $bicicletas = $productos
             ->where('tipo', '2')
@@ -34,15 +48,42 @@ class ProductoController extends Controller
         $marcas  = CatalogService::getMarcasByNegocio($idNegocio);
         $modelos = CatalogService::getModelosByNegocio($idNegocio);
 
-        // ── Inventario ──────────────────────────────────────────
-        if ($esRol1) {
-            // Admin: inventario de todas las sucursales agrupado por id_producto_modelo
+        // ✅ Inventario correcto según contexto
+        if ($esRol1 && $idSucursalFiltro) {
+            // Admin viendo una sucursal específica → inventario de esa sucursal con cantidad visible
+            $inventario = CatalogService::getInventarioBySucursal($idNegocio, $idSucursalFiltro)
+                ->keyBy('id_producto_modelo');
+        } elseif ($esRol1) {
+            // Admin sin filtro → inventario agrupado de todo el negocio
             $inventario = CatalogService::getInventarioByNegocio($idNegocio)
                 ->groupBy('id_producto_modelo');
         } else {
-            // Sucursal: solo su propio inventario, indexado por id_producto_modelo
+            // Sucursal → su propio inventario con cantidad
             $inventario = CatalogService::getInventarioBySucursal($idNegocio, $user->id_usuario)
                 ->keyBy('id_producto_modelo');
+        }
+
+        $coloresPorModelo = [];
+        $idModelos = $bicicletas->keys()->toArray();
+
+        if (count($idModelos)) {
+            $coloresEnStock = CatalogService::getColoresEnStockPorModelos(
+                $idModelos,
+                $idNegocio,
+                $idSucursalFiltro ?? ($esRol1 ? null : $user->id_usuario)
+            );
+
+            foreach ($idModelos as $idModelo) {
+                $coloresPorModelo[$idModelo] = ($coloresEnStock[$idModelo] ?? collect())
+                    ->map(function ($bici) {
+                        $partes = explode('|', $bici->color->color ?? '');
+                        $nombre = trim($partes[0]);
+                        $hexes  = isset($partes[1])
+                            ? array_map('trim', explode('/', $partes[1]))
+                            : ['#cccccc'];
+                        return ['nombre' => $nombre, 'hex' => $hexes];
+                    })->values()->toArray();
+            }
         }
 
         return view('productos.index', compact(
@@ -52,9 +93,14 @@ class ProductoController extends Controller
             'marcas',
             'modelos',
             'esRol1',
-            'inventario'
+            'inventario',
+            'coloresPorModelo',
+            'idSucursalFiltro',  
         ));
     }
+
+
+
     // ── STORE ACCESORIO (tipo 1) ──
     public function storeAccesorio(Request $request)
     {
