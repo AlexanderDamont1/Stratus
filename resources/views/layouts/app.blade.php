@@ -5,6 +5,12 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
+        @auth
+            @if(auth()->user()->requiereSesionUnica())
+                <meta name="session-token" content="{{ session('session_token') }}">
+            @endif
+        @endauth
+
         <title>{{ config('app.name', 'Laravel') }}</title>
 
         <!-- Fonts -->
@@ -30,58 +36,55 @@
             </main>
         </div>
 
-        {{-- Script global para cerrar sesión en tiempo real --}}
         @auth
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
 
-                // Valores seguros inyectados desde PHP
-                window.userId = @json(auth()->user()->id_usuario);
-                window.sessionToken = @json(session('session_token'));
+                    window.__userId       = @json(auth()->user()->id_usuario);
+                    window.__sessionToken = @json(session('session_token'));
 
-                // Comprobar que Echo esté disponible (Vite puede tardar en inicializar)
-                function startListener(retries = 10, delay = 300) {
-                    if (typeof Echo !== 'undefined' && Echo && window.userId) {
+                    function startListener(retries = 10, delay = 300) {
+                        if (typeof Echo === 'undefined' || !Echo || !window.__userId) {
+                            if (retries > 0) {
+                                setTimeout(() => startListener(retries - 1, delay), delay);
+                            } else {
+                                console.warn('Echo no disponible.');
+                            }
+                            return;
+                        }
 
-                        Echo.private(`user.${window.userId}`)
-                            .listen('.session.updated', (e) => {
+                        const canal = Echo.private(`user.${window.__userId}`);
 
-                                // Si el token local no coincide con el token enviado → cerrar sesión
-                                if (window.sessionToken !== e.token) {
+                        canal.subscribed(() => {
+                            console.log('✅ Suscrito a user.' + window.__userId);
+                        });
 
-                                    fetch('/logout', {
-                                        method: 'POST',
-                                        headers: {
-                                            'X-CSRF-TOKEN': document
-                                                .querySelector('meta[name="csrf-token"]').content,
-                                            'Accept': 'application/json',
-                                            'Content-Type': 'application/json'
-                                        },
-                                        body: JSON.stringify({})
-                                    }).finally(() => {
-                                        // redirigir al login (evita problemas si fetch falla)
-                                        window.location.href = "/login";
-                                    });
-                                }
+                        canal.error((err) => {
+                            console.error('❌ Error canal:', err);
+                        });
 
-                            });
+                        // ✅ Logout manual desde cualquier pestaña
+                        canal.listen('.sesion.cerrada', () => {
+                            setTimeout(() => window.location.href = '/login', 300);
+                        });
 
-                        return;
+                        // ✅ Sesión desplazada por nuevo login en otro dispositivo
+                        canal.listen('.session.updated', (e) => {
+                            if (window.__sessionToken && e.token !== window.__sessionToken) {
+                                setTimeout(() => window.location.href = '/login', 300);
+                            }
+                        });
+
+                        window.__sesionCanal = canal;
                     }
 
-                    if (retries > 0) {
-                        setTimeout(() => startListener(retries - 1, delay), delay);
-                    } else {
-                        console.warn('Echo no disponible: no fue posible inicializar el listener de sesión.');
-                    }
-                }
+                    startListener();
+                });
 
-                startListener();
-            });
-        </script>
+                
+            </script>
         @endauth
-
-        {{-- espacio para que otras vistas apilen scripts --}}
+        
         @stack('scripts')
     </body>
 </html>

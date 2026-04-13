@@ -69,14 +69,17 @@ class AuthenticatedSessionController extends Controller
     {
         $usuario = Auth::user();
 
-        // Limpiar token al cerrar sesión voluntariamente
-        if ($usuario && $usuario->requiereSesionUnica()) {
-            $usuario->session_token = null;
-            $usuario->save();
+        if ($usuario) {
+            // ✅ Broadcast ANTES de logout para que el WS aún esté autenticado
+            event(new \App\Events\UsuarioCerroSesion($usuario->id_usuario, 'logout'));
+
+            if ($usuario->requiereSesionUnica()) {
+                $usuario->session_token = null;
+                $usuario->save();
+            }
         }
 
         Auth::logout();
-
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 

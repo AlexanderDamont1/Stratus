@@ -32,7 +32,15 @@ Broadcast::channel('enlace-vendedor.{idVendedor}', function ($user, $idVendedor)
 
 
 Broadcast::channel('user.{id}', function ($user, $id) {
-    return $user->id_usuario === $id;
+    $autorizado = (string) $user->id_usuario === (string) $id;
+    
+    \Log::info('[channel user.{id}]', [
+        'user_id'    => $user->id_usuario,
+        'param_id'   => $id,
+        'autorizado' => $autorizado,
+    ]);
+
+    return $autorizado;
 });
 
 Broadcast::channel('catalogo.{idNegocio}', function ($user, $idNegocio) {

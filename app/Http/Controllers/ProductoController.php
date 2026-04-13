@@ -18,7 +18,7 @@ class ProductoController extends Controller
 
      
         $idSucursalFiltro = $esRol1
-            ? $request->get('sucursal')   // null = sin filtro (ve todo), string = sucursal específica
+            ? session('productos.sucursal_filtro')   // null = sin filtro (ve todo), string = sucursal específica
             : $user->id_usuario;
 
         $productos = CatalogService::getProductosConRelaciones(
@@ -267,5 +267,15 @@ class ProductoController extends Controller
         )->values();
 
         return response()->json($voltajesDisponibles);
+    }
+
+    public function setFiltroSucursal(Request $request)
+    {
+        $idSucursal = $request->input('sucursal');
+
+        // Guardar en sesión (null limpia el filtro)
+        session(['productos.sucursal_filtro' => $idSucursal ?: null]);
+
+        return response()->json(['ok' => true]);
     }
 }

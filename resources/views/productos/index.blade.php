@@ -665,7 +665,7 @@
             sucursalSeleccionada: '{{ $idSucursalFiltro ?? "" }}',
 
             form: {
-                tipo: '1', id_usuario: '', nombre_producto: '',
+                po: '1', id_usuario: '', nombre_producto: '',
                 id_marca: '', id_modelo: '', id_voltaje: '', precio: '',
             },
                 editFormOriginal: { nombre_producto: '', precio: '' },
@@ -722,18 +722,19 @@
                     }, 300);
                 }
 
-                // ✅ Antes solo disparaba el evento Alpine (solo actualizaba números).
-                // Ahora navega al servidor para que PHP filtre los productos correctos.
-                this.$watch('sucursalSeleccionada', val => {
-                    const url = new URL(window.location.href);
-                    if (val) {
-                        url.searchParams.set('sucursal', val);
-                    } else {
-                        url.searchParams.delete('sucursal');
-                    }
-                    // ✅ Resetear el skeleton para que se vea la transición
+               
+                this.$watch('sucursalSeleccionada', async val => {
+                    await fetch('{{ route("admin.productos.filtroSucursal") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type':     'application/json',
+                            'X-CSRF-TOKEN':     document.querySelector('meta[name="csrf-token"]').content,
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: JSON.stringify({ sucursal: val }),
+                    });
                     sessionStorage.removeItem('productPageSkeletonShown');
-                    window.location.href = url.toString();
+                    window.location.href = '{{ route("admin.productos.index") }}'; // ← URL limpia siempre
                 });
             },
 

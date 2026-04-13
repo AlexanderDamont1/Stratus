@@ -136,6 +136,8 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
         Route::delete('/pedidos/{id_pedido}',     [PedidoController::class, 'destroy'])->name('pedidos.destroy');
         Route::get('/ver/{id_pedido}/token',      [PedidoController::class, 'token'])->name('pedidos.token');
 
+        
+
         // ── Productos (admin) ─────────────────────────────────────────────────
         // La vista usa estas rutas como base para generar las URLs en el JS.
         // Todas bajo /productos para que la blade pueda usar url('/productos').
@@ -149,6 +151,7 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
             Route::get('/voltajes/{idModelo}',        [ProductoController::class, 'voltajesPorModelo'])->name('voltajes');
             // AJAX: modelos de una marca
             Route::get('/modelos-por-marca/{idMarca}',[ProductoController::class, 'modelosPorMarca'])->name('modelosPorMarca');
+            Route::post('/filtro-sucursal', [ProductoController::class, 'setFiltroSucursal'])->name('filtroSucursal');
         });
 
         // ── Catálogo admin ────────────────────────────────────────────────────
