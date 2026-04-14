@@ -1,0 +1,335 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Events\VentaRealizada;
+use App\Models\Bicicleta;
+use App\Models\Cliente;
+use App\Models\DetalleVenta;
+use App\Models\Producto;
+use App\Models\ProductoModelo;
+use App\Models\Venta;
+use App\Models\Inventario;
+use App\Services\CatalogService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Barryvdh\DomPDF\Facade\Pdf;
+
+class VentaController extends Controller
+{
+    /* =====================================================
+     | INDEX
+     ===================================================== */
+    public function index()
+    {
+        $user = auth()->user();
+        if ($user->id_rol != 2) abort(403);
+
+        $ventas = Venta::with([
+            'cliente',
+            'detalles.producto',
+            'detalles.bicicleta.modelo',
+            'detalles.bicicleta.color',
+        ])
+            ->where('id_negocio', $user->id_negocio)
+            ->whereHas('detalles.producto', fn($q) => $q->where('id_usuario', $user->id_usuario))
+            ->latest()
+            ->paginate(15);
+
+        return view('vendedor.ventas.index', compact('ventas'));
+    }
+
+    /* =====================================================
+     | CREATE
+     ===================================================== */
+    public function create()
+    {
+        $user = auth()->user();
+        if ($user->id_rol != 2) abort(403);
+
+        $accesorios = Producto::where('id_negocio', $user->id_negocio)
+            ->where('id_usuario', $user->id_usuario)
+            ->where('tipo', '1')
+            ->get()
+            ->filter(fn($p) => $p->precio > 0)
+            ->values();
+
+        return view('vendedor.ventas.create', compact('accesorios'));
+    }
+
+    /* =====================================================
+     | AJAX — buscar bicicleta por num_serie
+     ===================================================== */
+    public function buscarSerie(Request $request)
+    {
+        $user = auth()->user();
+        if ($user->id_rol != 2) abort(403);
+
+        $numSerie = strtoupper(trim($request->get('num_serie', '')));
+
+        if (!$numSerie) {
+            return response()->json([
+                'ok'     => false,
+                'mensaje' => 'Indica un número de serie.',
+            ], 422);
+        }
+
+        $bici = CatalogService::getBicicletaBySerie($numSerie);
+
+        if (
+            !$bici ||
+            $bici->id_negocio !== $user->id_negocio ||
+            $bici->status != 1 ||
+            ($bici->id_usuario !== null && $bici->id_usuario !== $user->id_usuario)
+        ) {
+            return response()->json([
+                'ok'     => false,
+                'mensaje' => 'Bicicleta no encontrada en tu stock o ya fue vendida.',
+            ], 404);
+        }
+
+        $pm = ProductoModelo::with('producto')
+            ->where('id_modelo',  $bici->id_modelo)
+            ->where('id_voltaje', $bici->id_voltaje)
+            ->where('id_negocio', $user->id_negocio)
+            ->where(function ($q) use ($user) {
+                $q->where('id_usuario', $user->id_usuario)
+                  ->orWhereNull('id_usuario');
+            })
+            ->where('activo', true)
+            ->first();
+
+        if (!$pm || !$pm->producto) {
+            return response()->json([
+                'ok'     => false,
+                'mensaje' => 'Esta bicicleta no tiene un producto configurado.',
+            ], 404);
+        }
+
+        if (!$pm->producto->precio || $pm->producto->precio <= 0) {
+            return response()->json([
+                'ok'     => false,
+                'mensaje' => 'Esta bicicleta no tiene un precio configurado.',
+            ], 404);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'bici' => [
+                'num_serie'    => $bici->num_serie,
+                'marca'        => $bici->modelo->marca->nombre_marca ?? '—',
+                'modelo'       => $bici->modelo->nombre_modelo       ?? '—',
+                'voltaje'      => $bici->voltaje->voltaje             ?? '—',
+                'color_nombre' => $bici->color->color                 ?? '—',
+                'color_hexes'  => [],
+            ],
+            'producto' => [
+                'id_producto' => $pm->producto->id_producto,
+                'nombre'      => $pm->producto->nombre_producto,
+                'precio'      => (float) $pm->producto->precio,
+            ],
+        ]);
+    }
+
+    /* =====================================================
+     | STORE
+     ===================================================== */
+    public function store(Request $request)
+    {
+        $user = auth()->user();
+        if ($user->id_rol != 2) abort(403);
+
+        $request->validate([
+            'nombre_cliente'      => 'required|string|max:100',
+            'apellido1'           => 'required|string|max:60',
+            'apellido2'           => 'nullable|string|max:60',
+            'telefono'            => 'required|string|max:15',
+            'correo'              => 'nullable|email|max:120',
+            'direccion'           => 'nullable|string|max:255',
+            'items'               => 'required|array|min:1',
+            'items.*.id_producto' => 'required|exists:productos,id_producto',
+            'items.*.num_serie'   => 'nullable|string',
+            'items.*.cantidad'    => 'required|integer|min:1',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            $cliente = Cliente::firstOrCreate(
+                [
+                    'id_negocio' => $user->id_negocio,
+                    'telefono'   => $request->telefono,
+                ],
+                [
+                    'nombre_cliente' => $request->nombre_cliente,
+                    'apellido1'      => $request->apellido1,
+                    'apellido2'      => $request->apellido2 ?? '',
+                    'correo'         => $request->correo   ?? '',
+                ]
+            );
+
+            $venta = Venta::create([
+                'id_negocio' => $user->id_negocio,
+                'id_cliente' => $cliente->id_cliente,
+            ]);
+
+            $totalVenta          = 0;
+            $bicicletasBroadcast = [];
+            $seriesParaInvalidar = [];
+
+            foreach ($request->items as $item) {
+                $producto = Producto::where('id_producto', $item['id_producto'])
+                    ->where('id_usuario', $user->id_usuario)
+                    ->where('id_negocio', $user->id_negocio)
+                    ->firstOrFail();
+
+                $cantidad       = (int) ($item['cantidad'] ?? 1);
+                $precioUnitario = (float) $producto->precio;
+
+                DetalleVenta::create([
+                    'id_venta'        => $venta->id_venta,
+                    'id_producto'     => $item['id_producto'],
+                    'num_serie'       => $item['num_serie'] ?? null,
+                    'precio_unitario' => $precioUnitario,
+                    'cantidad'        => $cantidad,
+                ]);
+
+                $totalVenta += $precioUnitario * $cantidad;
+
+                if ($producto->tipo === '2' && !empty($item['num_serie'])) {
+                    $bici = Bicicleta::with(['modelo.marca', 'voltaje', 'color'])
+                        ->where('num_serie',  $item['num_serie'])
+                        ->where('id_negocio', $user->id_negocio)
+                        ->where('id_usuario', $user->id_usuario)
+                        ->where('status', 1)
+                        ->lockForUpdate()
+                        ->firstOrFail();
+
+                    $bici->status = 2;
+                    $bici->save();
+
+                    $pm = ProductoModelo::where('id_modelo',  $bici->id_modelo)
+                        ->where('id_voltaje', $bici->id_voltaje)
+                        ->where('id_usuario', $user->id_usuario)
+                        ->first();
+
+                    if ($pm) {
+                        Inventario::where('id_producto_modelo', $pm->id_producto_modelo)
+                            ->where('id_negocio', $user->id_negocio)
+                            ->where('id_usuario', $user->id_usuario)
+                            ->where('cantidad', '>', 0)
+                            ->decrement('cantidad');
+                    }
+
+                    $seriesParaInvalidar[]  = $bici->num_serie;
+                    $bicicletasBroadcast[]  = [
+                        'num_serie' => $bici->num_serie,
+                        'modelo'    => $bici->modelo->nombre_modelo       ?? '—',
+                        'marca'     => $bici->modelo->marca->nombre_marca ?? '—',
+                        'voltaje'   => $bici->voltaje->voltaje             ?? '—',
+                        'color'     => $bici->color->color                 ?? '—',
+                    ];
+                }
+            }
+
+            DB::commit();
+
+            foreach ($seriesParaInvalidar as $serie) {
+                CatalogService::invalidateBicicleta($serie, $user->id_negocio);
+            }
+            CatalogService::invalidateBicicletasPorUsuario($user->id_usuario, $user->id_negocio);
+            CatalogService::invalidateSeccion($user->id_usuario, $user->id_negocio);
+            CatalogService::invalidateSeccion(null, $user->id_negocio);
+            CatalogService::invalidateInventario($user->id_negocio);
+            CatalogService::invalidateStockVendedores($user->id_negocio);
+            CatalogService::invalidateProductosConRelaciones($user->id_negocio, $user->id_usuario);
+
+            event(new VentaRealizada(
+                idVenta:        $venta->id_venta,
+                idNegocio:      $user->id_negocio,
+                idVendedor:     $user->id_usuario,
+                nombreVendedor: $user->nombre_usuario,
+                nombreCliente:  $cliente->nombre_cliente . ' ' . $cliente->apellido1,
+                total:          $totalVenta,
+                bicicletas:     $bicicletasBroadcast,
+            ));
+
+            return redirect()
+                ->route('ventas.show', $venta->id_venta)
+                ->with('success', 'Venta registrada correctamente.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error al registrar venta', [
+                'user'  => $user->id_usuario,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return back()
+                ->withInput()
+                ->with('error', 'Error al registrar la venta: ' . $e->getMessage());
+        }
+    }
+
+    /* =====================================================
+     | SHOW
+     ===================================================== */
+    public function show(string $id_venta)
+    {
+        $user = auth()->user();
+        if ($user->id_rol != 2) abort(403);
+
+        $venta = Venta::with([
+            'cliente',
+            'detalles.producto',
+            'detalles.bicicleta.modelo.marca',
+            'detalles.bicicleta.voltaje',
+            'detalles.bicicleta.color',
+        ])
+            ->where('id_negocio', $user->id_negocio)
+            ->findOrFail($id_venta);
+
+        return view('vendedor.ventas.show', compact('venta'));
+    }
+
+    /* =====================================================
+     | PDF — póliza de garantía
+     ===================================================== */
+    public function poliza(string $id_venta)
+    {
+        $user = auth()->user();
+        if ($user->id_rol != 2) abort(403);
+
+        $venta = Venta::with([
+            'cliente',
+            'negocio',
+            'detalles.producto',
+            'detalles.bicicleta.modelo.marca',
+            'detalles.bicicleta.voltaje',
+            'detalles.bicicleta.color',
+        ])
+            ->where('id_negocio', $user->id_negocio)
+            ->findOrFail($id_venta);
+
+        $bicicletas = $venta->detalles
+            ->filter(fn($d) => $d->bicicleta !== null)
+            ->values();
+
+        if ($bicicletas->isEmpty()) {
+            return back()->with('error', 'Esta venta no tiene bicicletas para generar póliza.');
+        }
+
+        $pdf = Pdf::loadView('vendedor.ventas.poliza', [
+            'venta'      => $venta,
+            'cliente'    => $venta->cliente,
+            'negocio'    => $venta->negocio,
+            'bicicletas' => $bicicletas,
+            'vendedor'   => $user,
+            'fecha'      => now()->format('d/m/Y'),
+        ])->setPaper('letter', 'landscape');
+
+        return $pdf->download('poliza-' . $venta->id_venta . '.pdf');
+    }
+}

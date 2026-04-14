@@ -5,13 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use App\Traits\GeneratesCustomId;
 
-
 class Cliente extends Model
 {
-    protected $table = 'clientes';
+    use GeneratesCustomId;  // ← esto faltaba
+
+    protected $table      = 'clientes';
     protected $primaryKey = 'id_cliente';
-    public $incrementing = false;
-    protected $keyType = 'string';
+    public $incrementing  = false;
+    protected $keyType    = 'string';
 
     protected $fillable = [
         'id_cliente',
@@ -23,23 +24,9 @@ class Cliente extends Model
         'correo',
     ];
 
-    protected function idPrefix(): string
-    {
-        return 'CLI';
-    }
+    protected function idPrefix(): string { return 'CLI'; }
 
-    public function negocio()
-    {
-        return $this->belongsTo(Negocio::class, 'id_negocio', 'id_negocio');
-    }
-
-    public function bicicletas()
-    {
-        return $this->hasMany(Bicicleta::class, 'id_cliente', 'id_cliente');
-    }
-
-    public function ventas()
-    {
-        return $this->hasMany(Venta::class, 'id_cliente', 'id_cliente');
-    }
+    public function negocio()  { return $this->belongsTo(Negocio::class,  'id_negocio', 'id_negocio'); }
+    public function bicicletas(){ return $this->hasMany(Bicicleta::class,  'id_cliente', 'id_cliente'); }
+    public function ventas()   { return $this->hasMany(Venta::class,       'id_cliente', 'id_cliente'); }
 }

@@ -1,20 +1,24 @@
 <?php
-
-
 use Illuminate\Support\Facades\Broadcast;
-
-
 use App\Models\Enlace;
-use App\Models\Usuario;
 
+/*
+|--------------------------------------------------------------------------
+| Canales de Broadcast
+|--------------------------------------------------------------------------
+*/
+
+// ─────────────────────────────────────────────
+// Canal: vendedor.{id}
+// ─────────────────────────────────────────────
 Broadcast::channel('vendedor.{idVendedor}', function ($user, $idVendedor) {
 
-    // El propio vendedor (rol 1) escucha su canal
+    // Vendedor (rol 1) escucha su propio canal
     if ($user->id_usuario == $idVendedor && $user->id_rol == 1) {
         return true;
     }
 
-    // El gestor (rol 5) escucha si tiene un enlace activo con ese vendedor
+    // Gestor (rol 5) escucha si tiene enlace activo
     if ($user->id_rol == 5) {
         return Enlace::where('id_usuario2', $user->id_usuario)
             ->where('id_usuario1', $idVendedor)
@@ -26,15 +30,26 @@ Broadcast::channel('vendedor.{idVendedor}', function ($user, $idVendedor) {
 });
 
 
+// ─────────────────────────────────────────────
+// Canal: enlace-vendedor.{id}
+// ─────────────────────────────────────────────
 Broadcast::channel('enlace-vendedor.{idVendedor}', function ($user, $idVendedor) {
     return $user->id_rol === 1 && $user->id_usuario == $idVendedor;
 });
 
 
+// ─────────────────────────────────────────────
+// Canal: user.{id}
+// ─────────────────────────────────────────────
 Broadcast::channel('user.{id}', function ($user, $id) {
-    return $user->id_usuario === $id;
+    // ✔ Permite a CUALQUIER usuario autenticado escuchar su propio canal
+    return (string) $user->id_usuario === (string) $id;
 });
 
+
+// ─────────────────────────────────────────────
+// Canal: catalogo.{idNegocio}
+// ─────────────────────────────────────────────
 Broadcast::channel('catalogo.{idNegocio}', function ($user, $idNegocio) {
     return $user->id_rol === 1 
         && (string) $user->id_negocio === (string) $idNegocio;
