@@ -57,6 +57,7 @@ class VendedorController extends Controller
         ]);
            
             CatalogService::invalidateStockVendedores($admin->id_negocio);
+            CatalogService::invalidateSucursales($admin->id_negocio);
 
 
         return redirect()->route('admin.vendedores.create')

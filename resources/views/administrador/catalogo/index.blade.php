@@ -109,7 +109,7 @@
         </div>
 
         {{-- Contenido real (se muestra cuando loading = false) --}}
-        <div x-show="!loading" x-cloak>
+        <div x-show="!loading" x-cloak class="space-y-6">
             @foreach($marcas as $marca)
                 @php
                     $totalModelos  = $marca->modelos->count();
