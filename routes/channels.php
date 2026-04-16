@@ -42,20 +42,8 @@ Broadcast::channel('enlace-vendedor.{idVendedor}', function ($user, $idVendedor)
 // Canal: user.{id}
 // ─────────────────────────────────────────────
 Broadcast::channel('user.{id}', function ($user, $id) {
-<<<<<<< HEAD
     // ✔ Permite a CUALQUIER usuario autenticado escuchar su propio canal
     return (string) $user->id_usuario === (string) $id;
-=======
-    $autorizado = (string) $user->id_usuario === (string) $id;
-    
-    \Log::info('[channel user.{id}]', [
-        'user_id'    => $user->id_usuario,
-        'param_id'   => $id,
-        'autorizado' => $autorizado,
-    ]);
-
-    return $autorizado;
->>>>>>> e4c1aaa6b73c3e7cee981f8eee8c0a78cc7b1558
 });
 
 
