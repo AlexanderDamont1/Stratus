@@ -143,11 +143,22 @@
                         const res  = await fetch('{{ route('bicicletas.stock.seccion') }}?' + params);
                         const json = await res.json();
 
-                        this.filas       = json.data;
-                        this.pagina      = json.current_page;
+                        // ✅ Deduplicar: si ya entró por WS antes de que cargara, no duplicar
+                        const seriesExistentes = new Set(this.filas.map(f => f.num_serie));
+                        const nuevas = json.data.filter(b => !seriesExistentes.has(b.num_serie));
+
+                        if (p === 1) {
+                            // Página 1: conservar lo que llegó por WS + lo del servidor sin duplicar
+                            const wsItems = this.filas; // los que llegaron por evento antes de cargar
+                            this.filas = [...wsItems, ...nuevas];
+                        } else {
+                            this.filas = [...this.filas, ...nuevas];
+                        }
+
+                        this.pagina       = json.current_page;
                         this.ultimaPagina = json.last_page;
-                        this.total       = json.total;
-                        this.cargando    = false;
+                        this.total        = json.total;
+                        this.cargando     = false;
                     },
 
                     init() {
@@ -159,21 +170,36 @@
                             if (e.detail.id_usuario === this.idUsuario) {
                                 this.total++;
                                 if (this.abierto) {
-                                    this.filas.unshift({
-                                        num_serie:  e.detail.num_serie,
-                                        modelo:     { nombre_modelo: e.detail.modelo },
-                                        voltaje:    { voltaje: e.detail.voltaje },
-                                        color:      { color: e.detail.color },
-                                        status:     e.detail.status,
-                                        updated_at: new Date().toISOString(),
-                                    });
+                                    // ✅ Solo insertar si no existe ya en filas
+                                    const yaExiste = this.filas.some(f => f.num_serie === e.detail.num_serie);
+                                    if (!yaExiste) {
+                                        this.filas.unshift({
+                                            num_serie:   e.detail.num_serie,
+                                            marca_nombre:e.detail.modelo ? '—' : '—', // marca no viene en el evento
+                                            modelo:      { nombre_modelo: e.detail.modelo },
+                                            voltaje:     { voltaje: e.detail.voltaje },
+                                            color:       { color: e.detail.color },
+                                            status:      e.detail.status,
+                                            updated_at:  new Date().toISOString(),
+                                        });
+                                    }
                                 }
                             }
                             if (this.idUsuario === '' && e.detail.id_usuario !== '') {
                                 this.total = Math.max(0, this.total - 1);
                                 if (this.abierto) {
-                                    this.filas = this.filas.filter(f => f.num_serie !== e.detail.num_serie);
+                                    const idx = this.filas.findIndex(f => f.num_serie === e.detail.num_serie);
+                                    if (idx !== -1) this.filas.splice(idx, 1);
                                 }
+                            }
+                        });
+
+                        window.addEventListener('bicicleta-vendida', (e) => {
+                            if (!Array.isArray(this.filas)) return;
+                            const idx = this.filas.findIndex(f => f.num_serie === e.detail.num_serie);
+                            if (idx !== -1) {
+                                this.filas.splice(idx, 1);
+                                this.total = Math.max(0, this.total - 1);
                             }
                         });
                     },
@@ -529,17 +555,27 @@
 
     @endif
 
+
     @if(auth()->user()->id_rol === 1)
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const idNegocio = document.querySelector('[data-negocio-id]')?.dataset?.negocioId;
             if (!idNegocio || !window.Echo) return;
 
+            // Canal existente — reasignación de sucursal
             window.Echo.private(`catalogo.${idNegocio}`)
                 .listen('.bicicleta.asignada', (e) => {
-                    window.dispatchEvent(new CustomEvent('bicicleta-asignada', {
-                        detail: e
-                    }));
+                    window.dispatchEvent(new CustomEvent('bicicleta-asignada', { detail: e }));
+                });
+
+            // ✅ NUEVO — ventas realizadas
+            window.Echo.private(`ventas.${idNegocio}`)
+                .listen('.venta.realizada', (e) => {
+                    (e.bicicletas ?? []).forEach(bici => {
+                        window.dispatchEvent(new CustomEvent('bicicleta-vendida', {
+                            detail: { num_serie: bici.num_serie }
+                        }));
+                    });
                 });
         });
     </script>

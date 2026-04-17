@@ -55,10 +55,6 @@
 
                         const canal = Echo.private(`user.${window.__userId}`);
 
-                        canal.subscribed(() => {
-                            console.log('✅ Suscrito a user.' + window.__userId);
-                        });
-
                         canal.error((err) => {
                             console.error('❌ Error canal:', err);
                         });

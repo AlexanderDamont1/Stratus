@@ -20,6 +20,7 @@ use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\EnlaceController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\VentaController;
+use App\Http\Controllers\MovimientoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -137,11 +138,16 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
         Route::delete('/pedidos/{id_pedido}',     [PedidoController::class, 'destroy'])->name('pedidos.destroy');
         Route::get('/ver/{id_pedido}/token',      [PedidoController::class, 'token'])->name('pedidos.token');
 
-        
 
-        // ── Productos (admin) ─────────────────────────────────────────────────
-        // La vista usa estas rutas como base para generar las URLs en el JS.
-        // Todas bajo /productos para que la blade pueda usar url('/productos').
+
+        Route::prefix('admin/movimientos')->name('admin.movimientos.')->group(function () {
+            Route::get('/',                  [MovimientoController::class, 'index'])->name('index');
+            Route::get('/historial/{serie}', [MovimientoController::class, 'historial'])->name('historial');
+            Route::get('/buscar',            [MovimientoController::class, 'buscar'])->name('buscar');
+        });
+
+
+        // ── Productos (admin) ──────────────────────────────────────────────
         Route::prefix('productos')->name('admin.productos.')->group(function () {
             Route::get('/',                           [ProductoController::class, 'index'])->name('index');
             Route::post('/accesorio',                 [ProductoController::class, 'storeAccesorio'])->name('storeAccesorio');
@@ -338,7 +344,7 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
             Route::get('/modelos-por-marca/{idMarca}', [ProductoController::class, 'modelosPorMarca'])->name('modelosPorMarca');
         });
 
-        Route::prefix('ventas')->name('ventas.')->group(function () {
+        Route::prefix('sucursal/ventas')->name('ventas.')->group(function () {
     Route::get('/',                 [VentaController::class, 'index'])->name('index');
     Route::get('/crear',            [VentaController::class, 'create'])->name('create');
     Route::post('/',                [VentaController::class, 'store'])->name('store');

@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use App\Events\PedidoUpdated;
 use App\Events\BicicletaActualizada;
+use App\Services\BicicletaMovimientoService;
+
 
 class PedidoController extends Controller
 {
@@ -421,21 +423,20 @@ class PedidoController extends Controller
             ], 422);
         }
 
-        $idNegocioGestor = $usuario->id_negocio;
+        $idNegocioGestor     = $usuario->id_negocio;
+        $movimientoService   = app(BicicletaMovimientoService::class); // ← instancia una vez
 
-        DB::transaction(function () use ($pedido, $tokenRecord, $idNegocioGestor) {
+        DB::transaction(function () use ($pedido, $tokenRecord, $idNegocioGestor, $movimientoService) {
             $pedido->update(['status' => 4]);
 
-            // ✅ Loop limpio, sin anidado
             foreach ($pedido->bicicletas as $bici) {
-                // Invalida caché en negocio ORIGEN antes de mover
                 CatalogService::invalidateBicicleta($bici->num_serie, $bici->id_negocio);
                 CatalogService::invalidateSeccion($bici->id_usuario, $idNegocioGestor);
 
-                // Mover la bici al negocio destino
                 $bici->update(['id_negocio' => $pedido->id_negocio]);
+                $movimientoService->entradaStockGeneral($bici->num_serie, $pedido->id_pedido);
 
-                // Invalida caché en negocio DESTINO después de mover
+
                 CatalogService::invalidateBicicleta($bici->num_serie, $pedido->id_negocio);
                 CatalogService::invalidateSeccion($bici->id_usuario, $pedido->id_negocio);
 
@@ -443,11 +444,12 @@ class PedidoController extends Controller
                     CatalogService::invalidateBicicletasPorUsuario($bici->id_usuario, $idNegocioGestor);
                     CatalogService::invalidateBicicletasPorUsuario($bici->id_usuario, $pedido->id_negocio);
                 }
+                
                 event(new BicicletaActualizada(
                     numSerie:       $bici->num_serie,
                     idNegocio:      $pedido->id_negocio,
                     idUsuario:      $bici->id_usuario ?? '',
-                    nombreVendedor: '', // ← no aplica, la bici aún no tiene vendedor asignada en destino
+                    nombreVendedor: '',
                     modelo:         $bici->modelo->nombre_modelo ?? '—',
                     voltaje:        $bici->voltaje->voltaje       ?? '—',
                     color:          $bici->color->color           ?? '—',
@@ -457,9 +459,8 @@ class PedidoController extends Controller
 
             $tokenRecord->delete();
 
-            // ✅ Invalidar ambos negocios completos
-            CatalogService::invalidateSeccion(null, $idNegocioGestor);    // sin asignar origen
-            CatalogService::invalidateSeccion(null, $pedido->id_negocio); // sin asignar destino
+            CatalogService::invalidateSeccion(null, $idNegocioGestor);
+            CatalogService::invalidateSeccion(null, $pedido->id_negocio);
             CatalogService::invalidateStockVendedores($idNegocioGestor);
             CatalogService::invalidateStockVendedores($pedido->id_negocio);
             CatalogService::invalidateInventario($idNegocioGestor);
@@ -467,6 +468,7 @@ class PedidoController extends Controller
             CatalogService::invalidateNegocio($idNegocioGestor);
             CatalogService::invalidateNegocio($pedido->id_negocio);
             CatalogService::invalidatePedido($pedido->id_pedido, $pedido->id_negocio);
+
             $pedidoFresh = Pedido::with([
                 'negocio', 'usuario',
                 'items.modelo', 'items.voltaje', 'items.color',

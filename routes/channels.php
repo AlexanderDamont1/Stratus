@@ -54,3 +54,8 @@ Broadcast::channel('catalogo.{idNegocio}', function ($user, $idNegocio) {
     return $user->id_rol === 1 
         && (string) $user->id_negocio === (string) $idNegocio;
 });
+
+Broadcast::channel('ventas.{idNegocio}', function ($user, $idNegocio) {
+    // Solo el admin (rol 1) del negocio recibe este canal
+    return $user->id_negocio === $idNegocio && $user->id_rol === 1;
+});

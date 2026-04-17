@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Events\VentaRealizada;
+use App\Events\BicicletaActualizada;
 use App\Models\Bicicleta;
 use App\Models\Cliente;
 use App\Models\DetalleVenta;
@@ -15,27 +16,31 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Services\BicicletaMovimientoService;
+
 
 class VentaController extends Controller
 {
     /* =====================================================
      | INDEX
      ===================================================== */
-    public function index()
+    public function index(Request $request)
     {
         $user = auth()->user();
         if ($user->id_rol != 2) abort(403);
 
-        $ventas = Venta::with([
-            'cliente',
-            'detalles.producto',
-            'detalles.bicicleta.modelo',
-            'detalles.bicicleta.color',
-        ])
-            ->where('id_negocio', $user->id_negocio)
-            ->whereHas('detalles.producto', fn($q) => $q->where('id_usuario', $user->id_usuario))
-            ->latest()
-            ->paginate(15);
+        $page = $request->get('page', 1);
+
+        // Solo cachea página 1 — las demás van directo a DB
+        if ($page == 1) {
+            $ventas = CatalogService::getVentasByVendedor(
+                $user->id_negocio,
+                $user->id_usuario
+            );
+        } else {
+            $ventas = self::queryVentas($user->id_negocio, $user->id_usuario)
+                ->paginate(15, ['*'], 'page', $page);
+        }
 
         return view('vendedor.ventas.index', compact('ventas'));
     }
@@ -177,6 +182,7 @@ class VentaController extends Controller
             $totalVenta          = 0;
             $bicicletasBroadcast = [];
             $seriesParaInvalidar = [];
+            $eventosBicicleta    = []; // Acumular datos para BicicletaActualizada
 
             foreach ($request->items as $item) {
                 $producto = Producto::where('id_producto', $item['id_producto'])
@@ -201,7 +207,7 @@ class VentaController extends Controller
                     $bici = Bicicleta::with(['modelo.marca', 'voltaje', 'color'])
                         ->where('num_serie',  $item['num_serie'])
                         ->where('id_negocio', $user->id_negocio)
-                        ->where('id_usuario', $user->id_usuario)
+                        ->where('id_usuario', $user->id_usuario)  // ← demasiado estricto
                         ->where('status', 1)
                         ->lockForUpdate()
                         ->firstOrFail();
@@ -209,6 +215,23 @@ class VentaController extends Controller
                     $bici->status = 2;
                     $bici->save();
 
+                    // Movimiento dentro de la transacción (correcto)
+                    app(BicicletaMovimientoService::class)
+                        ->venta(
+                            $bici->num_serie,
+                            $request->nombre_cliente . ' ' . $request->apellido1
+                        );
+
+                    $eventosBicicleta[] = [
+                        'num_serie' => $bici->num_serie,
+                        'modelo'    => $bici->modelo->nombre_modelo ?? '—',
+                        'marca'     => $bici->modelo->marca->nombre_marca ?? '—',
+                        'voltaje'   => $bici->voltaje->voltaje ?? '—',
+                        'color'     => $bici->color->color ?? '—',
+                        'status'    => 2,
+                    ];
+
+                    // Actualizar inventario (modelo-voltaje)
                     $pm = ProductoModelo::where('id_modelo',  $bici->id_modelo)
                         ->where('id_voltaje', $bici->id_voltaje)
                         ->where('id_usuario', $user->id_usuario)
@@ -235,6 +258,7 @@ class VentaController extends Controller
 
             DB::commit();
 
+            // ===== INVALIDACIONES DE CACHÉ =====
             foreach ($seriesParaInvalidar as $serie) {
                 CatalogService::invalidateBicicleta($serie, $user->id_negocio);
             }
@@ -244,6 +268,21 @@ class VentaController extends Controller
             CatalogService::invalidateInventario($user->id_negocio);
             CatalogService::invalidateStockVendedores($user->id_negocio);
             CatalogService::invalidateProductosConRelaciones($user->id_negocio, $user->id_usuario);
+            CatalogService::invalidateVentasByVendedor($user->id_negocio, $user->id_usuario);
+
+            // ===== BROADCASTS DESPUÉS DEL COMMIT =====
+            foreach ($eventosBicicleta as $ev) {
+                event(new BicicletaActualizada(
+                    numSerie:       $ev['num_serie'],
+                    idNegocio:      $user->id_negocio,
+                    idUsuario:      $user->id_usuario,
+                    nombreVendedor: $user->nombre_usuario,
+                    modelo:         $ev['modelo'],
+                    voltaje:        $ev['voltaje'],
+                    color:          $ev['color'],
+                    status:         $ev['status'],
+                ));
+            }
 
             event(new VentaRealizada(
                 idVenta:        $venta->id_venta,

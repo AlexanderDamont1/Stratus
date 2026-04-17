@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use App\Events\BicicletaActualizada;
+use App\Services\BicicletaMovimientoService;
 
 class BicicletaController extends Controller
 {
@@ -182,6 +183,25 @@ class BicicletaController extends Controller
             ));
         }
 
+        $movimientoService = new BicicletaMovimientoService();
+
+        foreach ($request->bicicletas as $b) {
+            // 1. Evento de creación (actualiza inventario)
+            event(new \App\Events\BicicletaCreada(
+                idModelo:  $b['id_modelo'],
+                idVoltaje: $b['id_voltaje'],
+                idNegocio: $id_negocio,
+                idUsuario: null,
+            ));
+
+            // 2. Registrar movimiento de entrada stock (sin id_pedido)
+            $movimientoService->entradaStockGeneral(
+                num_serie: strtoupper(trim($b['num_serie'])),
+                id_pedido: null
+            );
+        }
+
+
         // ✅ Invalidar caché
         CatalogService::invalidateBicicleta('masivo', $id_negocio);
         CatalogService::invalidateStockVendedores($id_negocio);
@@ -307,6 +327,11 @@ class BicicletaController extends Controller
             'id_pedido'          => $request->id_pedido ?? null,
            
         ]);
+
+        if ($request->id_pedido) {
+            app(BicicletaMovimientoService::class)
+                ->entradaStockGeneral($bicicleta->num_serie, $request->id_pedido);
+        }
 
         event(new \App\Events\BicicletaCreada(
             idModelo:  $request->id_modelo,
@@ -617,7 +642,11 @@ class BicicletaController extends Controller
             }
 
             if ($guardado) {
-                // ── Buscar o crear ProductoModelo de ESTA sucursal ──
+            app(BicicletaMovimientoService::class)
+                ->transferenciaASucursal(
+                    $bici->num_serie,
+                    $user->nombre_usuario  // nombre del vendedor como identificador de sucursal
+                );
                 $pmSucursal = \App\Models\ProductoModelo::where('id_modelo',  $bici->id_modelo)
                     ->where('id_voltaje', $bici->id_voltaje)
                     ->where('id_negocio', $idNegocio)

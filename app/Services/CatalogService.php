@@ -11,8 +11,10 @@ use App\Models\ModeloVoltaje;
 use App\Models\Bicicleta;
 use App\Models\Pedido;
 use App\Models\Usuario;
+use App\Models\Venta;
 use App\Models\Producto;
 use App\Models\Inventario;
+use App\Models\BicicletaMovimiento; 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -395,16 +397,16 @@ class CatalogService
             ->paginate(10);
     }
 
-    /**
-     * @param string|null $idNegocio  Pasar siempre que esté disponible para usar versión por tenant.
-     */
+    
     public static function getBicicletaBySerie(string $numSerie, ?string $idNegocio = null): ?Bicicleta
     {
         return self::remember(
             "bicicleta:serie:{$numSerie}",
             self::CACHE_TTL['bicicletas'],
-            fn () => Bicicleta::with(['modelo', 'voltaje', 'color'])->where('num_serie', $numSerie)->first(),
-            $idNegocio  // ← tenant version cuando esté disponible
+            fn () => Bicicleta::with(['modelo.marca', 'voltaje', 'color'])
+                        ->where('num_serie', $numSerie)
+                        ->first(),
+            $idNegocio
         );
     }
 
@@ -905,5 +907,72 @@ class CatalogService
     {
         $version = self::getVersion($idNegocio);
         Cache::forget(self::key("sucursales:negocio:{$idNegocio}") . ":v{$version}");
+    }
+    // ─── MOVIMIENTOS DE BICICLETAS ───────────────────────────────────────────
+
+    public static function getHistorialMovimientos(string $numSerie, string $idNegocio): \Illuminate\Support\Collection
+    {
+        return self::remember(
+            "movimientos:serie:{$numSerie}",
+            600, // 10 min — se invalida con cada nuevo movimiento
+            fn () => BicicletaMovimiento::with('usuario')
+                ->where('num_serie', $numSerie)
+                ->orderBy('fecha_movimiento', 'asc')
+                ->get(),
+            $idNegocio
+        );
+    }
+
+    public static function getMovimientosRecientes(string $idNegocio, int $limit = 20): \Illuminate\Support\Collection
+    {
+        return self::remember(
+            "movimientos:recientes:negocio:{$idNegocio}:limit{$limit}",
+            300,
+            fn () => BicicletaMovimiento::with('usuario')   
+                ->where('id_negocio', $idNegocio)
+                ->orderByDesc('fecha_movimiento')
+                ->limit($limit)
+                ->get(),
+            $idNegocio
+        );
+    }
+
+    public static function invalidateMovimientos(string $numSerie, string $idNegocio): void
+    {
+        $version = self::getVersion($idNegocio);
+        Cache::forget(self::key("movimientos:serie:{$numSerie}") . ":v{$version}");
+        Cache::forget(self::key("movimientos:recientes:negocio:{$idNegocio}:limit20") . ":v{$version}");
+    }
+
+    // ─── VENTAS ─────────────────────────────────────────────────────────────────
+
+    public static function getVentasByVendedor(string $idNegocio, string $idUsuario): LengthAwarePaginator
+    {
+        return self::remember(
+            "ventas:vendedor:{$idUsuario}:negocio:{$idNegocio}:page:1",
+            300, // 5 min
+            fn () => self::queryVentas($idNegocio, $idUsuario)
+                ->paginate(15, ['*'], 'page', 1),
+            $idNegocio
+        );
+    }
+
+    private static function queryVentas(string $idNegocio, string $idUsuario)
+    {
+        return Venta::with([
+                'cliente',
+                'detalles.producto',
+                'detalles.bicicleta.modelo',
+                'detalles.bicicleta.color',
+            ])
+            ->where('id_negocio', $idNegocio)
+            ->whereHas('detalles.producto', fn($q) => $q->where('id_usuario', $idUsuario))
+            ->latest();
+    }
+
+    public static function invalidateVentasByVendedor(string $idNegocio, string $idUsuario): void
+    {
+        $version = self::getVersion($idNegocio);
+        Cache::forget(self::key("ventas:vendedor:{$idUsuario}:negocio:{$idNegocio}:page:1") . ":v{$version}");
     }
 }

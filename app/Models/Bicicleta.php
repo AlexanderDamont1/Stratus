@@ -64,4 +64,16 @@ class Bicicleta extends Model
         return $this->hasMany(Mantenimiento::class, 'num_serie', 'num_serie');
     }
     
+        public function movimientos()
+    {
+        return $this->hasMany(BicicletaMovimiento::class, 'num_serie', 'num_serie')
+                    ->orderBy('fecha_movimiento', 'asc');
+    }
+
+    public function ultimoMovimiento()
+    {
+        return $this->hasOne(BicicletaMovimiento::class, 'num_serie', 'num_serie')
+                    ->latestOfMany('fecha_movimiento');
+    }
+    
 }
