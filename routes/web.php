@@ -21,6 +21,8 @@ use App\Http\Controllers\EnlaceController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\VentaController;
 use App\Http\Controllers\MovimientoController;
+use App\Http\Controllers\GarantiaController;
+use App\Http\Controllers\AdminGarantiaController;
 
 /*
 |--------------------------------------------------------------------------
@@ -145,6 +147,20 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
             Route::get('/historial/{serie}', [MovimientoController::class, 'historial'])->name('historial');
             Route::get('/buscar',            [MovimientoController::class, 'buscar'])->name('buscar');
         });
+
+        Route::prefix('admin/garantias')->name('admin.garantias.')->group(function () {
+        Route::get('/',                          [AdminGarantiaController::class, 'index'])         ->name('index');
+        Route::get('/reclamos',                  [AdminGarantiaController::class, 'reclamos'])      ->name('reclamos');
+        Route::get('/marcas',                    [AdminGarantiaController::class, 'marcas'])        ->name('marcas');
+        Route::get('/marcas/{idMarca}',          [AdminGarantiaController::class, 'editarMarca'])   ->name('marcas.editar');
+        Route::post('/marcas/{idMarca}/pdf',     [AdminGarantiaController::class, 'subirPdf'])      ->name('marcas.pdf');
+        Route::post('/marcas/{idMarca}/activar', [AdminGarantiaController::class, 'activar'])       ->name('marcas.activar');
+        Route::post('/componentes',              [AdminGarantiaController::class, 'guardarDefs'])   ->name('componentes.guardar');
+        Route::delete('/componentes/{id}',       [AdminGarantiaController::class, 'borrarDef'])     ->name('componentes.borrar');
+        Route::patch('/reclamo/{id}/estado',     [AdminGarantiaController::class, 'estadoReclamo'])->name('reclamo.estado');
+        Route::post('/reclamo/{id}/reemplazo',   [AdminGarantiaController::class, 'reemplazo'])    ->name('reclamo.reemplazo');
+        Route::post('/politica', [AdminGarantiaController::class, 'guardarPolitica'])->name('politica');
+    });
 
 
         // ── Productos (admin) ──────────────────────────────────────────────
@@ -343,6 +359,14 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
             Route::get('/voltajes/{idModelo}',         [ProductoController::class, 'voltajesPorModelo'])->name('voltajes');
             Route::get('/modelos-por-marca/{idMarca}', [ProductoController::class, 'modelosPorMarca'])->name('modelosPorMarca');
         });
+
+        Route::prefix('garantias')->name('garantias.')->group(function () {
+        Route::get('/',                      [GarantiaController::class, 'index'])   ->name('index');
+        Route::get('/buscar',                [GarantiaController::class, 'buscar'])  ->name('buscar');   // AJAX
+        Route::get('/bici/{numSerie}',       [GarantiaController::class, 'show'])    ->name('show');
+        Route::post('/reclamo',              [GarantiaController::class, 'reclamo']) ->name('reclamo');
+        Route::patch('/reclamo/{id}/estado', [GarantiaController::class, 'estado'])  ->name('estado');
+    });
 
         Route::prefix('sucursal/ventas')->name('ventas.')->group(function () {
     Route::get('/',                 [VentaController::class, 'index'])->name('index');
