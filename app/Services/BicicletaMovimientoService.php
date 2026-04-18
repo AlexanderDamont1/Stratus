@@ -6,22 +6,31 @@ use App\Events\BicicletaMovimientoRegistrado;
 use App\Models\Bicicleta;
 use App\Models\BicicletaMovimiento;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class BicicletaMovimientoService
 {
     public function registrar(
-        string $num_serie,
-        string $tipo_movimiento,
-        array  $extra = []
+    string $num_serie,
+    string $tipo_movimiento,
+    array  $extra = []
     ): BicicletaMovimiento {
 
+        Log::info('[BicicletaMovimientoService] registrar inicio', [
+            'num_serie'       => $num_serie,
+            'tipo_movimiento' => $tipo_movimiento,
+        ]);
+
         // ✅ Usar cache — nunca tocar Bicicleta directamente
-        $bicicleta = CatalogService::getBicicletaBySerie($num_serie);
+        $bicicleta = CatalogService::getBicicletaBySerie($num_serie, $extra['id_negocio'] ?? null);
+
+        Log::info('[BicicletaMovimientoService] bicicleta encontrada', [
+            'bicicleta'  => $bicicleta?->toArray(),
+        ]);
 
         abort_if(!$bicicleta, 404, "Serie {$num_serie} no encontrada.");
 
         $movimiento = BicicletaMovimiento::create([
-            // ✅ Generar PK string (igual al patrón del resto del proyecto)
             'id_movimiento'    => 'MOV' . strtoupper(substr(md5(uniqid('', true)), 0, 12)),
             'num_serie'        => $num_serie,
             'id_negocio'       => $bicicleta->id_negocio,
@@ -34,13 +43,15 @@ class BicicletaMovimientoService
             'fecha_movimiento' => $extra['fecha']     ?? now(),
         ]);
 
-        // ✅ Eager-load usuario ANTES del broadcast para evitar N+1 en el evento
+        Log::info('[BicicletaMovimientoService] movimiento creado', [
+            'id_movimiento' => $movimiento->id_movimiento,
+            'id_negocio'    => $movimiento->id_negocio,
+        ]);
+
         $movimiento->load('usuario');
 
-        // Invalidar caches afectados
         CatalogService::invalidateMovimientos($num_serie, $bicicleta->id_negocio);
 
-        // Broadcast (toOthers para no duplicar en quien lo registró)
         broadcast(new BicicletaMovimientoRegistrado($movimiento))->toOthers();
 
         return $movimiento;
@@ -48,7 +59,7 @@ class BicicletaMovimientoService
 
     /* ============ MÉTODOS SEMÁNTICOS ============ */
 
-    public function entradaStockGeneral(string $num_serie, ?string $id_pedido = null): BicicletaMovimiento
+    public function entradaStockGeneral(string $num_serie, ?string $id_pedido = null, ?string $id_negocio = null): BicicletaMovimiento
     {
         $extra = [
             'origen'  => 'Proveedor',
@@ -60,6 +71,10 @@ class BicicletaMovimientoService
 
         if ($id_pedido) {
             $extra['id_pedido'] = $id_pedido;
+        }
+
+        if ($id_negocio) {
+            $extra['id_negocio'] = $id_negocio;
         }
 
         return $this->registrar($num_serie, 'entrada_stock', $extra);

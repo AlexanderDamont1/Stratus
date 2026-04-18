@@ -11,11 +11,19 @@ return new class extends Migration
         Schema::create('inventario', function (Blueprint $table) {
             $table->string('id_inventario', 20)->primary();
 
-            $table->string('id_producto_modelo', 20);
+            // nullable para accesorios (tipo 1)
+            $table->string('id_producto_modelo', 20)->nullable();
             $table->foreign('id_producto_modelo')
                 ->references('id_producto_modelo')
                 ->on('producto_modelo')
-                ->cascadeOnDelete();
+                ->nullOnDelete();
+
+            // para accesorios (tipo 1) — nullable para bicicletas
+            $table->string('id_producto', 20)->nullable();
+            $table->foreign('id_producto')
+                ->references('id_producto')
+                ->on('productos')
+                ->nullOnDelete();
 
             $table->string('id_negocio', 20);
             $table->foreign('id_negocio')
@@ -23,7 +31,6 @@ return new class extends Migration
                 ->on('negocios')
                 ->cascadeOnDelete();
 
-            // null = stock admin, con valor = stock de esa sucursal
             $table->string('id_usuario', 20)->nullable();
             $table->foreign('id_usuario')
                 ->references('id_usuario')
@@ -35,9 +42,14 @@ return new class extends Migration
 
             $table->timestamps();
 
+            // unique por producto_modelo O por producto según el tipo
             $table->unique(
                 ['id_producto_modelo', 'id_negocio', 'id_usuario'],
                 'inv_pm_negocio_usuario_unique'
+            );
+            $table->unique(
+                ['id_producto', 'id_negocio', 'id_usuario'],
+                'inv_prod_negocio_usuario_unique'
             );
         });
     }

@@ -16,6 +16,7 @@ use Illuminate\Validation\Rule;
 use App\Events\PedidoUpdated;
 use App\Events\BicicletaActualizada;
 use App\Services\BicicletaMovimientoService;
+use Illuminate\Support\Facades\Log;
 
 
 class PedidoController extends Controller
@@ -400,14 +401,14 @@ class PedidoController extends Controller
     }
 
     // ─── COMPLETAR ENTREGA ───────────────────────────────────────
-    public function completarEntrega(Request $request, string $id_pedido)
+   public function completarEntrega(Request $request, string $id_pedido)
     {
         $usuario = auth()->user();
         abort_if($usuario->id_rol !== 5, 403);
 
         $request->validate(['token' => 'required|string|size:10']);
 
-        $pedido = Pedido::with(['bicicletas'])->findOrFail($id_pedido);
+        $pedido = Pedido::with(['bicicletas.modelo', 'bicicletas.voltaje', 'bicicletas.color'])->findOrFail($id_pedido);
         abort_if($pedido->status !== 3, 422, 'El pedido no está listo para entregar.');
 
         $tokenRecord = \App\Models\PedidoToken::where('id_pedido', $id_pedido)
@@ -423,28 +424,48 @@ class PedidoController extends Controller
             ], 422);
         }
 
-        $idNegocioGestor     = $usuario->id_negocio;
-        $movimientoService   = app(BicicletaMovimientoService::class); // ← instancia una vez
+        $idNegocioGestor   = $usuario->id_negocio;
+        $movimientoService = app(BicicletaMovimientoService::class);
 
         DB::transaction(function () use ($pedido, $tokenRecord, $idNegocioGestor, $movimientoService) {
             $pedido->update(['status' => 4]);
 
             foreach ($pedido->bicicletas as $bici) {
+                // 1. Invalidar caché con el negocio ANTERIOR
                 CatalogService::invalidateBicicleta($bici->num_serie, $bici->id_negocio);
                 CatalogService::invalidateSeccion($bici->id_usuario, $idNegocioGestor);
 
+                // 2. Cambiar negocio
                 $bici->update(['id_negocio' => $pedido->id_negocio]);
-                $movimientoService->entradaStockGeneral($bici->num_serie, $pedido->id_pedido);
 
-
+                // 3. Invalidar caché con el negocio NUEVO
                 CatalogService::invalidateBicicleta($bici->num_serie, $pedido->id_negocio);
+
+                // 4. Registrar movimiento — caché ya limpio con el negocio correcto
+                Log::info('[completarEntrega] Antes de entradaStockGeneral', [
+                    'num_serie'   => $bici->num_serie,
+                    'id_negocio'  => $bici->id_negocio,
+                    'id_pedido'   => $pedido->id_pedido,
+                ]);
+
+                $movimientoService->entradaStockGeneral(
+                    $bici->num_serie, 
+                    $pedido->id_pedido,
+                    $pedido->id_negocio  // ← negocio correcto
+                );
+
+                Log::info('[completarEntrega] Después de entradaStockGeneral', [
+                    'num_serie' => $bici->num_serie,
+                ]);
+
+
                 CatalogService::invalidateSeccion($bici->id_usuario, $pedido->id_negocio);
 
                 if ($bici->id_usuario) {
                     CatalogService::invalidateBicicletasPorUsuario($bici->id_usuario, $idNegocioGestor);
                     CatalogService::invalidateBicicletasPorUsuario($bici->id_usuario, $pedido->id_negocio);
                 }
-                
+
                 event(new BicicletaActualizada(
                     numSerie:       $bici->num_serie,
                     idNegocio:      $pedido->id_negocio,

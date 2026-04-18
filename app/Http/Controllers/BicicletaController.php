@@ -330,7 +330,12 @@ class BicicletaController extends Controller
 
         if ($request->id_pedido) {
             app(BicicletaMovimientoService::class)
-                ->entradaStockGeneral($bicicleta->num_serie, $request->id_pedido);
+                ->registrar($bicicleta->num_serie, 'entrada_stock', [
+                    'origen'    => 'Fabricante',
+                    'destino'   => 'Pedido Realizado',
+                    'notas'     => "Bicicleta escaneada e ingresada al pedido #{$request->id_pedido}",
+                    'id_pedido' => $request->id_pedido,
+                ]);
         }
 
         event(new \App\Events\BicicletaCreada(
@@ -643,10 +648,13 @@ class BicicletaController extends Controller
 
             if ($guardado) {
             app(BicicletaMovimientoService::class)
-                ->transferenciaASucursal(
-                    $bici->num_serie,
-                    $user->nombre_usuario  // nombre del vendedor como identificador de sucursal
-                );
+                ->registrar($bici->num_serie, 'transferencia_sucursal', [
+                    'origen'    => 'Stock general',
+                    'destino'   => $user->nombre_usuario,
+                    'notas'     => "Transferido a sucursal: {$user->nombre_usuario}",
+                    'id_negocio' => $idNegocio, // ← forzar el negocio correcto
+                ]);
+                
                 $pmSucursal = \App\Models\ProductoModelo::where('id_modelo',  $bici->id_modelo)
                     ->where('id_voltaje', $bici->id_voltaje)
                     ->where('id_negocio', $idNegocio)

@@ -1,12 +1,11 @@
 <x-app-layout>
     <div class="space-y-6" x-data="{
-    /* ── estado del formulario de entrada ── */
+    submitting: false,
+   
     form: { id_modelo: '', id_voltaje: '', id_color: '', cantidad: 1, voltajes: [], colores: [] },
 
-    /* ── tabla de líneas ya agregadas ── */
     items: [],
 
-    /* ── helpers de nombres para mostrar en la tabla ── */
     modeloNombre(id) {
         const el = document.querySelector(`[data-modelos] [data-id='${id}']`);
         return el ? el.dataset.nombre : id;
@@ -63,9 +62,13 @@
     removeItem(index) {
         this.items.splice(index, 1);
     }
-}">
+}"
+x-init="
+        window.addEventListener('pageshow', (e) => {
+            if (e.persisted) submitting = false;
+        });
+    ">
 
-        {{-- lookup oculto para nombres de modelos --}}
         <div data-modelos class="hidden">
             @foreach($modelos as $modelo)
             <span data-id="{{ $modelo->id_modelo }}" data-nombre="{{ $modelo->nombre_modelo }}"></span>
@@ -109,7 +112,7 @@
         </div>
         @endif
 
-        <form action="{{ route('pedidos.store') }}" method="POST">
+        <form action="{{ route('pedidos.store') }}" method="POST" @submit="submitting = true">
             @csrf
 
             {{-- ===== INFO GENERAL ===== --}}
@@ -289,12 +292,16 @@
                     Cancelar
                 </a>
                 <button type="submit"
-                    :disabled="items.length === 0"
+                    :disabled="items.length === 0 || submitting"
                     class="px-5 py-2 bg-gray-900 dark:bg-white dark:text-gray-900 text-white rounded-lg text-sm font-semibold hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg x-show="!submitting" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    Crear Pedido
+                    <svg x-show="submitting" class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                    </svg>
+                    <span x-text="submitting ? 'Creando...' : 'Crear Pedido'"></span>
                 </button>
             </div>
 
