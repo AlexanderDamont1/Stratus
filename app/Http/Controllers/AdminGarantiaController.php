@@ -1,0 +1,334 @@
+<?php
+// app/Http/Controllers/AdminGarantiaController.php
+
+namespace App\Http\Controllers;
+
+use App\Models\GarantiaComponenteDef;
+use App\Models\GarantiaReclamo;
+use App\Models\GarantiaReemplazo;
+use App\Models\MarcaGarantiaConfig;
+use App\Models\NegocioGarantiaConfig;
+use App\Services\CatalogService;
+use App\Services\GarantiaService;
+use App\Services\PdfGarantiaService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
+class AdminGarantiaController extends Controller
+{
+    public function __construct(
+        protected GarantiaService    $garantiaService,
+        protected PdfGarantiaService $pdfService,
+    ) {}
+
+    // ─── INDEX: resumen general ───────────────────────────────────────────
+    public function index()
+    {
+        $user = auth()->user();
+        if ($user->id_rol != 1) abort(403);
+
+        $marcas = CatalogService::getMarcasByNegocio($user->id_negocio);
+
+        // Configuración de garantía por marca (eager en una query)
+        $configs = MarcaGarantiaConfig::where('id_negocio', $user->id_negocio)
+            ->get()
+            ->keyBy('id_marca');
+
+        $config_negocio = NegocioGarantiaConfig::find($user->id_negocio);
+
+        return view('administrador.garantias.index', compact('marcas', 'configs', 'config_negocio'));
+    }
+
+    // ─── RECLAMOS: todos los de este negocio ─────────────────────────────
+    public function reclamos(Request $request)
+    {
+        $user = auth()->user();
+        if ($user->id_rol != 1) abort(403);
+
+        $query = GarantiaReclamo::with([
+                'bicicletaGarantia.garantiaDef',
+                'mantenimiento',
+            ])
+            ->where('id_negocio', $user->id_negocio);
+
+        // Filtros opcionales
+        if ($request->filled('estado')) {
+            $query->where('estado', $request->estado);
+        }
+        if ($request->filled('num_serie')) {
+            $query->where('num_serie', 'like', '%' . strtoupper($request->num_serie) . '%');
+        }
+
+        $reclamos = $query->latest()->paginate(20);
+
+        // Sucursales para mostrar a qué vendedor pertenece cada bici
+        $sucursales = CatalogService::getSucursalesByNegocio($user->id_negocio)
+            ->keyBy('id_usuario');
+
+        return view('administrador.garantias.reclamos', compact('reclamos', 'sucursales'));
+    }
+
+    // ─── MARCAS: configuración por marca ─────────────────────────────────
+    public function marcas()
+    {
+        $user = auth()->user();
+        if ($user->id_rol != 1) abort(403);
+
+        $marcas  = CatalogService::getMarcasByNegocio($user->id_negocio);
+        $configs = MarcaGarantiaConfig::with('componenteDefs')
+            ->where('id_negocio', $user->id_negocio)
+            ->get()
+            ->keyBy('id_marca');
+
+        return view('administrador.garantias.marcas', compact('marcas', 'configs'));
+    }
+
+    // ─── EDITAR MARCA: componentes + PDF ─────────────────────────────────
+    public function editarMarca(Request $request, string $idMarca)
+{
+    $user = auth()->user();
+    if ($user->id_rol != 1) abort(403);
+
+    $marca = CatalogService::getMarcaById($idMarca);
+    if (!$marca || $marca->id_negocio !== $user->id_negocio) abort(404);
+
+    $config = MarcaGarantiaConfig::with('componenteDefs')
+        ->where('id_marca', $idMarca)
+        ->where('id_negocio', $user->id_negocio)
+        ->first();
+
+    // Polling desde Alpine — devuelve solo estado + json IA
+    if ($request->wantsJson()) {
+        return response()->json([
+            'estado'      => $config?->estado_procesamiento ?? 'sin_pdf',
+            'ia_raw_json' => $config?->ia_raw_json,
+        ]);
+    }
+
+    return view('administrador.garantias.editar-marca', compact('marca', 'config'));
+}
+
+    // ─── POST: subir PDF ──────────────────────────────────────────────────
+    public function subirPdf(Request $request, string $idMarca)
+    {
+        $user = auth()->user();
+        if ($user->id_rol != 1) abort(403);
+
+        $request->validate([
+            'pdf' => 'required|file|mimes:pdf|max:4096', // max 4MB
+        ]);
+
+        $marca = CatalogService::getMarcaById($idMarca);
+        if (!$marca || $marca->id_negocio !== $user->id_negocio) abort(404);
+
+        try {
+            // Convertir a base64 — sin tocar filesystem
+            $archivo    = $request->file('pdf');
+            $base64     = base64_encode(file_get_contents($archivo->getRealPath()));
+            $nombreOrig = $archivo->getClientOriginalName();
+
+            // Upsert de la config de la marca
+            $config = MarcaGarantiaConfig::updateOrCreate(
+                ['id_marca' => $idMarca, 'id_negocio' => $user->id_negocio],
+                [
+                    'pdf_base64'          => $base64,
+                    'pdf_nombre_original' => $nombreOrig,
+                    'estado_procesamiento' => 'pendiente',
+                    'ia_raw_json'         => null,
+                    'ia_procesado_at'     => null,
+                ]
+            );
+
+            // Procesar con IA en background
+            // Se usa dispatch(function) para no bloquear la respuesta
+            $configId = $config->id_marca_garantia;
+            dispatch(function () use ($configId) {
+                app(PdfGarantiaService::class)->procesarConIA($configId);
+            })->afterCommit();
+
+            return response()->json([
+                'ok'      => true,
+                'mensaje' => 'PDF recibido. Procesando con IA, espera unos segundos.',
+                'config'  => [
+                    'id'      => $config->id_marca_garantia,
+                    'estado'  => 'pendiente',
+                    'nombre'  => $nombreOrig,
+                ],
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error al subir PDF de garantía', ['error' => $e->getMessage()]);
+            return response()->json(['ok' => false, 'mensaje' => 'Error al procesar el PDF.'], 500);
+        }
+    }
+
+    // ─── POST: activar/desactivar garantía de una marca ──────────────────
+    public function activar(Request $request, string $idMarca)
+    {
+        $user = auth()->user();
+        if ($user->id_rol != 1) abort(403);
+
+        $config = MarcaGarantiaConfig::where('id_marca', $idMarca)
+            ->where('id_negocio', $user->id_negocio)
+            ->firstOrFail();
+
+        $config->update(['activa' => !$config->activa]);
+
+        return response()->json([
+            'ok'     => true,
+            'activa' => $config->activa,
+        ]);
+    }
+
+    // ─── POST: guardar/actualizar definiciones de componentes ────────────
+    // Recibe el JSON validado (ya sea de IA o editado manualmente por el admin)
+    public function guardarDefs(Request $request)
+    {
+        $user = auth()->user();
+        if ($user->id_rol != 1) abort(403);
+
+        $request->validate([
+            'id_marca_garantia'          => 'required|string',
+            'componentes'                => 'required|array|min:1',
+            'componentes.*.clave'        => 'required|string|max:60',
+            'componentes.*.nombre'       => 'required|string|max:120',
+            'componentes.*.incluye'      => 'required|array',
+            'componentes.*.duracion'     => 'required|integer|min:0',
+            'componentes.*.cobertura'    => 'nullable|string|max:255',
+            'componentes.*.serializable' => 'boolean',
+            'componentes.*.excluido'     => 'boolean',
+        ]);
+
+        $config = MarcaGarantiaConfig::where('id_marca_garantia', $request->id_marca_garantia)
+            ->where('id_negocio', $user->id_negocio)
+            ->firstOrFail();
+
+        DB::transaction(function () use ($request, $config) {
+            foreach ($request->componentes as $comp) {
+                GarantiaComponenteDef::updateOrCreate(
+                    [
+                        'id_marca_garantia' => $config->id_marca_garantia,
+                        'clave_componente'  => $comp['clave'],
+                    ],
+                    [
+                        'id_negocio'       => $config->id_negocio,
+                        'nombre_componente' => $comp['nombre'],
+                        'incluye'          => $comp['incluye'],
+                        'duracion_meses'   => $comp['duracion'],
+                        'cobertura'        => $comp['cobertura'] ?? null,
+                        'serializable'     => $comp['serializable'] ?? false,
+                        'excluido'         => $comp['excluido'] ?? false,
+                        'activo'           => true,
+                    ]
+                );
+            }
+
+            // Marcar como completado
+            $config->update(['estado_procesamiento' => 'completado']);
+        });
+
+        return response()->json(['ok' => true, 'mensaje' => 'Componentes guardados correctamente.']);
+    }
+
+    // ─── DELETE: borrar definición de componente ─────────────────────────
+    public function borrarDef(string $id)
+    {
+        $user = auth()->user();
+        if ($user->id_rol != 1) abort(403);
+
+        $def = GarantiaComponenteDef::where('id_garantia_def', $id)
+            ->where('id_negocio', $user->id_negocio)
+            ->firstOrFail();
+
+        $def->delete();
+
+        return response()->json(['ok' => true]);
+    }
+
+    // ─── PATCH: estado de reclamo (admin) ────────────────────────────────
+    public function estadoReclamo(Request $request, string $id)
+    {
+        $user = auth()->user();
+        if ($user->id_rol != 1) abort(403);
+
+        $request->validate([
+            'estado'    => 'required|string|max:40',
+            'resultado' => 'nullable|string|max:1000',
+        ]);
+
+        $reclamo = GarantiaReclamo::where('id_reclamo', $id)
+            ->where('id_negocio', $user->id_negocio)
+            ->firstOrFail();
+
+        $reclamo->update([
+            'estado'    => $request->estado,
+            'resultado' => $request->resultado,
+        ]);
+
+        return response()->json(['ok' => true, 'mensaje' => 'Estado actualizado.']);
+    }
+
+    // ─── POST: procesar reemplazo ─────────────────────────────────────────
+    public function reemplazo(Request $request, string $id)
+    {
+        $user = auth()->user();
+        if ($user->id_rol != 1) abort(403);
+
+        $request->validate([
+            'num_serie_nuevo_componente' => 'nullable|string|max:60',
+            'notas'                      => 'nullable|string|max:1000',
+        ]);
+
+        $reclamo = GarantiaReclamo::where('id_reclamo', $id)
+            ->where('id_negocio', $user->id_negocio)
+            ->firstOrFail();
+
+        if ($reclamo->estado !== 'aprobado') {
+            return response()->json([
+                'ok'      => false,
+                'mensaje' => 'El reclamo debe estar aprobado antes de procesar el reemplazo.',
+            ], 422);
+        }
+
+        try {
+            $nuevaGarantia = $this->garantiaService->procesarReemplazo(
+                idReclamo:               $id,
+                numSerieNuevoComponente: $request->num_serie_nuevo_componente,
+                notas:                   $request->notas ?? '',
+            );
+
+            return response()->json([
+                'ok'      => true,
+                'mensaje' => 'Reemplazo procesado. Nueva garantía generada.',
+                'nueva_expiracion' => $nuevaGarantia->fecha_expiracion->format('d/m/Y'),
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error al procesar reemplazo', ['error' => $e->getMessage()]);
+            return response()->json(['ok' => false, 'mensaje' => 'Error al procesar el reemplazo.'], 500);
+        }
+    }
+
+    public function guardarPolitica(Request $request)
+{
+    $user = auth()->user();
+    if ($user->id_rol != 1) abort(403);
+
+    $request->validate([
+        'politica_reemplazo' => 'required|in:heredar,nueva,mini',
+        'mini_garantia_dias' => 'required_if:politica_reemplazo,mini|integer|min:1|max:90',
+    ]);
+
+    NegocioGarantiaConfig::updateOrCreate(
+        ['id_negocio' => $user->id_negocio],
+        [
+            'politica_reemplazo' => $request->politica_reemplazo,
+            'mini_garantia_dias' => $request->mini_garantia_dias ?? 7,
+        ]
+    );
+
+    return response()->json(['ok' => true]);
+}
+
+}

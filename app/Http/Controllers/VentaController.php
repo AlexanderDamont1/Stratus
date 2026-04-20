@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\BicicletaMovimientoService;
+use App\Services\GarantiaService;
 
 
 class VentaController extends Controller
@@ -27,7 +28,8 @@ class VentaController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
-        if ($user->id_rol != 2) abort(403);
+        if ($user->id_rol != 2)
+            abort(403);
 
         $page = $request->get('page', 1);
 
@@ -51,7 +53,8 @@ class VentaController extends Controller
     public function create()
     {
         $user = auth()->user();
-        if ($user->id_rol != 2) abort(403);
+        if ($user->id_rol != 2)
+            abort(403);
 
         $accesorios = Producto::where('id_negocio', $user->id_negocio)
             ->where('id_usuario', $user->id_usuario)
@@ -69,13 +72,14 @@ class VentaController extends Controller
     public function buscarSerie(Request $request)
     {
         $user = auth()->user();
-        if ($user->id_rol != 2) abort(403);
+        if ($user->id_rol != 2)
+            abort(403);
 
         $numSerie = strtoupper(trim($request->get('num_serie', '')));
 
         if (!$numSerie) {
             return response()->json([
-                'ok'     => false,
+                'ok' => false,
                 'mensaje' => 'Indica un número de serie.',
             ], 422);
         }
@@ -89,32 +93,32 @@ class VentaController extends Controller
             ($bici->id_usuario !== null && $bici->id_usuario !== $user->id_usuario)
         ) {
             return response()->json([
-                'ok'     => false,
+                'ok' => false,
                 'mensaje' => 'Bicicleta no encontrada en tu stock o ya fue vendida.',
             ], 404);
         }
 
         $pm = ProductoModelo::with('producto')
-            ->where('id_modelo',  $bici->id_modelo)
+            ->where('id_modelo', $bici->id_modelo)
             ->where('id_voltaje', $bici->id_voltaje)
             ->where('id_negocio', $user->id_negocio)
             ->where(function ($q) use ($user) {
                 $q->where('id_usuario', $user->id_usuario)
-                  ->orWhereNull('id_usuario');
+                    ->orWhereNull('id_usuario');
             })
             ->where('activo', true)
             ->first();
 
         if (!$pm || !$pm->producto) {
             return response()->json([
-                'ok'     => false,
+                'ok' => false,
                 'mensaje' => 'Esta bicicleta no tiene un producto configurado.',
             ], 404);
         }
 
         if (!$pm->producto->precio || $pm->producto->precio <= 0) {
             return response()->json([
-                'ok'     => false,
+                'ok' => false,
                 'mensaje' => 'Esta bicicleta no tiene un precio configurado.',
             ], 404);
         }
@@ -122,17 +126,17 @@ class VentaController extends Controller
         return response()->json([
             'ok' => true,
             'bici' => [
-                'num_serie'    => $bici->num_serie,
-                'marca'        => $bici->modelo->marca->nombre_marca ?? '—',
-                'modelo'       => $bici->modelo->nombre_modelo       ?? '—',
-                'voltaje'      => $bici->voltaje->voltaje             ?? '—',
-                'color_nombre' => $bici->color->color                 ?? '—',
-                'color_hexes'  => [],
+                'num_serie' => $bici->num_serie,
+                'marca' => $bici->modelo->marca->nombre_marca ?? '—',
+                'modelo' => $bici->modelo->nombre_modelo ?? '—',
+                'voltaje' => $bici->voltaje->voltaje ?? '—',
+                'color_nombre' => $bici->color->color ?? '—',
+                'color_hexes' => [],
             ],
             'producto' => [
                 'id_producto' => $pm->producto->id_producto,
-                'nombre'      => $pm->producto->nombre_producto,
-                'precio'      => (float) $pm->producto->precio,
+                'nombre' => $pm->producto->nombre_producto,
+                'precio' => (float) $pm->producto->precio,
             ],
         ]);
     }
@@ -143,19 +147,20 @@ class VentaController extends Controller
     public function store(Request $request)
     {
         $user = auth()->user();
-        if ($user->id_rol != 2) abort(403);
+        if ($user->id_rol != 2)
+            abort(403);
 
         $request->validate([
-            'nombre_cliente'      => 'required|string|max:100',
-            'apellido1'           => 'required|string|max:60',
-            'apellido2'           => 'nullable|string|max:60',
-            'telefono'            => 'required|string|max:15',
-            'correo'              => 'nullable|email|max:120',
-            'direccion'           => 'nullable|string|max:255',
-            'items'               => 'required|array|min:1',
+            'nombre_cliente' => 'required|string|max:100',
+            'apellido1' => 'required|string|max:60',
+            'apellido2' => 'nullable|string|max:60',
+            'telefono' => 'required|string|max:15',
+            'correo' => 'nullable|email|max:120',
+            'direccion' => 'nullable|string|max:255',
+            'items' => 'required|array|min:1',
             'items.*.id_producto' => 'required|exists:productos,id_producto',
-            'items.*.num_serie'   => 'nullable|string',
-            'items.*.cantidad'    => 'required|integer|min:1',
+            'items.*.num_serie' => 'nullable|string',
+            'items.*.cantidad' => 'required|integer|min:1',
         ]);
 
         DB::beginTransaction();
@@ -164,13 +169,13 @@ class VentaController extends Controller
             $cliente = Cliente::firstOrCreate(
                 [
                     'id_negocio' => $user->id_negocio,
-                    'telefono'   => $request->telefono,
+                    'telefono' => $request->telefono,
                 ],
                 [
                     'nombre_cliente' => $request->nombre_cliente,
-                    'apellido1'      => $request->apellido1,
-                    'apellido2'      => $request->apellido2 ?? '',
-                    'correo'         => $request->correo   ?? '',
+                    'apellido1' => $request->apellido1,
+                    'apellido2' => $request->apellido2 ?? '',
+                    'correo' => $request->correo ?? '',
                 ]
             );
 
@@ -179,10 +184,10 @@ class VentaController extends Controller
                 'id_cliente' => $cliente->id_cliente,
             ]);
 
-            $totalVenta          = 0;
+            $totalVenta = 0;
             $bicicletasBroadcast = [];
             $seriesParaInvalidar = [];
-            $eventosBicicleta    = []; // Acumular datos para BicicletaActualizada
+            $eventosBicicleta = []; // Acumular datos para BicicletaActualizada
 
             foreach ($request->items as $item) {
                 $producto = Producto::where('id_producto', $item['id_producto'])
@@ -190,22 +195,22 @@ class VentaController extends Controller
                     ->where('id_negocio', $user->id_negocio)
                     ->firstOrFail();
 
-                $cantidad       = (int) ($item['cantidad'] ?? 1);
+                $cantidad = (int) ($item['cantidad'] ?? 1);
                 $precioUnitario = (float) $producto->precio;
 
                 DetalleVenta::create([
-                    'id_venta'        => $venta->id_venta,
-                    'id_producto'     => $item['id_producto'],
-                    'num_serie'       => $item['num_serie'] ?? null,
+                    'id_venta' => $venta->id_venta,
+                    'id_producto' => $item['id_producto'],
+                    'num_serie' => $item['num_serie'] ?? null,
                     'precio_unitario' => $precioUnitario,
-                    'cantidad'        => $cantidad,
+                    'cantidad' => $cantidad,
                 ]);
 
                 $totalVenta += $precioUnitario * $cantidad;
 
                 if ($producto->tipo === '2' && !empty($item['num_serie'])) {
                     $bici = Bicicleta::with(['modelo.marca', 'voltaje', 'color'])
-                        ->where('num_serie',  $item['num_serie'])
+                        ->where('num_serie', $item['num_serie'])
                         ->where('id_negocio', $user->id_negocio)
                         ->where('id_usuario', $user->id_usuario)  // ← demasiado estricto
                         ->where('status', 1)
@@ -224,15 +229,15 @@ class VentaController extends Controller
 
                     $eventosBicicleta[] = [
                         'num_serie' => $bici->num_serie,
-                        'modelo'    => $bici->modelo->nombre_modelo ?? '—',
-                        'marca'     => $bici->modelo->marca->nombre_marca ?? '—',
-                        'voltaje'   => $bici->voltaje->voltaje ?? '—',
-                        'color'     => $bici->color->color ?? '—',
-                        'status'    => 2,
+                        'modelo' => $bici->modelo->nombre_modelo ?? '—',
+                        'marca' => $bici->modelo->marca->nombre_marca ?? '—',
+                        'voltaje' => $bici->voltaje->voltaje ?? '—',
+                        'color' => $bici->color->color ?? '—',
+                        'status' => 2,
                     ];
 
                     // Actualizar inventario (modelo-voltaje)
-                    $pm = ProductoModelo::where('id_modelo',  $bici->id_modelo)
+                    $pm = ProductoModelo::where('id_modelo', $bici->id_modelo)
                         ->where('id_voltaje', $bici->id_voltaje)
                         ->where('id_usuario', $user->id_usuario)
                         ->first();
@@ -245,15 +250,21 @@ class VentaController extends Controller
                             ->decrement('cantidad');
                     }
 
-                    $seriesParaInvalidar[]  = $bici->num_serie;
-                    $bicicletasBroadcast[]  = [
+                    $seriesParaInvalidar[] = $bici->num_serie;
+                    $bicicletasBroadcast[] = [
                         'num_serie' => $bici->num_serie,
-                        'modelo'    => $bici->modelo->nombre_modelo       ?? '—',
-                        'marca'     => $bici->modelo->marca->nombre_marca ?? '—',
-                        'voltaje'   => $bici->voltaje->voltaje             ?? '—',
-                        'color'     => $bici->color->color                 ?? '—',
+                        'modelo' => $bici->modelo->nombre_modelo ?? '—',
+                        'marca' => $bici->modelo->marca->nombre_marca ?? '—',
+                        'voltaje' => $bici->voltaje->voltaje ?? '—',
+                        'color' => $bici->color->color ?? '—',
                     ];
                 }
+                app(GarantiaService::class)->generarGarantiasParaVenta(
+                    numSerie: $bici->num_serie,
+                    idMarca: $bici->modelo->id_marca,    // disponible por el with(['modelo.marca'])
+                    idNegocio: $user->id_negocio,
+                    fechaVenta: now(),
+                );
             }
 
             DB::commit();
@@ -273,25 +284,25 @@ class VentaController extends Controller
             // ===== BROADCASTS DESPUÉS DEL COMMIT =====
             foreach ($eventosBicicleta as $ev) {
                 event(new BicicletaActualizada(
-                    numSerie:       $ev['num_serie'],
-                    idNegocio:      $user->id_negocio,
-                    idUsuario:      $user->id_usuario,
+                    numSerie: $ev['num_serie'],
+                    idNegocio: $user->id_negocio,
+                    idUsuario: $user->id_usuario,
                     nombreVendedor: $user->nombre_usuario,
-                    modelo:         $ev['modelo'],
-                    voltaje:        $ev['voltaje'],
-                    color:          $ev['color'],
-                    status:         $ev['status'],
+                    modelo: $ev['modelo'],
+                    voltaje: $ev['voltaje'],
+                    color: $ev['color'],
+                    status: $ev['status'],
                 ));
             }
 
             event(new VentaRealizada(
-                idVenta:        $venta->id_venta,
-                idNegocio:      $user->id_negocio,
-                idVendedor:     $user->id_usuario,
+                idVenta: $venta->id_venta,
+                idNegocio: $user->id_negocio,
+                idVendedor: $user->id_usuario,
                 nombreVendedor: $user->nombre_usuario,
-                nombreCliente:  $cliente->nombre_cliente . ' ' . $cliente->apellido1,
-                total:          $totalVenta,
-                bicicletas:     $bicicletasBroadcast,
+                nombreCliente: $cliente->nombre_cliente . ' ' . $cliente->apellido1,
+                total: $totalVenta,
+                bicicletas: $bicicletasBroadcast,
             ));
 
             return redirect()
@@ -301,7 +312,7 @@ class VentaController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error al registrar venta', [
-                'user'  => $user->id_usuario,
+                'user' => $user->id_usuario,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
@@ -318,7 +329,8 @@ class VentaController extends Controller
     public function show(string $id_venta)
     {
         $user = auth()->user();
-        if ($user->id_rol != 2) abort(403);
+        if ($user->id_rol != 2)
+            abort(403);
 
         $venta = Venta::with([
             'cliente',
@@ -339,7 +351,8 @@ class VentaController extends Controller
     public function poliza(string $id_venta)
     {
         $user = auth()->user();
-        if ($user->id_rol != 2) abort(403);
+        if ($user->id_rol != 2)
+            abort(403);
 
         $venta = Venta::with([
             'cliente',
@@ -361,12 +374,12 @@ class VentaController extends Controller
         }
 
         $pdf = Pdf::loadView('vendedor.ventas.poliza', [
-            'venta'      => $venta,
-            'cliente'    => $venta->cliente,
-            'negocio'    => $venta->negocio,
+            'venta' => $venta,
+            'cliente' => $venta->cliente,
+            'negocio' => $venta->negocio,
             'bicicletas' => $bicicletas,
-            'vendedor'   => $user,
-            'fecha'      => now()->format('d/m/Y'),
+            'vendedor' => $user,
+            'fecha' => now()->format('d/m/Y'),
         ])->setPaper('letter', 'landscape');
 
         return $pdf->download('poliza-' . $venta->id_venta . '.pdf');
