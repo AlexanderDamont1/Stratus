@@ -16,9 +16,8 @@ class ProductoController extends Controller
         $idNegocio = $user->id_negocio;
         $esRol1    = $user->id_rol === 1;
 
-     
         $idSucursalFiltro = $esRol1
-            ? session('productos.sucursal_filtro')   // null = sin filtro (ve todo), string = sucursal específica
+            ? session('productos.sucursal_filtro')
             : $user->id_usuario;
 
         $productos = CatalogService::getProductosConRelaciones(
@@ -26,11 +25,9 @@ class ProductoController extends Controller
             $idSucursalFiltro
         );
 
-        // ✅ Si el admin tiene una sucursal seleccionada, solo mostrar productos activos de ella
         if ($esRol1 && $idSucursalFiltro) {
             $productos = $productos->filter(function ($producto) {
                 if ($producto->tipo === '1') return true;
-
                 return $producto->productoModelo->contains('activo', true);
             });
         }
@@ -48,19 +45,31 @@ class ProductoController extends Controller
         $marcas  = CatalogService::getMarcasByNegocio($idNegocio);
         $modelos = CatalogService::getModelosByNegocio($idNegocio);
 
-        // ✅ Inventario correcto según contexto
+        // ✅ Inventario de bicicletas
         if ($esRol1 && $idSucursalFiltro) {
-            // Admin viendo una sucursal específica → inventario de esa sucursal con cantidad visible
             $inventario = CatalogService::getInventarioBySucursal($idNegocio, $idSucursalFiltro)
                 ->keyBy('id_producto_modelo');
         } elseif ($esRol1) {
-            // Admin sin filtro → inventario agrupado de todo el negocio
             $inventario = CatalogService::getInventarioByNegocio($idNegocio)
                 ->groupBy('id_producto_modelo');
         } else {
-            // Sucursal → su propio inventario con cantidad
             $inventario = CatalogService::getInventarioBySucursal($idNegocio, $user->id_usuario)
                 ->keyBy('id_producto_modelo');
+        }
+
+        // ✅ Inventario de accesorios (por id_producto)
+        if (!$esRol1) {
+            $inventarioAccesorios = CatalogService::getInventarioBySucursal($idNegocio, $user->id_usuario)
+                ->whereNull('id_producto_modelo')
+                ->keyBy('id_producto');
+        } elseif ($idSucursalFiltro) {
+            $inventarioAccesorios = CatalogService::getInventarioBySucursal($idNegocio, $idSucursalFiltro)
+                ->whereNull('id_producto_modelo')
+                ->keyBy('id_producto');
+        } else {
+            $inventarioAccesorios = CatalogService::getInventarioByNegocio($idNegocio)
+                ->whereNull('id_producto_modelo')
+                ->keyBy('id_producto');
         }
 
         $coloresPorModelo = [];
@@ -94,8 +103,9 @@ class ProductoController extends Controller
             'modelos',
             'esRol1',
             'inventario',
+            'inventarioAccesorios',
             'coloresPorModelo',
-            'idSucursalFiltro',  
+            'idSucursalFiltro',
         ));
     }
 
@@ -131,8 +141,20 @@ class ProductoController extends Controller
             'tipo'            => '1',
         ]);
 
+        // ── Crear inventario para el accesorio ──
+        \App\Models\Inventario::create([
+            'id_inventario'      => 'INV' . strtoupper(substr(md5(uniqid()), 0, 12)),
+            'id_producto_modelo' => null,
+            'id_producto'        => $idProducto,
+            'id_negocio'         => $idNegocio,
+            'id_usuario'         => $idUsuario,
+            'cantidad'           => 0,
+            'stock_minimo'       => 3,
+        ]);
+
         CatalogService::invalidateProducto($idProducto, $idNegocio);
         CatalogService::invalidateProductosConRelaciones($idNegocio, $idUsuario);
+        CatalogService::invalidateInventario($idNegocio, $idUsuario);
 
         return response()->json(['message' => 'Accesorio creado correctamente.']);
     }
@@ -275,6 +297,28 @@ class ProductoController extends Controller
 
         // Guardar en sesión (null limpia el filtro)
         session(['productos.sucursal_filtro' => $idSucursal ?: null]);
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function updateCantidadAccesorio(Request $request, string $idInventario)
+    {
+        $user      = Auth::user();
+        $idNegocio = $user->id_negocio;
+
+        $request->validate([
+            'cantidad' => 'required|integer|min:0',
+        ]);
+
+        $inventario = \App\Models\Inventario::where('id_inventario', $idInventario)
+            ->where('id_negocio', $idNegocio)
+            ->where('id_usuario', $user->id_usuario)
+            ->whereNull('id_producto_modelo') // solo accesorios
+            ->firstOrFail();
+
+        $inventario->update(['cantidad' => $request->cantidad]);
+
+        CatalogService::invalidateInventario($idNegocio, $user->id_usuario);
 
         return response()->json(['ok' => true]);
     }
