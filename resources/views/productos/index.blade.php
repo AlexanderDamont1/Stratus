@@ -65,7 +65,6 @@
     <div>
         <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Bicicletas</p>
 
-        {{-- Skeleton --}}
         <div x-show="loading" x-cloak class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             @for ($i = 0; $i < min(5, $bicicletas->count()); $i++)
             <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden animate-pulse">
@@ -92,7 +91,6 @@
                 $precioMin = $precios->first();
                 $precioMax = $precios->last();
 
-                // Acumular stock de todas las variantes para el badge de la card
                 $stockTotalInicial = 0;
                 $stockMinimoRef    = 3;
                 $allStockJson      = [];
@@ -120,7 +118,6 @@
                  x-data="modeloStock({{ $esRol1 ? 'true' : 'false' }}, {{ $stockJsonStr }}, {{ $stockTotalInicial }}, {{ $stockMinimoRef }})"
                  x-init="init()">
 
-                {{-- Header con rango de precios — siempre gris --}}
                 <div class="px-4 py-5 text-center bg-gray-50 dark:bg-gray-700/50">
                     <p class="text-xs text-gray-400 dark:text-gray-500 mb-1">
                         {{ $marca }} · {{ $modelo }}
@@ -134,10 +131,8 @@
                     </p>
                 </div>
 
-                {{-- Body --}}
                 <div class="bg-white dark:bg-gray-800 px-3 py-3 flex flex-col gap-2">
 
-                    {{-- Colores --}}
                     @if(count($colores))
                     <div class="flex items-center justify-between">
                         <span class="text-[11px] text-gray-400">Colores</span>
@@ -162,7 +157,6 @@
                     </div>
                     @endif
 
-                    {{-- Stock total del modelo (badge siempre gris) --}}
                     <div class="flex items-center justify-between">
                         <span class="text-[11px] text-gray-400">Stock</span>
                         <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full"
@@ -171,7 +165,6 @@
                         </span>
                     </div>
 
-                    {{-- Botón desplegable de variantes --}}
                     <div x-data="{ open: false }">
                         <button @click="open = !open"
                             class="w-full text-[11px] text-gray-400 border border-gray-200 dark:border-gray-600 rounded-lg py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition active:scale-95 flex items-center justify-center gap-1">
@@ -182,7 +175,6 @@
                             </svg>
                         </button>
 
-                        {{-- Filas por variante --}}
                         <div x-show="open" x-cloak
                              x-transition:enter="transition ease-out duration-200"
                              x-transition:enter-start="opacity-0 -translate-y-1"
@@ -272,17 +264,12 @@
         <div x-show="!loading" x-cloak class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             @foreach($accesorios as $producto)
             @php
-                $idPm      = $producto->productoModelo?->first()?->id_producto_modelo;
-                $stockItem = $idPm && isset($inventario[$idPm]) ? $inventario[$idPm] : null;
-
-                if ($esRol1 && $stockItem) {
-                    $stockItem = is_iterable($stockItem) ? collect($stockItem)->first() : $stockItem;
-                }
-
+                // ← Cambio: usar inventarioAccesorios por id_producto
+                $stockItem   = $inventarioAccesorios[$producto->id_producto] ?? null;
                 $cantidad    = $stockItem?->cantidad    ?? 0;
                 $stockMinimo = $stockItem?->stock_minimo ?? 3;
+                $idInv       = $stockItem?->id_inventario ?? null;
 
-                // Card siempre gris — solo el badge conserva colores
                 $badgeColor = $cantidad == 0
                     ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
                     : ($cantidad < $stockMinimo
@@ -294,9 +281,10 @@
                     : ($cantidad < $stockMinimo ? $cantidad . ' — bajo' : $cantidad . ' uds.');
             @endphp
 
-            <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
+            <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5"
+                 x-data="{ editandoCantidad: false, cantidad: {{ $cantidad }}, guardando: false }">
 
-                {{-- Header — siempre gris --}}
+                {{-- Header --}}
                 <div class="bg-gray-50 dark:bg-gray-700/50 px-4 py-5 text-center">
                     <div class="w-8 h-8 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center mx-auto mb-2">
                         <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -311,10 +299,51 @@
                 <div class="bg-white dark:bg-gray-800 px-3 py-3 flex flex-col gap-2">
                     <div class="flex items-center justify-between">
                         <span class="text-[11px] text-gray-400">Stock</span>
-                        <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full {{ $badgeColor }}">
-                            {{ $badgeLabel }}
+
+                        {{-- Badge normal --}}
+                        <span x-show="!editandoCantidad"
+                              class="text-[10px] font-semibold px-2 py-0.5 rounded-full {{ $badgeColor }}"
+                              x-text="cantidad === 0 ? 'Sin stock' : cantidad + ' uds.'">
                         </span>
+
+                        {{-- Input editable solo rol 2 con inventario --}}
+                        @if(!$esRol1 && $idInv)
+                        <div x-show="editandoCantidad" class="flex items-center gap-1">
+                            <input type="number" x-model="cantidad" min="0"
+                                class="w-16 text-xs border border-gray-200 dark:border-gray-600 rounded px-2 py-0.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-400">
+                            <button @click="
+                                guardando = true;
+                                fetch('{{ route('sucursal.productos.updateCantidad', $idInv ?? 'x') }}', {
+                                    method: 'PATCH',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                                        'Accept': 'application/json',
+                                    },
+                                    body: JSON.stringify({ cantidad: cantidad })
+                                })
+                                .then(r => r.json())
+                                .then(() => { editandoCantidad = false; guardando = false; })
+                                .catch(() => { guardando = false; });
+                            " :disabled="guardando"
+                                class="text-[10px] bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-2 py-0.5 rounded transition disabled:opacity-40">
+                                <span x-show="!guardando">✓</span>
+                                <span x-show="guardando">...</span>
+                            </button>
+                            <button @click="editandoCantidad = false; cantidad = {{ $cantidad }}"
+                                class="text-[10px] text-gray-400 hover:text-red-500 transition">✕</button>
+                        </div>
+                        @endif
                     </div>
+
+                    {{-- Botón ajustar cantidad solo rol 2 --}}
+                    @if(!$esRol1 && $idInv)
+                    <button x-show="!editandoCantidad" @click="editandoCantidad = true"
+                        class="w-full text-[11px] text-gray-400 border border-gray-200 dark:border-gray-600 rounded-lg py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition active:scale-95">
+                        Ajustar cantidad
+                    </button>
+                    @endif
+
                     <button @click.stop="abrirEditar(
                             '{{ $producto->id_producto }}',
                             '{{ addslashes($producto->nombre_producto) }}',
@@ -555,8 +584,11 @@
             <form @submit.prevent="submitEditar()" class="space-y-4">
                 <div>
                     <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Nombre</label>
+                    {{-- ← Cambio: deshabilitar nombre para bicicletas --}}
                     <input type="text" x-model="editForm.nombre_producto" required
-                        class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-400">
+                        :disabled="editForm.tipo === '2'"
+                        class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-400 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <p x-show="editForm.tipo === '2'" class="text-[11px] text-gray-400 mt-1">El nombre de bicicletas no se puede editar.</p>
                 </div>
                 <div>
                     <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Tipo</label>
@@ -665,12 +697,12 @@
             sucursalSeleccionada: '{{ $idSucursalFiltro ?? "" }}',
 
             form: {
-                po: '1', id_usuario: '', nombre_producto: '',
+                tipo: '1', id_usuario: '', nombre_producto: '',
                 id_marca: '', id_modelo: '', id_voltaje: '', precio: '',
             },
-                editFormOriginal: { nombre_producto: '', precio: '' },
-                editForm: { id_producto: '', nombre_producto: '', tipo: '', precio: '' },
-                deleteTarget: { id: '', nombre: '' },
+            editFormOriginal: { nombre_producto: '', precio: '' },
+            editForm: { id_producto: '', nombre_producto: '', tipo: '', precio: '' },
+            deleteTarget: { id: '', nombre: '' },
 
             get accesorioValido() {
                 const tieneNombre = this.form.nombre_producto.trim().length > 0;
@@ -699,6 +731,10 @@
                 const precioCambio = String(this.editForm.precio) !== String(this.editFormOriginal.precio);
                 const nombreValido = this.editForm.nombre_producto.trim().length > 0;
                 const precioValido = this.editForm.precio !== '' && Number(this.editForm.precio) >= 0;
+                // ← Cambio: si es bicicleta solo validar precio
+                if (this.editForm.tipo === '2') {
+                    return precioCambio && precioValido;
+                }
                 return (nombreCambio || precioCambio) && nombreValido && precioValido;
             },
 
@@ -722,7 +758,6 @@
                     }, 300);
                 }
 
-               
                 this.$watch('sucursalSeleccionada', async val => {
                     await fetch('{{ route("admin.productos.filtroSucursal") }}', {
                         method: 'POST',
@@ -734,7 +769,7 @@
                         body: JSON.stringify({ sucursal: val }),
                     });
                     sessionStorage.removeItem('productPageSkeletonShown');
-                    window.location.href = '{{ route("admin.productos.index") }}'; // ← URL limpia siempre
+                    window.location.href = '{{ route("admin.productos.index") }}';
                 });
             },
 
@@ -897,7 +932,6 @@
         }
     }
 
-    // Card principal del modelo: badge de stock siempre gris (sin alerta de color)
     function modeloStock(esAdmin, stockData, cantidadInicial, stockMinimoInicial) {
         return {
             esAdmin,
@@ -933,7 +967,6 @@
         }
     }
 
-    // Filas de variante desplegable: badge con colores según stock
     function varianteStock(esAdmin, stockData, cantidadInicial, stockMinimoInicial) {
         return {
             esAdmin,
@@ -976,4 +1009,4 @@
     </script>
 
 </div>
-</x-app-layout> 
+</x-app-layout>

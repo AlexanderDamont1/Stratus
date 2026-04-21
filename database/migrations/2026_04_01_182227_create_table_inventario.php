@@ -31,6 +31,7 @@ return new class extends Migration
                 ->on('negocios')
                 ->cascadeOnDelete();
 
+            // null = stock admin, con valor = stock de esa sucursal
             $table->string('id_usuario', 20)->nullable();
             $table->foreign('id_usuario')
                 ->references('id_usuario')
@@ -42,11 +43,11 @@ return new class extends Migration
 
             $table->timestamps();
 
-            // unique por producto_modelo O por producto según el tipo
             $table->unique(
                 ['id_producto_modelo', 'id_negocio', 'id_usuario'],
                 'inv_pm_negocio_usuario_unique'
             );
+
             $table->unique(
                 ['id_producto', 'id_negocio', 'id_usuario'],
                 'inv_prod_negocio_usuario_unique'

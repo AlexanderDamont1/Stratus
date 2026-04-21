@@ -350,7 +350,7 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
 
         // ── Productos (sucursal) ──────────────────────────────────────────────
         // Mismo controlador que admin pero bajo /sucursal/productos
-        Route::prefix('sucursal/productos')->name('sucursal.productos.')->group(function () {
+       Route::prefix('sucursal/productos')->name('sucursal.productos.')->group(function () {
             Route::get('/',                            [ProductoController::class, 'index'])->name('index');
             Route::post('/accesorio',                  [ProductoController::class, 'storeAccesorio'])->name('storeAccesorio');
             Route::post('/bicicleta',                  [ProductoController::class, 'storeBicicleta'])->name('storeBicicleta');
@@ -358,6 +358,7 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
             Route::delete('/{id}',                     [ProductoController::class, 'destroy'])->name('destroy');
             Route::get('/voltajes/{idModelo}',         [ProductoController::class, 'voltajesPorModelo'])->name('voltajes');
             Route::get('/modelos-por-marca/{idMarca}', [ProductoController::class, 'modelosPorMarca'])->name('modelosPorMarca');
+            Route::patch('/inventario/{idInventario}/cantidad', [ProductoController::class, 'updateCantidadAccesorio'])->name('updateCantidad'); // ← nuevo
         });
 
         Route::prefix('garantias')->name('garantias.')->group(function () {
@@ -369,6 +370,7 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
     });
 
         Route::prefix('sucursal/ventas')->name('ventas.')->group(function () {
+<<<<<<< HEAD
     Route::get('/',                 [VentaController::class, 'index'])->name('index');
     Route::get('/crear',            [VentaController::class, 'create'])->name('create');
     Route::post('/',                [VentaController::class, 'store'])->name('store');
@@ -377,6 +379,15 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
     Route::get('/{id}/poliza',      [VentaController::class, 'poliza'])->name('poliza');
     Route::get('/{id}/ticket',      [VentaController::class, 'ticket'])->name('ticket');
 });
+=======
+        Route::get('/',                 [VentaController::class, 'index'])->name('index');
+        Route::get('/crear',            [VentaController::class, 'create'])->name('create');
+        Route::post('/',                [VentaController::class, 'store'])->name('store');
+        Route::get('/buscar-serie',     [VentaController::class, 'buscarSerie'])->name('buscar-serie');
+        Route::get('/{id}',             [VentaController::class, 'show'])->name('show');
+        Route::get('/{id}/poliza',      [VentaController::class, 'poliza'])->name('poliza');
+    });
+>>>>>>> 17eb1cc0a8d856312dfc22e52aac1fd73f738ab9
 
         
     });
