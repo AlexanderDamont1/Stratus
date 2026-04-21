@@ -375,6 +375,7 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
     Route::get('/buscar-serie',     [VentaController::class, 'buscarSerie'])->name('buscar-serie');
     Route::get('/{id}',             [VentaController::class, 'show'])->name('show');
     Route::get('/{id}/poliza',      [VentaController::class, 'poliza'])->name('poliza');
+    Route::get('/{id}/ticket',      [VentaController::class, 'ticket'])->name('ticket');
 });
 
         
