@@ -370,13 +370,14 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
     });
 
         Route::prefix('sucursal/ventas')->name('ventas.')->group(function () {
-        Route::get('/',                 [VentaController::class, 'index'])->name('index');
-        Route::get('/crear',            [VentaController::class, 'create'])->name('create');
-        Route::post('/',                [VentaController::class, 'store'])->name('store');
-        Route::get('/buscar-serie',     [VentaController::class, 'buscarSerie'])->name('buscar-serie');
-        Route::get('/{id}',             [VentaController::class, 'show'])->name('show');
-        Route::get('/{id}/poliza',      [VentaController::class, 'poliza'])->name('poliza');
-    });
+    Route::get('/',                 [VentaController::class, 'index'])->name('index');
+    Route::get('/crear',            [VentaController::class, 'create'])->name('create');
+    Route::post('/',                [VentaController::class, 'store'])->name('store');
+    Route::get('/buscar-serie',     [VentaController::class, 'buscarSerie'])->name('buscar-serie');
+    Route::get('/{id}',             [VentaController::class, 'show'])->name('show');
+    Route::get('/{id}/poliza',      [VentaController::class, 'poliza'])->name('poliza');
+    Route::get('/{id}/ticket',      [VentaController::class, 'ticket'])->name('ticket');
+});
 
         
     });

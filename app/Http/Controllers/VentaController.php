@@ -209,10 +209,11 @@ class VentaController extends Controller
                 $totalVenta += $precioUnitario * $cantidad;
 
                 if ($producto->tipo === '2' && !empty($item['num_serie'])) {
+
                     $bici = Bicicleta::with(['modelo.marca', 'voltaje', 'color'])
                         ->where('num_serie', $item['num_serie'])
                         ->where('id_negocio', $user->id_negocio)
-                        ->where('id_usuario', $user->id_usuario)  // ← demasiado estricto
+                        ->where('id_usuario', $user->id_usuario)
                         ->where('status', 1)
                         ->lockForUpdate()
                         ->firstOrFail();
@@ -220,12 +221,18 @@ class VentaController extends Controller
                     $bici->status = 2;
                     $bici->save();
 
-                    // Movimiento dentro de la transacción (correcto)
-                    app(BicicletaMovimientoService::class)
-                        ->venta(
-                            $bici->num_serie,
-                            $request->nombre_cliente . ' ' . $request->apellido1
-                        );
+                    app(BicicletaMovimientoService::class)->venta(
+                        $bici->num_serie,
+                        $request->nombre_cliente . ' ' . $request->apellido1
+                    );
+
+                    // ← UNA SOLA llamada, dentro del if
+                    $garantiasGeneradas = app(GarantiaService::class)->generarGarantiasParaVenta(
+                        numSerie: $bici->num_serie,
+                        idMarca: $bici->modelo->id_marca,
+                        idNegocio: $user->id_negocio,
+                        fechaVenta: now(),
+                    );
 
                     $eventosBicicleta[] = [
                         'num_serie' => $bici->num_serie,
@@ -236,7 +243,6 @@ class VentaController extends Controller
                         'status' => 2,
                     ];
 
-                    // Actualizar inventario (modelo-voltaje)
                     $pm = ProductoModelo::where('id_modelo', $bici->id_modelo)
                         ->where('id_voltaje', $bici->id_voltaje)
                         ->where('id_usuario', $user->id_usuario)
@@ -251,20 +257,18 @@ class VentaController extends Controller
                     }
 
                     $seriesParaInvalidar[] = $bici->num_serie;
+
                     $bicicletasBroadcast[] = [
                         'num_serie' => $bici->num_serie,
                         'modelo' => $bici->modelo->nombre_modelo ?? '—',
                         'marca' => $bici->modelo->marca->nombre_marca ?? '—',
                         'voltaje' => $bici->voltaje->voltaje ?? '—',
                         'color' => $bici->color->color ?? '—',
+                        'tiene_garantia' => $garantiasGeneradas,
                     ];
-                }
-                app(GarantiaService::class)->generarGarantiasParaVenta(
-                    numSerie: $bici->num_serie,
-                    idMarca: $bici->modelo->id_marca,    // disponible por el with(['modelo.marca'])
-                    idNegocio: $user->id_negocio,
-                    fechaVenta: now(),
-                );
+
+                } // ← fin del if, ya no hay nada después
+                
             }
 
             DB::commit();
@@ -327,23 +331,35 @@ class VentaController extends Controller
      | SHOW
      ===================================================== */
     public function show(string $id_venta)
-    {
-        $user = auth()->user();
-        if ($user->id_rol != 2)
-            abort(403);
+{
+    $user = auth()->user();
+    if ($user->id_rol != 2) abort(403);
 
-        $venta = Venta::with([
-            'cliente',
-            'detalles.producto',
-            'detalles.bicicleta.modelo.marca',
-            'detalles.bicicleta.voltaje',
-            'detalles.bicicleta.color',
-        ])
-            ->where('id_negocio', $user->id_negocio)
-            ->findOrFail($id_venta);
+    $venta = Venta::with([
+        'cliente',
+        'detalles.producto',
+        'detalles.bicicleta.modelo.marca',
+        'detalles.bicicleta.voltaje',
+        'detalles.bicicleta.color',
+    ])
+        ->where('id_negocio', $user->id_negocio)
+        ->findOrFail($id_venta);
 
-        return view('vendedor.ventas.show', compact('venta'));
-    }
+    // Determinar si alguna bici de la venta tiene garantía activa configurada
+    $tieneGarantia = $venta->detalles
+        ->filter(fn($d) => $d->bicicleta !== null)
+        ->contains(function ($detalle) use ($user) {
+            $idMarca = $detalle->bicicleta->modelo->id_marca ?? null;
+            if (!$idMarca) return false;
+
+            return \App\Models\MarcaGarantiaConfig::where('id_marca', $idMarca)
+                ->where('id_negocio', $user->id_negocio)
+                ->where('activa', true)
+                ->exists();
+        });
+
+    return view('vendedor.ventas.show', compact('venta', 'tieneGarantia'));
+}
 
     /* =====================================================
      | PDF — póliza de garantía
@@ -383,5 +399,42 @@ class VentaController extends Controller
         ])->setPaper('letter', 'landscape');
 
         return $pdf->download('poliza-' . $venta->id_venta . '.pdf');
+    }
+
+    public function ticket(string $id_venta)
+    {
+        $user = auth()->user();
+        if ($user->id_rol != 2)
+            abort(403);
+
+        $venta = Venta::with([
+            'cliente',
+            'negocio',
+            'detalles.producto',
+            'detalles.bicicleta.modelo.marca',
+            'detalles.bicicleta.voltaje',
+            'detalles.bicicleta.color',
+        ])
+            ->where('id_negocio', $user->id_negocio)
+            ->findOrFail($id_venta);
+
+        $bicicletas = $venta->detalles
+            ->filter(fn($d) => $d->bicicleta !== null)
+            ->values();
+
+        if ($bicicletas->isEmpty()) {
+            return back()->with('error', 'Esta venta no tiene bicicletas para generar póliza.');
+        }
+
+        $pdf = Pdf::loadView('vendedor.ventas.ticket', [
+            'venta' => $venta,
+            'cliente' => $venta->cliente,
+            'negocio' => $venta->negocio,
+            'bicicletas' => $bicicletas,
+            'vendedor' => $user,
+            'fecha' => now()->format('d/m/Y'),
+        ])->setPaper('letter', 'landscape');
+
+        return $pdf->download('ticket-' . $venta->id_venta . '.pdf');
     }
 }

@@ -24,39 +24,48 @@ class GarantiaService
      * Se llama dentro de la transacción del VentaController.
      */
     public function generarGarantiasParaVenta(
-        string $numSerie,
-        string $idMarca,
-        string $idNegocio,
-        Carbon $fechaVenta
-    ): void {
-        $marcaConfig = MarcaGarantiaConfig::where('id_marca', $idMarca)
-            ->where('id_negocio', $idNegocio)
-            ->where('activa', true)
-            ->first();
+    string $numSerie,
+    string $idMarca,
+    string $idNegocio,
+    Carbon $fechaVenta
+): bool {
+    $marcaConfig = MarcaGarantiaConfig::where('id_marca', $idMarca)
+        ->where('id_negocio', $idNegocio)
+        ->where('activa', true)
+        ->first();
 
-        // Si la marca no tiene garantías configuradas y activas, no se genera nada.
-        // Suposición razonable: sin config activa = sin garantía.
-        if (!$marcaConfig) return;
+    if (!$marcaConfig) return false;
 
-        $defs = GarantiaComponenteDef::where('id_marca_garantia', $marcaConfig->id_marca_garantia)
-            ->where('activo', true)
-            ->where('excluido', false) // consumibles no generan instancia
-            ->get();
+    $defs = GarantiaComponenteDef::where('id_marca_garantia', $marcaConfig->id_marca_garantia)
+        ->where('activo', true)
+        ->where('excluido', false)
+        ->get();
 
-        foreach ($defs as $def) {
-            BicicletaGarantia::create([
-                'id_negocio'      => $idNegocio,
-                'num_serie'       => $numSerie,
-                'id_garantia_def' => $def->id_garantia_def,
-                'clave_componente'=> $def->clave_componente,
-                'fecha_inicio'    => $fechaVenta->toDateString(),
-                'fecha_expiracion'=> $fechaVenta->copy()
-                                        ->addMonths($def->duracion_meses)
-                                        ->toDateString(),
-                'estado'          => 'vigente',
-            ]);
-        }
+    if ($defs->isEmpty()) return false;
+
+    // ⚠️ Fijar la fecha de inicio UNA vez, fuera del foreach
+    // addMonths() muta el objeto Carbon — si lo haces dentro del loop
+    // la segunda iteración parte de la fecha ya sumada de la primera.
+    $fechaInicio = $fechaVenta->copy()->startOfDay();
+
+    foreach ($defs as $def) {
+        BicicletaGarantia::create([
+            'id_negocio'       => $idNegocio,
+            'num_serie'        => $numSerie,
+            // ⚠️ Usa la PK real del modelo GarantiaComponenteDef
+            // Revisa con: $def->getKeyName() si no estás seguro
+            'id_garantia_def'  => $def->getKey(),
+            'clave_componente' => $def->clave_componente,
+            'fecha_inicio'     => $fechaInicio->toDateString(),
+            // copy() para no mutar $fechaInicio en cada iteración
+            'fecha_expiracion' => $fechaInicio->copy()->addMonths($def->duracion_meses)->toDateString(),
+            'estado'           => 'vigente',
+        ]);
     }
+
+    return true;
+}
+
 
     // ────────────────────────────────────────────────────────────────────────
     // 2. MAPA VISUAL

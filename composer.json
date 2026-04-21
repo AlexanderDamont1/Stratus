@@ -19,7 +19,7 @@
         "predis/predis": "^3.4",
         "pusher/pusher-php-server": "^7.2",
         "simplesoftwareio/simple-qrcode": "^4.2",
-        "smalot/pdfparser": "^2.12"
+        "smalot/pdfparser": "*"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
