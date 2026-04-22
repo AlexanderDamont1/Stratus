@@ -1,158 +1,181 @@
 <?php
-// app/Services/PdfGarantiaService.php
 
 namespace App\Services;
 
-use App\Models\GarantiaComponenteDef;
 use App\Models\MarcaGarantiaConfig;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Smalot\PdfParser\Parser;
 
 class PdfGarantiaService
 {
-    // ─── Llamado en la REQUEST (síncrono, rápido) ──────────────────────────
-    // Extrae el texto del PDF y lo guarda como string plano.
-    // Retorna el texto para que el controlador pueda encolar el job.
-    public function extraerTextoPdf(string $rutaTemporal): string
-    {
-        $parser = new Parser();
-        $pdf    = $parser->parseFile($rutaTemporal);
-        $texto  = $pdf->getText();
+    private const SYSTEM_PROMPT = <<<'PROMPT'
+Eres un motor de interpretación de pólizas de garantía para un sistema ERP de gestión de bicicletas eléctricas.
+Tu tarea es analizar el contenido de una póliza de garantía en texto plano y devolver una estructura JSON limpia.
 
-        // Limpieza básica: colapsar espacios y líneas vacías múltiples
-        $texto = preg_replace('/\n{3,}/', "\n\n", trim($texto));
-        $texto = preg_replace('/[ \t]+/', ' ', $texto);
+Responde ÚNICAMENTE con JSON válido, sin texto adicional, sin explicaciones, sin markdown.
 
-        return mb_substr($texto, 0, 40000); // tope seguro para el prompt
-    }
-
-    // ─── Llamado en el JOB (asíncrono, toca la red) ───────────────────────
-    // Recibe el id de la config (ya tiene el texto guardado).
-    public function procesarConIA(string $configId): void
-    {
-        $config = MarcaGarantiaConfig::findOrFail($configId);
-        $texto  = $config->pdf_texto_extraido;
-
-        if (blank($texto)) {
-            $config->update(['estado_procesamiento' => 'error']);
-            return;
-        }
-
-        $config->update(['estado_procesamiento' => 'procesando']);
-
-        try {
-            $componentes = $this->llamarGroq($texto);
-
-            if (empty($componentes)) {
-                $config->update(['estado_procesamiento' => 'error']);
-                return;
-            }
-
-            $config->update([
-                // Solo guardamos el array de componentes, no el response completo
-                'ia_raw_json'          => json_encode($componentes, JSON_UNESCAPED_UNICODE),
-                'estado_procesamiento' => 'completado',
-                'ia_procesado_at'      => now(),
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Groq procesamiento falló', [
-                'config'  => $configId,
-                'mensaje' => $e->getMessage(),
-            ]);
-            $config->update(['estado_procesamiento' => 'error']);
-        }
-    }
-
-    // ─── Groq ──────────────────────────────────────────────────────────────
-    private function llamarGroq(string $textoPdf): array
-    {
-        $prompt = <<<PROMPT
-Analiza esta póliza de garantía y extrae ÚNICAMENTE los componentes cubiertos.
-
-Devuelve SOLO un JSON válido con este formato exacto, sin texto adicional:
+Estructura obligatoria:
 {
-  "componentes": [
+  "marca": "string o null",
+  "garantias": [
     {
-      "clave": "motor",
-      "nombre": "Motor eléctrico",
-      "duracion": 24,
-      "cobertura": "Defectos de fabricación",
-      "incluye": ["bobinas", "estátor"],
-      "serializable": false,
-      "excluido": false
+      "componente": "string",
+      "incluye": ["string"],
+      "duracion_meses": number,
+      "cobertura": "string o null"
     }
-  ]
+  ],
+  "exclusiones": ["string"],
+  "reglas_generales": ["string"]
 }
 
 Reglas:
-- "clave": snake_case, sin espacios, única por componente
-- "duracion": meses como entero (0 si no se especifica)
-- "incluye": array de strings (puede ser vacío [])
-- "serializable": true solo si el componente tiene número de serie propio
-- "excluido": false siempre (el admin decide después)
-
-PÓLIZA:
-{$textoPdf}
+- Todo en minúsculas, sin acentos, sin caracteres especiales
+- Duración siempre en meses (1 año = 12)
+- Si duración no es clara, omitir el componente
+- Máximo 15 reglas_generales
 PROMPT;
 
-        $response = Http::withToken(config('services.groq.key'))
-            ->timeout(60)
-            ->post('https://api.groq.com/openai/v1/chat/completions', [
-                'model'       => 'llama-3.3-70b-versatile',
-                'temperature' => 0.1,
-                'max_tokens'  => 2048,
-                'messages'    => [
-                    [
-                        'role'    => 'system',
-                        'content' => 'Eres un extractor de datos estructurados. Responde SOLO con JSON válido, sin markdown ni explicaciones.',
-                    ],
-                    ['role' => 'user', 'content' => $prompt],
-                ],
-            ]);
+    public function procesarConIA(string $idMarcaGarantia): void
+{
+    $config = MarcaGarantiaConfig::find($idMarcaGarantia);
+
+    if (!$config) {
+        Log::error('procesarConIA: config no encontrada', ['id' => $idMarcaGarantia]);
+        return;
+    }
+
+    $texto = $config->pdf_texto_extraido;
+
+    Log::info('procesarConIA inicio', [
+        'config_id' => $idMarcaGarantia,
+        'longitud'  => strlen($texto ?? ''),
+        'preview'   => mb_substr($texto ?? '', 0, 80),
+    ]);
+
+    if (blank($texto)) {
+        Log::error('procesarConIA: pdf_texto_extraido vacío', ['id' => $idMarcaGarantia]);
+        $config->update(['estado_procesamiento' => 'error']);
+        return;
+    }
+
+    $config->update(['estado_procesamiento' => 'procesando']);
+
+    try {
+        $jsonIA   = $this->enviarAGroq($texto);
+        $validado = $this->validarJson($jsonIA);
+
+        Log::info('procesarConIA completado', [
+            'componentes' => count($validado['garantias'] ?? []),
+        ]);
+
+        $config->update([
+            'ia_raw_json'          => $validado,
+            'ia_procesado_at'      => now(),
+            'estado_procesamiento' => 'completado',
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('procesarConIA error', [
+            'id'    => $idMarcaGarantia,
+            'error' => $e->getMessage(),
+        ]);
+        $config->update(['estado_procesamiento' => 'error']);
+    }
+}
+
+    public function extraerTextoPdf(string $base64): string
+    {
+        $binario = base64_decode($base64);
+        $tmpPath = tempnam(sys_get_temp_dir(), 'garantia_pdf_');
+        file_put_contents($tmpPath, $binario);
+
+        try {
+            $parser = new \Smalot\PdfParser\Parser();
+            $pdf    = $parser->parseFile($tmpPath);
+            $texto  = $pdf->getText();
+        } finally {
+            @unlink($tmpPath);
+        }
+
+        return $texto;
+    }
+
+    private function enviarAGroq(string $textoPdf): array
+    {
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . config('services.groq.key'),
+            'Content-Type'  => 'application/json',
+        ])->timeout(60)->post('https://api.groq.com/openai/v1/chat/completions', [
+            'model'       => 'llama-3.3-70b-versatile',
+            'temperature' => 0.1,
+            'messages'    => [
+                ['role' => 'system', 'content' => self::SYSTEM_PROMPT],
+                ['role' => 'user',   'content' => $textoPdf],
+            ],
+        ]);
 
         if (!$response->successful()) {
-            throw new \RuntimeException('Groq HTTP ' . $response->status());
+            throw new \Exception('Groq API error: ' . $response->status());
         }
 
         $content = $response->json('choices.0.message.content', '');
-
-        // Limpiar posibles backticks que Groq a veces añade
         $content = preg_replace('/^```json\s*/i', '', trim($content));
         $content = preg_replace('/\s*```$/', '', $content);
 
         $decoded = json_decode($content, true);
 
-        if (json_last_error() !== JSON_ERROR_NONE || !isset($decoded['componentes'])) {
-            Log::warning('Groq devolvió JSON inválido', ['raw' => mb_substr($content, 0, 500)]);
-            return [];
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new \Exception('JSON inválido de Groq: ' . json_last_error_msg());
         }
 
-        return $this->validarComponentes($decoded['componentes']);
+        return $decoded;
     }
 
-    // ─── Validación estricta del array ─────────────────────────────────────
-    private function validarComponentes(array $raw): array
+    private function validarJson(array $data): array
     {
-        $validos = [];
+        $garantiasValidas = [];
 
-        foreach ($raw as $comp) {
-            $clave = preg_replace('/[^a-z0-9_]/', '_', strtolower($comp['clave'] ?? ''));
+        foreach ($data['garantias'] ?? [] as $g) {
+            if (
+                empty($g['componente']) ||
+                !isset($g['duracion_meses']) ||
+                !is_numeric($g['duracion_meses']) ||
+                $g['duracion_meses'] < 0 ||
+                !is_array($g['incluye'] ?? null)
+            ) {
+                continue;
+            }
 
-            if (blank($clave) || blank($comp['nombre'] ?? '')) continue;
-
-            $validos[] = [
-                'clave'        => mb_substr($clave, 0, 60),
-                'nombre'       => mb_substr($comp['nombre'], 0, 120),
-                'duracion'     => (int) ($comp['duracion'] ?? 0),
-                'cobertura'    => mb_substr($comp['cobertura'] ?? '', 0, 255) ?: null,
-                'incluye'      => array_values(array_filter((array) ($comp['incluye'] ?? []))),
-                'serializable' => (bool) ($comp['serializable'] ?? false),
-                'excluido'     => false, // siempre false desde IA
+            $garantiasValidas[] = [
+                'componente'     => substr(strtolower(trim($g['componente'])), 0, 60),
+                'incluye'        => array_values(array_filter(
+                    array_map(fn($i) => substr(strtolower(trim($i)), 0, 100), $g['incluye']),
+                    fn($i) => !empty($i)
+                )),
+                'duracion_meses' => (int) $g['duracion_meses'],
+                'cobertura'      => isset($g['cobertura'])
+                    ? substr(strtolower(trim($g['cobertura'])), 0, 255)
+                    : null,
             ];
         }
 
-        return $validos;
+        return [
+            'marca'            => isset($data['marca'])
+                ? substr(strtolower(trim($data['marca'])), 0, 100)
+                : null,
+            'garantias'        => $garantiasValidas,
+            'exclusiones'      => array_values(array_filter(
+                array_map(fn($e) => substr(strtolower(trim($e)), 0, 100), $data['exclusiones'] ?? []),
+                fn($e) => !empty($e)
+            )),
+            'reglas_generales' => array_slice(
+                array_values(array_filter(
+                    array_map(fn($r) => substr(trim($r), 0, 255), $data['reglas_generales'] ?? []),
+                    fn($r) => !empty($r)
+                )),
+                0, 15
+            ),
+        ];
     }
 }

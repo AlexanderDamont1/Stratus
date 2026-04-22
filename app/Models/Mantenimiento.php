@@ -8,6 +8,7 @@ use App\Traits\GeneratesCustomId;
 
 class Mantenimiento extends Model
 {
+    use GeneratesCustomId;
     protected $table = 'mantenimientos';
     protected $primaryKey = 'id_mantenimiento';
     public $incrementing = false;
