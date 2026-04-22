@@ -24,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'administrador' => \App\Http\Middleware\Administrador::class,
             'ventas' => \App\Http\Middleware\Ventas::class,
             'prefijo.admin' => \App\Http\Middleware\ProtegerPrefijoAdmin::class, //Proteje todo dentro de /admin
+            'modulo' => \App\Http\Middleware\VerificarModulo::class,
         ]);
 
 

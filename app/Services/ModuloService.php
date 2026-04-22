@@ -1,0 +1,123 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Modulo;
+use App\Models\NegocioModuloRol;
+use Illuminate\Support\Facades\Cache;
+
+class ModuloService
+{
+    const CACHE_TTL    = 3600;
+    const CACHE_PREFIX = 'modulos:';
+
+    // ─── VERSIÓN — reutiliza la versión por tenant de CatalogService ─────────
+
+    protected static function getVersion(string $idNegocio): int
+    {
+        return (int) Cache::get('catalog:version:' . $idNegocio, 1);
+    }
+
+    protected static function key(string $key): string
+    {
+        return self::CACHE_PREFIX . $key;
+    }
+
+    // ─── CONSULTA PRINCIPAL ──────────────────────────────────────────────────
+
+    /**
+     * ¿Tiene este negocio+rol acceso al módulo?
+     * Único método que usan controllers, middlewares y vistas.
+     */
+    public static function tiene(string $idNegocio, int $idRol, string $idModulo): bool
+    {
+        $modulos = self::getModulosNegocio($idNegocio);
+        return isset($modulos[$idModulo][$idRol]) && $modulos[$idModulo][$idRol] === true;
+    }
+
+    // ─── CACHE ───────────────────────────────────────────────────────────────
+
+    public static function getModulosNegocio(string $idNegocio): array
+    {
+        $version = self::getVersion($idNegocio);
+
+        return Cache::remember(
+            self::key("negocio:{$idNegocio}") . ":v{$version}",
+            self::CACHE_TTL,
+            function () use ($idNegocio) {
+                $rows = NegocioModuloRol::where('id_negocio', $idNegocio)->get();
+
+                $mapa = [];
+                foreach ($rows as $row) {
+                    $mapa[$row->id_modulo][$row->id_rol] = (bool) $row->activo;
+                }
+                return $mapa;
+            }
+        );
+    }
+
+    public static function invalidate(string $idNegocio): void
+    {
+        $version = self::getVersion($idNegocio);
+        Cache::forget(self::key("negocio:{$idNegocio}") . ":v{$version}");
+    }
+
+    // ─── GESTIÓN (solo Root) ─────────────────────────────────────────────────
+
+    public static function toggle(
+        string $idNegocio,
+        string $idModulo,
+        int    $idRol,
+        bool   $activo
+    ): void {
+        NegocioModuloRol::updateOrCreate(
+            [
+                'id_negocio' => $idNegocio,
+                'id_modulo'  => $idModulo,
+                'id_rol'     => $idRol,
+            ],
+            ['activo' => $activo]
+        );
+
+        self::invalidate($idNegocio);
+    }
+
+    /**
+     * Activa un plan completo de golpe.
+     * Ejemplo: ModuloService::activarPlan($id, ['tracking' => [1, 2]])
+     */
+    public static function activarPlan(string $idNegocio, array $modulos): void
+    {
+        foreach ($modulos as $idModulo => $roles) {
+            foreach ($roles as $idRol) {
+                self::toggle($idNegocio, $idModulo, $idRol, true);
+            }
+        }
+    }
+
+    // ─── HELPER PARA PANEL ROOT ───────────────────────────────────────────────
+
+    public static function getEstadoCompleto(string $idNegocio): array
+    {
+        $todosLosModulos = Modulo::all();
+        $activos         = self::getModulosNegocio($idNegocio);
+        $roles           = [1 => 'Admin', 2 => 'Vendedor', 5 => 'Gestor'];
+
+        $resultado = [];
+        foreach ($todosLosModulos as $modulo) {
+            $porRol = [];
+            foreach ($roles as $idRol => $nombre) {
+                $porRol[$idRol] = [
+                    'nombre' => $nombre,
+                    'activo' => $activos[$modulo->id_modulo][$idRol] ?? false,
+                ];
+            }
+            $resultado[] = [
+                'modulo' => $modulo,
+                'roles'  => $porRol,
+            ];
+        }
+
+        return $resultado;
+    }
+}

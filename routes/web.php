@@ -142,11 +142,11 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
 
 
 
-        Route::prefix('admin/movimientos')->name('admin.movimientos.')->group(function () {
-            Route::get('/',                  [MovimientoController::class, 'index'])->name('index');
-            Route::get('/historial/{serie}', [MovimientoController::class, 'historial'])->name('historial');
-            Route::get('/buscar',            [MovimientoController::class, 'buscar'])->name('buscar');
-        });
+        Route::prefix('admin/movimientos')->name('admin.movimientos.')->middleware(['modulo:tracking'])->group(function () {
+                Route::get('/',                  [MovimientoController::class, 'index'])->name('index');
+                Route::get('/historial/{serie}', [MovimientoController::class, 'historial'])->name('historial');
+                Route::get('/buscar',            [MovimientoController::class, 'buscar'])->name('buscar');
+            });
 
         Route::prefix('admin/garantias')->name('admin.garantias.')->group(function () {
         Route::get('/',                          [AdminGarantiaController::class, 'index'])         ->name('index');
@@ -388,9 +388,13 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
     |----------------------------------------------------------------------
     */
     Route::middleware('es.root')->group(function () {
-        Route::get('/root',               [RootController::class, 'index'])->name('root.dashboard');
-        Route::post('/root/links',        [RootController::class, 'storeLink'])->name('root.links.store');
-        Route::delete('/root/links/{link}',[RootController::class, 'destroyLink'])->name('root.links.destroy');
+        Route::get('/root',                              [RootController::class, 'index'])->name('root.dashboard');
+        Route::post('/root/links',                       [RootController::class, 'storeLink'])->name('root.links.store');
+        Route::delete('/root/links/{link}',              [RootController::class, 'destroyLink'])->name('root.links.destroy');
+
+        // ✅ Módulos
+        Route::get('/root/negocios/{id}/modulos',        [RootController::class, 'modulos'])->name('root.modulos');
+        Route::post('/root/modulos/toggle',              [RootController::class, 'toggleModulo'])->name('root.modulos.toggle');
     });
 
 });

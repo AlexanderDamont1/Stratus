@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Negocio;
 use App\Models\RegistroLink;
+use App\Services\ModuloService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -53,5 +54,42 @@ class RootController extends Controller
         $link->delete();
 
         return back()->with('success', 'Link eliminado correctamente.');
+    }
+
+    /*
+    |----------------------------------------
+    | Módulos por negocio
+    |----------------------------------------
+    */
+    public function modulos(string $idNegocio)
+    {
+        $negocio = Negocio::findOrFail($idNegocio);
+        $estado  = ModuloService::getEstadoCompleto($idNegocio);
+
+        return view('root.modulos', compact('negocio', 'estado'));
+    }
+
+    /*
+    |----------------------------------------
+    | Toggle AJAX — activar/desactivar módulo
+    |----------------------------------------
+    */
+    public function toggleModulo(Request $request)
+    {
+        $request->validate([
+            'id_negocio' => 'required|string|exists:negocios,id_negocio',
+            'id_modulo'  => 'required|string|exists:modulos,id_modulo',
+            'id_rol'     => 'required|integer|in:1,2,5',
+            'activo'     => 'required|boolean',
+        ]);
+
+        ModuloService::toggle(
+            $request->id_negocio,
+            $request->id_modulo,
+            $request->id_rol,
+            $request->activo
+        );
+
+        return response()->json(['ok' => true]);
     }
 }

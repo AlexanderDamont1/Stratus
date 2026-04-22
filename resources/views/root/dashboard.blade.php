@@ -217,6 +217,7 @@
                     <th class="px-4 py-2 text-left text-xs text-gray-500 dark:text-gray-400 font-medium">Admin</th>
                     <th class="px-4 py-2 text-left text-xs text-gray-500 dark:text-gray-400 font-medium">Límite vendedores</th>
                     <th class="px-4 py-2 text-left text-xs text-gray-500 dark:text-gray-400 font-medium">Creado</th>
+                    <th class="px-4 py-2 text-right text-xs text-gray-500 dark:text-gray-400 font-medium">Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -229,6 +230,20 @@
                         </td>
                         <td class="px-4 py-3 text-gray-700 dark:text-gray-300">{{ $negocio->max_users }}</td>
                         <td class="px-4 py-3 text-xs text-gray-400">{{ $negocio->created_at->format('d/m/y H:i') }}</td>
+                        <td class="px-4 py-3 text-right">
+                            <a
+                                href="{{ route('root.modulos', $negocio->id_negocio) }}"
+                                class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md
+                                    bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300
+                                    hover:bg-gray-200 dark:hover:bg-gray-600 transition font-medium"
+                            >
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 6h16M4 12h16M4 18h7"/>
+                                </svg>
+                                Módulos
+                            </a>
+                        </td>
                     </tr>
                 @empty
                     <tr>
