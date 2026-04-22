@@ -90,27 +90,27 @@ class AdminGarantiaController extends Controller
 
     // ─── EDITAR MARCA: componentes + PDF ─────────────────────────────────
     public function editarMarca(Request $request, string $idMarca)
-    {
-        $user = auth()->user();
-        if ($user->id_rol != 1)
-            abort(403);
+{
+    $user = auth()->user();
+    if ($user->id_rol != 1) abort(403);
 
-        $marca = CatalogService::getMarcaById($idMarca);
-        if (!$marca || $marca->id_negocio !== $user->id_negocio)
-            abort(404);
+    $marca = CatalogService::getMarcaById($idMarca);
+    if (!$marca || $marca->id_negocio !== $user->id_negocio) abort(404);
 
-        $config = MarcaGarantiaConfig::with('componenteDefs')
-            ->where('id_marca', $idMarca)
-            ->where('id_negocio', $user->id_negocio)
-            ->first();
+    $config = MarcaGarantiaConfig::with('componenteDefs')
+        ->where('id_marca', $idMarca)
+        ->where('id_negocio', $user->id_negocio)
+        ->first();
 
-        // Polling desde Alpine — devuelve solo estado + json IA
-        if ($request->wantsJson()) {
-            return response()->json([
-                'estado' => $config?->estado_procesamiento ?? 'sin_pdf',
-                'ia_raw_json' => $config?->ia_raw_json,
-            ]);
-        }
+    // Polling desde Alpine
+    if ($request->wantsJson() || $request->has('json')) {
+        return response()->json([
+            'estado'      => $config?->estado_procesamiento ?? 'sin_pdf',
+            'ia_raw_json' => $config?->ia_raw_json,  // ya es array por el cast del modelo
+        ]);
+    }
+
+    
 
         return view('administrador.garantias.editar-marca', compact('marca', 'config'));
     }
@@ -121,28 +121,32 @@ class AdminGarantiaController extends Controller
     $user = auth()->user();
     if ($user->id_rol != 1) abort(403);
 
-    $request->validate([
-        'pdf' => 'required|file|mimes:pdf|max:4096',
-    ]);
+    $request->validate(['pdf' => 'required|file|max:4096']);
+
+    $archivo = $request->file('pdf');
+    if (strtolower($archivo->getClientOriginalExtension()) !== 'pdf') {
+        return response()->json(['ok' => false, 'mensaje' => 'El archivo debe ser un PDF.'], 422);
+    }
 
     $marca = CatalogService::getMarcaById($idMarca);
     if (!$marca || $marca->id_negocio !== $user->id_negocio) abort(404);
 
     try {
-        $archivo = $request->file('pdf');
+        // Extraer texto aquí — síncrono, sin guardar base64
+        $parser  = new \Smalot\PdfParser\Parser();
+        $pdf     = $parser->parseFile($archivo->getRealPath());
+        $texto   = trim($pdf->getText());
+        $texto   = preg_replace('/\n{3,}/', "\n\n", $texto);
+        $texto   = preg_replace('/[ \t]+/', ' ', $texto);
+        $texto   = mb_substr($texto, 0, 40000);
 
-        // 1. Extraer texto AQUÍ (síncrono, sin red, sin DB aún)
-        $textoPdf = app(PdfGarantiaService::class)
-            ->extraerTextoPdf($archivo->getRealPath());
-
-        if (blank($textoPdf)) {
+        if (blank($texto)) {
             return response()->json([
                 'ok'      => false,
-                'mensaje' => 'No se pudo extraer texto del PDF. ¿Es un PDF escaneado?',
+                'mensaje' => 'No se pudo extraer texto. Sube la póliza original del fabricante, no una generada por el sistema.',
             ], 422);
         }
 
-        // 2. Upsert — solo guardamos texto plano (liviano)
         $config = MarcaGarantiaConfig::where('id_marca', $idMarca)
             ->where('id_negocio', $user->id_negocio)
             ->first();
@@ -154,19 +158,19 @@ class AdminGarantiaController extends Controller
             ]);
         }
 
+        // Solo guarda lo que la tabla tiene — sin pdf_base64
         $config->update([
             'pdf_nombre_original'  => $archivo->getClientOriginalName(),
-            'pdf_texto_extraido'   => $textoPdf,   // ← texto, no base64
+            'pdf_texto_extraido'   => $texto,
             'estado_procesamiento' => 'pendiente',
             'ia_raw_json'          => null,
             'ia_procesado_at'      => null,
         ]);
 
-        // 3. Encolar el job de Groq (solo texto, sin PDF)
         $configId = $config->id_marca_garantia;
         dispatch(function () use ($configId) {
             app(PdfGarantiaService::class)->procesarConIA($configId);
-        })->afterCommit();
+        });
 
         return response()->json([
             'ok'      => true,
@@ -178,18 +182,17 @@ class AdminGarantiaController extends Controller
             ],
         ]);
 
-    // En AdminGarantiaController::subirPdf() — bloque catch temporal
-} catch (\Exception $e) {
-    Log::error('Error al subir PDF de garantía', [
-        'error' => $e->getMessage(),
-        'trace' => $e->getTraceAsString(), // ← agrega esto temporalmente
-    ]);
-    // ← Temporalmente devuelve el mensaje real para diagnosticar
-    return response()->json([
-        'ok'      => false,
-        'mensaje' => 'Error: ' . $e->getMessage(), // ← quitar en producción
-    ], 500);
-}
+    } catch (\Exception $e) {
+        Log::error('Error al subir PDF de garantía', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+        ]);
+        return response()->json([
+            'ok'      => false,
+            'mensaje' => 'Error: ' . $e->getMessage(),
+        ], 500);
+    }
+
 }
     // ─── POST: activar/desactivar garantía de una marca ──────────────────
     public function activar(Request $request, string $idMarca)

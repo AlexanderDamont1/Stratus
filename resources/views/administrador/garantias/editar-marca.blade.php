@@ -52,7 +52,7 @@
                 @php $tienePdf = $config?->tienePdf(); @endphp
                 @if($tienePdf)
                     <span class="text-[10px] px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30
-                             text-blue-700 dark:text-blue-300 font-medium shrink-0">
+                                     text-blue-700 dark:text-blue-300 font-medium shrink-0">
                         {{ $config->pdf_nombre_original }}
                     </span>
                 @endif
@@ -277,17 +277,53 @@
                         @endif
             },
 
-                    cargarDesdeIA(json) {
-                        if (!json?.garantias) return;
-                        this.componentes = json.garantias.map(g => ({
-                            clave: g.componente,
-                            nombre: g.componente.charAt(0).toUpperCase() + g.componente.slice(1).replace(/_/g, ' '),
-                            incluye: g.incluye ?? [],
-                            duracion: g.duracion_meses,
-                            cobertura: g.cobertura ?? '',
-                            serializable: ['motor', 'bateria'].some(k => g.componente.includes(k)),
-                            excluido: false,
-                        }));
+                    // Reemplaza cargarDesdeIA() completo en editar-marca.blade.php
+                    cargarDesdeIA(rawJson) {
+                        let componentes = [];
+
+                        try {
+                            // ia_raw_json puede llegar como string o como objeto ya parseado
+                            const data = typeof rawJson === 'string' ? JSON.parse(rawJson) : rawJson;
+
+                            // El servicio guarda el array plano de validarComponentes()
+                            // que ya tiene: { clave, nombre, duracion, cobertura, incluye, serializable, excluido }
+                            if (Array.isArray(data)) {
+                                componentes = data.map(c => ({
+                                    clave: c.clave ?? '',
+                                    nombre: c.nombre ?? '',
+                                    duracion: c.duracion ?? 12,
+                                    cobertura: c.cobertura ?? '',
+                                    incluye: Array.isArray(c.incluye) ? c.incluye : [],
+                                    serializable: c.serializable ?? false,
+                                    excluido: c.excluido ?? false,
+                                }));
+                            }
+                            // Compatibilidad con formato anterior { garantias: [...] }
+                            else if (data?.garantias && Array.isArray(data.garantias)) {
+                                componentes = data.garantias.map(g => {
+                                    // "componente" puede ser un string largo — lo convertimos a clave
+                                    const claveRaw = (g.componente ?? g.clave ?? '').split(',')[0].trim();
+                                    const clave = claveRaw.toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 60);
+                                    const nombre = g.nombre ?? (claveRaw.charAt(0).toUpperCase() + claveRaw.slice(1));
+
+                                    return {
+                                        clave,
+                                        nombre,
+                                        duracion: g.duracion_meses ?? g.duracion ?? 12,
+                                        cobertura: g.cobertura ?? '',
+                                        incluye: Array.isArray(g.incluye) ? g.incluye : [],
+                                        serializable: ['motor', 'bateria', 'controlador'].some(k => clave.includes(k)),
+                                        excluido: false,
+                                    };
+                                });
+                            }
+                        } catch (e) {
+                            console.error('Error parseando ia_raw_json:', e);
+                        }
+
+                        if (componentes.length > 0) {
+                            this.componentes = componentes;
+                        }
                     },
 
                     agregarComponente() {
@@ -302,34 +338,66 @@
                     },
 
                     async subirPdf(event) {
+                        // ← Capturar el archivo INMEDIATAMENTE antes de cualquier otra operación
                         const file = event.target.files[0];
                         if (!file) return;
+
                         if (file.size > 4 * 1024 * 1024) {
-                            this.flash('El PDF no debe superar 4MB.', 'error'); return;
+                            this.flash('El PDF no debe superar 4MB.', 'error');
+                            return;
                         }
 
-                        this.subiendo = true;
+                        if (!file.name.toLowerCase().endsWith('.pdf')) {
+                            this.flash('Solo se aceptan archivos PDF.', 'error');
+                            return;
+                        }
+
+                        // Construir FormData ANTES de cambiar subiendo=true
+                        // (cambiar subiendo dispara re-render de Alpine que puede afectar el input)
+                        const token = document.querySelector('meta[name="csrf-token"]').content;
                         const fd = new FormData();
-                        fd.append('pdf', file);
-                        fd.append('_token', document.querySelector('meta[name="csrf-token"]').content);
+                        fd.append('pdf', file);  // ← file ya está capturado, el re-render no afecta
+
+                        // Ahora sí cambiar el estado
+                        this.subiendo = true;
 
                         try {
                             const res = await fetch('{{ route("admin.garantias.marcas.pdf", $marca->id_marca) }}', {
                                 method: 'POST',
-                                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                                headers: {
+                                    'X-CSRF-TOKEN': token,
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'Accept': 'application/json',
+                                    // SIN Content-Type — el browser lo pone con el boundary
+                                },
                                 body: fd,
                             });
+
+                            if (res.status === 419) {
+                                this.flash('Sesión expirada. Recarga la página.', 'error');
+                                return;
+                            }
+
                             const data = await res.json();
-                            if (!data.ok) { this.flash(data.mensaje ?? 'Error.', 'error'); return; }
+
+                            console.log('Response status:', res.status, 'Body:', data);
+
+                            if (!data.ok) {
+                                this.flash(data.mensaje ?? 'Error.', 'error');
+                                return;
+                            }
 
                             this.idMarcaGarantia = data.config.id;
                             this.flash(data.mensaje);
-                            // Actualizar estado local
-                            this.$el.querySelector('[x-data]').__x.$data.estado = 'pendiente';
                             this.iniciarPolling();
 
-                        } catch { this.flash('Error al subir el PDF.', 'error'); }
-                        finally { this.subiendo = false; event.target.value = ''; }
+                        } catch (err) {
+                            console.error('Error subiendo PDF:', err);
+                            this.flash('Error de conexión.', 'error');
+                        } finally {
+                            this.subiendo = false;
+                            event.target.value = '';
+                        }
                     },
 
                     iniciarPolling() {

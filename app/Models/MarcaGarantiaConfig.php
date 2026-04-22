@@ -20,7 +20,7 @@ class MarcaGarantiaConfig extends Model
         'id_negocio',
         'id_marca',
         'activa',
-        'pdf_base64',
+        'pdf_texto_extraido',
         'pdf_nombre_original',
         'estado_procesamiento',
         'ia_raw_json',
@@ -29,10 +29,10 @@ class MarcaGarantiaConfig extends Model
     ];
 
     protected $casts = [
-        'activa'           => 'boolean',
-        'ia_raw_json'      => 'array',
-        'ia_procesado_at'  => 'datetime',
-    ];
+    'ia_raw_json'  => 'array',
+    'activa'       => 'boolean',
+    'ia_procesado_at' => 'datetime',
+];
 
     // Nunca exponer el base64 en listados
     protected $hidden = ['pdf_base64'];
