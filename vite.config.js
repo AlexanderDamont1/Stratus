@@ -12,7 +12,7 @@ export default defineConfig({
         host: '0.0.0.0',
         port: 5173,
         hmr: {
-            host: '10.137.208.197', 
+            host: '192.168.100.11', 
         },
     },
 });

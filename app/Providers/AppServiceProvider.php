@@ -5,7 +5,6 @@ use Illuminate\Support\Facades\Blade;
 use App\Services\ModuloService;
 
 
-
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider

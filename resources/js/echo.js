@@ -12,17 +12,6 @@ window.Echo = new Echo({
     forceTLS: false,
     enabledTransports: ['ws', 'wss'],
 
-    // ── Reconexión controlada ──────────────────
-    activityTimeout: 120000,   // 2 min sin actividad antes de ping
-    pongTimeout: 10000,        // espera 10s la respuesta del ping
-    unavailableTimeout: 10000, // 10s para marcar como no disponible
+    
 });
 
-// ── Pausar cuando la pestaña está oculta ──────
-document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-        window.Echo.connector.pusher.connection.disconnect();
-    } else {
-        window.Echo.connector.pusher.connection.connect();
-    }
-});
