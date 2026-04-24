@@ -59,3 +59,13 @@ Broadcast::channel('ventas.{idNegocio}', function ($user, $idNegocio) {
     // Solo el admin (rol 1) del negocio recibe este canal
     return $user->id_negocio === $idNegocio && $user->id_rol === 1;
 });
+
+// Todos los usuarios del negocio lo escuchan
+Broadcast::channel('negocio.{idNegocio}', function ($user, $idNegocio) {
+    return (string) $user->id_negocio === (string) $idNegocio;
+});
+
+// Solo el root (rol 0) puede escuchar
+Broadcast::channel('root', function ($user) {
+    return $user->id_rol === 0;
+});

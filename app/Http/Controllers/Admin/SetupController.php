@@ -59,17 +59,30 @@ class SetupController extends Controller
         DB::transaction(function () use ($data, $admin) {
 
             foreach ($data['vendedores'] as $vendedor) {
-                Usuario::create([
-                    'id_usuario'     => $this->generarIdUsuario(),
-                    'id_negocio'     => $admin->id_negocio,
-                    'nombre_usuario' => $vendedor['nombre'],
-                    'correo'         => $vendedor['correo'],
-                    'password'       => Hash::make($vendedor['password']),
-                    'id_rol'         => 2,
+                $verificationToken = Str::random(64);
+
+                $nuevoVendedor = Usuario::create([
+                    'id_usuario'               => $this->generarIdUsuario(),
+                    'id_negocio'               => $admin->id_negocio,
+                    'nombre_usuario'           => $vendedor['nombre'],
+                    'correo'                   => $vendedor['correo'],
+                    'password'                 => Hash::make($vendedor['password']),
+                    'id_rol'                   => 2,
+                    'email_verified_at'        => null,
+                    'email_verification_token' => $verificationToken,
                 ]);
+
+                $nuevoVendedor->notify(new VerificarEmailNotification(
+                    $verificationToken,
+                    $vendedor['nombre']
+                ));
             }
 
-            // salir del modo setup
+            $admin->negocio->update([
+                'trial_ends_at'  => now()->addDays(14),
+                'negocio_status' => 'trial',
+            ]);
+
             $admin->update(['id_rol' => 1]);
 
             CatalogService::invalidateStockVendedores($admin->id_negocio);

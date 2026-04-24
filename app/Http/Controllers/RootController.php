@@ -7,27 +7,29 @@ use App\Models\RegistroLink;
 use App\Services\ModuloService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use App\Events\NegocioExpirado;
+use App\Events\NegocioActivado;
+use App\Events\StatsActualizadas;
 
 class RootController extends Controller
 {
-    /*
-    |----------------------------------------
-    | Dashboard principal del Root
-    |----------------------------------------
-    */
     public function index()
     {
         $links    = RegistroLink::latest()->paginate(10);
         $negocios = Negocio::with('admin')->latest()->paginate(10);
 
-        return view('root.dashboard', compact('links', 'negocios'));
+        // Stats de suscripción para las tarjetas nuevas
+        $stats = [
+            'en_trial'             => Negocio::where('negocio_status', 'trial')->count(),
+            'activos'              => Negocio::where('negocio_status', 'activo')->count(),
+            'trial_expirado'       => Negocio::where('negocio_status', 'trial_expirado')->count(),
+            'suscripcion_expirada' => Negocio::where('negocio_status', 'suscripcion_expirada')->count(),
+            'suspendidos'          => Negocio::where('negocio_status', 'suspendido')->count(),
+        ];
+
+        return view('root.dashboard', compact('links', 'negocios', 'stats'));
     }
 
-    /*
-    |----------------------------------------
-    | Crear link de registro
-    |----------------------------------------
-    */
     public function storeLink(Request $request)
     {
         $request->validate([
@@ -44,23 +46,45 @@ class RootController extends Controller
         return back()->with('success', 'Link creado. Expira en 24 horas.');
     }
 
-    /*
-    |----------------------------------------
-    | Eliminar link
-    |----------------------------------------
-    */
     public function destroyLink(RegistroLink $link)
     {
         $link->delete();
-
         return back()->with('success', 'Link eliminado correctamente.');
     }
 
-    /*
-    |----------------------------------------
-    | Módulos por negocio
-    |----------------------------------------
-    */
+    // ── Activar suscripción desde root ────────────────────
+        public function activarSuscripcion(Request $request, string $idNegocio)
+    {
+        $request->validate([
+            'dias' => 'required|integer|min:1|max:365',
+        ]);
+
+        $negocio = Negocio::findOrFail($idNegocio);
+        $negocio->activarSuscripcion($request->dias);
+        $negocio->refresh();
+
+        // Notificar en tiempo real al root (otras pestañas) y stats
+        broadcast(new NegocioActivado($negocio));
+        broadcast(new StatsActualizadas());
+
+        return response()->json([
+            'ok'      => true,
+            'mensaje' => "Suscripción activada por {$request->dias} días.",
+            'hasta'   => $negocio->subscribed_until->format('d/m/Y'),
+        ]);
+    }
+
+    public function suspender(string $idNegocio)
+    {
+        $negocio = Negocio::findOrFail($idNegocio);
+        $negocio->suspender();
+
+        broadcast(new NegocioExpirado($negocio, 'suspendido'));
+        broadcast(new StatsActualizadas());
+
+        return response()->json(['ok' => true]);
+    }
+
     public function modulos(string $idNegocio)
     {
         $negocio = Negocio::findOrFail($idNegocio);
@@ -69,11 +93,6 @@ class RootController extends Controller
         return view('root.modulos', compact('negocio', 'estado'));
     }
 
-    /*
-    |----------------------------------------
-    | Toggle AJAX — activar/desactivar módulo
-    |----------------------------------------
-    */
     public function toggleModulo(Request $request)
     {
         $request->validate([

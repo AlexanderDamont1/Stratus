@@ -5,29 +5,20 @@ namespace App\Http\Controllers;
 use App\Models\Negocio;
 use App\Models\RegistroLink;
 use App\Models\Usuario;
+use App\Notifications\VerificarEmailNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class RegistroController extends Controller
 {
-    /*
-    |----------------------------------------
-    | Mostrar formulario de registro
-    |----------------------------------------
-    */
     public function show(string $token)
     {
         $link = $this->linkValido($token);
-
         return view('registro.admin', compact('link'));
     }
 
-    /*
-    |----------------------------------------
-    | Crear negocio + admin
-    |----------------------------------------
-    */
     public function store(Request $request, string $token)
     {
         $link = $this->linkValido($token);
@@ -39,45 +30,43 @@ class RegistroController extends Controller
             'password'        => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
-        DB::transaction(function () use ($request, $link) {
+        $verificationToken = Str::random(64);
 
-            // 1. Crear el negocio
+        DB::transaction(function () use ($request, $link, $verificationToken) {
+
             $negocio = Negocio::create([
                 'nombre_negocio' => $request->nombre_negocio,
                 'max_users'      => $link->max_users,
             ]);
 
-            // 2. Crear el admin con id_rol = 1
-            Usuario::create([
-                'id_negocio'     => $negocio->id_negocio,
-                'nombre_usuario' => $request->nombre_usuario,
-                'correo'         => $request->correo,
-                'password'       => Hash::make($request->password),
-                'id_rol'         => 44, // Admin siempre
+            $usuario = Usuario::create([
+                'id_negocio'               => $negocio->id_negocio,
+                'nombre_usuario'           => $request->nombre_usuario,
+                'correo'                   => $request->correo,
+                'password'                 => Hash::make($request->password),
+                'id_rol'                   => 44,
+                'email_verified_at'        => null,   // ← pendiente
+                'email_verification_token' => $verificationToken,
             ]);
 
-            // 3. Matar el link ☠️
             $link->update(['usado' => true]);
+
+            // Enviar correo de verificación
+            $usuario->notify(new VerificarEmailNotification(
+                $verificationToken,
+                $request->nombre_usuario
+            ));
         });
 
         return redirect()->route('login')
-                         ->with('success', 'Negocio creado. Ya puedes iniciar sesión.');
+            ->with('success', 'Cuenta creada. Revisa tu correo para verificarla antes de iniciar sesión.');
     }
 
-    /*
-    |----------------------------------------
-    | Helper: obtener link válido o abortar
-    |----------------------------------------
-    */
     private function linkValido(string $token): RegistroLink
     {
         return RegistroLink::where('token', $token)
             ->where('usado', false)
-            ->where(function ($query) {
-                $query->whereNull('expires_at')
-                      ->orWhere('expires_at', '>', now());
-            })
+            ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
             ->firstOrFail();
-        // firstOrFail() lanza 404 automático si no existe, expiró o ya fue usado
     }
 }

@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\View\View;
 use App\Services\CatalogService;
+use App\Notifications\VerificarEmailNotification;
+use Illuminate\Support\Str;
+
 
 class VendedorController extends Controller
 {
@@ -47,18 +50,28 @@ class VendedorController extends Controller
             'username.regex' => 'El username solo puede contener letras, números y guiones bajos.',
         ]);
 
-        Usuario::create([
-            'id_usuario'     => Usuario::generarId(),
-            'id_negocio'     => $admin->id_negocio,
-            'nombre_usuario' => $request->nombre_usuario,
-            'correo'         => $request->correo,
-            'password'       => Hash::make($request->password),
-            'id_rol'         => 2,
-        ]);
-           
-            CatalogService::invalidateStockVendedores($admin->id_negocio);
-            CatalogService::invalidateSucursales($admin->id_negocio);
+        $verificationToken = Str::random(64);
 
+        $nuevoVendedor = Usuario::create([
+            'id_usuario'               => Usuario::generarId(),
+            'id_negocio'               => $admin->id_negocio,
+            'nombre_usuario'           => $request->nombre_usuario,
+            'correo'                   => $request->correo,
+            'password'                 => Hash::make($request->password),
+            'id_rol'                   => 2,
+            'email_verified_at'        => null,
+            'email_verification_token' => $verificationToken,
+        ]);
+
+        $nuevoVendedor->notify(new VerificarEmailNotification(
+            $verificationToken,
+            $request->nombre_usuario
+        ));
+
+        CatalogService::invalidateStockVendedores($admin->id_negocio);
+        CatalogService::invalidateSucursales($admin->id_negocio);
+                
+                    
 
         return redirect()->route('admin.vendedores.create')
             ->with('success', 'Vendedor creado correctamente.');

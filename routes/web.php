@@ -23,12 +23,17 @@ use App\Http\Controllers\VentaController;
 use App\Http\Controllers\MovimientoController;
 use App\Http\Controllers\GarantiaController;
 use App\Http\Controllers\AdminGarantiaController;
+use App\Http\Controllers\TrialController;
+use App\Http\Controllers\EmailVerificationController;
+use App\Http\Controllers\GoogleAuthController;
 
 /*
 |--------------------------------------------------------------------------
 | PÚBLICAS
 |--------------------------------------------------------------------------
 */
+
+
 
 Route::get('/', fn () => view('welcome'));
 
@@ -55,12 +60,44 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->middleware('auth')
     ->name('logout');
 
+
+    // ── Google OAuth ──────────────────────────────────────
+Route::get('/auth/google/login',              [GoogleAuthController::class, 'redirectLogin'])->name('google.login');
+Route::get('/auth/google/callback',           [GoogleAuthController::class, 'callbackLogin'])->name('google.callback');
+Route::get('/auth/google/registro/{token}',   [GoogleAuthController::class, 'redirectRegistro'])->name('google.registro.redirect');
+Route::get('/auth/google/registro/callback',  [GoogleAuthController::class, 'callbackRegistro'])->name('google.registro.callback');
+Route::get('/registro/google/negocio',        [GoogleAuthController::class, 'formNegocio'])->name('registro.google.negocio');
+Route::post('/registro/google/negocio',       [GoogleAuthController::class, 'storeNegocio'])->name('registro.google.negocio.store');
+
 /*
 |--------------------------------------------------------------------------
 | PROTEGIDAS
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () {
+
+
+Route::middleware(['auth', 'email.verificado'])->group(function () {
+    Route::get('/trial/expirado',       [TrialController::class, 'expirado'])->name('trial.expirado');
+    Route::get('/suscripcion/expirada', [TrialController::class, 'suscripcionExpirada'])->name('suscripcion.expirada');
+
+     Route::get('/verificacion-pendiente', function () {
+        if (auth()->user()->emailVerificado()) {
+            return redirect()->route('dashboard');
+        }
+        return view('auth.verificacion-pendiente');
+    })->name('verificacion.pendiente');
+
+    Route::post('/reenviar-verificacion', [EmailVerificationController::class, 'reenviar'])
+        ->name('verificacion.reenviar')
+        ->middleware('throttle:3,1');
+});
+
+
+
+
+
+
+Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado'])->group(function () {
 
     Route::get('/dashboard', fn () => view('dashboard'))->name('dashboard');
 
@@ -388,14 +425,18 @@ Route::middleware(['auth', 'single.session', 'force.setup'])->group(function () 
     |----------------------------------------------------------------------
     */
     Route::middleware('es.root')->group(function () {
-        Route::get('/root',                              [RootController::class, 'index'])->name('root.dashboard');
-        Route::post('/root/links',                       [RootController::class, 'storeLink'])->name('root.links.store');
-        Route::delete('/root/links/{link}',              [RootController::class, 'destroyLink'])->name('root.links.destroy');
+        Route::get('/root',                                    [RootController::class, 'index'])->name('root.dashboard');
+        Route::post('/root/links',                             [RootController::class, 'storeLink'])->name('root.links.store');
+        Route::delete('/root/links/{link}',                    [RootController::class, 'destroyLink'])->name('root.links.destroy');
+        Route::post('/root/negocios/{id}/activar',             [RootController::class, 'activarSuscripcion'])->name('root.negocios.activar');
+        Route::post('/root/negocios/{id}/suspender',           [RootController::class, 'suspender'])->name('root.negocios.suspender');
 
         // ✅ Módulos
         Route::get('/root/negocios/{id}/modulos',        [RootController::class, 'modulos'])->name('root.modulos');
         Route::post('/root/modulos/toggle',              [RootController::class, 'toggleModulo'])->name('root.modulos.toggle');
     });
+
+   
 
 });
 

@@ -14,7 +14,7 @@ use App\Models\Usuario;
 use App\Models\Venta;
 use App\Models\Producto;
 use App\Models\Inventario;
-use App\Models\BicicletaMovimiento; 
+use App\Models\BicicletaMovimiento;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -29,7 +29,7 @@ class CatalogService
         'bicicletas' => 3600,
         'pedidos'    => 3600,
         'usuarios'   => 3600,
-        'stats'      => 1800,
+        'stats'      => 300,   // ✅ bajado de 1800 a 300 — WS las actualiza frecuente
         'search'     => 3600,
         'productos'  => 3600,
     ];
@@ -37,8 +37,6 @@ class CatalogService
     const CACHE_PREFIX = 'catalog:';
 
     // ─── VERSIÓN: GLOBAL Y POR TENANT ───────────────────────────────────────
-    // Datos globales (sin negocio) usan version global.
-    // Datos de tenant usan version:{idNegocio} → un bump solo afecta a ese negocio.
 
     protected static function getVersionKey(?string $idNegocio = null): string
     {
@@ -64,12 +62,6 @@ class CatalogService
         return self::CACHE_PREFIX . $key;
     }
 
-    /**
-     * @param string        $key        Clave lógica del cache
-     * @param int           $ttl        Segundos de vida
-     * @param callable      $callback   Query a ejecutar en caso de miss
-     * @param string|null   $idNegocio  Si se pasa → versión por tenant; null → versión global
-     */
     protected static function remember(string $key, int $ttl, callable $callback, ?string $idNegocio = null)
     {
         $version = self::getVersion($idNegocio);
@@ -87,7 +79,7 @@ class CatalogService
                 ->select('id_marca', 'nombre_marca')
                 ->orderBy('nombre_marca')
                 ->get(),
-            $idNegocio  // ← versión por tenant
+            $idNegocio
         );
 
         return $withSelectFormato ? $marcas->pluck('nombre_marca', 'id_marca') : $marcas;
@@ -95,7 +87,6 @@ class CatalogService
 
     public static function getMarcasPublicas(bool $withSelectFormato = false)
     {
-        // Sin negocio → versión global
         $marcas = self::remember('marcas:publicas', self::CACHE_TTL['marcas'], fn () =>
             Marca::whereNull('id_negocio')
                 ->select('id_marca', 'nombre_marca')
@@ -108,23 +99,25 @@ class CatalogService
 
     public static function getMarcaById(string $idMarca): ?Marca
     {
-        // Sin negocio en firma → versión global; invalidateMarca hace forget explícito
         return self::remember("marca:{$idMarca}", self::CACHE_TTL['marcas'],
             fn () => Marca::with('negocio')->find($idMarca)
         );
     }
 
+    // ✅ FIX: guardamos globalV una sola vez para evitar race condition
     public static function invalidateMarca(string $idMarca, ?string $idNegocio = null): void
     {
-        $version = self::getVersion($idNegocio);
-        Cache::forget(self::key("marca:{$idMarca}") . ":v" . self::getVersion()); // global key
-        Cache::forget(self::key("marca:{$idMarca}") . ":v{$version}");
+        $globalV = self::getVersion();
+        $tenantV = self::getVersion($idNegocio);
+
+        Cache::forget(self::key("marca:{$idMarca}") . ":v{$globalV}");
 
         if ($idNegocio) {
-            Cache::forget(self::key("marcas:negocio:{$idNegocio}") . ":v{$version}");
-            Cache::forget(self::key("modelos:negocio:{$idNegocio}") . ":v{$version}");
+            Cache::forget(self::key("marca:{$idMarca}") . ":v{$tenantV}");
+            Cache::forget(self::key("marcas:negocio:{$idNegocio}") . ":v{$tenantV}");
+            Cache::forget(self::key("modelos:negocio:{$idNegocio}") . ":v{$tenantV}");
         } else {
-            Cache::forget(self::key('marcas:publicas') . ":v" . self::getVersion());
+            Cache::forget(self::key('marcas:publicas') . ":v{$globalV}");
         }
     }
 
@@ -164,7 +157,6 @@ class CatalogService
 
     public static function getModelos(bool $withSelectFormato = false)
     {
-        // Públicos → versión global
         $modelos = self::remember('modelos:publicos', self::CACHE_TTL['modelos'],
             fn () => Modelo::whereNull('id_negocio')
                 ->select('id_modelo', 'nombre_modelo')
@@ -177,7 +169,6 @@ class CatalogService
 
     public static function getModeloById(string $idModelo): ?Modelo
     {
-        // Sin negocio en firma → versión global; invalidateModelo hace forget explícito
         return self::remember("modelo:{$idModelo}", self::CACHE_TTL['modelos'],
             fn () => Modelo::with(['marca', 'negocio'])->find($idModelo)
         );
@@ -242,7 +233,7 @@ class CatalogService
 
                 return $query->orderBy('voltajes.voltaje')->get();
             },
-            $idNegocio  // null si es público → versión global
+            $idNegocio
         );
 
         return $withSelectFormato ? $voltajes->pluck('voltaje', 'id_voltaje') : $voltajes;
@@ -267,26 +258,17 @@ class CatalogService
         );
     }
 
-    /**
-     * ✅ CORREGIDO: bump por tenant → solo afecta al negocio que editó el voltaje.
-     * El voltaje vive embebido en bicicletas, secciones, productos, etc.
-     * No es posible invalidar quirúrgicamente todas esas caches sin conocer
-     * cada num_serie afectada, por eso se hace bump de versión del tenant.
-     */
     public static function invalidateVoltaje(string $idVoltaje, ?string $idNegocio = null): void
     {
         if ($idNegocio) {
-            // Dato de tenant → bump solo de ese negocio
             self::incrementVersion($idNegocio);
         } else {
-            // Dato público → bump global
             self::incrementVersion();
         }
     }
 
     public static function invalidateVoltajes(): void
     {
-        // Para datos públicos globales
         self::incrementVersion();
     }
 
@@ -352,10 +334,6 @@ class CatalogService
         );
     }
 
-    /**
-     * ✅ CORREGIDO: bump por tenant → igual que voltaje.
-     * El color vive embebido en decenas de caches (bicicletas, secciones, productos, catálogo).
-     */
     public static function invalidateColor(string $idColor, string $idModelo, ?string $idNegocio = null): void
     {
         if ($idNegocio) {
@@ -369,7 +347,6 @@ class CatalogService
 
     public static function getNegocios(bool $withSelectFormato = false)
     {
-        // Meta-dato global → versión global
         $negocios = self::remember('negocios', self::CACHE_TTL['negocios'],
             fn () => Negocio::select('id_negocio', 'nombre_negocio')
                 ->orderBy('nombre_negocio')
@@ -390,22 +367,20 @@ class CatalogService
 
     public static function getBicicletasPaginadas(string $idNegocio): LengthAwarePaginator
     {
-        // Paginación directa sin cache (se usa solo en rol 5)
         return Bicicleta::where('id_negocio', $idNegocio)
             ->with(['modelo', 'voltaje', 'color'])
             ->orderByDesc('updated_at')
             ->paginate(10);
     }
 
-    
     public static function getBicicletaBySerie(string $numSerie, ?string $idNegocio = null): ?Bicicleta
     {
         return self::remember(
             "bicicleta:serie:{$numSerie}",
             self::CACHE_TTL['bicicletas'],
             fn () => Bicicleta::with(['modelo.marca', 'voltaje', 'color'])
-                        ->where('num_serie', $numSerie)
-                        ->first(),
+                ->where('num_serie', $numSerie)
+                ->first(),
             $idNegocio
         );
     }
@@ -417,7 +392,12 @@ class CatalogService
             self::CACHE_TTL['stats'],
             function () use ($idNegocio) {
                 $stats = Bicicleta::where('id_negocio', $idNegocio)
-                    ->selectRaw("COUNT(*) as total, SUM(status = 1) as en_stock, SUM(status = 2) as vendidas, SUM(status = 3) as en_reparacion")
+                    ->selectRaw("
+                        COUNT(*) as total,
+                        SUM(status = 1) as en_stock,
+                        SUM(status = 2) as vendidas,
+                        SUM(status = 3) as en_reparacion
+                    ")
                     ->first();
 
                 return [
@@ -479,7 +459,6 @@ class CatalogService
 
     public static function getBicicletasByCliente(string $idCliente)
     {
-        // Sin negocio en firma → versión global
         return self::remember("bicicletas:cliente:{$idCliente}", 300,
             fn () => Bicicleta::with(['modelo', 'color'])
                 ->where('id_cliente', $idCliente)
@@ -511,9 +490,8 @@ class CatalogService
                     ->groupBy('id_usuario')
                     ->pluck('total', 'id_usuario');
 
-                $sinAsignar = $totales->get(null,
-                    Bicicleta::where('id_negocio', $idNegocio)->whereNull('id_usuario')->count()
-                );
+                // ✅ FIX: sin query extra, el null ya está en $totales si existe
+                $sinAsignar = (int) ($totales[null] ?? 0);
 
                 $resultado = [];
                 foreach ($vendedores as $vendedor) {
@@ -523,7 +501,7 @@ class CatalogService
                         'bicicletas' => null,
                     ];
                 }
-                $resultado[] = ['vendedor' => null, 'total' => (int) $sinAsignar, 'bicicletas' => null];
+                $resultado[] = ['vendedor' => null, 'total' => $sinAsignar, 'bicicletas' => null];
 
                 return $resultado;
             },
@@ -585,7 +563,6 @@ class CatalogService
 
     public static function getPedidoById(string $idPedido): ?Pedido
     {
-        // Sin negocio en firma → versión global; invalidatePedido hace forget explícito
         return self::remember("pedido:{$idPedido}", self::CACHE_TTL['pedidos'],
             fn () => Pedido::with(['usuario', 'negocio', 'items.modelo', 'items.voltaje', 'items.color', 'bicicletas'])->find($idPedido)
         );
@@ -607,24 +584,36 @@ class CatalogService
         return array_map(fn ($id) => self::getPedidoById($id), $ids);
     }
 
+    // ✅ FIX: de 4 queries a 1 sola con selectRaw
     public static function getPedidoStats(string $idNegocio): array
     {
         return self::remember(
             "stats:pedidos:negocio:{$idNegocio}",
             self::CACHE_TTL['stats'],
-            fn () => [
-                'pendientes'  => Pedido::where('id_negocio', $idNegocio)->where('status', 1)->count(),
-                'en_proceso'  => Pedido::where('id_negocio', $idNegocio)->where('status', 2)->count(),
-                'completados' => Pedido::where('id_negocio', $idNegocio)->where('status', 3)->count(),
-                'total'       => Pedido::where('id_negocio', $idNegocio)->count(),
-            ],
+            function () use ($idNegocio) {
+                $stats = Pedido::where('id_negocio', $idNegocio)
+                    ->selectRaw("
+                        COUNT(*) as total,
+                        SUM(status = 1) as pendientes,
+                        SUM(status = 2) as en_proceso,
+                        SUM(status = 3) as completados
+                    ")
+                    ->first();
+
+                return [
+                    'pendientes'  => (int) $stats->pendientes,
+                    'en_proceso'  => (int) $stats->en_proceso,
+                    'completados' => (int) $stats->completados,
+                    'total'       => (int) $stats->total,
+                ];
+            },
             $idNegocio
         );
     }
 
     public static function invalidatePedido(string $idPedido, string $idNegocio): void
     {
-        $globalV = self::getVersion();      // pedido:{id} usa versión global
+        $globalV = self::getVersion();
         $tenantV = self::getVersion($idNegocio);
 
         Cache::forget(self::key("pedido:{$idPedido}") . ":v{$globalV}");
@@ -662,10 +651,8 @@ class CatalogService
 
     public static function invalidateNegocio(string $idNegocio): void
     {
-        // Bump completo del tenant → limpia todo lo de ese negocio de una vez
         self::incrementVersion($idNegocio);
 
-        // Limpia también claves globales relacionadas al negocio
         $globalV = self::getVersion();
         Cache::forget(self::key("negocio:{$idNegocio}") . ":v{$globalV}");
         Cache::forget(self::key('negocios') . ":v{$globalV}");
@@ -673,6 +660,7 @@ class CatalogService
 
     // ─── STATS GLOBALES ─────────────────────────────────────────────────────
 
+    // ✅ FIX: null explícito para que use versión global correctamente
     public static function getGlobalStats(): array
     {
         return self::remember('stats:global', self::CACHE_TTL['stats'], fn () => [
@@ -685,8 +673,7 @@ class CatalogService
             'total_pedidos'       => Pedido::count(),
             'total_usuarios'      => Usuario::count(),
             'relaciones_voltajes' => ModeloVoltaje::count(),
-        ]);
-        // versión global (sin idNegocio)
+        ], null); // ✅ null explícito = versión global
     }
 
     // ─── BÚSQUEDA ───────────────────────────────────────────────────────────
@@ -709,7 +696,6 @@ class CatalogService
 
     public static function getProductos(bool $withSelectFormato = false)
     {
-        // Global → versión global
         $productos = self::remember('productos', self::CACHE_TTL['productos'],
             fn () => Producto::with('negocio')->orderBy('nombre_producto')->get()
         );
@@ -820,9 +806,6 @@ class CatalogService
 
     // ─── CACHÉ GENERAL ──────────────────────────────────────────────────────
 
-    /**
-     * Limpia todo el cache de un tenant específico o el global si no se pasa negocio.
-     */
     public static function clearCache(?string $idNegocio = null): void
     {
         self::incrementVersion($idNegocio);
@@ -834,11 +817,9 @@ class CatalogService
     {
         $version = self::getVersion($idNegocio);
 
-        // Cache general del admin
         Cache::forget(self::key("inventario:negocio:{$idNegocio}") . ":v{$version}");
         Cache::forget(self::key("inventario:sucursales:{$idNegocio}") . ":v{$version}");
 
-        // ✅ Cache específico de la sucursal — este era el que nunca se limpiaba
         if ($idUsuario) {
             Cache::forget(self::key("inventario:sucursal:{$idNegocio}:{$idUsuario}") . ":v{$version}");
         }
@@ -908,13 +889,14 @@ class CatalogService
         $version = self::getVersion($idNegocio);
         Cache::forget(self::key("sucursales:negocio:{$idNegocio}") . ":v{$version}");
     }
+
     // ─── MOVIMIENTOS DE BICICLETAS ───────────────────────────────────────────
 
     public static function getHistorialMovimientos(string $numSerie, string $idNegocio): \Illuminate\Support\Collection
     {
         return self::remember(
             "movimientos:serie:{$numSerie}",
-            600, // 10 min — se invalida con cada nuevo movimiento
+            600,
             fn () => BicicletaMovimiento::with('usuario')
                 ->where('num_serie', $numSerie)
                 ->orderBy('fecha_movimiento', 'asc')
@@ -928,7 +910,7 @@ class CatalogService
         return self::remember(
             "movimientos:recientes:negocio:{$idNegocio}:limit{$limit}",
             300,
-            fn () => BicicletaMovimiento::with('usuario')   
+            fn () => BicicletaMovimiento::with('usuario')
                 ->where('id_negocio', $idNegocio)
                 ->orderByDesc('fecha_movimiento')
                 ->limit($limit)
@@ -944,13 +926,13 @@ class CatalogService
         Cache::forget(self::key("movimientos:recientes:negocio:{$idNegocio}:limit20") . ":v{$version}");
     }
 
-    // ─── VENTAS ─────────────────────────────────────────────────────────────────
+    // ─── VENTAS ─────────────────────────────────────────────────────────────
 
     public static function getVentasByVendedor(string $idNegocio, string $idUsuario): LengthAwarePaginator
     {
         return self::remember(
             "ventas:vendedor:{$idUsuario}:negocio:{$idNegocio}:page:1",
-            300, // 5 min
+            300,
             fn () => self::queryVentas($idNegocio, $idUsuario)
                 ->paginate(15, ['*'], 'page', 1),
             $idNegocio

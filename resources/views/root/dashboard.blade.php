@@ -5,19 +5,91 @@
         deleteModal: false,
         deleteToken: '',
         deleteAction: '',
+
+        stats: {
+            en_trial:             {{ $stats['en_trial'] }},
+            activos:              {{ $stats['activos'] }},
+            trial_expirado:       {{ $stats['trial_expirado'] }},
+            suscripcion_expirada: {{ $stats['suscripcion_expirada'] }},
+            suspendidos:          {{ $stats['suspendidos'] }},
+        },
+
+        negociosStatus: {
+            @foreach($negocios as $n)
+            '{{ $n->id_negocio }}': {
+                status:         '{{ $n->negocio_status }}',
+                dias_restantes:  {{ $n->diasRestantes() }},
+            },
+            @endforeach
+        },
+
         openDelete(token, action) {
             this.deleteToken  = token;
             this.deleteAction = action;
             this.deleteModal  = true;
+        },
+
+        statusLabel(status) {
+            const map = {
+                trial:                'Trial',
+                activo:               'Activo',
+                trial_expirado:       'Trial exp.',
+                suscripcion_expirada: 'Sub. exp.',
+                suspendido:           'Suspendido',
+            };
+            return map[status] ?? '—';
+        },
+
+        statusClass(status) {
+            const map = {
+                trial:                'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800',
+                activo:               'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-800',
+                trial_expirado:       'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800',
+                suscripcion_expirada: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800',
+                suspendido:           'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600',
+            };
+            return map[status] ?? 'bg-gray-100 text-gray-400 border-gray-200';
+        },
+
+        init() {
+            const startWs = (retries = 10, delay = 300) => {
+                if (typeof Echo === 'undefined' || !Echo) {
+                    if (retries > 0) setTimeout(() => startWs(retries - 1, delay), delay);
+                    return;
+                }
+
+                Echo.private('root')
+
+                    .listen('.negocio.expirado', (e) => {
+                        if (this.negociosStatus[e.id_negocio]) {
+                            this.negociosStatus[e.id_negocio].status         = e.tipo;
+                            this.negociosStatus[e.id_negocio].dias_restantes = 0;
+                        }
+                    })
+
+                    .listen('.negocio.activado', (e) => {
+                        if (this.negociosStatus[e.id_negocio]) {
+                            this.negociosStatus[e.id_negocio].status         = e.negocio_status;
+                            this.negociosStatus[e.id_negocio].dias_restantes = e.dias_restantes;
+                        }
+                    })
+
+                    .listen('.stats.actualizadas', (e) => {
+                        this.stats = e;
+                    });
+            };
+
+            startWs();
         }
     }"
     class="space-y-6"
 >
+
     {{-- ===== MENSAJE FLASH ===== --}}
     @if(session('success'))
-    <div class="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 animate-fade-in" 
-         x-data="{ show: true }" 
-         x-show="show" 
+    <div class="fixed top-6 left-1/2 transform -translate-x-1/2 z-50"
+         x-data="{ show: true }"
+         x-show="show"
          x-init="setTimeout(() => show = false, 3000)"
          x-transition:enter="transition ease-out duration-300"
          x-transition:enter-start="opacity-0 -translate-y-2"
@@ -32,15 +104,14 @@
             <div class="flex-1">
                 <p class="text-sm font-medium text-gray-900">{{ session('success') }}</p>
             </div>
-            <button @click="show = false" 
-                    class="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors">
+            <button @click="show = false" class="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
             </button>
         </div>
     </div>
-@endif
+    @endif
 
     {{-- ===== ENCABEZADO ===== --}}
     <div class="flex justify-between items-center">
@@ -57,23 +128,31 @@
     </div>
 
     {{-- ===== ESTADÍSTICAS ===== --}}
-    @php
-        $totalLinks    = $links->total();
-        $disponibles   = \App\Models\RegistroLink::disponibles()->count();
-        $totalNegocios = $negocios->total();
-    @endphp
-    <div class="grid grid-cols-3 gap-4">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-5 py-4">
-            <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Links totales</p>
-            <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ $totalLinks }}</p>
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-4 py-3">
+            <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Links</p>
+            <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ $links->total() }}</p>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-5 py-4">
-            <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Disponibles</p>
-            <p class="text-2xl font-semibold text-green-600 dark:text-green-400">{{ $disponibles }}</p>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-4 py-3">
+            <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Disponibles</p>
+            <p class="text-2xl font-semibold text-green-600 dark:text-green-400">
+                {{ \App\Models\RegistroLink::disponibles()->count() }}
+            </p>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-5 py-4">
-            <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Negocios</p>
-            <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ $totalNegocios }}</p>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-4 py-3">
+            <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">En trial</p>
+            <p class="text-2xl font-semibold text-blue-600 dark:text-blue-400"
+               x-text="stats.en_trial"></p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-4 py-3">
+            <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Activos</p>
+            <p class="text-2xl font-semibold text-emerald-600 dark:text-emerald-400"
+               x-text="stats.activos"></p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-4 py-3">
+            <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Expirados</p>
+            <p class="text-2xl font-semibold text-red-500 dark:text-red-400"
+               x-text="stats.trial_expirado + stats.suscripcion_expirada"></p>
         </div>
     </div>
 
@@ -96,13 +175,12 @@
             <tbody>
                 @forelse($links as $link)
                     @php
-                        $expirado   = $link->expires_at && now()->greaterThan($link->expires_at);
-                        $disponible = ! $link->usado && ! $expirado;
-                        $url        = route('registro.show', $link->token);
+                        $expirado    = $link->expires_at && now()->greaterThan($link->expires_at);
+                        $disponible  = !$link->usado && !$expirado;
+                        $url         = route('registro.show', $link->token);
                         $deleteRoute = route('root.links.destroy', $link);
                     @endphp
                     <tr class="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition">
-                        {{-- URL + Botón copiar --}}
                         <td class="px-4 py-3">
                             @if($disponible)
                                 <div class="flex items-center gap-2">
@@ -212,39 +290,138 @@
         <table class="w-full text-sm">
             <thead class="bg-gray-50 dark:bg-gray-700/50">
                 <tr>
-                    <th class="px-4 py-2 text-left text-xs text-gray-500 dark:text-gray-400 font-medium">ID</th>
                     <th class="px-4 py-2 text-left text-xs text-gray-500 dark:text-gray-400 font-medium">Negocio</th>
                     <th class="px-4 py-2 text-left text-xs text-gray-500 dark:text-gray-400 font-medium">Admin</th>
-                    <th class="px-4 py-2 text-left text-xs text-gray-500 dark:text-gray-400 font-medium">Límite vendedores</th>
-                    <th class="px-4 py-2 text-left text-xs text-gray-500 dark:text-gray-400 font-medium">Creado</th>
+                    <th class="px-4 py-2 text-left text-xs text-gray-500 dark:text-gray-400 font-medium">Status</th>
+                    <th class="px-4 py-2 text-left text-xs text-gray-500 dark:text-gray-400 font-medium">Días restantes</th>
                     <th class="px-4 py-2 text-right text-xs text-gray-500 dark:text-gray-400 font-medium">Acciones</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($negocios as $negocio)
-                    <tr class="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition">
-                        <td class="px-4 py-3 text-xs text-gray-400">{{ $negocio->id_negocio }}</td>
-                        <td class="px-4 py-3 font-medium text-gray-800 dark:text-gray-200">{{ $negocio->nombre_negocio }}</td>
-                        <td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
-                            {{ $negocio->admin?->correo ?? '—' }}
-                        </td>
-                        <td class="px-4 py-3 text-gray-700 dark:text-gray-300">{{ $negocio->max_users }}</td>
-                        <td class="px-4 py-3 text-xs text-gray-400">{{ $negocio->created_at->format('d/m/y H:i') }}</td>
-                        <td class="px-4 py-3 text-right">
-                            <a
-                                href="{{ route('root.modulos', $negocio->id_negocio) }}"
-                                class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md
-                                    bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300
-                                    hover:bg-gray-200 dark:hover:bg-gray-600 transition font-medium"
+                <tr
+                    x-data="{ activarModal: false, dias: 30 }"
+                    class="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition"
+                >
+                    <td class="px-4 py-3">
+                        <p class="font-medium text-gray-800 dark:text-gray-200">{{ $negocio->nombre_negocio }}</p>
+                        <p class="text-[10px] text-gray-400">{{ $negocio->id_negocio }}</p>
+                    </td>
+                    <td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+                        {{ $negocio->admin?->correo ?? '—' }}
+                    </td>
+
+                    {{-- Status reactivo --}}
+                    <td class="px-4 py-3">
+                        <span
+                            class="inline-flex items-center text-xs px-2 py-0.5 rounded-full border transition-all duration-300"
+                            :class="statusClass(negociosStatus['{{ $negocio->id_negocio }}']?.status)"
+                            x-text="statusLabel(negociosStatus['{{ $negocio->id_negocio }}']?.status)"
+                        ></span>
+                    </td>
+
+                    {{-- Días restantes reactivos --}}
+                    <td class="px-4 py-3 text-xs">
+                        <span
+                            :class="{
+                                'text-red-500 font-semibold': negociosStatus['{{ $negocio->id_negocio }}']?.dias_restantes <= 3
+                                    && negociosStatus['{{ $negocio->id_negocio }}']?.dias_restantes > 0,
+                                'text-gray-300 dark:text-gray-600': negociosStatus['{{ $negocio->id_negocio }}']?.dias_restantes === 0,
+                                'text-gray-500 dark:text-gray-400': negociosStatus['{{ $negocio->id_negocio }}']?.dias_restantes > 3,
+                            }"
+                            x-text="negociosStatus['{{ $negocio->id_negocio }}']?.dias_restantes > 0
+                                ? negociosStatus['{{ $negocio->id_negocio }}'].dias_restantes + ' días'
+                                : '—'"
+                        ></span>
+                    </td>
+
+                    <td class="px-4 py-3 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                            <button
+                                @click="activarModal = true"
+                                class="text-xs px-2.5 py-1 rounded-md bg-gray-100 dark:bg-gray-700
+                                       text-gray-600 dark:text-gray-300 hover:bg-gray-200
+                                       dark:hover:bg-gray-600 transition font-medium"
                             >
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M4 6h16M4 12h16M4 18h7"/>
-                                </svg>
+                                Activar
+                            </button>
+                            <a href="{{ route('root.modulos', $negocio->id_negocio) }}"
+                               class="text-xs px-2.5 py-1 rounded-md bg-gray-100 dark:bg-gray-700
+                                      text-gray-600 dark:text-gray-300 hover:bg-gray-200
+                                      dark:hover:bg-gray-600 transition font-medium">
                                 Módulos
                             </a>
-                        </td>
-                    </tr>
+                        </div>
+
+                        {{-- Modal activar suscripción --}}
+                        <div
+                            x-show="activarModal"
+                            x-cloak
+                            x-transition:enter="transition ease-out duration-200"
+                            x-transition:enter-start="opacity-0"
+                            x-transition:enter-end="opacity-100"
+                            class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4"
+                            @click.self="activarModal = false"
+                        >
+                            <div
+                                x-show="activarModal"
+                                x-transition:enter="transition ease-out duration-200"
+                                x-transition:enter-start="opacity-0 scale-95"
+                                x-transition:enter-end="opacity-100 scale-100"
+                                class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-sm"
+                                @click.stop
+                            >
+                                <h3 class="text-base font-semibold text-gray-900 dark:text-white mb-1">
+                                    Activar suscripción
+                                </h3>
+                                <p class="text-xs text-gray-400 mb-4">{{ $negocio->nombre_negocio }}</p>
+
+                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                                    Días de suscripción
+                                </label>
+                                <input
+                                    type="number"
+                                    x-model.number="dias"
+                                    min="1" max="365"
+                                    class="w-full border border-gray-300 dark:border-gray-600
+                                           dark:bg-gray-700 dark:text-white rounded-lg
+                                           px-3.5 py-2.5 text-sm focus:outline-none
+                                           focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30"
+                                >
+
+                                <div class="flex justify-end gap-2 mt-4">
+                                    <button
+                                        @click="activarModal = false"
+                                        class="px-4 py-2 text-sm text-gray-500 hover:text-gray-900
+                                               dark:hover:text-white transition rounded-lg
+                                               hover:bg-gray-100 dark:hover:bg-gray-700"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        @click="
+                                            fetch('{{ route('root.negocios.activar', $negocio->id_negocio) }}', {
+                                                method: 'POST',
+                                                headers: {
+                                                    'Content-Type': 'application/json',
+                                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                                                },
+                                                body: JSON.stringify({ dias })
+                                            })
+                                            .then(r => r.json())
+                                            .then(d => { if (d.ok) activarModal = false; })
+                                        "
+                                        class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white
+                                               px-4 py-2 rounded-lg text-sm font-semibold
+                                               hover:opacity-90 transition active:scale-[.98]"
+                                    >
+                                        Confirmar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
                 @empty
                     <tr>
                         <td colspan="5" class="px-4 py-8 text-center text-gray-400 text-sm">
@@ -313,13 +490,11 @@
                     <input
                         type="number"
                         name="max_users"
-                        min="1"
-                        max="100"
+                        min="1" max="100"
                         value="{{ old('max_users', 1) }}"
                         placeholder="ej. 5"
                         class="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition"
-                        required
-                        autofocus
+                        required autofocus
                     >
                     @error('max_users')
                         <p class="text-xs text-red-500 mt-1.5">{{ $message }}</p>
@@ -331,19 +506,13 @@
                         Expira en 24h y se destruye al usarse.
                     </p>
                 </div>
-
                 <div class="flex justify-end gap-2">
-                    <button
-                        type="button"
-                        @click="createModal = false"
-                        class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-                    >
+                    <button type="button" @click="createModal = false"
+                        class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
                         Cancelar
                     </button>
-                    <button
-                        type="submit"
-                        class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition"
-                    >
+                    <button type="submit"
+                        class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition">
                         Crear link
                     </button>
                 </div>
@@ -391,28 +560,22 @@
                     </p>
                 </div>
             </div>
-
             <form method="POST" :action="deleteAction">
                 @csrf
                 @method('DELETE')
-
                 <div class="flex justify-end gap-2">
-                    <button
-                        type="button"
-                        @click="deleteModal = false"
-                        class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-                    >
+                    <button type="button" @click="deleteModal = false"
+                        class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
                         Cancelar
                     </button>
-                    <button
-                        type="submit"
-                        class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition active:scale-[.98]"
-                    >
+                    <button type="submit"
+                        class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition active:scale-[.98]">
                         Sí, eliminar
                     </button>
                 </div>
             </form>
         </div>
     </div>
+
 </div>
 </x-app-layout>
