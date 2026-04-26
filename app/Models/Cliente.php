@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use App\Traits\GeneratesCustomId;
+use Illuminate\Notifications\Notifiable;
 
 class Cliente extends Model
 {
-    use GeneratesCustomId;  // ← esto faltaba
+    use GeneratesCustomId, Notifiable;  // ← esto faltaba
 
     protected $table      = 'clientes';
     protected $primaryKey = 'id_cliente';
@@ -25,6 +26,11 @@ class Cliente extends Model
     ];
 
     protected function idPrefix(): string { return 'CLI'; }
+
+    public function routeNotificationForMail($notification = null): ?string
+    {
+        return !empty($this->correo) ? $this->correo : null;
+    }
 
     public function negocio()  { return $this->belongsTo(Negocio::class,  'id_negocio', 'id_negocio'); }
     public function bicicletas(){ return $this->hasMany(Bicicleta::class,  'id_cliente', 'id_cliente'); }

@@ -154,4 +154,15 @@
         </div>
     </div>
 </div>
+
+@if($autoTicket)
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Pequeño delay para que el vendedor vea la página antes de que abra el PDF
+        setTimeout(function () {
+            window.open('{{ route('ventas.ticket', $venta->id_venta) }}', '_blank');
+        }, 800);
+    });
+</script>
+@endif
 </x-app-layout>

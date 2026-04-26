@@ -13,6 +13,7 @@ use Illuminate\View\View;
 use App\Services\CatalogService;
 use App\Notifications\VerificarEmailNotification;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Notification;
 
 
 class VendedorController extends Controller
@@ -63,11 +64,10 @@ class VendedorController extends Controller
             'email_verification_token' => $verificationToken,
         ]);
 
-        $nuevoVendedor->notify(new VerificarEmailNotification(
+        Notification::sendNow($nuevoVendedor, new VerificarEmailNotification(
             $verificationToken,
             $request->nombre_usuario
         ));
-
         CatalogService::invalidateStockVendedores($admin->id_negocio);
         CatalogService::invalidateSucursales($admin->id_negocio);
                 

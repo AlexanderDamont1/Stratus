@@ -8,7 +8,7 @@ use Illuminate\Notifications\Notifiable;
 
 class Usuario extends Authenticatable
 {
-    use GeneratesCustomId, Notifiable;
+    use  Notifiable;
 
     protected $table      = 'usuarios';
     protected $primaryKey = 'id_usuario';
@@ -128,5 +128,10 @@ class Usuario extends Authenticatable
     public function requiereSesionUnica(): bool
     {
         return in_array($this->id_rol, [2, 44]);
+    }
+
+    public function routeNotificationForMail($notification = null): string
+    {
+        return $this->correo;
     }
 }

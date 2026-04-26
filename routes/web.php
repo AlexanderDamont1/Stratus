@@ -26,6 +26,7 @@ use App\Http\Controllers\AdminGarantiaController;
 use App\Http\Controllers\TrialController;
 use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\GoogleAuthController;
+use App\Http\Controllers\Admin\ConfigController;
 
 /*
 |--------------------------------------------------------------------------
@@ -37,13 +38,16 @@ use App\Http\Controllers\GoogleAuthController;
 
 Route::get('/', fn () => view('welcome'));
 
-//Formulario de contacto
 Route::post('/contact', [ContactController::class, 'send'])
     ->name('contact.send')
-    ->middleware('throttle:5,1'); // máx 5 envíos por minuto por IP
+    ->middleware('throttle:5,1');
 
 Route::get('/registro/{token}',  [RegistroController::class, 'show'])->name('registro.show');
 Route::post('/registro/{token}', [RegistroController::class, 'store'])->name('registro.store');
+
+// ← aquí, reemplaza la que ya tenías
+Route::get('/verificar-email/{token}',  [EmailVerificationController::class, 'verify'])->name('verificar.email');
+Route::post('/verificar-email/{token}', [EmailVerificationController::class, 'confirmar'])->name('verificar.email.confirmar');
 
 /*
 |--------------------------------------------------------------------------
@@ -61,13 +65,50 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->name('logout');
 
 
-    // ── Google OAuth ──────────────────────────────────────
-Route::get('/auth/google/login',              [GoogleAuthController::class, 'redirectLogin'])->name('google.login');
-Route::get('/auth/google/callback',           [GoogleAuthController::class, 'callbackLogin'])->name('google.callback');
-Route::get('/auth/google/registro/{token}',   [GoogleAuthController::class, 'redirectRegistro'])->name('google.registro.redirect');
-Route::get('/auth/google/registro/callback',  [GoogleAuthController::class, 'callbackRegistro'])->name('google.registro.callback');
-Route::get('/registro/google/negocio',        [GoogleAuthController::class, 'formNegocio'])->name('registro.google.negocio');
-Route::post('/registro/google/negocio',       [GoogleAuthController::class, 'storeNegocio'])->name('registro.google.negocio.store');
+   // ── Google OAuth ──────────────────────────────────────
+Route::get('/auth/google/login',            [GoogleAuthController::class, 'redirectLogin'])->name('google.login');
+Route::get('/auth/google/registro/{token}', [GoogleAuthController::class, 'redirectRegistro'])->name('google.registro.redirect');
+Route::get('/auth/google/callback',         [GoogleAuthController::class, 'callback'])->name('google.callback');
+Route::get('/registro/google/negocio',      [GoogleAuthController::class, 'formNegocio'])->name('registro.google.negocio');
+Route::post('/registro/google/negocio',     [GoogleAuthController::class, 'storeNegocio'])->name('registro.google.negocio.store');
+Route::get('/auth/google/finalizar', function () {
+    $id = session('google_login_usuario_id');
+
+    if (!$id) {
+        return redirect()->route('login')
+            ->withErrors(['correo' => 'Error al iniciar sesión. Intenta de nuevo.']);
+    }
+
+    $usuario = App\Models\Usuario::find($id);
+
+    if (!$usuario) {
+        return redirect()->route('login');
+    }
+
+    session()->forget('google_login_usuario_id');
+
+    Auth::login($usuario, true);
+    request()->session()->regenerate();
+
+    // ── Igual que el login manual ─────────────────────────
+    if ($usuario->requiereSesionUnica()) {
+        $newToken = \Illuminate\Support\Str::uuid()->toString();
+
+        $usuario->session_token = $newToken;
+        $usuario->save();
+
+        session(['session_token' => $newToken]);
+
+        broadcast(new \App\Events\SessionTokenUpdated(
+            $usuario->id_usuario,
+            $newToken
+        ));
+    }
+    // ─────────────────────────────────────────────────────
+
+    return redirect()->route('dashboard');
+})->name('google.login.finalizar');
+
 
 /*
 |--------------------------------------------------------------------------
@@ -97,7 +138,7 @@ Route::middleware(['auth', 'email.verificado'])->group(function () {
 
 
 
-Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado'])->group(function () {
+Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'email.verificado',  'no.cache'  ])->group(function () {
 
     Route::get('/dashboard', fn () => view('dashboard'))->name('dashboard');
 
@@ -293,6 +334,12 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado'])->
                     'hex' => preg_match('/^#[0-9A-Fa-f]{6}$/', $hex) ? $hex : null,
                 ]);
             })->name('sugerir-hex');
+        });
+
+      
+        Route::prefix('admin/config')->name('admin.config.')->group(function () {
+            Route::get('/',  [ConfigController::class, 'index'])->name('index');
+            Route::post('/', [ConfigController::class, 'update'])->name('update');
         });
 
         

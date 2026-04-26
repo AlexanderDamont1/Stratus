@@ -18,6 +18,19 @@ class EmailVerificationController extends Controller
                 ->withErrors(['correo' => 'El enlace de verificación es inválido o ya fue usado.']);
         }
 
+        // Mostrar página de confirmación antes de verificar
+        return view('auth.confirmar-verificacion', compact('token'));
+    }
+
+    public function confirmar(string $token)
+    {
+        $usuario = Usuario::where('email_verification_token', $token)->first();
+
+        if (!$usuario) {
+            return redirect()->route('login')
+                ->withErrors(['correo' => 'El enlace de verificación es inválido o ya fue usado.']);
+        }
+
         $usuario->marcarEmailVerificado();
 
         return redirect()->route('login')

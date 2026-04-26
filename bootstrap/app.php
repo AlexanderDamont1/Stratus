@@ -27,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'modulo' => \App\Http\Middleware\VerificarModulo::class,
             'trial.expirado' => \App\Http\Middleware\TrialExpirado::class,
             'email.verificado' => \App\Http\Middleware\EmailVerificado::class,
+            'no.cache' => \App\Http\Middleware\NoCacheMiddleware::class,
         ]);
     
      

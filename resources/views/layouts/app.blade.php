@@ -23,11 +23,12 @@
             }
         </style>
 
-        <!-- Scripts (Vite compila app.js y app.css) -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
 
     <body class="font-sans antialiased">
+
+        {{-- ── Contenido principal con zoom ─────────────────────── --}}
         <div class="min-h-screen bg-gray-100 dark:bg-gray-900" style="zoom: 0.9;">
             @include('layouts.navigation')
 
@@ -35,6 +36,9 @@
                 @yield('content')
             </main>
         </div>
+
+        {{-- ── Todo lo que necesita cubrir el viewport real ──────── --}}
+        {{-- (fuera del zoom para que fixed inset-0 funcione bien)   --}}
 
         @auth
             <script>
@@ -71,19 +75,17 @@
 
                         window.__sesionCanal = canal;
 
-                        // ── Trial / Suscripción expirada ──────────────────────
                         @if(auth()->user()->id_negocio && auth()->user()->id_rol !== 0)
                             const canalNegocio = Echo.channel(
                                 `negocio.{{ auth()->user()->id_negocio }}`
                             );
 
                             canalNegocio.listen('.negocio.expirado', (e) => {
-                                // Mostrar el overlay y redirigir a los 3 segundos
                                 const overlay = document.getElementById('trial-expired-overlay');
                                 if (overlay) {
-                                    overlay._x_dataStack?.[0] 
+                                    overlay._x_dataStack?.[0]
                                         ? (overlay._x_dataStack[0].visible = true,
-                                        overlay._x_dataStack[0].redirect = e.redirect)
+                                           overlay._x_dataStack[0].redirect = e.redirect)
                                         : null;
                                     setTimeout(() => window.location.href = e.redirect, 3000);
                                 } else {
@@ -91,14 +93,13 @@
                                 }
                             });
                         @endif
-                        // ─────────────────────────────────────────────────────
                     }
 
                     startListener();
                 });
             </script>
 
-            {{-- Overlay de expiración --}}
+            {{-- Overlay de expiración de trial/suscripción --}}
             @if(auth()->user()->id_negocio && auth()->user()->id_rol !== 0)
             <div
                 id="trial-expired-overlay"
@@ -114,16 +115,16 @@
                     x-transition:enter="transition ease-out duration-300"
                     x-transition:enter-start="opacity-0 scale-95"
                     x-transition:enter-end="opacity-100 scale-100"
-                    class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 
-                        max-w-sm w-full text-center space-y-4 mx-4"
+                    class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6
+                           max-w-sm w-full text-center space-y-4 mx-4"
                 >
                     <div class="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30
                                 flex items-center justify-center mx-auto">
                         <svg class="w-6 h-6 text-amber-500" fill="none"
-                            stroke="currentColor" viewBox="0 0 24 24">
+                             stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round"
-                                stroke-width="1.5"
-                                d="M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z"/>
+                                  stroke-width="1.5"
+                                  d="M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z"/>
                         </svg>
                     </div>
 
@@ -136,7 +137,6 @@
                         </p>
                     </div>
 
-                    {{-- Barra de progreso --}}
                     <div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-0.5 overflow-hidden">
                         <div
                             x-show="visible"
@@ -152,7 +152,7 @@
             </div>
             @endif
         @endauth
-        
+
         @stack('scripts')
     </body>
 </html>

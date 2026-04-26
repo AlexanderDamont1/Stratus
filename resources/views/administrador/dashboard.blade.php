@@ -235,7 +235,7 @@
         x-transition:leave-end="opacity-0"
         class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4"
         @click.self="tokenModal = false"
-    >
+        >
         <div
             x-show="tokenModal"
             x-transition:enter="transition ease-out duration-200"
@@ -246,7 +246,7 @@
             x-transition:leave-end="opacity-0 scale-95"
             class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-sm"
             @click.stop
-        >
+            >
             <div class="flex items-center justify-between mb-5">
                 <div class="flex items-center gap-3">
                     <div class="w-9 h-9 rounded-lg bg-gray-900 dark:bg-white flex items-center justify-center shrink-0">

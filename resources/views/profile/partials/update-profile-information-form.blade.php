@@ -47,6 +47,14 @@
             @endif
         </div>
 
+        <!-- Nuevo campo: Nombre del negocio -->
+        <div>
+            <x-input-label for="business_name" :value="__('Business Name')" />
+            <x-text-input id="business_name" name="business_name" type="text" class="mt-1 block w-full" :value="old('business_name', $user->business_name)" autocomplete="organization" />
+            <x-input-error class="mt-2" :messages="$errors->get('business_name')" />
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('The name of your business or company.') }}</p>
+        </div>
+
         <div class="flex items-center gap-4">
             <x-primary-button>{{ __('Save') }}</x-primary-button>
 

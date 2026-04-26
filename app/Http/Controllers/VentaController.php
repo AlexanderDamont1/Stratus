@@ -151,16 +151,16 @@ class VentaController extends Controller
             abort(403);
 
         $request->validate([
-            'nombre_cliente' => 'required|string|max:100',
-            'apellido1' => 'required|string|max:60',
-            'apellido2' => 'nullable|string|max:60',
-            'telefono' => 'required|string|max:15',
-            'correo' => 'nullable|email|max:120',
-            'direccion' => 'nullable|string|max:255',
-            'items' => 'required|array|min:1',
-            'items.*.id_producto' => 'required|exists:productos,id_producto',
-            'items.*.num_serie' => 'nullable|string',
-            'items.*.cantidad' => 'required|integer|min:1',
+            'nombre_cliente'         => 'required|string|max:100',
+            'apellido1'              => 'required|string|max:60',
+            'apellido2'              => 'nullable|string|max:60',
+            'telefono'               => 'required|string|max:15',
+            'correo'                 => 'nullable|email|max:120',
+            'direccion'              => 'nullable|string|max:255',
+            'items'                  => 'required|array|min:1',
+            'items.*.id_producto'    => 'required|exists:productos,id_producto',
+            'items.*.num_serie'      => 'nullable|string',
+            'items.*.cantidad'       => 'required|integer|min:1',
         ]);
 
         DB::beginTransaction();
@@ -169,13 +169,13 @@ class VentaController extends Controller
             $cliente = Cliente::firstOrCreate(
                 [
                     'id_negocio' => $user->id_negocio,
-                    'telefono' => $request->telefono,
+                    'telefono'   => $request->telefono,
                 ],
                 [
                     'nombre_cliente' => $request->nombre_cliente,
-                    'apellido1' => $request->apellido1,
-                    'apellido2' => $request->apellido2 ?? '',
-                    'correo' => $request->correo ?? '',
+                    'apellido1'      => $request->apellido1,
+                    'apellido2'      => $request->apellido2 ?? null,
+                    'correo'         => $request->correo ?? null,
                 ]
             );
 
@@ -184,10 +184,11 @@ class VentaController extends Controller
                 'id_cliente' => $cliente->id_cliente,
             ]);
 
-            $totalVenta = 0;
+            $totalVenta          = 0;
             $bicicletasBroadcast = [];
             $seriesParaInvalidar = [];
-            $eventosBicicleta = []; // Acumular datos para BicicletaActualizada
+            $eventosBicicleta    = [];
+            $jobsPostVenta       = [];
 
             foreach ($request->items as $item) {
                 $producto = Producto::where('id_producto', $item['id_producto'])
@@ -195,15 +196,15 @@ class VentaController extends Controller
                     ->where('id_negocio', $user->id_negocio)
                     ->firstOrFail();
 
-                $cantidad = (int) ($item['cantidad'] ?? 1);
+                $cantidad       = (int) ($item['cantidad'] ?? 1);
                 $precioUnitario = (float) $producto->precio;
 
                 DetalleVenta::create([
-                    'id_venta' => $venta->id_venta,
-                    'id_producto' => $item['id_producto'],
-                    'num_serie' => $item['num_serie'] ?? null,
+                    'id_venta'        => $venta->id_venta,
+                    'id_producto'     => $item['id_producto'],
+                    'num_serie'       => $item['num_serie'] ?? null,
                     'precio_unitario' => $precioUnitario,
-                    'cantidad' => $cantidad,
+                    'cantidad'        => $cantidad,
                 ]);
 
                 $totalVenta += $precioUnitario * $cantidad;
@@ -221,26 +222,22 @@ class VentaController extends Controller
                     $bici->status = 2;
                     $bici->save();
 
-                    app(BicicletaMovimientoService::class)->venta(
-                        $bici->num_serie,
-                        $request->nombre_cliente . ' ' . $request->apellido1
-                    );
-
-                    // ← UNA SOLA llamada, dentro del if
-                    $garantiasGeneradas = app(GarantiaService::class)->generarGarantiasParaVenta(
-                        numSerie: $bici->num_serie,
-                        idMarca: $bici->modelo->id_marca,
-                        idNegocio: $user->id_negocio,
-                        fechaVenta: now(),
+                    $jobsPostVenta[] = new \App\Jobs\ProcesarPostVenta(
+                        numSerie:       $bici->num_serie,
+                        idMarca:        $bici->modelo->id_marca,
+                        idNegocio:      $user->id_negocio,
+                        nombreCliente:  $request->nombre_cliente . ' ' . $request->apellido1,
+                        idVenta:        $venta->id_venta,
+                        nombreVendedor: $user->nombre_usuario,
                     );
 
                     $eventosBicicleta[] = [
                         'num_serie' => $bici->num_serie,
-                        'modelo' => $bici->modelo->nombre_modelo ?? '—',
-                        'marca' => $bici->modelo->marca->nombre_marca ?? '—',
-                        'voltaje' => $bici->voltaje->voltaje ?? '—',
-                        'color' => $bici->color->color ?? '—',
-                        'status' => 2,
+                        'modelo'    => $bici->modelo->nombre_modelo ?? '—',
+                        'marca'     => $bici->modelo->marca->nombre_marca ?? '—',
+                        'voltaje'   => $bici->voltaje->voltaje ?? '—',
+                        'color'     => $bici->color->color ?? '—',
+                        'status'    => 2,
                     ];
 
                     $pm = ProductoModelo::where('id_modelo', $bici->id_modelo)
@@ -259,21 +256,31 @@ class VentaController extends Controller
                     $seriesParaInvalidar[] = $bici->num_serie;
 
                     $bicicletasBroadcast[] = [
-                        'num_serie' => $bici->num_serie,
-                        'modelo' => $bici->modelo->nombre_modelo ?? '—',
-                        'marca' => $bici->modelo->marca->nombre_marca ?? '—',
-                        'voltaje' => $bici->voltaje->voltaje ?? '—',
-                        'color' => $bici->color->color ?? '—',
-                        'tiene_garantia' => $garantiasGeneradas,
+                        'num_serie'      => $bici->num_serie,
+                        'modelo'         => $bici->modelo->nombre_modelo ?? '—',
+                        'marca'          => $bici->modelo->marca->nombre_marca ?? '—',
+                        'voltaje'        => $bici->voltaje->voltaje ?? '—',
+                        'color'          => $bici->color->color ?? '—',
+                        'tiene_garantia' => true,
                     ];
-
-                } // ← fin del if, ya no hay nada después
-                
+                }
             }
 
             DB::commit();
 
-            // ===== INVALIDACIONES DE CACHÉ =====
+            // ── Despachar jobs DESPUÉS del commit ──────────────────────────────
+            $config     = $user->negocio->getConfig();
+            $debeCorreo = $config->entregaPorCorreo() && !empty($cliente->correo);
+            $total      = count($jobsPostVenta);
+
+            foreach ($jobsPostVenta as $i => $job) {
+                if ($debeCorreo && $i === $total - 1) {
+                    $job->enviarCorreo = true;
+                }
+                dispatch($job);
+            }
+
+            // ── Invalidaciones de caché ────────────────────────────────────────
             foreach ($seriesParaInvalidar as $serie) {
                 CatalogService::invalidateBicicleta($serie, $user->id_negocio);
             }
@@ -285,38 +292,48 @@ class VentaController extends Controller
             CatalogService::invalidateProductosConRelaciones($user->id_negocio, $user->id_usuario);
             CatalogService::invalidateVentasByVendedor($user->id_negocio, $user->id_usuario);
 
-            // ===== BROADCASTS DESPUÉS DEL COMMIT =====
+            // ── Broadcasts ────────────────────────────────────────────────────
             foreach ($eventosBicicleta as $ev) {
                 event(new BicicletaActualizada(
-                    numSerie: $ev['num_serie'],
-                    idNegocio: $user->id_negocio,
-                    idUsuario: $user->id_usuario,
+                    numSerie:       $ev['num_serie'],
+                    idNegocio:      $user->id_negocio,
+                    idUsuario:      $user->id_usuario,
                     nombreVendedor: $user->nombre_usuario,
-                    modelo: $ev['modelo'],
-                    voltaje: $ev['voltaje'],
-                    color: $ev['color'],
-                    status: $ev['status'],
+                    modelo:         $ev['modelo'],
+                    voltaje:        $ev['voltaje'],
+                    color:          $ev['color'],
+                    status:         $ev['status'],
                 ));
             }
 
             event(new VentaRealizada(
-                idVenta: $venta->id_venta,
-                idNegocio: $user->id_negocio,
-                idVendedor: $user->id_usuario,
+                idVenta:        $venta->id_venta,
+                idNegocio:      $user->id_negocio,
+                idVendedor:     $user->id_usuario,
                 nombreVendedor: $user->nombre_usuario,
-                nombreCliente: $cliente->nombre_cliente . ' ' . $cliente->apellido1,
-                total: $totalVenta,
-                bicicletas: $bicicletasBroadcast,
+                nombreCliente:  $cliente->nombre_cliente . ' ' . $cliente->apellido1,
+                total:          $totalVenta,
+                bicicletas:     $bicicletasBroadcast,
             ));
+
+            // ── Respuesta ─────────────────────────────────────────────────────
+            if ($debeCorreo) {
+                $mensajeExito = 'Venta registrada. Comprobante enviado al correo del cliente.';
+            } elseif ($config->entregaPorTicket()) {
+                session()->flash('auto_ticket', $venta->id_venta);
+                $mensajeExito = 'Venta registrada. Generando ticket...';
+            } else {
+                $mensajeExito = 'Venta registrada correctamente.';
+            }
 
             return redirect()
                 ->route('ventas.show', $venta->id_venta)
-                ->with('success', 'Venta registrada correctamente.');
+                ->with('success', $mensajeExito);
 
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error al registrar venta', [
-                'user' => $user->id_usuario,
+                'user'  => $user->id_usuario,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
@@ -331,35 +348,36 @@ class VentaController extends Controller
      | SHOW
      ===================================================== */
     public function show(string $id_venta)
-{
-    $user = auth()->user();
-    if ($user->id_rol != 2) abort(403);
+    {
+        $user = auth()->user();
+        if ($user->id_rol != 2) abort(403);
 
-    $venta = Venta::with([
-        'cliente',
-        'detalles.producto',
-        'detalles.bicicleta.modelo.marca',
-        'detalles.bicicleta.voltaje',
-        'detalles.bicicleta.color',
-    ])
-        ->where('id_negocio', $user->id_negocio)
-        ->findOrFail($id_venta);
+        $venta = Venta::with([
+            'cliente',
+            'detalles.producto',
+            'detalles.bicicleta.modelo.marca',
+            'detalles.bicicleta.voltaje',
+            'detalles.bicicleta.color',
+        ])
+            ->where('id_negocio', $user->id_negocio)
+            ->findOrFail($id_venta);
 
-    // Determinar si alguna bici de la venta tiene garantía activa configurada
-    $tieneGarantia = $venta->detalles
-        ->filter(fn($d) => $d->bicicleta !== null)
-        ->contains(function ($detalle) use ($user) {
-            $idMarca = $detalle->bicicleta->modelo->id_marca ?? null;
-            if (!$idMarca) return false;
+        $tieneGarantia = $venta->detalles
+            ->filter(fn($d) => $d->bicicleta !== null)
+            ->contains(function ($detalle) use ($user) {
+                $idMarca = $detalle->bicicleta->modelo->id_marca ?? null;
+                if (!$idMarca) return false;
+                return \App\Models\MarcaGarantiaConfig::where('id_marca', $idMarca)
+                    ->where('id_negocio', $user->id_negocio)
+                    ->where('activa', true)
+                    ->exists();
+            });
 
-            return \App\Models\MarcaGarantiaConfig::where('id_marca', $idMarca)
-                ->where('id_negocio', $user->id_negocio)
-                ->where('activa', true)
-                ->exists();
-        });
+        // ← detecta si viene del store con flag de ticket automático
+        $autoTicket = session()->pull('auto_ticket') === $id_venta;
 
-    return view('vendedor.ventas.show', compact('venta', 'tieneGarantia'));
-}
+        return view('vendedor.ventas.show', compact('venta', 'tieneGarantia', 'autoTicket'));
+    }
 
     /* =====================================================
      | PDF — póliza de garantía

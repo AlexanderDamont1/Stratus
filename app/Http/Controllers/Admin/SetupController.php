@@ -12,10 +12,12 @@ use Illuminate\Validation\Rules;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 use App\Services\CatalogService;
+use App\Notifications\VerificarEmailNotification;
+use Illuminate\Support\Facades\Notification;
 
 class SetupController extends Controller
 {
-        private function generarIdUsuario(): string
+    private function generarIdUsuario(): string
     {
         $fecha  = Carbon::now()->format('ymd'); // Ejemplo: 260314
         $letras = Str::upper(Str::random(3));   // Genera exactamente 3 letras
@@ -56,8 +58,10 @@ class SetupController extends Controller
 
         $data = $request->validate($rules, $messages);
 
-        DB::transaction(function () use ($data, $admin) {
+        // En SetupController
+        $vendedoresCreados = [];
 
+        DB::transaction(function () use ($data, $admin, &$vendedoresCreados) {
             foreach ($data['vendedores'] as $vendedor) {
                 $verificationToken = Str::random(64);
 
@@ -72,10 +76,12 @@ class SetupController extends Controller
                     'email_verification_token' => $verificationToken,
                 ]);
 
-                $nuevoVendedor->notify(new VerificarEmailNotification(
-                    $verificationToken,
-                    $vendedor['nombre']
-                ));
+                // Guardar para enviar después de la transacción
+                $vendedoresCreados[] = [
+                    'usuario' => $nuevoVendedor,
+                    'token'   => $verificationToken,
+                    'nombre'  => $vendedor['nombre'],
+                ];
             }
 
             $admin->negocio->update([
@@ -89,6 +95,13 @@ class SetupController extends Controller
             CatalogService::invalidateSucursales($admin->id_negocio);
         });
 
+        // Enviar correos FUERA de la transacción
+        foreach ($vendedoresCreados as $item) {
+            \Illuminate\Support\Facades\Notification::sendNow(
+                $item['usuario'],
+                new VerificarEmailNotification($item['token'], $item['nombre'])
+            );
+        }
         return redirect()
             ->route('dashboard')
             ->with('success', 'Cuenta activada correctamente');

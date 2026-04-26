@@ -119,6 +119,11 @@ class Negocio extends Model
         return $this->hasMany(Bicicleta::class, 'id_negocio', 'id_negocio');
     }
 
+    public function config()
+    {
+        return $this->hasOne(NegocioConfig::class, 'id_negocio', 'id_negocio');
+    }
+
     public function ventas()
     {
         return $this->hasMany(Venta::class, 'id_negocio', 'id_negocio');
@@ -129,5 +134,13 @@ class Negocio extends Model
     public function puedeAgregarVendedor(): bool
     {
         return $this->vendedores()->count() < $this->max_users;
+    }
+
+    public function getConfig(): NegocioConfig
+    {
+        return $this->config ?? new NegocioConfig([
+            'id_negocio'          => $this->id_negocio,
+            'entrega_comprobante' => 'ticket',
+        ]);
     }
 }
