@@ -269,7 +269,7 @@ class VentaController extends Controller
             DB::commit();
 
             // ── Despachar jobs DESPUÉS del commit ──────────────────────────────
-            $config     = $user->negocio->getConfig();
+            $config = CatalogService::getConfigNegocio($user->id_negocio);
             $debeCorreo = $config->entregaPorCorreo() && !empty($cliente->correo);
             $total      = count($jobsPostVenta);
 

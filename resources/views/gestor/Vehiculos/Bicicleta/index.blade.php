@@ -1,4 +1,56 @@
 <x-app-layout>
+    <style>
+        /* Animaciones para entrada y salida */
+        @keyframes slideInHighlight {
+            0% {
+                opacity: 0;
+                transform: translateX(-8px);
+                background-color: rgba(34, 197, 94, 0.3);
+            }
+            30% {
+                opacity: 1;
+                transform: translateX(0);
+                background-color: rgba(34, 197, 94, 0.5);
+            }
+            100% {
+                background-color: transparent;
+            }
+        }
+
+        @keyframes slideOutHighlight {
+        0% {
+            opacity: 1;
+            transform: translateX(0);
+            background-color: rgba(245, 158, 11, 0.3);  /* ámbar claro */
+        }
+        70% {
+            opacity: 0;
+            transform: translateX(8px);
+            background-color: rgba(245, 158, 11, 0.5);
+        }
+        100% {
+            opacity: 0;
+            display: none;
+        }
+    }
+
+        .animate-entrada {
+            animation: slideInHighlight 1.2s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+        border-left: 3px solid #26b464;
+        }
+
+        .animate-salida {
+            animation: slideOutHighlight 1.2s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+            border-left: 3px solid #f59e0b; 
+        }
+
+        /* Base para evitar saltos de layout */
+        .bici-row {
+            border-left: 3px solid transparent;
+            transition: all 0.2s;
+        }
+    </style>
+
     <div x-data="inventarioPage()"
         class="mx-auto space-y-6"
         data-negocio-id="{{ auth()->user()->id_negocio }}"
@@ -143,12 +195,12 @@
                         const res  = await fetch('{{ route('bicicletas.stock.seccion') }}?' + params);
                         const json = await res.json();
 
-                        // ✅ Deduplicar: si ya entró por WS antes de que cargara, no duplicar
+                       
                         const seriesExistentes = new Set(this.filas.map(f => f.num_serie));
                         const nuevas = json.data.filter(b => !seriesExistentes.has(b.num_serie));
 
                         if (p === 1) {
-                            // Página 1: conservar lo que llegó por WS + lo del servidor sin duplicar
+                            
                             const wsItems = this.filas; // los que llegaron por evento antes de cargar
                             this.filas = [...wsItems, ...nuevas];
                         } else {
@@ -170,36 +222,59 @@
                             if (e.detail.id_usuario === this.idUsuario) {
                                 this.total++;
                                 if (this.abierto) {
-                                    // ✅ Solo insertar si no existe ya en filas
                                     const yaExiste = this.filas.some(f => f.num_serie === e.detail.num_serie);
                                     if (!yaExiste) {
-                                        this.filas.unshift({
+                                        const nuevaBici = {
                                             num_serie:   e.detail.num_serie,
-                                            marca_nombre:e.detail.modelo ? '—' : '—', // marca no viene en el evento
+                                            marca_nombre: e.detail.marca_nombre || '—',
                                             modelo:      { nombre_modelo: e.detail.modelo },
                                             voltaje:     { voltaje: e.detail.voltaje },
                                             color:       { color: e.detail.color },
                                             status:      e.detail.status,
                                             updated_at:  new Date().toISOString(),
-                                        });
+                                            animateEntrada: true,     // ✅ bandera para animación verde
+                                            animateSalida: false
+                                        };
+                                        this.filas.unshift(nuevaBici);
+                                        setTimeout(() => {
+                                            const bici = this.filas.find(f => f.num_serie === nuevaBici.num_serie);
+                                            if (bici) bici.animateEntrada = false;
+                                        }, 1200);
                                     }
                                 }
                             }
+                         
                             if (this.idUsuario === '' && e.detail.id_usuario !== '') {
                                 this.total = Math.max(0, this.total - 1);
                                 if (this.abierto) {
                                     const idx = this.filas.findIndex(f => f.num_serie === e.detail.num_serie);
-                                    if (idx !== -1) this.filas.splice(idx, 1);
+                                    if (idx !== -1) {
+                                       
+                                        const bici = this.filas[idx];
+                                        bici.animateSalida = true;
+                                        setTimeout(() => {
+                                            const i = this.filas.findIndex(f => f.num_serie === e.detail.num_serie);
+                                            if (i !== -1) this.filas.splice(i, 1);
+                                        }, 1200);
+                                    }
                                 }
                             }
                         });
 
+                       
                         window.addEventListener('bicicleta-vendida', (e) => {
                             if (!Array.isArray(this.filas)) return;
                             const idx = this.filas.findIndex(f => f.num_serie === e.detail.num_serie);
                             if (idx !== -1) {
-                                this.filas.splice(idx, 1);
-                                this.total = Math.max(0, this.total - 1);
+                                // Marcar con animación roja y luego eliminar
+                                this.filas[idx].animateSalida = true;
+                                setTimeout(() => {
+                                    const i = this.filas.findIndex(f => f.num_serie === e.detail.num_serie);
+                                    if (i !== -1) {
+                                        this.filas.splice(i, 1);
+                                        this.total = Math.max(0, this.total - 1);
+                                    }
+                                }, 600);
                             }
                         });
                     },
@@ -223,7 +298,7 @@
                 <span class="text-xs text-gray-400 whitespace-nowrap shrink-0" x-text="total + ' unidades'"></span>
             </div>
 
-            {{-- Contenido (igual que antes) --}}
+            {{-- Contenido --}}
             <div x-show="abierto"
                 x-transition:enter="transition ease-out duration-200"
                 x-transition:enter-start="opacity-0 -translate-y-1"
@@ -234,7 +309,7 @@
 
                 <div x-show="cargando" class="px-6 py-36 text-center text-sm text-gray-400">Cargando...</div>
 
-                {{-- Tablas y paginación (sin cambios) --}}
+                {{-- Tabla PC --}}
                 <div x-show="!cargando" class="hidden md:block overflow-x-auto">
                     <table class="min-w-full text-sm border border-gray-200 dark:border-gray-700">
                         <thead class="bg-gray-100 dark:bg-gray-800">
@@ -255,7 +330,8 @@
                                 </tr>
                             </template>
                             <template x-for="bici in filas" :key="bici.num_serie">
-                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition bici-row"
+                                    :class="{'animate-entrada': bici.animateEntrada, 'animate-salida': bici.animateSalida}">
                                     <td class="px-4 py-3 font-medium text-gray-800 dark:text-white" x-text="bici.num_serie"></td>
                                     <td class="px-4 py-3 text-gray-600 dark:text-gray-400" x-text="bici.marca_nombre ?? '—'"></td>
                                     <td class="px-4 py-3 text-gray-600 dark:text-gray-400" x-text="bici.modelo?.nombre_modelo ?? '—'"></td>
@@ -294,6 +370,7 @@
                     </table>
                 </div>
 
+                {{-- Tabla móvil --}}
                 <div x-show="!cargando" class="block md:hidden overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead class="bg-gray-50 dark:bg-gray-700/50">
@@ -307,7 +384,8 @@
                         </thead>
                         <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                             <template x-for="bici in filas" :key="bici.num_serie">
-                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 bici-row"
+                                    :class="{'animate-entrada': bici.animateEntrada, 'animate-salida': bici.animateSalida}">
                                     <td class="px-3 py-3">
                                         <div class="text-xs font-medium text-gray-900 dark:text-white" x-text="bici.num_serie"></div>
                                         <div class="text-xs text-gray-400" x-text="(bici.marca_nombre ?? '—') + ' ~ ' + (bici.modelo?.nombre_modelo ?? '—')"></div>

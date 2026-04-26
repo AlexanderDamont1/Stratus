@@ -1,6 +1,6 @@
 <x-app-layout>
     <style>
-        /* Animación tipo trading con color verde */
+        /* Animación más lenta: 1.2s */
         @keyframes slideInHighlight {
             0% {
                 opacity: 0;
@@ -18,16 +18,18 @@
         }
 
         .animate-new-feed {
-            animation: slideInHighlight 0.6s ease-out;
+            animation: slideInHighlight 1.2s ease-in-out;
             border-left: 3px solid #10b981;
         }
 
         .animate-new-timeline {
-            animation: slideInHighlight 0.6s ease-out;
+            animation: slideInHighlight 1.2s ease-in-out;
             border-left: 3px solid #10b981;
         }
 
+        /* Borde transparente por defecto para evitar saltos */
         .feed-item-enter, .timeline-item-enter {
+            border-left: 3px solid transparent;
             transition: all 0.2s;
         }
     </style>
@@ -54,7 +56,7 @@
             {{-- COLUMNA IZQUIERDA: Buscador + Timeline --}}
             <div class="lg:col-span-3 space-y-4">
 
-                {{-- BUSCADOR --}}
+                {{-- BUSCADOR CON BOTÓN LIMPIAR --}}
                 <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
                     <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">
                         Buscar por número de serie
@@ -65,13 +67,27 @@
                             x-model="query"
                             @input.debounce.300ms="buscar"
                             @keydown.escape="cerrarSugerencias"
+                            maxlength="17"
                             placeholder="Ej: SN-2024-0042..."
-                            class="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent"
+                            class="w-full pl-10 pr-10 py-2.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent"
                         />
                         <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
                         </svg>
-                        <div x-show="cargando" class="absolute right-3 top-1/2 -translate-y-1/2">
+
+                        <!-- Botón para limpiar búsqueda (X) -->
+                        <button 
+                            x-show="query.length > 0"
+                            @click="limpiarBusqueda()"
+                            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none"
+                            title="Limpiar búsqueda"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+
+                        <div x-show="cargando" class="absolute right-10 top-1/2 -translate-y-1/2">
                             <svg class="w-4 h-4 animate-spin text-indigo-500" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
@@ -146,7 +162,7 @@
                     {{-- Timeline items --}}
                     <div x-show="serieActiva && !cargandoHistorial" class="p-4 space-y-0">
                         <template x-for="(mov, i) in movimientos" :key="mov.id_movimiento ?? `temp-timeline-${i}`">
-                            <div :class="{'animate-new-timeline': mov.animate}" class="relative flex gap-4 pb-6 last:pb-0 transition-all">
+                            <div :class="{'animate-new-timeline': mov.animate}" class="relative flex gap-4 pb-6 last:pb-0 transition-all feed-item-enter">
                                 {{-- Línea vertical --}}
                                 <div x-show="i < movimientos.length - 1" class="absolute left-[19px] top-6 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700"></div>
 
@@ -273,6 +289,15 @@
                     });
                 },
 
+                limpiarBusqueda() {
+                    this.query = '';
+                    this.sugerencias = [];
+                    this.serieActiva = null;
+                    this.movimientos = [];
+                    this.bicicletaInfo = {};
+                    history.pushState({}, '', window.location.pathname); // Limpiar URL
+                },
+
                 iniciarActualizacionTiempos() {
                     this._interval = setInterval(() => {
                         this.feedItems = this.feedItems.map(item => ({
@@ -285,7 +310,6 @@
                 conectarEcho() {
                     if (!window.Echo) return;
 
-                    // Evitar múltiples suscripciones
                     if (this._canal) {
                         window.Echo.leaveChannel(`movimientos.{{ auth()->user()->id_negocio }}`);
                     }
@@ -300,28 +324,29 @@
                             relativo: this.formatRelativo(e.fecha_movimiento)
                         };
 
-                        // ✅ Evitar duplicados en feedItems
+                        // Evitar duplicados en feedItems
                         const yaExisteFeed = this.feedItems.some(item => item.id_movimiento === nuevoMov.id_movimiento);
                         if (!yaExisteFeed) {
                             this.feedItems.unshift(nuevoMov);
                             if (this.feedItems.length > 50) this.feedItems.pop();
 
+                            // 🔧 FIX: eliminar animación usando id_movimiento (no índice)
                             setTimeout(() => {
-                                if (this.feedItems[0] && this.feedItems[0].animate) {
-                                    this.feedItems[0].animate = false;
-                                }
-                            }, 600);
+                                const item = this.feedItems.find(i => i.id_movimiento === nuevoMov.id_movimiento);
+                                if (item) item.animate = false;
+                            }, 1200); // Coincide con la nueva duración de la animación
                         }
 
-                        // ✅ Evitar duplicados en timeline (si es la serie activa)
+                        // Evitar duplicados en timeline y agregar si es la serie activa
                         if (this.serieActiva === nuevoMov.num_serie) {
                             const yaExisteTimeline = this.movimientos.some(mov => mov.id_movimiento === nuevoMov.id_movimiento);
                             if (!yaExisteTimeline) {
                                 this.movimientos.push({ ...nuevoMov, animate: true });
+                                // 🔧 FIX: eliminar animación usando id_movimiento
                                 setTimeout(() => {
-                                    const last = this.movimientos[this.movimientos.length - 1];
-                                    if (last && last.animate) last.animate = false;
-                                }, 600);
+                                    const mov = this.movimientos.find(m => m.id_movimiento === nuevoMov.id_movimiento);
+                                    if (mov) mov.animate = false;
+                                }, 1200);
                             }
                         }
                     });
@@ -341,6 +366,9 @@
                 },
 
                 async seleccionarSerie(numSerie) {
+                    // Si ya está seleccionada la misma, no hacer nada
+                    if (this.serieActiva === numSerie) return;
+
                     this.serieActiva       = numSerie;
                     this.query             = numSerie;
                     this.sugerencias       = [];
@@ -366,6 +394,21 @@
                             voltaje: data.bicicleta.voltaje?.voltaje      ?? '—',
                             status:  data.bicicleta.status,
                         };
+
+                        // 🔧 FIX NOTABLE: agregar al timeline los movimientos de esta serie que ya estén en feedItems (y no existan aún)
+                        const movimientosFeedDeEstaSerie = this.feedItems.filter(f => f.num_serie === numSerie);
+                        for (let feedMov of movimientosFeedDeEstaSerie) {
+                            const yaExiste = this.movimientos.some(m => m.id_movimiento === feedMov.id_movimiento);
+                            if (!yaExiste) {
+                                this.movimientos.push({
+                                    ...feedMov,
+                                    animate: false  // sin animación porque ya estaban en el feed
+                                });
+                            }
+                        }
+                        // Ordenar cronológicamente (más reciente al final o principio? El timeline usa orden ascendente? En la vista se muestran en orden de llegada, pero conviene ordenar por fecha)
+                        this.movimientos.sort((a, b) => new Date(a.fecha_movimiento) - new Date(b.fecha_movimiento));
+
                     } finally {
                         this.cargandoHistorial = false;
                     }

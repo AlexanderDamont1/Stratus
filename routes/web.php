@@ -413,7 +413,7 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
     Route::middleware('enlace')->group(function () {
         Route::post('/enlaces/generar',          [EnlaceController::class, 'generar'])->name('enlaces.generar');
         Route::patch('/enlaces/{id}/cancelar',   [EnlaceController::class, 'cancelar'])->name('enlaces.cancelar');
-        Route::get('gestor/vehiculos/bicicletas',[BicicletaController::class, 'index'])->name('bicicletas.index');
+        Route::get('vehiculos/stock',[BicicletaController::class, 'index'])->name('bicicletas.index');
         Route::post('/modelo-voltaje',       [ModeloVoltajeController::class, 'store'])->name('modelo-voltaje.store');
         Route::delete('/modelo-voltaje/{id}',[ModeloVoltajeController::class, 'destroy'])->name('modelo-voltaje.destroy');
         Route::get('/pedidos',                          [PedidoController::class, 'index'])->name('pedidos.index');

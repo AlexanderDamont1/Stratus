@@ -379,9 +379,9 @@ class CatalogService
             "bicicleta:serie:{$numSerie}",
             self::CACHE_TTL['bicicletas'],
             fn () => Bicicleta::with(['modelo.marca', 'voltaje', 'color'])
-                ->where('num_serie', $numSerie)
-                ->first(),
-            $idNegocio
+            ->where('num_serie', $numSerie)
+            ->where('id_negocio', $idNegocio) // <--- Faltaría esta línea
+            ->first()
         );
     }
 
@@ -956,5 +956,24 @@ class CatalogService
     {
         $version = self::getVersion($idNegocio);
         Cache::forget(self::key("ventas:vendedor:{$idUsuario}:negocio:{$idNegocio}:page:1") . ":v{$version}");
+    }
+
+    public static function getConfigNegocio(string $idNegocio): \App\Models\NegocioConfig
+    {
+        return self::remember(
+            "config:negocio:{$idNegocio}",
+            self::CACHE_TTL['negocios'], // 1 hora
+            fn () => \App\Models\NegocioConfig::firstOrCreate(
+                ['id_negocio' => $idNegocio],
+                ['entrega_comprobante' => 'ticket']
+            ),
+            $idNegocio
+        );
+    }
+
+    public static function invalidateConfigNegocio(string $idNegocio): void
+    {
+        $version = self::getVersion($idNegocio);
+        Cache::forget(self::key("config:negocio:{$idNegocio}") . ":v{$version}");
     }
 }

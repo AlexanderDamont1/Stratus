@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\NegocioConfig;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Services\CatalogService;
 
 class ConfigController extends Controller
 {
@@ -35,6 +36,8 @@ class ConfigController extends Controller
             ['id_negocio' => $user->id_negocio],
             ['entrega_comprobante' => $request->entrega_comprobante]
         );
+        CatalogService::invalidateConfigNegocio($user->id_negocio); // ← agregar esto
+
 
         return back()->with('success', 'Configuración guardada correctamente.');
     }

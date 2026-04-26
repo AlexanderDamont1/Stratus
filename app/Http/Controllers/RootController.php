@@ -18,13 +18,20 @@ class RootController extends Controller
         $links    = RegistroLink::latest()->paginate(10);
         $negocios = Negocio::with('admin')->latest()->paginate(10);
 
-        // Stats de suscripción para las tarjetas nuevas
+        $rawStats = Negocio::selectRaw("
+            SUM(negocio_status = 'trial')                as en_trial,
+            SUM(negocio_status = 'activo')               as activos,
+            SUM(negocio_status = 'trial_expirado')       as trial_expirado,
+            SUM(negocio_status = 'suscripcion_expirada') as suscripcion_expirada,
+            SUM(negocio_status = 'suspendido')           as suspendidos
+        ")->first();
+
         $stats = [
-            'en_trial'             => Negocio::where('negocio_status', 'trial')->count(),
-            'activos'              => Negocio::where('negocio_status', 'activo')->count(),
-            'trial_expirado'       => Negocio::where('negocio_status', 'trial_expirado')->count(),
-            'suscripcion_expirada' => Negocio::where('negocio_status', 'suscripcion_expirada')->count(),
-            'suspendidos'          => Negocio::where('negocio_status', 'suspendido')->count(),
+            'en_trial'             => (int) $rawStats->en_trial,
+            'activos'              => (int) $rawStats->activos,
+            'trial_expirado'       => (int) $rawStats->trial_expirado,
+            'suscripcion_expirada' => (int) $rawStats->suscripcion_expirada,
+            'suspendidos'          => (int) $rawStats->suspendidos,
         ];
 
         return view('root.dashboard', compact('links', 'negocios', 'stats'));

@@ -173,16 +173,6 @@ class BicicletaController extends Controller
 
         \App\Models\Bicicleta::insert($inserts);
 
-        // ✅ Evento por cada bici — el listener actualiza inventario
-        foreach ($request->bicicletas as $b) {
-            event(new \App\Events\BicicletaCreada(
-                idModelo:  $b['id_modelo'],
-                idVoltaje: $b['id_voltaje'],
-                idNegocio: $id_negocio,
-                idUsuario: null,
-            ));
-        }
-
         $movimientoService = new BicicletaMovimientoService();
 
         foreach ($request->bicicletas as $b) {
