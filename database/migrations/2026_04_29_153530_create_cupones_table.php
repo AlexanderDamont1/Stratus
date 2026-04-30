@@ -13,13 +13,13 @@ return new class extends Migration
        
         
         // ── CUPONES ──────────────────────────────────────────────────────────
-        Schema::create('cupones', function (Blueprint $table) {
+       
             $table->char('id_cupon', 20)->primary();
             $table->char('id_negocio', 36);
             $table->string('codigo', 30)->unique();
             $table->string('nombre', 120);
-            $table->enum('tipo_descuento', ['porcentaje', 'monto_fijo']);
-            $table->decimal('valor_descuento', 10, 2);
+            $table->enum('tipo_descuento', ['porcentaje', 'monto_fijo'])->nullable();
+            $table->decimal('valor_descuento', 10, 2)->nullable();
             $table->enum('aplica_a', ['total', 'producto']);
             $table->char('id_producto_gratis', 20)->nullable();
             $table->boolean('activo')->default(true);
@@ -77,9 +77,9 @@ return new class extends Migration
             $table->foreign('id_cupon')->references('id_cupon')->on('cupones')->nullOnDelete();
         });
 
-        });
+        };
     }
-    }
+    
 
     public function down(): void
     {

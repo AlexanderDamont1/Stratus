@@ -80,8 +80,7 @@ class CuponService
             }
         }
 
-        // ── Calcular descuento ────────────────────────────────────────────
-
+        // ── Calcular descuento (puede ser 0 si es solo regalo) ────────────
         $descuento = self::calcularDescuento($cupon, $items);
 
         return [
@@ -93,6 +92,11 @@ class CuponService
 
     public static function calcularDescuento(Cupon $cupon, array $items): float
     {
+        // Si el cupón no tiene tipo de descuento (solo regalo), el descuento es 0
+        if (empty($cupon->tipo_descuento)) {
+            return 0.0;
+        }
+
         $total = collect($items)->sum(fn($i) => $i['precio'] * $i['cantidad']);
 
         if ($cupon->aplicaAlTotal()) {
@@ -169,18 +173,17 @@ class CuponService
         );
     }
 
-
     public static function getProductoGratis(Cupon $cupon): ?array
-{
-    if (!$cupon->id_producto_gratis) return null;
+    {
+        if (!$cupon->id_producto_gratis) return null;
 
-    $producto = $cupon->productoGratis ?? \App\Models\Producto::find($cupon->id_producto_gratis);
-    if (!$producto) return null;
+        $producto = $cupon->productoGratis ?? \App\Models\Producto::find($cupon->id_producto_gratis);
+        if (!$producto) return null;
 
-    return [
-        'id_producto'    => $producto->id_producto,
-        'nombre_producto'=> $producto->nombre_producto,
-        'precio'         => (float) $producto->precio,
-    ];
-}
+        return [
+            'id_producto'    => $producto->id_producto,
+            'nombre_producto'=> $producto->nombre_producto,
+            'precio'         => (float) $producto->precio,
+        ];
+    }
 }
