@@ -11,9 +11,9 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\View\View;
 use App\Services\CatalogService;
-use App\Notifications\VerificarEmailNotification;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Notification;
+use App\Jobs\EnviarVerificacionEmailJob;
+
 
 
 class VendedorController extends Controller
@@ -64,10 +64,8 @@ class VendedorController extends Controller
             'email_verification_token' => $verificationToken,
         ]);
 
-        Notification::sendNow($nuevoVendedor, new VerificarEmailNotification(
-            $verificationToken,
-            $request->nombre_usuario
-        ));
+        EnviarVerificacionEmailJob::dispatch($nuevoVendedor, $verificationToken, $request->nombre_usuario);
+
         CatalogService::invalidateStockVendedores($admin->id_negocio);
         CatalogService::invalidateSucursales($admin->id_negocio);
                 

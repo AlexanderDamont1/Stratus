@@ -83,9 +83,9 @@ class CuponController extends Controller
             $cupon->update([
                 'codigo'             => strtoupper(trim($validated['codigo'])),
                 'nombre'             => $validated['nombre'],
-                'tipo_descuento'     => $validated['tipo_descuento'],
-                'valor_descuento'    => $validated['valor_descuento'],
-                'aplica_a'           => $validated['aplica_a'],
+                'tipo_descuento'     => $validated['tipo_descuento'] ?? null,
+                'valor_descuento'    => $validated['valor_descuento'] ?? null,
+                'aplica_a'           => $validated['aplica_a']?? 'total',
                 'id_producto_gratis' => $validated['id_producto_gratis'] ?? null,
                 'usos_maximos'       => $validated['usos_maximos'] ?? null,
                 'fecha_inicio'       => $validated['fecha_inicio'] ?? null,
@@ -141,20 +141,30 @@ class CuponController extends Controller
             ? 'required|string|max:30|unique:cupones,codigo'
             : "required|string|max:30|unique:cupones,codigo,{$ignorar},id_cupon";
 
-        return $request->validate([
+        $rules = [
             'nombre'              => 'required|string|max:120',
             'codigo'              => $codigoRule,
-            'tipo_descuento'      => 'required|in:porcentaje,monto_fijo',
-            'valor_descuento'     => 'required|numeric|min:0',
-            'aplica_a'            => 'required|in:total,producto',
             'id_producto_gratis'  => 'nullable|string|exists:productos,id_producto',
             'usos_maximos'        => 'nullable|integer|min:1',
             'fecha_inicio'        => 'nullable|date',
             'fecha_fin'           => 'nullable|date|after_or_equal:fecha_inicio',
-            'reglas'              => 'required|array|min:1',    // sucursal obligatoria
+            'reglas'              => 'required|array|min:1',
             'reglas.*.tipo'       => 'required|in:modelo,marca,cantidad_minima,sucursal',
             'reglas.*.valor'      => 'nullable|string|max:100',
-        ]);
+        ];
+
+        // Si NO hay producto gratis, entonces requerimos descuento
+        if (empty($request->id_producto_gratis)) {
+            $rules['tipo_descuento']  = 'required|in:porcentaje,monto_fijo';
+            $rules['valor_descuento'] = 'required|numeric|min:0';
+            $rules['aplica_a']        = 'required|in:total,producto';
+        } else {
+            $rules['tipo_descuento']  = 'nullable';
+            $rules['valor_descuento'] = 'nullable';
+            $rules['aplica_a']        = 'nullable';
+        }
+
+        return $request->validate($rules);
     }
 
     private function sincronizarReglas(Cupon $cupon, array $reglas): void

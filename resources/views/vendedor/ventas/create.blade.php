@@ -28,9 +28,38 @@
     </div>
     @endif
 
-    {{-- Flash Alpine --}}
-    <x-flash-messages />
-
+    {{-- ===== FLASH (toast flotante) ===== --}}
+    <div x-show="flash.msg" x-cloak
+        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0 translate-y-2"
+        x-transition:enter-end="opacity-100 translate-y-0"
+        x-transition:leave="transition ease-in duration-200"
+        x-transition:leave-end="opacity-0 translate-y-2"
+        class="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 w-auto min-w-[300px] max-w-md">
+        <div class="flex items-center gap-3 rounded-lg bg-white dark:bg-gray-800 p-4 shadow-xl ring-1"
+            :class="{
+                'ring-gray-200 dark:ring-gray-700': flash.tipo === 'ok',
+                'ring-red-200 dark:ring-red-800':   flash.tipo === 'error',
+                'ring-yellow-200 dark:ring-yellow-800': flash.tipo === 'warn'
+            }">
+            <svg class="h-5 w-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"
+                :class="{
+                    'text-green-500':  flash.tipo === 'ok',
+                    'text-red-500':    flash.tipo === 'error',
+                    'text-yellow-500': flash.tipo === 'warn'
+                }">
+                <path x-show="flash.tipo === 'ok'" fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                <path x-show="flash.tipo === 'error'" fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                <path x-show="flash.tipo === 'warn'" fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+            <p class="text-sm font-medium text-gray-900 dark:text-gray-100 flex-1" x-text="flash.msg"></p>
+            <button @click="flash.msg = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+    </div>
 
     {{-- ══ LAYOUT ══ --}}
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
@@ -195,10 +224,14 @@
                         </div>
                     </template>
 
-                    {{-- Items normales del carrito --}}
+                    {{-- Items del carrito --}}
                     <template x-for="(item, idx) in carrito" :key="item.key">
-                        <div class="flex items-center gap-3 px-5 py-3">
+                        <div class="flex items-center gap-3 px-5 py-3"
+                             :class="item.es_gratis ? 'bg-green-50/50 dark:bg-green-900/10' : ''">
+
+                            {{-- Ícono / color --}}
                             <div class="shrink-0">
+                                {{-- Bicicleta con color --}}
                                 <template x-if="item.tipo === '2' && item.color_hexes.length === 0">
                                     <div class="w-7 h-7 rounded-full border border-gray-300 dark:border-gray-600 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
                                         <span class="text-xs font-bold text-gray-500" x-text="(item.color_nombre || '?').charAt(0).toUpperCase()"></span>
@@ -214,21 +247,53 @@
                                         <div class="absolute right-0 top-0 w-1/2 h-full" :style="'background:' + item.color_hexes[1]"></div>
                                     </div>
                                 </template>
-                                <template x-if="item.tipo !== '2'">
+                                {{-- Accesorio normal --}}
+                                <template x-if="item.tipo !== '2' && !item.es_gratis">
                                     <div class="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
                                         <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"/>
                                         </svg>
                                     </div>
                                 </template>
+                                {{-- Accesorio gratis --}}
+                                <template x-if="item.tipo !== '2' && item.es_gratis">
+                                    <div class="w-7 h-7 rounded-lg bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
+                                        <svg class="w-3.5 h-3.5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/>
+                                        </svg>
+                                    </div>
+                                </template>
                             </div>
+
+                            {{-- Info --}}
                             <div class="flex-1 min-w-0">
-                                <p class="text-xs font-medium text-gray-800 dark:text-white truncate" x-text="item.nombre"></p>
+                                <div class="flex items-center gap-1.5">
+                                    <p class="text-xs font-medium text-gray-800 dark:text-white truncate" x-text="item.nombre"></p>
+                                    <template x-if="item.es_gratis">
+                                        <span class="shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 uppercase tracking-wide">
+                                            Gratis
+                                        </span>
+                                    </template>
+                                </div>
                                 <p class="text-xs text-gray-400 font-mono truncate" x-show="item.num_serie" x-text="item.num_serie"></p>
-                                <p class="text-xs font-semibold text-gray-700 dark:text-gray-300"
-                                   x-text="fmt(item.precio_unitario) + (item.cantidad > 1 ? ' × ' + item.cantidad : '')"></p>
+                                {{--
+                                    Si es gratis: tachamos precio original y mostramos $0.00
+                                    Si no:        precio normal × cantidad
+                                --}}
+                                <template x-if="!item.es_gratis">
+                                    <p class="text-xs font-semibold text-gray-700 dark:text-gray-300"
+                                       x-text="fmt(item.precio_unitario) + (item.cantidad > 1 ? ' × ' + item.cantidad : '')"></p>
+                                </template>
+                                <template x-if="item.es_gratis">
+                                    <p class="text-xs text-gray-400">
+                                        <span class="line-through" x-text="fmt(item.precio_unitario)"></span>
+                                        <span class="ml-1 font-bold text-green-600 dark:text-green-400">$0.00</span>
+                                    </p>
+                                </template>
                             </div>
-                            <template x-if="item.tipo !== '2'">
+
+                            {{-- Controles de cantidad — solo accesorios NO gratis --}}
+                            <template x-if="item.tipo !== '2' && !item.es_gratis">
                                 <div class="flex items-center gap-1 shrink-0">
                                     <button type="button" @click="decrementar(idx)"
                                         class="w-6 h-6 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition text-sm font-bold flex items-center justify-center">
@@ -241,8 +306,12 @@
                                     </button>
                                 </div>
                             </template>
+
+                            {{-- Quitar — no permitir quitar el producto gratis que vino del cupón --}}
                             <button type="button" @click="quitar(idx)"
-                                class="shrink-0 text-gray-300 hover:text-red-500 dark:hover:text-red-400 transition p-1">
+                                :disabled="item.es_gratis && item.origen_cupon"
+                                :title="item.es_gratis && item.origen_cupon ? 'Quita el cupón para eliminar este regalo' : ''"
+                                class="shrink-0 text-gray-300 hover:text-red-500 dark:hover:text-red-400 transition p-1 disabled:opacity-30 disabled:cursor-not-allowed">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                 </svg>
@@ -250,8 +319,11 @@
                         </div>
                     </template>
 
-                    {{-- Accesorio gratis — solo visual, el backend lo agrega al guardar --}}
-                    <template x-if="productoGratis">
+                    {{--
+                        Producto gratis que NO estaba en el carrito → ítem visual adicional.
+                        (Si ya estaba en carrito, se muestra inline con badge "Gratis" arriba)
+                    --}}
+                    <template x-if="productoGratisExtra">
                         <div class="flex items-center gap-3 px-5 py-3 bg-green-50/50 dark:bg-green-900/10">
                             <div class="shrink-0">
                                 <div class="w-7 h-7 rounded-lg bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
@@ -261,8 +333,8 @@
                                 </div>
                             </div>
                             <div class="flex-1 min-w-0">
-                                <p class="text-xs font-medium text-gray-800 dark:text-white truncate" x-text="productoGratis.nombre_producto"></p>
-                                <p class="text-[10px] text-green-600 dark:text-green-400 font-medium">Gratis con el cupón</p>
+                                <p class="text-xs font-medium text-gray-800 dark:text-white truncate" x-text="productoGratisExtra.nombre_producto"></p>
+                                <p class="text-[10px] text-green-600 dark:text-green-400 font-medium">Se añadirá gratis con el cupón</p>
                             </div>
                             <span class="text-xs font-bold text-green-600 dark:text-green-400 shrink-0">$0.00</span>
                         </div>
@@ -331,7 +403,7 @@
                 {{-- Total --}}
                 <template x-if="carrito.length > 0">
                     <div class="px-5 py-3 border-t dark:border-gray-700 rounded-b-xl bg-gray-50 dark:bg-gray-700/30 space-y-1">
-                        <template x-if="descuento > 0">
+                        <template x-if="descuento > 0 || tieneGratisEnCarrito">
                             <div class="flex items-center justify-between">
                                 <span class="text-xs text-gray-400">Subtotal</span>
                                 <span class="text-sm text-gray-500 dark:text-gray-400" x-text="fmt(total)"></span>
@@ -341,6 +413,13 @@
                             <div class="flex items-center justify-between">
                                 <span class="text-xs text-green-600 dark:text-green-400">Descuento</span>
                                 <span class="text-sm font-medium text-green-600 dark:text-green-400" x-text="'−' + fmt(descuento)"></span>
+                            </div>
+                        </template>
+                        {{-- Descuento por producto gratis ya en carrito --}}
+                        <template x-if="tieneGratisEnCarrito && descuentoGratis > 0">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-green-600 dark:text-green-400">Regalo (cupón)</span>
+                                <span class="text-sm font-medium text-green-600 dark:text-green-400" x-text="'−' + fmt(descuentoGratis)"></span>
                             </div>
                         </template>
                         <div class="flex items-center justify-between pt-1 border-t border-gray-200 dark:border-gray-600">
@@ -409,7 +488,7 @@
                     :disabled="carrito.length === 0 || enviando"
                     class="w-full bg-gray-900 dark:bg-white dark:text-gray-900 text-white py-3 rounded-xl text-sm font-semibold hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                     <template x-if="!enviando">
-                        <span x-text="descuento > 0 ? 'Registrar venta · ' + fmt(totalConDescuento) : 'Registrar venta'"></span>
+                        <span x-text="(descuento > 0 || tieneGratisEnCarrito) ? 'Registrar venta · ' + fmt(totalConDescuento) : 'Registrar venta'"></span>
                     </template>
                     <template x-if="enviando">
                         <span class="flex items-center gap-2">
@@ -438,16 +517,45 @@ function ventaCreate() {
         buscarUrl:      '',
         cuponUrl:       '',
         csrfToken:      '{{ csrf_token() }}',
-        cuponInput:     '',
-        validandoCupon: false,
-        cupon:          null,
-        descuento:      0,
-        productoGratis: null,   // { id_producto, nombre_producto, precio } — solo visual
+
+        // ── Cupón ─────────────────────────────────────────────────────────────
+        cuponInput:          '',
+        validandoCupon:      false,
+        cupon:               null,   // datos del cupón validado
+        descuento:           0,      // descuento en $ calculado por el backend
+        /**
+         * productoGratisExtra:
+         *   Si el producto gratis NO estaba en el carrito → se muestra aquí como
+         *   ítem visual adicional (el backend lo agrega al guardar la venta).
+         *   Si YA estaba en el carrito → null aquí; el ítem del carrito lleva
+         *   es_gratis=true y origen_cupon=true.
+         */
+        productoGratisExtra: null,
 
         init() {
             this.buscarUrl = document.querySelector('[data-buscar-url]')?.dataset?.buscarUrl ?? '';
             this.cuponUrl  = document.querySelector('[data-cupon-url]')?.dataset?.cuponUrl ?? '';
             this.$nextTick(() => this.$refs.serieInputRef?.focus());
+        },
+
+        // ── Helpers de carrito ────────────────────────────────────────────────
+
+        /**
+         * ¿Hay algún ítem en el carrito marcado como gratis por el cupón?
+         * Se usa para mostrar la fila de "Regalo (cupón)" en el resumen.
+         */
+        get tieneGratisEnCarrito() {
+            return this.carrito.some(i => i.es_gratis && i.origen_cupon);
+        },
+
+        /**
+         * Precio del producto que está marcado como gratis en el carrito.
+         * Se descuenta del total para que el cliente pague $0 por él.
+         */
+        get descuentoGratis() {
+            return this.carrito
+                .filter(i => i.es_gratis && i.origen_cupon)
+                .reduce((s, i) => s + i.precio_unitario * i.cantidad, 0);
         },
 
         // ── Bicicletas ────────────────────────────────────────────────────────
@@ -498,6 +606,8 @@ function ventaCreate() {
                 cantidad:        1,
                 color_hexes:     bici.color_hexes,
                 color_nombre:    bici.color_nombre,
+                es_gratis:       false,
+                origen_cupon:    false,
             });
 
             this.bikePreview = null;
@@ -510,7 +620,9 @@ function ventaCreate() {
 
         // ── Accesorios ────────────────────────────────────────────────────────
         agregarAccesorio(acc) {
-            const existente = this.carrito.find(i => i.id_producto === acc.id_producto);
+            const existente = this.carrito.find(
+                i => i.id_producto === acc.id_producto && !i.es_gratis
+            );
             if (existente) {
                 existente.cantidad++;
                 this.mostrarFlash('Unidad adicional agregada.', 'ok');
@@ -525,6 +637,8 @@ function ventaCreate() {
                     cantidad:        1,
                     color_hexes:     [],
                     color_nombre:    '',
+                    es_gratis:       false,
+                    origen_cupon:    false,
                 });
                 this.mostrarFlash('Accesorio agregado al carrito.', 'ok');
             }
@@ -533,11 +647,13 @@ function ventaCreate() {
         },
 
         incrementar(idx) {
+            if (this.carrito[idx].es_gratis) return; // no tocar gratuito
             this.carrito[idx].cantidad++;
             if (this.cupon) this.recalcularDescuento();
         },
 
         decrementar(idx) {
+            if (this.carrito[idx].es_gratis) return;
             if (this.carrito[idx].cantidad <= 1) {
                 this.quitar(idx);
                 return;
@@ -547,51 +663,39 @@ function ventaCreate() {
         },
 
         quitar(idx) {
+            if (this.carrito[idx].es_gratis && this.carrito[idx].origen_cupon) return;
             this.carrito.splice(idx, 1);
             if (this.cupon) this.recalcularDescuento();
         },
 
         vaciarCarrito() {
-            this.carrito        = [];
-            this.cupon          = null;
-            this.descuento      = 0;
-            this.cuponInput     = '';
-            this.productoGratis = null;
+            this.carrito             = [];
+            this.cupon               = null;
+            this.descuento           = 0;
+            this.cuponInput          = '';
+            this.productoGratisExtra = null;
         },
 
         // ── Cupón ─────────────────────────────────────────────────────────────
+
+        /**
+         * Aplicar cupón por primera vez.
+         */
         async aplicarCupon() {
             if (!this.cuponInput.trim() || this.validandoCupon || this.carrito.length === 0) return;
-
             this.validandoCupon = true;
 
             try {
-                const res = await fetch(this.cuponUrl, {
-                    method:  'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': this.csrfToken,
-                        'Accept':       'application/json',
-                    },
-                    body: JSON.stringify({
-                        codigo: this.cuponInput.trim().toUpperCase(),
-                        items:  this.carrito.map(i => ({
-                            id_producto: i.id_producto,
-                            cantidad:    i.cantidad,
-                        })),
-                    }),
-                });
-
-                const data = await res.json();
+                const data = await this._llamarValidar();
 
                 if (!data.valido) {
                     this.mostrarFlash(data.mensaje || 'Cupón no válido.', 'error');
                     return;
                 }
 
-                this.cupon          = data.cupon;
-                this.descuento      = data.descuento;
-                this.productoGratis = data.producto_gratis ?? null;
+                this.cupon    = data.cupon;
+                this.descuento = data.descuento;
+                this._aplicarProductoGratis(data);
                 this.mostrarFlash(data.mensaje, 'ok');
 
             } catch {
@@ -602,55 +706,130 @@ function ventaCreate() {
         },
 
         quitarCupon() {
-            this.cupon          = null;
-            this.descuento      = 0;
-            this.cuponInput     = '';
-            this.productoGratis = null;
+            // Revertir cualquier ítem marcado como gratis por el cupón
+            this.carrito = this.carrito.filter(i => !i.origen_cupon);
+
+            this.cupon               = null;
+            this.descuento           = 0;
+            this.cuponInput          = '';
+            this.productoGratisExtra = null;
         },
 
+        /**
+         * Recalcular cuando cambia el carrito con cupón ya aplicado.
+         */
         async recalcularDescuento() {
             if (!this.cupon || this.carrito.length === 0) {
-                this.descuento      = 0;
-                this.productoGratis = null;
+                this.descuento           = 0;
+                this.productoGratisExtra = null;
+                // Limpiar ítems gratis del carrito
+                this.carrito = this.carrito.filter(i => !i.origen_cupon);
                 return;
             }
 
             try {
-                const res = await fetch(this.cuponUrl, {
-                    method:  'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': this.csrfToken,
-                        'Accept':       'application/json',
-                    },
-                    body: JSON.stringify({
-                        codigo: this.cuponInput.trim().toUpperCase(),
-                        items:  this.carrito.map(i => ({
-                            id_producto: i.id_producto,
-                            cantidad:    i.cantidad,
-                        })),
-                    }),
-                });
-
-                const data = await res.json();
+                const data = await this._llamarValidar();
 
                 if (data.valido) {
-                    this.descuento      = data.descuento;
-                    this.productoGratis = data.producto_gratis ?? null;
+                    this.descuento = data.descuento;
+                    this._aplicarProductoGratis(data);
                 } else {
+                    // Cupón dejó de ser válido (ej. ya no cumple cantidad mínima)
+                    this.mostrarFlash(data.mensaje || 'El cupón ya no aplica.', 'warn');
                     this.quitarCupon();
                 }
-
             } catch { /* silencioso */ }
         },
 
+        /**
+         * Lógica central: ¿qué hacer con el producto gratis según si ya está en carrito?
+         *
+         * Caso A — gratis_ya_en_carrito = true:
+         *   El producto ya está en el carrito. Marcamos UNA unidad como gratis
+         *   (es_gratis + origen_cupon) para que se muestre con badge y precio tachado.
+         *   El descuentoGratis computed lo resta del total.
+         *
+         * Caso B — gratis_ya_en_carrito = false:
+         *   No está en el carrito. Lo mostramos en productoGratisExtra como ítem
+         *   visual separado ("Se añadirá gratis con el cupón"). El backend lo agrega
+         *   al guardar; el frontend no lo mete en el carrito para evitar dobles.
+         */
+        _aplicarProductoGratis(data) {
+            if (!data.producto_gratis) {
+                // Limpiar estado anterior si existía
+                this.productoGratisExtra = null;
+                this.carrito = this.carrito.filter(i => !i.origen_cupon);
+                return;
+            }
+
+            const pg = data.producto_gratis;
+
+            if (data.gratis_ya_en_carrito) {
+                // ── Caso A: marcar ítem existente como gratis ─────────────────
+                this.productoGratisExtra = null;
+
+                // Desmarcar cualquier gratis anterior (por si cambió el cupón)
+                this.carrito.forEach(i => {
+                    if (i.origen_cupon) {
+                        i.es_gratis    = false;
+                        i.origen_cupon = false;
+                    }
+                });
+
+                // Marcar la primera unidad del producto como gratis
+                const item = this.carrito.find(i => i.id_producto === pg.id_producto && !i.es_gratis);
+                if (item) {
+                    item.es_gratis    = true;
+                    item.origen_cupon = true;
+                }
+            } else {
+                // ── Caso B: producto gratis fuera del carrito ─────────────────
+                // Asegurarnos de limpiar cualquier marca anterior del carrito
+                this.carrito.forEach(i => {
+                    if (i.origen_cupon) {
+                        i.es_gratis    = false;
+                        i.origen_cupon = false;
+                    }
+                });
+                this.productoGratisExtra = pg;
+            }
+        },
+
+        /**
+         * Llamada HTTP reutilizable al endpoint de validación.
+         * Siempre envía los ítems del carrito que NO son de origen_cupon
+         * (para no contaminar el cálculo con el gratis ya marcado).
+         */
+        async _llamarValidar() {
+            const itemsReales = this.carrito
+                .filter(i => !i.origen_cupon)
+                .map(i => ({ id_producto: i.id_producto, cantidad: i.cantidad }));
+
+            const res = await fetch(this.cuponUrl, {
+                method:  'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': this.csrfToken,
+                    'Accept':       'application/json',
+                },
+                body: JSON.stringify({
+                    codigo: this.cuponInput.trim().toUpperCase(),
+                    items:  itemsReales,
+                }),
+            });
+            return res.json();
+        },
+
         // ── Totales ───────────────────────────────────────────────────────────
+
+        /** Suma bruta de todos los ítems (incluido el marcado como gratis) */
         get total() {
             return this.carrito.reduce((s, i) => s + (i.precio_unitario * i.cantidad), 0);
         },
 
+        /** Total a cobrar = total bruto − descuento de porcentaje/monto − precio del regalo */
         get totalConDescuento() {
-            return Math.max(0, this.total - this.descuento);
+            return Math.max(0, this.total - this.descuento - this.descuentoGratis);
         },
 
         get totalItems() {
@@ -676,11 +855,19 @@ function ventaCreate() {
                 cont.appendChild(inp);
             };
 
-            // Solo los items del carrito — el accesorio gratis lo agrega el backend
+            /**
+             * Enviamos TODOS los ítems del carrito.
+             * Para los marcados como origen_cupon (gratis ya en carrito),
+             * enviamos el flag `es_gratis=1` para que el backend no los cobre
+             * y no los duplique.
+             * El productoGratisExtra (no estaba en carrito) lo agrega el backend
+             * solo con el código del cupón — NO lo incluimos aquí.
+             */
             this.carrito.forEach((item, i) => {
                 mk(`items[${i}][id_producto]`, item.id_producto);
                 mk(`items[${i}][num_serie]`,   item.num_serie);
                 mk(`items[${i}][cantidad]`,     item.cantidad);
+                mk(`items[${i}][es_gratis]`,    item.es_gratis ? '1' : '0');
             });
 
             if (this.cupon) {
@@ -696,7 +883,7 @@ function ventaCreate() {
             if (this.flash._t) clearTimeout(this.flash._t);
             this.flash.msg  = msg;
             this.flash.tipo = tipo;
-            this.flash._t   = setTimeout(() => { this.flash.msg = ''; }, 3500);
+            this.flash._t   = setTimeout(() => { this.flash.msg = ''; }, 2000);
         },
     };
 }
