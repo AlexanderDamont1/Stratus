@@ -17,15 +17,17 @@
         </div>
 
         @if($tieneGarantia)
-    <a href="{{ route('ventas.poliza', $venta->id_venta) }}" 
-       class="btn-primary">
-        Descargar póliza de garantía
-    </a>
+    <button 
+        onclick="openPreview('{{ route('ventas.poliza', $venta->id_venta) }}')"
+        class="btn-primary">
+        Ver póliza de garantía
+    </button>
 @else
-    <a href="{{ route('ventas.ticket', $venta->id_venta) }}" 
-       class="btn-secondary">
-        Descargar ticket de compra
-    </a>
+    <button 
+        onclick="openPreview('{{ route('ventas.ticket', $venta->id_venta) }}')"
+        class="btn-secondary">
+        Ver ticket de compra
+    </button>
 @endif
     </div>
 
@@ -140,6 +142,24 @@
                     </tr>
                     @endforeach
                 </tbody>
+
+                <div id="previewModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center z-50">
+    
+    <!-- Contenedor -->
+    <div class="relative w-[95%] md:w-[80%] lg:w-[65%] h-[90%] bg-white rounded-xl shadow-2xl overflow-hidden">
+
+        <!-- Header -->
+        <div class="flex justify-between items-center px-4 py-2 border-b bg-gray-100">
+            <span class="text-sm font-semibold">Vista previa</span>
+            <button onclick="closePreview()" class="text-gray-500 hover:text-black text-lg">&times;</button>
+        </div>
+
+        <!-- Iframe -->
+        <iframe id="previewFrame" class="w-full h-full"></iframe>
+
+    </div>
+</div>
+
                 <tfoot class="bg-gray-50 dark:bg-gray-700/30 border-t-2 border-gray-200 dark:border-gray-600">
                     <tr>
                         <td colspan="5" class="px-4 py-4 text-right text-sm font-semibold text-gray-700 dark:text-gray-300">
@@ -158,11 +178,39 @@
 @if($autoTicket)
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // Pequeño delay para que el vendedor vea la página antes de que abra el PDF
         setTimeout(function () {
             window.open('{{ route('ventas.ticket', $venta->id_venta) }}', '_blank');
         }, 800);
     });
 </script>
 @endif
+
+<script>
+    
+
+function openPreview(url) {
+    const modal = document.getElementById('previewModal');
+    const frame = document.getElementById('previewFrame');
+
+    frame.src = url;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function closePreview() {
+    const modal = document.getElementById('previewModal');
+    const frame = document.getElementById('previewFrame');
+
+    frame.src = '';
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+// cerrar al hacer click fuera
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('previewModal');
+    if (e.target === modal) closePreview();
+});
+</script>
+
 </x-app-layout>

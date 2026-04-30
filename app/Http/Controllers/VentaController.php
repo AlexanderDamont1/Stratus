@@ -491,7 +491,10 @@ class VentaController extends Controller
             'fecha' => now()->format('d/m/Y'),
         ])->setPaper('letter', 'landscape');
 
-        return $pdf->download('poliza-' . $venta->id_venta . '.pdf');
+        return response()->make($pdf->output(), 200, [
+    'Content-Type' => 'application/pdf',
+    'Content-Disposition' => 'inline; filename="poliza-' . $venta->id_venta . '.pdf"',
+]);
     }
 
     public function ticket(string $id_venta)
@@ -528,6 +531,9 @@ class VentaController extends Controller
             'fecha' => now()->format('d/m/Y'),
         ])->setPaper('letter', 'landscape');
 
-        return $pdf->download('ticket-' . $venta->id_venta . '.pdf');
+        return response()->make($pdf->output(), 200, [
+    'Content-Type' => 'application/pdf',
+    'Content-Disposition' => 'inline; filename="ticket-' . $venta->id_venta . '.pdf"',
+]);
     }
 }
