@@ -27,6 +27,10 @@ use App\Http\Controllers\TrialController;
 use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\Admin\ConfigController;
+use App\Http\Controllers\ReporteRoboController;
+use App\Http\Controllers\Admin\CuponController;
+use App\Http\Controllers\CuponValidarController;
+use Termwind\Components\Raw;
 
 /*
 |--------------------------------------------------------------------------
@@ -45,9 +49,10 @@ Route::post('/contact', [ContactController::class, 'send'])
 Route::get('/registro/{token}',  [RegistroController::class, 'show'])->name('registro.show');
 Route::post('/registro/{token}', [RegistroController::class, 'store'])->name('registro.store');
 
-// ← aquí, reemplaza la que ya tenías
 Route::get('/verificar-email/{token}',  [EmailVerificationController::class, 'verify'])->name('verificar.email');
 Route::post('/verificar-email/{token}', [EmailVerificationController::class, 'confirmar'])->name('verificar.email.confirmar');
+
+Route::get('/robo/confirmar/{token}', [ReporteRoboController::class, 'confirmar'])->name('robo.confirmar');
 
 /*
 |--------------------------------------------------------------------------
@@ -242,7 +247,7 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
 
 
         // ── Productos (admin) ──────────────────────────────────────────────
-        Route::prefix('productos')->name('admin.productos.')->group(function () {
+        Route::prefix('admin/productos')->name('admin.productos.')->group(function () {
             Route::get('/',                           [ProductoController::class, 'index'])->name('index');
             Route::post('/accesorio',                 [ProductoController::class, 'storeAccesorio'])->name('storeAccesorio');
             Route::post('/bicicleta',                 [ProductoController::class, 'storeBicicleta'])->name('storeBicicleta');
@@ -254,6 +259,20 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
             Route::get('/modelos-por-marca/{idMarca}',[ProductoController::class, 'modelosPorMarca'])->name('modelosPorMarca');
             Route::post('/filtro-sucursal', [ProductoController::class, 'setFiltroSucursal'])->name('filtroSucursal');
         });
+
+
+
+        // ── Cupones (admin) ───────────────────────────────────────────────
+        Route::prefix('admin/cupones')->name('admin.cupones.')->group(function () {
+            Route::get('/',           [CuponController::class, 'index'])->name('index');
+            Route::post('/',          [CuponController::class, 'store'])->name('store');
+            Route::put('/{id}',              [CuponController::class, 'update'])->name('update');
+            Route::patch('/{id}/toggle', [CuponController::class, 'toggle'])->name('toggle');
+            Route::delete('/{id}',    [CuponController::class, 'destroy'])->name('destroy');
+        });
+
+
+
 
         // ── Catálogo admin ────────────────────────────────────────────────────
         Route::prefix('admin/catalogo')->name('admin.catalogo.')->middleware('prefijo.admin')->group(function () {
@@ -411,15 +430,23 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
     |----------------------------------------------------------------------
     */
     Route::middleware('enlace')->group(function () {
-        Route::post('/enlaces/generar',          [EnlaceController::class, 'generar'])->name('enlaces.generar');
-        Route::patch('/enlaces/{id}/cancelar',   [EnlaceController::class, 'cancelar'])->name('enlaces.cancelar');
-        Route::get('vehiculos/stock',[BicicletaController::class, 'index'])->name('bicicletas.index');
-        Route::post('/modelo-voltaje',       [ModeloVoltajeController::class, 'store'])->name('modelo-voltaje.store');
-        Route::delete('/modelo-voltaje/{id}',[ModeloVoltajeController::class, 'destroy'])->name('modelo-voltaje.destroy');
-        Route::get('/pedidos',                          [PedidoController::class, 'index'])->name('pedidos.index');
-        Route::get('/pedidos/{id_pedido}',              [PedidoController::class, 'show'])->name('pedidos.show');
-        Route::patch('/pedidos/{id_pedido}/status',     [PedidoController::class, 'updateStatus'])->name('pedidos.status');
+        Route::post('/enlaces/generar',        [EnlaceController::class, 'generar'])->name('enlaces.generar');
+        Route::patch('/enlaces/{id}/cancelar', [EnlaceController::class, 'cancelar'])->name('enlaces.cancelar');
+        Route::get('vehiculos/stock',          [BicicletaController::class, 'index'])->name('bicicletas.index');
+        Route::post('/modelo-voltaje',         [ModeloVoltajeController::class, 'store'])->name('modelo-voltaje.store');
+        Route::delete('/modelo-voltaje/{id}',  [ModeloVoltajeController::class, 'destroy'])->name('modelo-voltaje.destroy');
 
+       
+        Route::get('/pedidos', function () {
+            $user = auth()->user();
+            if ($user->id_rol === 1 && !\App\Services\ModuloService::tiene($user->id_negocio, 1, 'pedidos')) {
+                abort(403, 'Tu plan no incluye este módulo.');
+            }
+            return app(\App\Http\Controllers\PedidoController::class)->index(request());
+        })->name('pedidos.index');
+
+        Route::get('/pedidos/{id_pedido}',          [PedidoController::class, 'show'])->name('pedidos.show');
+        Route::patch('/pedidos/{id_pedido}/status', [PedidoController::class, 'updateStatus'])->name('pedidos.status');
     });
 
     /*
@@ -434,7 +461,7 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
 
         // ── Productos (sucursal) ──────────────────────────────────────────────
         // Mismo controlador que admin pero bajo /sucursal/productos
-       Route::prefix('sucursal/productos')->name('sucursal.productos.')->group(function () {
+        Route::prefix('sucursal/productos')->name('sucursal.productos.')->group(function () {
             Route::get('/',                            [ProductoController::class, 'index'])->name('index');
             Route::post('/accesorio',                  [ProductoController::class, 'storeAccesorio'])->name('storeAccesorio');
             Route::post('/bicicleta',                  [ProductoController::class, 'storeBicicleta'])->name('storeBicicleta');
@@ -445,25 +472,32 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
             Route::patch('/inventario/{idInventario}/cantidad', [ProductoController::class, 'updateCantidadAccesorio'])->name('updateCantidad'); // ← nuevo
         });
 
-        Route::prefix('garantias')->name('garantias.')->group(function () {
-        Route::get('/',                      [GarantiaController::class, 'index'])   ->name('index');
-        Route::get('/buscar',                [GarantiaController::class, 'buscar'])  ->name('buscar');   // AJAX
-        Route::get('/bici/{numSerie}',       [GarantiaController::class, 'show'])    ->name('show');
-        Route::post('/reclamo',              [GarantiaController::class, 'reclamo']) ->name('reclamo');
-        Route::patch('/reclamo/{id}/estado', [GarantiaController::class, 'estado'])  ->name('estado');
-    });
+        Route::prefix('sucursal/garantias')->name('garantias.')->group(function () {
+            Route::get('/',                      [GarantiaController::class, 'index'])   ->name('index');
+            Route::get('/buscar',                [GarantiaController::class, 'buscar'])  ->name('buscar');   // AJAX
+            Route::get('/bici/{numSerie}',       [GarantiaController::class, 'show'])    ->name('show');
+            Route::post('/reclamo',              [GarantiaController::class, 'reclamo']) ->name('reclamo');
+            Route::patch('/reclamo/{id}/estado', [GarantiaController::class, 'estado'])  ->name('estado');
+        });
 
         Route::prefix('sucursal/ventas')->name('ventas.')->group(function () {
-    Route::get('/',                 [VentaController::class, 'index'])->name('index');
-    Route::get('/crear',            [VentaController::class, 'create'])->name('create');
-    Route::post('/',                [VentaController::class, 'store'])->name('store');
-    Route::get('/buscar-serie',     [VentaController::class, 'buscarSerie'])->name('buscar-serie');
-    Route::get('/{id}',             [VentaController::class, 'show'])->name('show');
-    Route::get('/{id}/poliza',      [VentaController::class, 'poliza'])->name('poliza');
-    Route::get('/{id}/ticket',      [VentaController::class, 'ticket'])->name('ticket');
-});
+            Route::get('/',                 [VentaController::class, 'index'])->name('index');
+            Route::get('/crear',            [VentaController::class, 'create'])->name('create');
+            Route::post('/',                [VentaController::class, 'store'])->name('store');
+            Route::get('/buscar-serie',     [VentaController::class, 'buscarSerie'])->name('buscar-serie');
+            Route::get('/{id}',             [VentaController::class, 'show'])->name('show');
+            Route::get('/{id}/poliza',      [VentaController::class, 'poliza'])->name('poliza');
+            Route::get('/{id}/ticket',      [VentaController::class, 'ticket'])->name('ticket');
+        });
 
-        
+        Route::post('/sucursal/cupones/validar', [CuponValidarController::class, 'validar'])->name('cupones.validar');
+
+        Route::prefix ('sucursal/reporte/robo')->name('robo.')->group(function () {
+            Route::get('/',            [ReporteRoboController::class, 'index'])->name('index');
+            Route::get('/buscar',            [ReporteRoboController::class, 'buscar'])->name('buscar');
+            Route::post('/reportar',         [ReporteRoboController::class, 'reportar'])->name('reportar');
+            Route::get('/verificar/{serie}', [ReporteRoboController::class, 'verificar'])->name('verificar');
+        });
     });
 
     /*
@@ -478,7 +512,6 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
         Route::post('/root/negocios/{id}/activar',             [RootController::class, 'activarSuscripcion'])->name('root.negocios.activar');
         Route::post('/root/negocios/{id}/suspender',           [RootController::class, 'suspender'])->name('root.negocios.suspender');
 
-        // ✅ Módulos
         Route::get('/root/negocios/{id}/modulos',        [RootController::class, 'modulos'])->name('root.modulos');
         Route::post('/root/modulos/toggle',              [RootController::class, 'toggleModulo'])->name('root.modulos.toggle');
     });

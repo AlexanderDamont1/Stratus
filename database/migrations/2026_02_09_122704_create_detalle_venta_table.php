@@ -11,10 +11,10 @@ return new class extends Migration
         Schema::dropIfExists('detalle_venta');
 
         Schema::create('detalle_venta', function (Blueprint $table) {
-            $table->string('id_detalleVenta', 20)->primary();
-            $table->string('id_venta', 20);
-            $table->string('id_producto', 20);
-            $table->string('num_serie', 17)->nullable();
+            $table->char('id_detalleVenta', 20)->primary();
+            $table->char('id_venta', 20);
+            $table->char('id_producto', 20);
+            $table->char('num_serie', 17)->nullable();
             $table->decimal('precio_unitario', 10, 2);
             $table->unsignedInteger('cantidad')->default(1);
             $table->timestamps();

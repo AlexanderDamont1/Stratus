@@ -1555,6 +1555,23 @@ footer { border-top:1px solid var(--border); padding:3rem 0; background:var(--bg
           <a href="#">Privacidad</a>
         </div>
       </div>
+      @auth
+        <div>
+          <div class="footer-col-title">Dashboard</div>
+          <div class="footer-links">
+            <a href="{{ url('/dashboard') }}">Dashboard</a>
+          </div>
+        </div>                
+        @else
+          <div>
+            <div class="footer-col-title">Log in</div>
+            <div class="footer-links">
+              <a href="{{ route('login') }}">Log in</a>
+            </div>
+          </div>  
+                          
+        
+      @endauth
       <div>
         <div class="footer-col-title">Contacto</div>
         <div class="footer-links">

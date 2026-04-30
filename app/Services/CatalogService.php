@@ -29,7 +29,7 @@ class CatalogService
         'bicicletas' => 3600,
         'pedidos'    => 3600,
         'usuarios'   => 3600,
-        'stats'      => 300,   // ✅ bajado de 1800 a 300 — WS las actualiza frecuente
+        'stats'      => 300,
         'search'     => 3600,
         'productos'  => 3600,
     ];
@@ -97,14 +97,25 @@ class CatalogService
         return $withSelectFormato ? $marcas->pluck('nombre_marca', 'id_marca') : $marcas;
     }
 
-    public static function getMarcaById(string $idMarca): ?Marca
+    /**
+     * Obtiene una marca por ID, opcionalmente verificando que pertenezca al negocio.
+     */
+    public static function getMarcaById(string $idMarca, ?string $idNegocio = null): ?Marca
     {
-        return self::remember("marca:{$idMarca}", self::CACHE_TTL['marcas'],
-            fn () => Marca::with('negocio')->find($idMarca)
+        return self::remember(
+            "marca:{$idMarca}",
+            self::CACHE_TTL['marcas'],
+            function () use ($idMarca, $idNegocio) {
+                $query = Marca::with('negocio');
+                if ($idNegocio) {
+                    $query->where('id_negocio', $idNegocio);
+                }
+                return $query->find($idMarca);
+            },
+            $idNegocio
         );
     }
 
-    // ✅ FIX: guardamos globalV una sola vez para evitar race condition
     public static function invalidateMarca(string $idMarca, ?string $idNegocio = null): void
     {
         $globalV = self::getVersion();
@@ -167,10 +178,22 @@ class CatalogService
         return $withSelectFormato ? $modelos->pluck('nombre_modelo', 'id_modelo') : $modelos;
     }
 
-    public static function getModeloById(string $idModelo): ?Modelo
+    /**
+     * Obtiene un modelo por ID, verificando opcionalmente el negocio.
+     */
+    public static function getModeloById(string $idModelo, ?string $idNegocio = null): ?Modelo
     {
-        return self::remember("modelo:{$idModelo}", self::CACHE_TTL['modelos'],
-            fn () => Modelo::with(['marca', 'negocio'])->find($idModelo)
+        return self::remember(
+            "modelo:{$idModelo}",
+            self::CACHE_TTL['modelos'],
+            function () use ($idModelo, $idNegocio) {
+                $query = Modelo::with(['marca', 'negocio']);
+                if ($idNegocio) {
+                    $query->where('id_negocio', $idNegocio);
+                }
+                return $query->find($idModelo);
+            },
+            $idNegocio
         );
     }
 
@@ -251,10 +274,22 @@ class CatalogService
         return $withSelectFormato ? $voltajes->pluck('voltaje', 'id_voltaje') : $voltajes;
     }
 
-    public static function getVoltajeById(string $id): ?Voltaje
+    /**
+     * Obtiene un voltaje por ID, verificando opcionalmente el negocio.
+     */
+    public static function getVoltajeById(string $id, ?string $idNegocio = null): ?Voltaje
     {
-        return self::remember("voltaje:{$id}", self::CACHE_TTL['voltajes'],
-            fn () => Voltaje::find($id)
+        return self::remember(
+            "voltaje:{$id}",
+            self::CACHE_TTL['voltajes'],
+            function () use ($id, $idNegocio) {
+                $query = Voltaje::query();
+                if ($idNegocio) {
+                    $query->where('id_negocio', $idNegocio);
+                }
+                return $query->find($id);
+            },
+            $idNegocio
         );
     }
 
@@ -327,10 +362,22 @@ class CatalogService
         return $withSelectFormato ? $colores->pluck('color', 'id_color') : $colores;
     }
 
-    public static function getColorById(string $id): ?Color
+    /**
+     * Obtiene un color por ID, verificando opcionalmente el negocio.
+     */
+    public static function getColorById(string $id, ?string $idNegocio = null): ?Color
     {
-        return self::remember("color:{$id}", self::CACHE_TTL['colores'],
-            fn () => Color::find($id)
+        return self::remember(
+            "color:{$id}",
+            self::CACHE_TTL['colores'],
+            function () use ($id, $idNegocio) {
+                $query = Color::query();
+                if ($idNegocio) {
+                    $query->where('id_negocio', $idNegocio);
+                }
+                return $query->find($id);
+            },
+            $idNegocio
         );
     }
 
@@ -380,7 +427,7 @@ class CatalogService
             self::CACHE_TTL['bicicletas'],
             fn () => Bicicleta::with(['modelo.marca', 'voltaje', 'color'])
             ->where('num_serie', $numSerie)
-            ->where('id_negocio', $idNegocio) // <--- Faltaría esta línea
+            ->when($idNegocio, fn($q) => $q->where('id_negocio', $idNegocio))
             ->first()
         );
     }
@@ -457,20 +504,27 @@ class CatalogService
         Cache::forget(self::key("bicicletas:user:{$idUsuario}:negocio:{$idNegocio}:page:1") . ":v{$version}");
     }
 
-    public static function getBicicletasByCliente(string $idCliente)
+    /**
+     * Obtiene bicicletas de un cliente, filtradas por negocio.
+     */
+    public static function getBicicletasByCliente(string $idCliente, string $idNegocio)
     {
-        return self::remember("bicicletas:cliente:{$idCliente}", 300,
+        return self::remember(
+            "bicicletas:cliente:{$idCliente}:negocio:{$idNegocio}",
+            300,
             fn () => Bicicleta::with(['modelo', 'color'])
                 ->where('id_cliente', $idCliente)
+                ->where('id_negocio', $idNegocio)
                 ->where('status', '!=', 'danada')
-                ->get()
+                ->get(),
+            $idNegocio
         );
     }
 
-    public static function invalidateBicicletasByCliente(string $idCliente): void
+    public static function invalidateBicicletasByCliente(string $idCliente, string $idNegocio): void
     {
-        $version = self::getVersion();
-        Cache::forget(self::key("bicicletas:cliente:{$idCliente}") . ":v{$version}");
+        $version = self::getVersion($idNegocio);
+        Cache::forget(self::key("bicicletas:cliente:{$idCliente}:negocio:{$idNegocio}") . ":v{$version}");
     }
 
     public static function getStockPorVendedores(string $idNegocio): array
@@ -490,7 +544,6 @@ class CatalogService
                     ->groupBy('id_usuario')
                     ->pluck('total', 'id_usuario');
 
-                // ✅ FIX: sin query extra, el null ya está en $totales si existe
                 $sinAsignar = (int) ($totales[null] ?? 0);
 
                 $resultado = [];
@@ -561,10 +614,22 @@ class CatalogService
 
     // ─── PEDIDOS ────────────────────────────────────────────────────────────
 
-    public static function getPedidoById(string $idPedido): ?Pedido
+    /**
+     * Obtiene un pedido por ID, verificando opcionalmente el negocio.
+     */
+    public static function getPedidoById(string $idPedido, ?string $idNegocio = null): ?Pedido
     {
-        return self::remember("pedido:{$idPedido}", self::CACHE_TTL['pedidos'],
-            fn () => Pedido::with(['usuario', 'negocio', 'items.modelo', 'items.voltaje', 'items.color', 'bicicletas'])->find($idPedido)
+        return self::remember(
+            "pedido:{$idPedido}",
+            self::CACHE_TTL['pedidos'],
+            function () use ($idPedido, $idNegocio) {
+                $query = Pedido::with(['usuario', 'negocio', 'items.modelo', 'items.voltaje', 'items.color', 'bicicletas']);
+                if ($idNegocio) {
+                    $query->where('id_negocio', $idNegocio);
+                }
+                return $query->find($idPedido);
+            },
+            $idNegocio
         );
     }
 
@@ -581,10 +646,9 @@ class CatalogService
             $idNegocio
         );
 
-        return array_map(fn ($id) => self::getPedidoById($id), $ids);
+        return array_map(fn ($id) => self::getPedidoById($id, $idNegocio), $ids);
     }
 
-    // ✅ FIX: de 4 queries a 1 sola con selectRaw
     public static function getPedidoStats(string $idNegocio): array
     {
         return self::remember(
@@ -626,17 +690,41 @@ class CatalogService
 
     // ─── USUARIOS ───────────────────────────────────────────────────────────
 
-    public static function getUserById(string $idUsuario): ?Usuario
+    /**
+     * Obtiene un usuario por ID, verificando opcionalmente el negocio.
+     */
+    public static function getUserById(string $idUsuario, ?string $idNegocio = null): ?Usuario
     {
-        return self::remember("usuario:{$idUsuario}", self::CACHE_TTL['usuarios'],
-            fn () => Usuario::find($idUsuario)
+        return self::remember(
+            "usuario:{$idUsuario}",
+            self::CACHE_TTL['usuarios'],
+            function () use ($idUsuario, $idNegocio) {
+                $query = Usuario::query();
+                if ($idNegocio) {
+                    $query->where('id_negocio', $idNegocio);
+                }
+                return $query->find($idUsuario);
+            },
+            $idNegocio
         );
     }
 
-    public static function getUserWithNegocio(string $idUsuario): ?Usuario
+    /**
+     * Obtiene un usuario con su negocio, verificando opcionalmente el negocio.
+     */
+    public static function getUserWithNegocio(string $idUsuario, ?string $idNegocio = null): ?Usuario
     {
-        return self::remember("usuario:negocio:{$idUsuario}", self::CACHE_TTL['usuarios'],
-            fn () => Usuario::with('negocio')->find($idUsuario)
+        return self::remember(
+            "usuario:negocio:{$idUsuario}",
+            self::CACHE_TTL['usuarios'],
+            function () use ($idUsuario, $idNegocio) {
+                $query = Usuario::with('negocio');
+                if ($idNegocio) {
+                    $query->where('id_negocio', $idNegocio);
+                }
+                return $query->find($idUsuario);
+            },
+            $idNegocio
         );
     }
 
@@ -660,7 +748,6 @@ class CatalogService
 
     // ─── STATS GLOBALES ─────────────────────────────────────────────────────
 
-    // ✅ FIX: null explícito para que use versión global correctamente
     public static function getGlobalStats(): array
     {
         return self::remember('stats:global', self::CACHE_TTL['stats'], fn () => [
@@ -673,7 +760,7 @@ class CatalogService
             'total_pedidos'       => Pedido::count(),
             'total_usuarios'      => Usuario::count(),
             'relaciones_voltajes' => ModeloVoltaje::count(),
-        ], null); // ✅ null explícito = versión global
+        ], null);
     }
 
     // ─── BÚSQUEDA ───────────────────────────────────────────────────────────
@@ -703,10 +790,22 @@ class CatalogService
         return $withSelectFormato ? $productos->pluck('nombre_producto', 'id_producto') : $productos;
     }
 
-    public static function getProductoById(string $idProducto): ?Producto
+    /**
+     * Obtiene un producto por ID, verificando opcionalmente el negocio.
+     */
+    public static function getProductoById(string $idProducto, ?string $idNegocio = null): ?Producto
     {
-        return self::remember("producto:{$idProducto}", self::CACHE_TTL['productos'],
-            fn () => Producto::with('negocio')->find($idProducto)
+        return self::remember(
+            "producto:{$idProducto}",
+            self::CACHE_TTL['productos'],
+            function () use ($idProducto, $idNegocio) {
+                $query = Producto::with('negocio');
+                if ($idNegocio) {
+                    $query->where('id_negocio', $idNegocio);
+                }
+                return $query->find($idProducto);
+            },
+            $idNegocio
         );
     }
 
@@ -899,6 +998,7 @@ class CatalogService
             600,
             fn () => BicicletaMovimiento::with('usuario')
                 ->where('num_serie', $numSerie)
+                ->where('id_negocio', $idNegocio)
                 ->orderBy('fecha_movimiento', 'asc')
                 ->get(),
             $idNegocio
@@ -962,7 +1062,7 @@ class CatalogService
     {
         return self::remember(
             "config:negocio:{$idNegocio}",
-            self::CACHE_TTL['negocios'], // 1 hora
+            self::CACHE_TTL['negocios'],
             fn () => \App\Models\NegocioConfig::firstOrCreate(
                 ['id_negocio' => $idNegocio],
                 ['entrega_comprobante' => 'ticket']

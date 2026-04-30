@@ -5,6 +5,7 @@
     class="space-y-6 max-w-6xl mx-auto"
     data-vendedor-id="{{ auth()->user()->id_usuario }}"
     data-buscar-url="{{ route('ventas.buscar-serie') }}"
+    data-cupon-url="{{ route('cupones.validar') }}"
 >
     {{-- ══ HEADER ══ --}}
     <div class="flex items-center gap-3">
@@ -28,23 +29,8 @@
     @endif
 
     {{-- Flash Alpine --}}
-    <div x-show="flash.msg" x-cloak x-transition.opacity.duration.200ms
-        :class="{
-            'bg-yellow-50 border-yellow-200 text-yellow-700 dark:bg-yellow-900/20 dark:border-yellow-700 dark:text-yellow-400': flash.tipo === 'warn',
-            'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-700 dark:text-red-400': flash.tipo === 'error',
-            'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-700 dark:text-green-400': flash.tipo === 'ok',
-        }"
-        class="border text-sm px-4 py-3 rounded-lg flex items-center gap-2">
-        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  x-bind:d="flash.tipo === 'ok'
-                    ? 'M5 13l4 4L19 7'
-                    : flash.tipo === 'error'
-                    ? 'M6 18L18 6M6 6l12 12'
-                    : 'M12 9v2m0 4h.01M12 3a9 9 0 100 18A9 9 0 0012 3z'"/>
-        </svg>
-        <span x-text="flash.msg"></span>
-    </div>
+    <x-flash-messages />
+
 
     {{-- ══ LAYOUT ══ --}}
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
@@ -94,7 +80,6 @@
                     <div x-show="bikePreview" x-transition.opacity.duration.150ms>
                         <template x-if="bikePreview">
                             <div class="border border-green-200 dark:border-green-800 rounded-lg p-4 bg-green-50 dark:bg-green-900/20 flex items-start gap-4">
-                                {{-- Color --}}
                                 <div class="shrink-0 mt-0.5">
                                     <template x-if="bikePreview.bici.color_hexes.length === 0">
                                         <div class="w-10 h-10 rounded-full border-2 border-gray-300 dark:border-gray-600 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
@@ -115,7 +100,6 @@
                                         </div>
                                     </template>
                                 </div>
-                                {{-- Info --}}
                                 <div class="flex-1 min-w-0">
                                     <p class="text-sm font-semibold text-gray-800 dark:text-white"
                                        x-text="bikePreview.bici.marca + ' ' + bikePreview.bici.modelo"></p>
@@ -126,7 +110,6 @@
                                     <p class="text-base font-bold text-gray-900 dark:text-white mt-1"
                                        x-text="fmt(bikePreview.producto.precio)"></p>
                                 </div>
-                                {{-- Acción --}}
                                 <div class="shrink-0 flex flex-col items-end gap-2">
                                     <button type="button" @click="agregarBicicleta()"
                                         class="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5">
@@ -194,7 +177,7 @@
                     <div class="flex items-center gap-2">
                         <span class="text-xs text-gray-400" x-text="totalItems + ' producto(s)'"></span>
                         <template x-if="carrito.length > 0">
-                            <button type="button" @click="carrito = []"
+                            <button type="button" @click="vaciarCarrito()"
                                 class="text-xs text-red-400 hover:text-red-600 dark:hover:text-red-300 transition">
                                 Vaciar
                             </button>
@@ -212,9 +195,9 @@
                         </div>
                     </template>
 
+                    {{-- Items normales del carrito --}}
                     <template x-for="(item, idx) in carrito" :key="item.key">
                         <div class="flex items-center gap-3 px-5 py-3">
-                            {{-- Icono/color --}}
                             <div class="shrink-0">
                                 <template x-if="item.tipo === '2' && item.color_hexes.length === 0">
                                     <div class="w-7 h-7 rounded-full border border-gray-300 dark:border-gray-600 bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
@@ -239,16 +222,12 @@
                                     </div>
                                 </template>
                             </div>
-
-                            {{-- Info --}}
                             <div class="flex-1 min-w-0">
                                 <p class="text-xs font-medium text-gray-800 dark:text-white truncate" x-text="item.nombre"></p>
                                 <p class="text-xs text-gray-400 font-mono truncate" x-show="item.num_serie" x-text="item.num_serie"></p>
                                 <p class="text-xs font-semibold text-gray-700 dark:text-gray-300"
                                    x-text="fmt(item.precio_unitario) + (item.cantidad > 1 ? ' × ' + item.cantidad : '')"></p>
                             </div>
-
-                            {{-- Cantidad (solo accesorios) --}}
                             <template x-if="item.tipo !== '2'">
                                 <div class="flex items-center gap-1 shrink-0">
                                     <button type="button" @click="decrementar(idx)"
@@ -262,8 +241,6 @@
                                     </button>
                                 </div>
                             </template>
-
-                            {{-- Quitar --}}
                             <button type="button" @click="quitar(idx)"
                                 class="shrink-0 text-gray-300 hover:text-red-500 dark:hover:text-red-400 transition p-1">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -272,13 +249,104 @@
                             </button>
                         </div>
                     </template>
+
+                    {{-- Accesorio gratis — solo visual, el backend lo agrega al guardar --}}
+                    <template x-if="productoGratis">
+                        <div class="flex items-center gap-3 px-5 py-3 bg-green-50/50 dark:bg-green-900/10">
+                            <div class="shrink-0">
+                                <div class="w-7 h-7 rounded-lg bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
+                                    <svg class="w-3.5 h-3.5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-xs font-medium text-gray-800 dark:text-white truncate" x-text="productoGratis.nombre_producto"></p>
+                                <p class="text-[10px] text-green-600 dark:text-green-400 font-medium">Gratis con el cupón</p>
+                            </div>
+                            <span class="text-xs font-bold text-green-600 dark:text-green-400 shrink-0">$0.00</span>
+                        </div>
+                    </template>
                 </div>
+
+                {{-- Cupón --}}
+                <template x-if="carrito.length > 0">
+                    <div class="px-5 py-3 border-t dark:border-gray-700">
+                        <template x-if="!cupon">
+                            <div class="flex gap-2">
+                                <div class="relative flex-1">
+                                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                                    </svg>
+                                    <input
+                                        type="text"
+                                        x-model="cuponInput"
+                                        @keyup.enter="aplicarCupon()"
+                                        @input="cuponInput = cuponInput.toUpperCase()"
+                                        :disabled="validandoCupon"
+                                        placeholder="CÓDIGO DE CUPÓN"
+                                        class="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 text-xs bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-400 font-mono uppercase tracking-widest transition">
+                                </div>
+                                <button type="button" @click="aplicarCupon()"
+                                    :disabled="validandoCupon || !cuponInput.trim()"
+                                    class="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap flex items-center gap-1.5">
+                                    <template x-if="validandoCupon">
+                                        <svg class="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                        </svg>
+                                    </template>
+                                    <span x-text="validandoCupon ? 'Validando...' : 'Aplicar'"></span>
+                                </button>
+                            </div>
+                        </template>
+
+                        {{-- Cupón aplicado --}}
+                        <template x-if="cupon">
+                            <div class="flex items-center justify-between bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg px-3 py-2">
+                                <div class="flex items-center gap-2">
+                                    <svg class="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                                    </svg>
+                                    <div>
+                                        <p class="text-xs font-semibold text-green-700 dark:text-green-400" x-text="cuponInput"></p>
+                                        <p class="text-[10px] text-green-600 dark:text-green-500" x-text="cupon.nombre"></p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-bold text-green-700 dark:text-green-400"
+                                          x-text="descuento > 0 ? '−' + fmt(descuento) : ''"></span>
+                                    <button type="button" @click="quitarCupon()"
+                                        class="text-gray-400 hover:text-red-500 transition">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </template>
 
                 {{-- Total --}}
                 <template x-if="carrito.length > 0">
-                    <div class="px-5 py-3 border-t dark:border-gray-700 flex items-center justify-between bg-gray-50 dark:bg-gray-700/30 rounded-b-xl">
-                        <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Total</span>
-                        <span class="text-lg font-bold text-gray-900 dark:text-white" x-text="fmt(total)"></span>
+                    <div class="px-5 py-3 border-t dark:border-gray-700 rounded-b-xl bg-gray-50 dark:bg-gray-700/30 space-y-1">
+                        <template x-if="descuento > 0">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-gray-400">Subtotal</span>
+                                <span class="text-sm text-gray-500 dark:text-gray-400" x-text="fmt(total)"></span>
+                            </div>
+                        </template>
+                        <template x-if="descuento > 0">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-green-600 dark:text-green-400">Descuento</span>
+                                <span class="text-sm font-medium text-green-600 dark:text-green-400" x-text="'−' + fmt(descuento)"></span>
+                            </div>
+                        </template>
+                        <div class="flex items-center justify-between pt-1 border-t border-gray-200 dark:border-gray-600">
+                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Total</span>
+                            <span class="text-lg font-bold text-gray-900 dark:text-white" x-text="fmt(totalConDescuento)"></span>
+                        </div>
                     </div>
                 </template>
             </div>
@@ -341,7 +409,7 @@
                     :disabled="carrito.length === 0 || enviando"
                     class="w-full bg-gray-900 dark:bg-white dark:text-gray-900 text-white py-3 rounded-xl text-sm font-semibold hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                     <template x-if="!enviando">
-                        <span>Registrar venta</span>
+                        <span x-text="descuento > 0 ? 'Registrar venta · ' + fmt(totalConDescuento) : 'Registrar venta'"></span>
                     </template>
                     <template x-if="enviando">
                         <span class="flex items-center gap-2">
@@ -361,21 +429,28 @@
 <script>
 function ventaCreate() {
     return {
-        serieInput:  '',
-        buscando:    false,
-        enviando:    false,
-        bikePreview: null,
-        carrito:     [],
-        flash:       { msg: '', tipo: 'warn', _t: null },
-        buscarUrl:   '',
-        csrfToken:   '{{ csrf_token() }}',
+        serieInput:     '',
+        buscando:       false,
+        enviando:       false,
+        bikePreview:    null,
+        carrito:        [],
+        flash:          { msg: '', tipo: 'warn', _t: null },
+        buscarUrl:      '',
+        cuponUrl:       '',
+        csrfToken:      '{{ csrf_token() }}',
+        cuponInput:     '',
+        validandoCupon: false,
+        cupon:          null,
+        descuento:      0,
+        productoGratis: null,   // { id_producto, nombre_producto, precio } — solo visual
 
         init() {
             this.buscarUrl = document.querySelector('[data-buscar-url]')?.dataset?.buscarUrl ?? '';
+            this.cuponUrl  = document.querySelector('[data-cupon-url]')?.dataset?.cuponUrl ?? '';
             this.$nextTick(() => this.$refs.serieInputRef?.focus());
         },
 
-        /* ─── Buscar bicicleta ─── */
+        // ── Bicicletas ────────────────────────────────────────────────────────
         async buscarSerie() {
             const serie = this.serieInput.trim().toUpperCase();
             if (!serie || this.buscando) return;
@@ -399,65 +474,67 @@ function ventaCreate() {
                     return;
                 }
 
-                // Auto-agregar si ya teníamos el input lleno (scan QR)
                 this.bikePreview = data;
                 this.agregarBicicleta();
 
-            } catch (e) {
+            } catch {
                 this.mostrarFlash('Error de conexión.', 'error');
             } finally {
                 this.buscando = false;
             }
         },
 
-        /* ─── Agregar bicicleta ─── */
         agregarBicicleta() {
             if (!this.bikePreview) return;
             const { bici, producto } = this.bikePreview;
 
             this.carrito.push({
-                key:           bici.num_serie,
-                tipo:          '2',
-                id_producto:   producto.id_producto,
-                num_serie:     bici.num_serie,
-                nombre:        bici.marca + ' ' + bici.modelo,
+                key:             bici.num_serie,
+                tipo:            '2',
+                id_producto:     producto.id_producto,
+                num_serie:       bici.num_serie,
+                nombre:          bici.marca + ' ' + bici.modelo,
                 precio_unitario: producto.precio,
-                cantidad:      1,
-                color_hexes:   bici.color_hexes,
-                color_nombre:  bici.color_nombre,
+                cantidad:        1,
+                color_hexes:     bici.color_hexes,
+                color_nombre:    bici.color_nombre,
             });
 
             this.bikePreview = null;
             this.serieInput  = '';
             this.$nextTick(() => this.$refs.serieInputRef?.focus());
             this.mostrarFlash('Bicicleta agregada al carrito.', 'ok');
+
+            if (this.cupon) this.recalcularDescuento();
         },
 
-        /* ─── Agregar accesorio ─── */
+        // ── Accesorios ────────────────────────────────────────────────────────
         agregarAccesorio(acc) {
             const existente = this.carrito.find(i => i.id_producto === acc.id_producto);
             if (existente) {
                 existente.cantidad++;
                 this.mostrarFlash('Unidad adicional agregada.', 'ok');
-                return;
+            } else {
+                this.carrito.push({
+                    key:             acc.id_producto,
+                    tipo:            '1',
+                    id_producto:     acc.id_producto,
+                    num_serie:       '',
+                    nombre:          acc.nombre,
+                    precio_unitario: parseFloat(acc.precio),
+                    cantidad:        1,
+                    color_hexes:     [],
+                    color_nombre:    '',
+                });
+                this.mostrarFlash('Accesorio agregado al carrito.', 'ok');
             }
-            this.carrito.push({
-                key:             acc.id_producto,
-                tipo:            '1',
-                id_producto:     acc.id_producto,
-                num_serie:       '',
-                nombre:          acc.nombre,
-                precio_unitario: parseFloat(acc.precio),
-                cantidad:        1,
-                color_hexes:     [],
-                color_nombre:    '',
-            });
-            this.mostrarFlash('Accesorio agregado al carrito.', 'ok');
+
+            if (this.cupon) this.recalcularDescuento();
         },
 
-        /* ─── Cantidad accesorios ─── */
         incrementar(idx) {
             this.carrito[idx].cantidad++;
+            if (this.cupon) this.recalcularDescuento();
         },
 
         decrementar(idx) {
@@ -466,51 +543,155 @@ function ventaCreate() {
                 return;
             }
             this.carrito[idx].cantidad--;
+            if (this.cupon) this.recalcularDescuento();
         },
 
         quitar(idx) {
             this.carrito.splice(idx, 1);
+            if (this.cupon) this.recalcularDescuento();
         },
 
-        /* ─── Totales ─── */
+        vaciarCarrito() {
+            this.carrito        = [];
+            this.cupon          = null;
+            this.descuento      = 0;
+            this.cuponInput     = '';
+            this.productoGratis = null;
+        },
+
+        // ── Cupón ─────────────────────────────────────────────────────────────
+        async aplicarCupon() {
+            if (!this.cuponInput.trim() || this.validandoCupon || this.carrito.length === 0) return;
+
+            this.validandoCupon = true;
+
+            try {
+                const res = await fetch(this.cuponUrl, {
+                    method:  'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': this.csrfToken,
+                        'Accept':       'application/json',
+                    },
+                    body: JSON.stringify({
+                        codigo: this.cuponInput.trim().toUpperCase(),
+                        items:  this.carrito.map(i => ({
+                            id_producto: i.id_producto,
+                            cantidad:    i.cantidad,
+                        })),
+                    }),
+                });
+
+                const data = await res.json();
+
+                if (!data.valido) {
+                    this.mostrarFlash(data.mensaje || 'Cupón no válido.', 'error');
+                    return;
+                }
+
+                this.cupon          = data.cupon;
+                this.descuento      = data.descuento;
+                this.productoGratis = data.producto_gratis ?? null;
+                this.mostrarFlash(data.mensaje, 'ok');
+
+            } catch {
+                this.mostrarFlash('Error al validar el cupón.', 'error');
+            } finally {
+                this.validandoCupon = false;
+            }
+        },
+
+        quitarCupon() {
+            this.cupon          = null;
+            this.descuento      = 0;
+            this.cuponInput     = '';
+            this.productoGratis = null;
+        },
+
+        async recalcularDescuento() {
+            if (!this.cupon || this.carrito.length === 0) {
+                this.descuento      = 0;
+                this.productoGratis = null;
+                return;
+            }
+
+            try {
+                const res = await fetch(this.cuponUrl, {
+                    method:  'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': this.csrfToken,
+                        'Accept':       'application/json',
+                    },
+                    body: JSON.stringify({
+                        codigo: this.cuponInput.trim().toUpperCase(),
+                        items:  this.carrito.map(i => ({
+                            id_producto: i.id_producto,
+                            cantidad:    i.cantidad,
+                        })),
+                    }),
+                });
+
+                const data = await res.json();
+
+                if (data.valido) {
+                    this.descuento      = data.descuento;
+                    this.productoGratis = data.producto_gratis ?? null;
+                } else {
+                    this.quitarCupon();
+                }
+
+            } catch { /* silencioso */ }
+        },
+
+        // ── Totales ───────────────────────────────────────────────────────────
         get total() {
             return this.carrito.reduce((s, i) => s + (i.precio_unitario * i.cantidad), 0);
+        },
+
+        get totalConDescuento() {
+            return Math.max(0, this.total - this.descuento);
         },
 
         get totalItems() {
             return this.carrito.reduce((s, i) => s + i.cantidad, 0);
         },
 
-        /* ─── Formato ─── */
         fmt(n) {
             return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n);
         },
 
-        /* ─── Submit ─── */
+        // ── Submit ────────────────────────────────────────────────────────────
         submitVenta() {
             if (this.carrito.length === 0 || this.enviando) return;
 
             const cont = document.getElementById('carrito-inputs');
             cont.innerHTML = '';
 
+            const mk = (name, val) => {
+                const inp = document.createElement('input');
+                inp.type  = 'hidden';
+                inp.name  = name;
+                inp.value = val ?? '';
+                cont.appendChild(inp);
+            };
+
+            // Solo los items del carrito — el accesorio gratis lo agrega el backend
             this.carrito.forEach((item, i) => {
-                const mk = (name, val) => {
-                    const inp = document.createElement('input');
-                    inp.type  = 'hidden';
-                    inp.name  = name;
-                    inp.value = val ?? '';
-                    cont.appendChild(inp);
-                };
                 mk(`items[${i}][id_producto]`, item.id_producto);
                 mk(`items[${i}][num_serie]`,   item.num_serie);
                 mk(`items[${i}][cantidad]`,     item.cantidad);
             });
 
+            if (this.cupon) {
+                mk('codigo_cupon', this.cuponInput.trim().toUpperCase());
+            }
+
             this.enviando = true;
             document.getElementById('form-venta').submit();
         },
 
-        /* ─── Flash ─── */
+        // ── Flash ─────────────────────────────────────────────────────────────
         mostrarFlash(msg, tipo = 'warn') {
             if (this.flash._t) clearTimeout(this.flash._t);
             this.flash.msg  = msg;

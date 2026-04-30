@@ -101,17 +101,20 @@ class ModuloService
     {
         $todosLosModulos = Modulo::all();
         $activos         = self::getModulosNegocio($idNegocio);
-        $roles           = [1 => 'Admin', 2 => 'Vendedor', 5 => 'Gestor'];
 
         $resultado = [];
         foreach ($todosLosModulos as $modulo) {
+            // ✅ Roles específicos por módulo, no todos siempre
+            $roles  = self::getRolesDeModulo($modulo->id_modulo);
             $porRol = [];
+
             foreach ($roles as $idRol => $nombre) {
                 $porRol[$idRol] = [
                     'nombre' => $nombre,
                     'activo' => $activos[$modulo->id_modulo][$idRol] ?? false,
                 ];
             }
+
             $resultado[] = [
                 'modulo' => $modulo,
                 'roles'  => $porRol,
@@ -119,5 +122,17 @@ class ModuloService
         }
 
         return $resultado;
+    }
+
+    // ─── ROLES POR MÓDULO ────────────────────────────────────────────────────────
+    protected static array $rolesPorModulo = [
+        'tracking' => [1 => 'Admin', 2 => 'Vendedor'],
+        'pedidos'  => [1 => 'Admin'],
+        // futuros módulos aquí
+    ];
+
+    protected static function getRolesDeModulo(string $idModulo): array
+    {
+        return self::$rolesPorModulo[$idModulo] ?? [1 => 'Admin', 2 => 'Vendedor', 5 => 'Gestor'];
     }
 }

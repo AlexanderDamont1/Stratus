@@ -1,4 +1,3 @@
-{{-- resources/views/vendedor/garantias/index.blade.php --}}
 <x-app-layout>
 <div class="mx-auto max-w-lg" x-data="buscadorGarantia()">
 
@@ -6,6 +5,10 @@
         <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Garantías</h2>
         <p class="text-xs text-gray-400 mt-0.5">Busca una bicicleta por número de serie</p>
     </div>
+
+        
+    <x-flash-messages />
+
 
     {{-- Buscador --}}
     <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 shadow-sm">
@@ -44,13 +47,8 @@
         </div>
 
         {{-- Error --}}
-        <div x-show="error" x-cloak
-             class="mt-3 flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
-            <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-            </svg>
-            <span x-text="error"></span>
-        </div>
+        
+    
     </div>
 
     <script>

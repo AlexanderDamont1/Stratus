@@ -161,6 +161,7 @@ class VentaController extends Controller
             'items.*.id_producto'    => 'required|exists:productos,id_producto',
             'items.*.num_serie'      => 'nullable|string',
             'items.*.cantidad'       => 'required|integer|min:1',
+            'codigo_cupon'           => 'nullable|string|max:30',
         ]);
 
         DB::beginTransaction();
@@ -179,9 +180,52 @@ class VentaController extends Controller
                 ]
             );
 
+            // ── Cupón ──────────────────────────────────────────────────────────
+            $cuponAplicado  = null;
+            $descuentoTotal = 0;
+
+            if ($request->filled('codigo_cupon')) {
+                $cupon = \App\Services\CuponService::buscarPorCodigo(
+                    $request->codigo_cupon,
+                    $user->id_negocio
+                );
+
+                if ($cupon) {
+                    $itemsParaValidar = collect($request->items)->map(function ($item) use ($user) {
+                        $producto = Producto::with('productoModelo.modelo.marca')
+                            ->where('id_producto', $item['id_producto'])
+                            ->where('id_negocio', $user->id_negocio)
+                            ->first();
+
+                        $pm = $producto?->productoModelo?->first();
+
+                        return [
+                            'id_producto' => $item['id_producto'],
+                            'id_modelo'   => $pm?->id_modelo,
+                            'id_marca'    => $pm?->modelo?->id_marca,
+                            'precio'      => (float) ($producto?->precio ?? 0),
+                            'cantidad'    => (int) ($item['cantidad'] ?? 1),
+                        ];
+                    })->filter()->values()->toArray();
+
+                    $resultado = \App\Services\CuponService::validar(
+                        $cupon,
+                        $itemsParaValidar,
+                        $user->id_usuario
+                    );
+
+                    if ($resultado['valido']) {
+                        $cuponAplicado  = $cupon;
+                        $descuentoTotal = $resultado['descuento'];
+                    }
+                }
+            }
+
             $venta = Venta::create([
-                'id_negocio' => $user->id_negocio,
-                'id_cliente' => $cliente->id_cliente,
+                'id_negocio'      => $user->id_negocio,
+                'id_cliente'      => $cliente->id_cliente,
+                'id_cupon'        => $cuponAplicado?->id_cupon,
+                'descuento_total' => $descuentoTotal,
             ]);
 
             $totalVenta          = 0;
@@ -190,6 +234,7 @@ class VentaController extends Controller
             $eventosBicicleta    = [];
             $jobsPostVenta       = [];
 
+            // ── Items del carrito ───────────────────────────────────────────────
             foreach ($request->items as $item) {
                 $producto = Producto::where('id_producto', $item['id_producto'])
                     ->where('id_usuario', $user->id_usuario)
@@ -266,10 +311,40 @@ class VentaController extends Controller
                 }
             }
 
+            // ── Accesorio gratis por cupón ──────────────────────────────────────
+            // Se agrega DENTRO de la transacción, con precio 0, sin afectar totalVenta.
+            if ($cuponAplicado?->id_producto_gratis) {
+                $productoGratis = Producto::where('id_producto', $cuponAplicado->id_producto_gratis)
+                    ->where('id_negocio', $user->id_negocio)
+                    ->first();
+
+                if ($productoGratis) {
+                    DetalleVenta::create([
+                        'id_venta'        => $venta->id_venta,
+                        'id_producto'     => $productoGratis->id_producto,
+                        'num_serie'       => null,
+                        'precio_unitario' => 0.00,
+                        'cantidad'        => 1,
+                    ]);
+                    // No se suma a $totalVenta — es gratis
+                }
+            }
+
             DB::commit();
 
-            // ── Despachar jobs DESPUÉS del commit ──────────────────────────────
-            $config = CatalogService::getConfigNegocio($user->id_negocio);
+            // ── Registrar uso del cupón DESPUÉS del commit ──────────────────────
+            if ($cuponAplicado) {
+                \App\Services\CuponService::registrarUso(
+                    idCupon:           $cuponAplicado->id_cupon,
+                    idVenta:           $venta->id_venta,
+                    idNegocio:         $user->id_negocio,
+                    idUsuario:         $user->id_usuario,
+                    descuentoAplicado: $descuentoTotal,
+                );
+            }
+
+            // ── Despachar jobs DESPUÉS del commit ───────────────────────────────
+            $config     = CatalogService::getConfigNegocio($user->id_negocio);
             $debeCorreo = $config->entregaPorCorreo() && !empty($cliente->correo);
             $total      = count($jobsPostVenta);
 
@@ -280,7 +355,7 @@ class VentaController extends Controller
                 dispatch($job);
             }
 
-            // ── Invalidaciones de caché ────────────────────────────────────────
+            // ── Invalidaciones de caché ─────────────────────────────────────────
             foreach ($seriesParaInvalidar as $serie) {
                 CatalogService::invalidateBicicleta($serie, $user->id_negocio);
             }
@@ -292,7 +367,7 @@ class VentaController extends Controller
             CatalogService::invalidateProductosConRelaciones($user->id_negocio, $user->id_usuario);
             CatalogService::invalidateVentasByVendedor($user->id_negocio, $user->id_usuario);
 
-            // ── Broadcasts ────────────────────────────────────────────────────
+            // ── Broadcasts ─────────────────────────────────────────────────────
             foreach ($eventosBicicleta as $ev) {
                 event(new BicicletaActualizada(
                     numSerie:       $ev['num_serie'],
@@ -312,11 +387,11 @@ class VentaController extends Controller
                 idVendedor:     $user->id_usuario,
                 nombreVendedor: $user->nombre_usuario,
                 nombreCliente:  $cliente->nombre_cliente . ' ' . $cliente->apellido1,
-                total:          $totalVenta,
+                total:          $totalVenta - $descuentoTotal,
                 bicicletas:     $bicicletasBroadcast,
             ));
 
-            // ── Respuesta ─────────────────────────────────────────────────────
+            // ── Respuesta ──────────────────────────────────────────────────────
             if ($debeCorreo) {
                 $mensajeExito = 'Venta registrada. Comprobante enviado al correo del cliente.';
             } elseif ($config->entregaPorTicket()) {

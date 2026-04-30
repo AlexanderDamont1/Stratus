@@ -104,6 +104,18 @@
                 <span class="truncate">Garantías</span>
             </a>
 
+            <a href="{{ route('admin.cupones.index') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition
+                      {{ request()->routeIs('admin.cupones.*')
+                          ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+                          : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}"
+               @click="open = false">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 0 1 0 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 0 1 0-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375Z" />
+                </svg>    
+                <span class="truncate">Cupones</span>
+            </a>
+
             {{-- Inventario --}}
             @php
             $inventarioActivo = request()->routeIs('bicicletas.index')
@@ -426,19 +438,36 @@
             </div>
             @endif
 
-            @if(in_array(auth()->user()->id_rol, [1, 5]))
-            <a href="{{ route('pedidos.index') }}"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition
-                      {{ request()->routeIs('pedidos.index')
-                          ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
-                          : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}"
-               @click="open = false">
-                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                <span class="truncate">Pedidos</span>
-            </a>
+            @if(auth()->user()->id_rol === 1)
+                @modulo('pedidos')
+                    <a href="{{ route('pedidos.index') }}"
+                    class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition
+                            {{ request()->routeIs('pedidos.*')
+                                ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+                                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}"
+                    @click="open = false">
+                        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                        </svg>
+                        <span class="truncate">Pedidos</span>
+                    </a>
+                @endmodulo
+            @endif
+
+            @if(auth()->user()->id_rol === 5)
+                <a href="{{ route('pedidos.index') }}"
+                class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition
+                        {{ request()->routeIs('pedidos.*')
+                            ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+                            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }}"
+                @click="open = false">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                    <span class="truncate">Pedidos</span>
+                </a>
             @endif
 
              @if(auth()->user()->id_rol === 1)
