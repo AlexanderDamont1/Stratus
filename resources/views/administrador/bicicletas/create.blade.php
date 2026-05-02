@@ -50,7 +50,6 @@
     {{-- ===== FLASH ===== --}}
     <x-flash-messages />
 
-
     {{-- ===== PASOS ===== --}}
     <div class="flex items-center">
         <template x-for="(step, i) in [{label:'Modelo'},{label:'N° Series'},{label:'Guardar'}]" :key="i">
@@ -91,7 +90,6 @@
                 ? 'border-emerald-300 dark:border-emerald-700 shadow-sm'
                 : 'border-gray-200 dark:border-gray-800'">
 
-            {{-- Header --}}
             <div class="px-5 py-3.5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
                 <div class="flex items-center gap-2">
                     <span class="w-5 h-5 rounded-full bg-gray-900 dark:bg-white flex items-center justify-center text-white dark:text-gray-900 text-[9px] font-black shrink-0">1</span>
@@ -120,7 +118,6 @@
                         </button>
                     </div>
 
-                    {{-- Modelo seleccionado --}}
                     <div x-show="plantilla.id_modelo"
                          x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-98" x-transition:enter-end="opacity-100 scale-100"
                          class="flex items-center gap-3 px-4 py-3 bg-gray-900 dark:bg-white rounded-xl cursor-pointer" @click="limpiarModelo()">
@@ -138,11 +135,9 @@
                         </svg>
                     </div>
 
-                    {{-- Picker: filtro + grid --}}
                     <div x-show="!plantilla.id_modelo"
                          x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
                          class="space-y-2">
-                        {{-- Filtro --}}
                         <div class="relative">
                             <div class="pointer-events-none absolute inset-y-0 left-3 flex items-center">
                                 <svg class="w-3.5 h-3.5 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -162,7 +157,6 @@
                             </button>
                         </div>
 
-                        {{-- Grid de modelos --}}
                         <div class="max-h-52 overflow-y-auto rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-800/30 p-2.5 space-y-3">
                             <template x-if="modelosFiltrados.length === 0">
                                 <div class="py-6 text-center">
@@ -191,24 +185,83 @@
                     </div>
                 </div>
 
-                {{-- ── Color y Voltaje ── --}}
+                {{-- ── Color y Voltaje (PLANTILLA GLOBAL) ── --}}
                 <div class="grid grid-cols-2 gap-3" x-show="plantilla.id_modelo"
                      x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-1" x-transition:enter-end="opacity-100 translate-y-0">
-                    <div class="space-y-1.5">
+
+                    {{-- COLOR PICKER — plantilla global, usa coloresDisponibles y plantilla.id_color --}}
+                    <div class="space-y-1.5" x-data="{ abiertoColor: false }" @click.outside="abiertoColor = false">
                         <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Color</label>
-                        <select x-model="plantilla.id_color" :disabled="!coloresDisponibles.length"
-                            class="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-gray-200 dark:focus:ring-gray-700 transition disabled:opacity-40 disabled:cursor-not-allowed">
-                            <option value="">— Elige color —</option>
-                            <template x-for="c in coloresDisponibles" :key="c.id_color">
-                                <option :value="String(c.id_color)" x-text="c.color"></option>
-                            </template>
-                        </select>
+                        <div class="relative">
+                            <button type="button"
+                                @click="abiertoColor = !abiertoColor"
+                                :disabled="!coloresDisponibles.length"
+                                class="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-sm bg-white dark:bg-gray-800 text-left flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed transition focus:outline-none focus:ring-2 focus:ring-gray-200 dark:focus:ring-gray-700">
+                                <template x-if="!plantilla.id_color">
+                                    <span class="text-gray-400 dark:text-gray-500 flex-1 text-sm">Elige color</span>
+                                </template>
+                                <template x-if="plantilla.id_color">
+                                    <span class="flex items-center gap-2 flex-1 min-w-0">
+                                        <template x-if="parsearColor((coloresDisponibles.find(c => String(c.id_color) === plantilla.id_color) || {color:''}).color).hexes.length >= 2">
+                                            <span class="w-4 h-4 rounded-sm border border-black/10 dark:border-white/10 overflow-hidden relative inline-flex shrink-0">
+                                                <span class="absolute left-0 top-0 w-1/2 h-full"
+                                                      :style="'background:' + parsearColor((coloresDisponibles.find(c => String(c.id_color) === plantilla.id_color) || {color:''}).color).hexes[0]"></span>
+                                                <span class="absolute right-0 top-0 w-1/2 h-full"
+                                                      :style="'background:' + parsearColor((coloresDisponibles.find(c => String(c.id_color) === plantilla.id_color) || {color:''}).color).hexes[1]"></span>
+                                            </span>
+                                        </template>
+                                        <template x-if="parsearColor((coloresDisponibles.find(c => String(c.id_color) === plantilla.id_color) || {color:''}).color).hexes.length < 2">
+                                            <span class="w-4 h-4 rounded-sm border border-black/10 dark:border-white/10 shrink-0 inline-block"
+                                                  :style="'background:' + parsearColor((coloresDisponibles.find(c => String(c.id_color) === plantilla.id_color) || {color:''}).color).hexes[0]"></span>
+                                        </template>
+                                        <span class="text-gray-900 dark:text-white truncate text-sm"
+                                              x-text="parsearColor((coloresDisponibles.find(c => String(c.id_color) === plantilla.id_color) || {color:''}).color).nombre"></span>
+                                    </span>
+                                </template>
+                                <svg class="w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform duration-150" :class="abiertoColor ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+
+                            <div x-show="abiertoColor" x-cloak
+                                 x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+                                 x-transition:leave="transition ease-in duration-100" x-transition:leave-end="opacity-0"
+                                 class="absolute z-30 mt-1 w-full min-w-[180px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden">
+                                <div class="max-h-48 overflow-y-auto p-1">
+                                    <template x-for="c in coloresDisponibles" :key="c.id_color">
+                                        <button type="button"
+                                            @click="plantilla.id_color = String(c.id_color); abiertoColor = false"
+                                            class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition text-left"
+                                            :class="String(c.id_color) === plantilla.id_color ? 'bg-gray-50 dark:bg-gray-700/50' : ''">
+                                            <template x-if="parsearColor(c.color).hexes.length >= 2">
+                                                <span class="w-5 h-5 rounded-sm border border-black/10 dark:border-white/10 overflow-hidden relative inline-flex shrink-0">
+                                                    <span class="absolute left-0 top-0 w-1/2 h-full" :style="'background:' + parsearColor(c.color).hexes[0]"></span>
+                                                    <span class="absolute right-0 top-0 w-1/2 h-full" :style="'background:' + parsearColor(c.color).hexes[1]"></span>
+                                                </span>
+                                            </template>
+                                            <template x-if="parsearColor(c.color).hexes.length < 2">
+                                                <span class="w-5 h-5 rounded-sm border border-black/10 dark:border-white/10 shrink-0 inline-block"
+                                                      :style="'background:' + parsearColor(c.color).hexes[0]"></span>
+                                            </template>
+                                            <span class="text-sm text-gray-800 dark:text-gray-200 truncate" x-text="parsearColor(c.color).nombre"></span>
+                                            <template x-if="String(c.id_color) === plantilla.id_color">
+                                                <svg class="w-3.5 h-3.5 text-gray-900 dark:text-white ml-auto shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                                                </svg>
+                                            </template>
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+
+                    {{-- VOLTAJE --}}
                     <div class="space-y-1.5">
                         <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Voltaje</label>
                         <select x-model="plantilla.id_voltaje" :disabled="!voltajesDisponibles.length"
                             class="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-gray-200 dark:focus:ring-gray-700 transition disabled:opacity-40 disabled:cursor-not-allowed">
-                            <option value="">— Elige voltaje —</option>
+                            <option value="">Elige voltaje</option>
                             <template x-for="v in voltajesDisponibles" :key="v.id_voltaje">
                                 <option :value="String(v.id_voltaje)" x-text="v.voltaje"></option>
                             </template>
@@ -310,12 +363,31 @@
 
                                     <td class="px-4 py-3.5">
                                         <div class="space-y-2">
+                                            {{-- Badges resumen --}}
                                             <div class="flex flex-wrap gap-1">
                                                 <span class="inline-flex items-center text-[11px] bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800/50 px-2 py-0.5 rounded-md font-medium" x-text="nombreMarca(fila)"></span>
                                                 <span class="inline-flex items-center text-[11px] bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-100 dark:border-gray-700 px-2 py-0.5 rounded-md" x-text="nombreModelo(fila)"></span>
-                                                <span class="inline-flex items-center text-[11px] bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-500 border border-gray-100 dark:border-gray-700 px-2 py-0.5 rounded-md" x-text="nombreColor(fila)"></span>
+                                                <span class="inline-flex items-center gap-1 text-[11px] bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-500 border border-gray-100 dark:border-gray-700 px-2 py-0.5 rounded-md">
+                                                    {{-- Cuadrito de color en el badge --}}
+                                                    <template x-if="fila.id_color && filaColores(idx).find(c => String(c.id_color) === fila.id_color)">
+                                                        <span>
+                                                            <template x-if="parsearColor((filaColores(idx).find(c => String(c.id_color) === fila.id_color) || {color:''}).color).hexes.length >= 2">
+                                                                <span class="w-2.5 h-2.5 rounded-sm border border-black/10 overflow-hidden relative inline-flex shrink-0 align-middle">
+                                                                    <span class="absolute left-0 top-0 w-1/2 h-full" :style="'background:' + parsearColor((filaColores(idx).find(c => String(c.id_color) === fila.id_color) || {color:''}).color).hexes[0]"></span>
+                                                                    <span class="absolute right-0 top-0 w-1/2 h-full" :style="'background:' + parsearColor((filaColores(idx).find(c => String(c.id_color) === fila.id_color) || {color:''}).color).hexes[1]"></span>
+                                                                </span>
+                                                            </template>
+                                                            <template x-if="parsearColor((filaColores(idx).find(c => String(c.id_color) === fila.id_color) || {color:''}).color).hexes.length < 2">
+                                                                <span class="w-2.5 h-2.5 rounded-sm border border-black/10 shrink-0 inline-block align-middle"
+                                                                      :style="'background:' + parsearColor((filaColores(idx).find(c => String(c.id_color) === fila.id_color) || {color:''}).color).hexes[0]"></span>
+                                                            </template>
+                                                        </span>
+                                                    </template>
+                                                    <span x-text="nombreColor(fila)"></span>
+                                                </span>
                                                 <span class="inline-flex items-center text-[11px] bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-500 border border-gray-100 dark:border-gray-700 px-2 py-0.5 rounded-md" x-text="nombreVoltaje(fila)"></span>
                                             </div>
+
                                             <button type="button" @click="fila.expanded = !fila.expanded"
                                                 class="text-[11px] text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 font-medium flex items-center gap-0.5 transition duration-150">
                                                 <svg class="w-3 h-3 transition-transform duration-200" :class="fila.expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -323,6 +395,8 @@
                                                 </svg>
                                                 <span x-text="fila.expanded ? 'Cerrar' : 'Config individual'"></span>
                                             </button>
+
+                                            {{-- Override individual DESKTOP --}}
                                             <div x-show="fila.expanded"
                                                  x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
                                                  x-transition:leave="transition ease-in duration-150" x-transition:leave-end="opacity-0"
@@ -343,13 +417,69 @@
                                                     </template>
                                                 </select>
                                                 <div class="grid grid-cols-2 gap-1.5">
-                                                    <select x-model="fila.id_color" :disabled="!filaColores(idx).length"
-                                                        class="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-xs bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-600 transition disabled:opacity-40 disabled:cursor-not-allowed">
-                                                        <option value="">Color</option>
-                                                        <template x-for="c in filaColores(idx)" :key="c.id_color">
-                                                            <option :value="String(c.id_color)" x-text="c.color"></option>
-                                                        </template>
-                                                    </select>
+                                                    {{-- COLOR PICKER — override desktop, usa filaColores(idx) y fila.id_color --}}
+                                                    <div x-data="{ abiertoColor: false }" @click.outside="abiertoColor = false" class="relative">
+                                                        <button type="button"
+                                                            @click="abiertoColor = !abiertoColor"
+                                                            :disabled="!filaColores(idx).length"
+                                                            class="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-xs bg-white dark:bg-gray-800 text-left flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed transition focus:outline-none focus:ring-1 focus:ring-gray-300">
+                                                            <template x-if="!fila.id_color">
+                                                                <span class="text-gray-400 flex-1">Color</span>
+                                                            </template>
+                                                            <template x-if="fila.id_color">
+                                                                <span class="flex items-center gap-1.5 flex-1 min-w-0">
+                                                                    <template x-if="parsearColor((filaColores(idx).find(c => String(c.id_color) === fila.id_color) || {color:''}).color).hexes.length >= 2">
+                                                                        <span class="w-3.5 h-3.5 rounded-sm border border-black/10 overflow-hidden relative inline-flex shrink-0">
+                                                                            <span class="absolute left-0 top-0 w-1/2 h-full"
+                                                                                  :style="'background:' + parsearColor((filaColores(idx).find(c => String(c.id_color) === fila.id_color) || {color:''}).color).hexes[0]"></span>
+                                                                            <span class="absolute right-0 top-0 w-1/2 h-full"
+                                                                                  :style="'background:' + parsearColor((filaColores(idx).find(c => String(c.id_color) === fila.id_color) || {color:''}).color).hexes[1]"></span>
+                                                                        </span>
+                                                                    </template>
+                                                                    <template x-if="parsearColor((filaColores(idx).find(c => String(c.id_color) === fila.id_color) || {color:''}).color).hexes.length < 2">
+                                                                        <span class="w-3.5 h-3.5 rounded-sm border border-black/10 shrink-0 inline-block"
+                                                                              :style="'background:' + parsearColor((filaColores(idx).find(c => String(c.id_color) === fila.id_color) || {color:''}).color).hexes[0]"></span>
+                                                                    </template>
+                                                                    <span class="truncate text-gray-800 dark:text-white"
+                                                                          x-text="parsearColor((filaColores(idx).find(c => String(c.id_color) === fila.id_color) || {color:''}).color).nombre"></span>
+                                                                </span>
+                                                            </template>
+                                                            <svg class="w-3 h-3 text-gray-400 shrink-0 transition-transform duration-150" :class="abiertoColor ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                                            </svg>
+                                                        </button>
+                                                        <div x-show="abiertoColor" x-cloak
+                                                             x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+                                                             x-transition:leave="transition ease-in duration-100" x-transition:leave-end="opacity-0"
+                                                             class="absolute z-40 mt-1 w-full min-w-[160px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden">
+                                                            <div class="max-h-40 overflow-y-auto p-1">
+                                                                <template x-for="c in filaColores(idx)" :key="c.id_color">
+                                                                    <button type="button"
+                                                                        @click="fila.id_color = String(c.id_color); abiertoColor = false"
+                                                                        class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition text-left"
+                                                                        :class="String(c.id_color) === fila.id_color ? 'bg-gray-50 dark:bg-gray-700/50' : ''">
+                                                                        <template x-if="parsearColor(c.color).hexes.length >= 2">
+                                                                            <span class="w-4 h-4 rounded-sm border border-black/10 overflow-hidden relative inline-flex shrink-0">
+                                                                                <span class="absolute left-0 top-0 w-1/2 h-full" :style="'background:' + parsearColor(c.color).hexes[0]"></span>
+                                                                                <span class="absolute right-0 top-0 w-1/2 h-full" :style="'background:' + parsearColor(c.color).hexes[1]"></span>
+                                                                            </span>
+                                                                        </template>
+                                                                        <template x-if="parsearColor(c.color).hexes.length < 2">
+                                                                            <span class="w-4 h-4 rounded-sm border border-black/10 shrink-0 inline-block"
+                                                                                  :style="'background:' + parsearColor(c.color).hexes[0]"></span>
+                                                                        </template>
+                                                                        <span class="text-xs text-gray-800 dark:text-gray-200 truncate" x-text="parsearColor(c.color).nombre"></span>
+                                                                        <template x-if="String(c.id_color) === fila.id_color">
+                                                                            <svg class="w-3 h-3 text-gray-900 dark:text-white ml-auto shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                                                                            </svg>
+                                                                        </template>
+                                                                    </button>
+                                                                </template>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
                                                     <select x-model="fila.id_voltaje" :disabled="!filaVoltajes(idx).length"
                                                         class="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-xs bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-600 transition disabled:opacity-40 disabled:cursor-not-allowed">
                                                         <option value="">Voltaje</option>
@@ -417,9 +547,26 @@
                                 <div class="flex flex-wrap gap-1 pt-0.5">
                                     <span class="text-[10px] bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800/50 px-1.5 py-0.5 rounded font-medium" x-text="nombreMarca(fila)"></span>
                                     <span class="text-[10px] bg-gray-50 dark:bg-gray-800 text-gray-500 border border-gray-100 dark:border-gray-700 px-1.5 py-0.5 rounded" x-text="nombreModelo(fila)"></span>
-                                    <span class="text-[10px] bg-gray-50 dark:bg-gray-800 text-gray-400 border border-gray-100 dark:border-gray-700 px-1.5 py-0.5 rounded" x-text="nombreColor(fila)"></span>
+                                    <span class="inline-flex items-center gap-1 text-[10px] bg-gray-50 dark:bg-gray-800 text-gray-400 border border-gray-100 dark:border-gray-700 px-1.5 py-0.5 rounded">
+                                        <template x-if="fila.id_color && filaColores(idx).find(c => String(c.id_color) === fila.id_color)">
+                                            <span>
+                                                <template x-if="parsearColor((filaColores(idx).find(c => String(c.id_color) === fila.id_color) || {color:''}).color).hexes.length >= 2">
+                                                    <span class="w-2.5 h-2.5 rounded-sm border border-black/10 overflow-hidden relative inline-flex shrink-0 align-middle">
+                                                        <span class="absolute left-0 top-0 w-1/2 h-full" :style="'background:' + parsearColor((filaColores(idx).find(c => String(c.id_color) === fila.id_color) || {color:''}).color).hexes[0]"></span>
+                                                        <span class="absolute right-0 top-0 w-1/2 h-full" :style="'background:' + parsearColor((filaColores(idx).find(c => String(c.id_color) === fila.id_color) || {color:''}).color).hexes[1]"></span>
+                                                    </span>
+                                                </template>
+                                                <template x-if="parsearColor((filaColores(idx).find(c => String(c.id_color) === fila.id_color) || {color:''}).color).hexes.length < 2">
+                                                    <span class="w-2.5 h-2.5 rounded-sm border border-black/10 shrink-0 inline-block align-middle"
+                                                          :style="'background:' + parsearColor((filaColores(idx).find(c => String(c.id_color) === fila.id_color) || {color:''}).color).hexes[0]"></span>
+                                                </template>
+                                            </span>
+                                        </template>
+                                        <span x-text="nombreColor(fila)"></span>
+                                    </span>
                                     <span class="text-[10px] bg-gray-50 dark:bg-gray-800 text-gray-400 border border-gray-100 dark:border-gray-700 px-1.5 py-0.5 rounded" x-text="nombreVoltaje(fila)"></span>
                                 </div>
+
                                 <button type="button" @click="fila.expanded = !fila.expanded"
                                     class="text-[11px] text-gray-400 hover:text-blue-500 font-medium flex items-center gap-0.5 transition">
                                     <svg class="w-3 h-3 transition-transform duration-200" :class="fila.expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -427,6 +574,8 @@
                                     </svg>
                                     <span x-text="fila.expanded ? 'Cerrar' : 'Config individual'"></span>
                                 </button>
+
+                                {{-- Override individual MÓVIL --}}
                                 <div x-show="fila.expanded"
                                      x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
                                      x-transition:leave="transition ease-in duration-150" x-transition:leave-end="opacity-0"
@@ -446,13 +595,69 @@
                                         </template>
                                     </select>
                                     <div class="grid grid-cols-2 gap-1.5">
-                                        <select x-model="fila.id_color" :disabled="!filaColores(idx).length"
-                                            class="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-xs bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-600 transition disabled:opacity-40 disabled:cursor-not-allowed">
-                                            <option value="">Color</option>
-                                            <template x-for="c in filaColores(idx)" :key="c.id_color">
-                                                <option :value="String(c.id_color)" x-text="c.color"></option>
-                                            </template>
-                                        </select>
+                                        {{-- COLOR PICKER — override móvil, idéntico al desktop --}}
+                                        <div x-data="{ abiertoColor: false }" @click.outside="abiertoColor = false" class="relative">
+                                            <button type="button"
+                                                @click="abiertoColor = !abiertoColor"
+                                                :disabled="!filaColores(idx).length"
+                                                class="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-xs bg-white dark:bg-gray-800 text-left flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed transition focus:outline-none focus:ring-1 focus:ring-gray-300">
+                                                <template x-if="!fila.id_color">
+                                                    <span class="text-gray-400 flex-1">Color</span>
+                                                </template>
+                                                <template x-if="fila.id_color">
+                                                    <span class="flex items-center gap-1.5 flex-1 min-w-0">
+                                                        <template x-if="parsearColor((filaColores(idx).find(c => String(c.id_color) === fila.id_color) || {color:''}).color).hexes.length >= 2">
+                                                            <span class="w-3.5 h-3.5 rounded-sm border border-black/10 overflow-hidden relative inline-flex shrink-0">
+                                                                <span class="absolute left-0 top-0 w-1/2 h-full"
+                                                                      :style="'background:' + parsearColor((filaColores(idx).find(c => String(c.id_color) === fila.id_color) || {color:''}).color).hexes[0]"></span>
+                                                                <span class="absolute right-0 top-0 w-1/2 h-full"
+                                                                      :style="'background:' + parsearColor((filaColores(idx).find(c => String(c.id_color) === fila.id_color) || {color:''}).color).hexes[1]"></span>
+                                                            </span>
+                                                        </template>
+                                                        <template x-if="parsearColor((filaColores(idx).find(c => String(c.id_color) === fila.id_color) || {color:''}).color).hexes.length < 2">
+                                                            <span class="w-3.5 h-3.5 rounded-sm border border-black/10 shrink-0 inline-block"
+                                                                  :style="'background:' + parsearColor((filaColores(idx).find(c => String(c.id_color) === fila.id_color) || {color:''}).color).hexes[0]"></span>
+                                                        </template>
+                                                        <span class="truncate text-gray-800 dark:text-white"
+                                                              x-text="parsearColor((filaColores(idx).find(c => String(c.id_color) === fila.id_color) || {color:''}).color).nombre"></span>
+                                                    </span>
+                                                </template>
+                                                <svg class="w-3 h-3 text-gray-400 shrink-0 transition-transform duration-150" :class="abiertoColor ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                                </svg>
+                                            </button>
+                                            <div x-show="abiertoColor" x-cloak
+                                                 x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+                                                 x-transition:leave="transition ease-in duration-100" x-transition:leave-end="opacity-0"
+                                                 class="absolute z-40 mt-1 w-full min-w-[160px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden">
+                                                <div class="max-h-40 overflow-y-auto p-1">
+                                                    <template x-for="c in filaColores(idx)" :key="c.id_color">
+                                                        <button type="button"
+                                                            @click="fila.id_color = String(c.id_color); abiertoColor = false"
+                                                            class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition text-left"
+                                                            :class="String(c.id_color) === fila.id_color ? 'bg-gray-50 dark:bg-gray-700/50' : ''">
+                                                            <template x-if="parsearColor(c.color).hexes.length >= 2">
+                                                                <span class="w-4 h-4 rounded-sm border border-black/10 overflow-hidden relative inline-flex shrink-0">
+                                                                    <span class="absolute left-0 top-0 w-1/2 h-full" :style="'background:' + parsearColor(c.color).hexes[0]"></span>
+                                                                    <span class="absolute right-0 top-0 w-1/2 h-full" :style="'background:' + parsearColor(c.color).hexes[1]"></span>
+                                                                </span>
+                                                            </template>
+                                                            <template x-if="parsearColor(c.color).hexes.length < 2">
+                                                                <span class="w-4 h-4 rounded-sm border border-black/10 shrink-0 inline-block"
+                                                                      :style="'background:' + parsearColor(c.color).hexes[0]"></span>
+                                                            </template>
+                                                            <span class="text-xs text-gray-800 dark:text-gray-200 truncate" x-text="parsearColor(c.color).nombre"></span>
+                                                            <template x-if="String(c.id_color) === fila.id_color">
+                                                                <svg class="w-3 h-3 text-gray-900 dark:text-white ml-auto shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                                                                </svg>
+                                                            </template>
+                                                        </button>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         <select x-model="fila.id_voltaje" :disabled="!filaVoltajes(idx).length"
                                             class="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-xs bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-600 transition disabled:opacity-40 disabled:cursor-not-allowed">
                                             <option value="">Voltaje</option>
@@ -534,16 +739,16 @@
 <script>
 function cargaMasiva() {
     return {
-        catalogo:            @json(json_decode($catalogoJson)),
-        plantilla:           { id_marca: '', id_modelo: '', id_color: '', id_voltaje: '' },
-        filas:               [],
-        submitting:          false,
-        flashVisible:        false,
-        flashMsg:            '',
-        flashTipo:           'success',
-        _uid:                0,
+        catalogo:              @json(json_decode($catalogoJson)),
+        plantilla:             { id_marca: '', id_modelo: '', id_color: '', id_voltaje: '' },
+        filas:                 [],
+        submitting:            false,
+        flashVisible:          false,
+        flashMsg:              '',
+        flashTipo:             'success',
+        _uid:                  0,
         mostrarModalSinMarcas: false,
-        filtroModelo:        '',
+        filtroModelo:          '',
 
         // ─── GETTERS ───────────────────────────────────
         get paso() {
@@ -571,7 +776,6 @@ function cargaMasiva() {
             return this.filas.length > 0 &&
                    this.filas.every(f => f.num_serie.length === 17 && !f.error && f.id_modelo && f.id_color && f.id_voltaje);
         },
-        // Catálogo agrupado por marca, filtrado por texto
         get modelosFiltrados() {
             const q = this.filtroModelo.toLowerCase().trim();
             return this.catalogo
@@ -601,7 +805,12 @@ function cargaMasiva() {
             this.filtroModelo         = '';
         },
 
-        // ─── HELPERS NOMBRE ────────────────────────────
+        // ─── HELPERS ───────────────────────────────────
+        parsearColor(colorStr) {
+            const [nombre, hexParte] = (colorStr || '').split('|');
+            const hexes = hexParte ? hexParte.split('/') : ['#cccccc'];
+            return { nombre: nombre?.trim() || colorStr, hexes };
+        },
         nombreMarcaById(id) {
             const m = this.catalogo.find(m => String(m.id_marca) === id);
             return m ? m.nombre_marca : '';
@@ -629,7 +838,7 @@ function cargaMasiva() {
             const mo = m.modelos.find(mo => String(mo.id_modelo) === fila.id_modelo);
             if (!mo) return '—';
             const c = mo.colores.find(c => String(c.id_color) === fila.id_color);
-            return c ? c.color : '—';
+            return c ? this.parsearColor(c.color).nombre : '—';
         },
         nombreVoltaje(fila) {
             const m = this.catalogo.find(m => String(m.id_marca) === fila.id_marca);

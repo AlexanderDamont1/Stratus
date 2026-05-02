@@ -53,8 +53,7 @@ class VentaController extends Controller
     public function create()
     {
         $user = auth()->user();
-        if ($user->id_rol != 2)
-            abort(403);
+        if ($user->id_rol != 2) abort(403);
 
         $accesorios = Producto::where('id_negocio', $user->id_negocio)
             ->where('id_usuario', $user->id_usuario)
@@ -63,7 +62,14 @@ class VentaController extends Controller
             ->filter(fn($p) => $p->precio > 0)
             ->values();
 
-        return view('vendedor.ventas.create', compact('accesorios'));
+        // ── NUEVO: stock de cada accesorio ──
+        $stockAccesorios = \App\Models\Inventario::where('id_negocio', $user->id_negocio)
+            ->where('id_usuario', $user->id_usuario)
+            ->whereNull('id_producto_modelo')
+            ->whereIn('id_producto', $accesorios->pluck('id_producto'))
+            ->pluck('cantidad', 'id_producto');  // ['PDT000001' => 5, ...]
+
+        return view('vendedor.ventas.create', compact('accesorios', 'stockAccesorios'));
     }
 
     /* =====================================================
@@ -147,8 +153,7 @@ class VentaController extends Controller
     public function store(Request $request)
     {
         $user = auth()->user();
-        if ($user->id_rol != 2)
-            abort(403);
+        if ($user->id_rol != 2) abort(403);
 
         $request->validate([
             'nombre_cliente'         => 'required|string|max:100',
@@ -236,6 +241,7 @@ class VentaController extends Controller
 
             // ── Items del carrito ───────────────────────────────────────────────
             foreach ($request->items as $item) {
+
                 $producto = Producto::where('id_producto', $item['id_producto'])
                     ->where('id_usuario', $user->id_usuario)
                     ->where('id_negocio', $user->id_negocio)
@@ -268,11 +274,11 @@ class VentaController extends Controller
                     $bici->save();
 
                     $jobsPostVenta[] = new \App\Jobs\ProcesarPostVenta(
-                        numSerie:       $bici->num_serie,
-                        idMarca:        $bici->modelo->id_marca,
-                        idNegocio:      $user->id_negocio,
-                        nombreCliente:  $request->nombre_cliente . ' ' . $request->apellido1,
-                        idVenta:        $venta->id_venta,
+                        numSerie: $bici->num_serie,
+                        idMarca: $bici->modelo->id_marca,
+                        idNegocio: $user->id_negocio,
+                        nombreCliente: $request->nombre_cliente . ' ' . $request->apellido1,
+                        idVenta: $venta->id_venta,
                         nombreVendedor: $user->nombre_usuario,
                     );
 
@@ -308,11 +314,18 @@ class VentaController extends Controller
                         'color'          => $bici->color->color ?? '—',
                         'tiene_garantia' => true,
                     ];
+                } elseif ($producto->tipo === '1') {
+
+                    Inventario::where('id_producto', $item['id_producto'])
+                        ->where('id_negocio', $user->id_negocio)
+                        ->where('id_usuario', $user->id_usuario)
+                        ->whereNull('id_producto_modelo')
+                        ->where('cantidad', '>', 0)
+                        ->decrement('cantidad', $cantidad);
                 }
             }
 
             // ── Accesorio gratis por cupón ──────────────────────────────────────
-            // Se agrega DENTRO de la transacción, con precio 0, sin afectar totalVenta.
             if ($cuponAplicado?->id_producto_gratis) {
                 $productoGratis = Producto::where('id_producto', $cuponAplicado->id_producto_gratis)
                     ->where('id_negocio', $user->id_negocio)
@@ -326,24 +339,23 @@ class VentaController extends Controller
                         'precio_unitario' => 0.00,
                         'cantidad'        => 1,
                     ]);
-                    // No se suma a $totalVenta — es gratis
                 }
             }
 
             DB::commit();
 
-            // ── Registrar uso del cupón DESPUÉS del commit ──────────────────────
+            // ── Post-commit: cupón, jobs, caché, broadcasts ─────────────────────
+
             if ($cuponAplicado) {
                 \App\Services\CuponService::registrarUso(
-                    idCupon:           $cuponAplicado->id_cupon,
-                    idVenta:           $venta->id_venta,
-                    idNegocio:         $user->id_negocio,
-                    idUsuario:         $user->id_usuario,
+                    idCupon: $cuponAplicado->id_cupon,
+                    idVenta: $venta->id_venta,
+                    idNegocio: $user->id_negocio,
+                    idUsuario: $user->id_usuario,
                     descuentoAplicado: $descuentoTotal,
                 );
             }
 
-            // ── Despachar jobs DESPUÉS del commit ───────────────────────────────
             $config     = CatalogService::getConfigNegocio($user->id_negocio);
             $debeCorreo = $config->entregaPorCorreo() && !empty($cliente->correo);
             $total      = count($jobsPostVenta);
@@ -355,43 +367,41 @@ class VentaController extends Controller
                 dispatch($job);
             }
 
-            // ── Invalidaciones de caché ─────────────────────────────────────────
+            // ── Invalidaciones ──────────────────────────────────────────────────
             foreach ($seriesParaInvalidar as $serie) {
                 CatalogService::invalidateBicicleta($serie, $user->id_negocio);
             }
             CatalogService::invalidateBicicletasPorUsuario($user->id_usuario, $user->id_negocio);
             CatalogService::invalidateSeccion($user->id_usuario, $user->id_negocio);
             CatalogService::invalidateSeccion(null, $user->id_negocio);
-            CatalogService::invalidateInventario($user->id_negocio);
-            CatalogService::invalidateStockVendedores($user->id_negocio);
-            CatalogService::invalidateProductosConRelaciones($user->id_negocio, $user->id_usuario);
             CatalogService::invalidateVentasByVendedor($user->id_negocio, $user->id_usuario);
+            CatalogService::invalidateInventario($user->id_negocio, $user->id_usuario); // incrementVersion — cubre todo lo demás
 
-            // ── Broadcasts ─────────────────────────────────────────────────────
+            // ── Broadcasts ──────────────────────────────────────────────────────
             foreach ($eventosBicicleta as $ev) {
                 event(new BicicletaActualizada(
-                    numSerie:       $ev['num_serie'],
-                    idNegocio:      $user->id_negocio,
-                    idUsuario:      $user->id_usuario,
+                    numSerie: $ev['num_serie'],
+                    idNegocio: $user->id_negocio,
+                    idUsuario: $user->id_usuario,
                     nombreVendedor: $user->nombre_usuario,
-                    modelo:         $ev['modelo'],
-                    voltaje:        $ev['voltaje'],
-                    color:          $ev['color'],
-                    status:         $ev['status'],
+                    modelo: $ev['modelo'],
+                    voltaje: $ev['voltaje'],
+                    color: $ev['color'],
+                    status: $ev['status'],
                 ));
             }
 
             event(new VentaRealizada(
-                idVenta:        $venta->id_venta,
-                idNegocio:      $user->id_negocio,
-                idVendedor:     $user->id_usuario,
+                idVenta: $venta->id_venta,
+                idNegocio: $user->id_negocio,
+                idVendedor: $user->id_usuario,
                 nombreVendedor: $user->nombre_usuario,
-                nombreCliente:  $cliente->nombre_cliente . ' ' . $cliente->apellido1,
-                total:          $totalVenta - $descuentoTotal,
-                bicicletas:     $bicicletasBroadcast,
+                nombreCliente: $cliente->nombre_cliente . ' ' . $cliente->apellido1,
+                total: $totalVenta - $descuentoTotal,
+                bicicletas: $bicicletasBroadcast,
             ));
 
-            // ── Respuesta ──────────────────────────────────────────────────────
+            // ── Respuesta ───────────────────────────────────────────────────────
             if ($debeCorreo) {
                 $mensajeExito = 'Venta registrada. Comprobante enviado al correo del cliente.';
             } elseif ($config->entregaPorTicket()) {
@@ -404,7 +414,6 @@ class VentaController extends Controller
             return redirect()
                 ->route('ventas.show', $venta->id_venta)
                 ->with('success', $mensajeExito);
-
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error al registrar venta', [
@@ -448,7 +457,6 @@ class VentaController extends Controller
                     ->exists();
             });
 
-        // ← detecta si viene del store con flag de ticket automático
         $autoTicket = session()->pull('auto_ticket') === $id_venta;
 
         return view('vendedor.ventas.show', compact('venta', 'tieneGarantia', 'autoTicket'));

@@ -166,8 +166,13 @@
                     <p class="text-xs text-gray-400 mt-0.5">Puedes agregar múltiples unidades</p>
                 </div>
                 <div class="divide-y divide-gray-100 dark:divide-gray-700">
-                    @foreach($accesorios as $a)
-                    <div class="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition">
+                   @foreach($accesorios as $a)
+                    @php
+                        $stockAcc = $stockAccesorios[$a->id_producto] ?? 0;
+                        $sinStock = $stockAcc <= 0;
+                    @endphp
+                    <div class="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition"
+                        :class="carritoStockAccesorio('{{ $a->id_producto }}') <= 0 && {{ $sinStock ? 'true' : 'false' }} ? 'opacity-60' : ''">
                         <div class="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
                             <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"/>
@@ -175,15 +180,29 @@
                         </div>
                         <div class="flex-1 min-w-0">
                             <p class="text-sm font-medium text-gray-800 dark:text-white truncate">{{ $a->nombre_producto }}</p>
-                            <p class="text-xs text-gray-400">{{ number_format($a->precio, 2) }} c/u</p>
+                            <div class="flex items-center gap-2 mt-0.5">
+                                <p class="text-xs text-gray-400">{{ number_format($a->precio, 2) }} c/u</p>
+                                {{-- Badge de stock --}}
+                                @if($sinStock)
+                                    <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300">
+                                        Sin stock
+                                    </span>
+                                @else
+                                    <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+                                        x-text="'{{ $stockAcc }} disp.' + (carritoStockAccesorio('{{ $a->id_producto }}') > 0 ? ' (−' + carritoStockAccesorio('{{ $a->id_producto }}') + ' en carrito)' : '')">
+                                    </span>
+                                @endif
+                            </div>
                         </div>
                         <button type="button"
                             @click="agregarAccesorio({
                                 id_producto: '{{ $a->id_producto }}',
                                 nombre:      '{{ addslashes($a->nombre_producto) }}',
                                 precio:      {{ $a->precio }},
+                                stock:       {{ $stockAcc }},
                             })"
-                            class="shrink-0 flex items-center gap-1.5 bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:opacity-80 transition">
+                            :disabled="{{ $sinStock ? 'true' : 'false' }} || stockInsuficiente('{{ $a->id_producto }}', {{ $stockAcc }})"
+                            class="shrink-0 flex items-center gap-1.5 bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:opacity-80 transition disabled:opacity-40 disabled:cursor-not-allowed">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
                             </svg>
@@ -620,6 +639,13 @@ function ventaCreate() {
 
         // ── Accesorios ────────────────────────────────────────────────────────
         agregarAccesorio(acc) {
+
+            const enCarrito = this.carritoStockAccesorio(acc.id_producto);
+                if (enCarrito >= acc.stock) {
+                    this.mostrarFlash('No hay más unidades disponibles de este accesorio.', 'error');
+                    return;
+                }
+
             const existente = this.carrito.find(
                 i => i.id_producto === acc.id_producto && !i.es_gratis
             );
@@ -639,6 +665,7 @@ function ventaCreate() {
                     color_nombre:    '',
                     es_gratis:       false,
                     origen_cupon:    false,
+                    stock: acc.stock ?? 9999,
                 });
                 this.mostrarFlash('Accesorio agregado al carrito.', 'ok');
             }
@@ -646,8 +673,25 @@ function ventaCreate() {
             if (this.cupon) this.recalcularDescuento();
         },
 
+        carritoStockAccesorio(idProducto) {
+            const item = this.carrito.find(i => i.id_producto === idProducto && !i.es_gratis);
+            return item ? item.cantidad : 0;
+        },
+
+        stockInsuficiente(idProducto, stockDisponible) {
+            return this.carritoStockAccesorio(idProducto) >= stockDisponible;
+        },
+
         incrementar(idx) {
-            if (this.carrito[idx].es_gratis) return; // no tocar gratuito
+            if (this.carrito[idx].es_gratis) return;
+            const item = this.carrito[idx];
+            // ── NUEVO: respetar stock del accesorio ──
+            if (item.tipo === '1' && item.stock !== undefined) {
+                if (item.cantidad >= item.stock) {
+                    this.mostrarFlash('No hay más unidades disponibles.', 'error');
+                    return;
+                }
+            }
             this.carrito[idx].cantidad++;
             if (this.cupon) this.recalcularDescuento();
         },

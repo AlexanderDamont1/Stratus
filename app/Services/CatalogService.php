@@ -917,7 +917,6 @@ class CatalogService
         $version = self::getVersion($idNegocio);
 
         Cache::forget(self::key("inventario:negocio:{$idNegocio}") . ":v{$version}");
-        Cache::forget(self::key("inventario:sucursales:{$idNegocio}") . ":v{$version}");
 
         if ($idUsuario) {
             Cache::forget(self::key("inventario:sucursal:{$idNegocio}:{$idUsuario}") . ":v{$version}");
