@@ -18,6 +18,10 @@ use Illuminate\Support\Facades\Log;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\BicicletaMovimientoService;
 use App\Services\GarantiaService;
+use App\Models\Personal;
+use App\Models\MetodoPago;
+use App\Models\VentaPago;
+use App\Models\VentaVendedor;
 
 
 class VentaController extends Controller
@@ -62,14 +66,7 @@ class VentaController extends Controller
             ->filter(fn($p) => $p->precio > 0)
             ->values();
 
-        // ── NUEVO: stock de cada accesorio ──
-        $stockAccesorios = \App\Models\Inventario::where('id_negocio', $user->id_negocio)
-            ->where('id_usuario', $user->id_usuario)
-            ->whereNull('id_producto_modelo')
-            ->whereIn('id_producto', $accesorios->pluck('id_producto'))
-            ->pluck('cantidad', 'id_producto');  // ['PDT000001' => 5, ...]
-
-        return view('vendedor.ventas.create', compact('accesorios', 'stockAccesorios'));
+        return view('vendedor.ventas.create', compact('accesorios'));
     }
 
     /* =====================================================
@@ -156,17 +153,24 @@ class VentaController extends Controller
         if ($user->id_rol != 2) abort(403);
 
         $request->validate([
-            'nombre_cliente'         => 'required|string|max:100',
-            'apellido1'              => 'required|string|max:60',
-            'apellido2'              => 'nullable|string|max:60',
-            'telefono'               => 'required|string|max:15',
-            'correo'                 => 'nullable|email|max:120',
-            'direccion'              => 'nullable|string|max:255',
-            'items'                  => 'required|array|min:1',
-            'items.*.id_producto'    => 'required|exists:productos,id_producto',
-            'items.*.num_serie'      => 'nullable|string',
-            'items.*.cantidad'       => 'required|integer|min:1',
-            'codigo_cupon'           => 'nullable|string|max:30',
+            'nombre_cliente' => 'required|string|max:100',
+            'apellido1' => 'required|string|max:60',
+            'apellido2' => 'nullable|string|max:60',
+            'telefono' => 'required|string|max:15',
+            'correo' => 'nullable|email|max:120',
+            'direccion' => 'nullable|string|max:255',
+            'items' => 'required|array|min:1',
+            'items.*.id_producto' => 'required|exists:productos,id_producto',
+            'items.*.num_serie' => 'nullable|string',
+            'items.*.cantidad' => 'required|integer|min:1',
+            'codigo_cupon' => 'nullable|string|max:30',
+            'pagos' => 'required|array|min:1',
+            'pagos.*.id_metodo' => 'required|exists:metodos_pago,id_metodo',
+            'pagos.*.monto' => 'required|numeric|min:0.01',
+            'pagos.*.referencia' => 'nullable|string|max:120',
+            'monto_recibido' => 'nullable|numeric|min:0',
+            'cambio' => 'nullable|numeric|min:0',
+            'id_personal' => 'nullable|exists:personal,id_personal',
         ]);
 
         DB::beginTransaction();
@@ -175,18 +179,19 @@ class VentaController extends Controller
             $cliente = Cliente::firstOrCreate(
                 [
                     'id_negocio' => $user->id_negocio,
-                    'telefono'   => $request->telefono,
+                    'telefono' => $request->telefono,
                 ],
                 [
                     'nombre_cliente' => $request->nombre_cliente,
-                    'apellido1'      => $request->apellido1,
-                    'apellido2'      => $request->apellido2 ?? null,
-                    'correo'         => $request->correo ?? null,
+                    'apellido1' => $request->apellido1,
+                    'apellido2' => $request->apellido2 ?? null,
+                    'correo' => $request->correo ?? null,
                 ]
             );
 
+
             // ── Cupón ──────────────────────────────────────────────────────────
-            $cuponAplicado  = null;
+            $cuponAplicado = null;
             $descuentoTotal = 0;
 
             if ($request->filled('codigo_cupon')) {
@@ -206,10 +211,10 @@ class VentaController extends Controller
 
                         return [
                             'id_producto' => $item['id_producto'],
-                            'id_modelo'   => $pm?->id_modelo,
-                            'id_marca'    => $pm?->modelo?->id_marca,
-                            'precio'      => (float) ($producto?->precio ?? 0),
-                            'cantidad'    => (int) ($item['cantidad'] ?? 1),
+                            'id_modelo' => $pm?->id_modelo,
+                            'id_marca' => $pm?->modelo?->id_marca,
+                            'precio' => (float) ($producto?->precio ?? 0),
+                            'cantidad' => (int) ($item['cantidad'] ?? 1),
                         ];
                     })->filter()->values()->toArray();
 
@@ -220,24 +225,24 @@ class VentaController extends Controller
                     );
 
                     if ($resultado['valido']) {
-                        $cuponAplicado  = $cupon;
+                        $cuponAplicado = $cupon;
                         $descuentoTotal = $resultado['descuento'];
                     }
                 }
             }
 
             $venta = Venta::create([
-                'id_negocio'      => $user->id_negocio,
-                'id_cliente'      => $cliente->id_cliente,
-                'id_cupon'        => $cuponAplicado?->id_cupon,
+                'id_negocio' => $user->id_negocio,
+                'id_cliente' => $cliente->id_cliente,
+                'id_cupon' => $cuponAplicado?->id_cupon,
                 'descuento_total' => $descuentoTotal,
             ]);
 
-            $totalVenta          = 0;
+            $totalVenta = 0;
             $bicicletasBroadcast = [];
             $seriesParaInvalidar = [];
-            $eventosBicicleta    = [];
-            $jobsPostVenta       = [];
+            $eventosBicicleta = [];
+            $jobsPostVenta = [];
 
             // ── Items del carrito ───────────────────────────────────────────────
             foreach ($request->items as $item) {
@@ -247,15 +252,15 @@ class VentaController extends Controller
                     ->where('id_negocio', $user->id_negocio)
                     ->firstOrFail();
 
-                $cantidad       = (int) ($item['cantidad'] ?? 1);
+                $cantidad = (int) ($item['cantidad'] ?? 1);
                 $precioUnitario = (float) $producto->precio;
 
                 DetalleVenta::create([
-                    'id_venta'        => $venta->id_venta,
-                    'id_producto'     => $item['id_producto'],
-                    'num_serie'       => $item['num_serie'] ?? null,
+                    'id_venta' => $venta->id_venta,
+                    'id_producto' => $item['id_producto'],
+                    'num_serie' => $item['num_serie'] ?? null,
                     'precio_unitario' => $precioUnitario,
-                    'cantidad'        => $cantidad,
+                    'cantidad' => $cantidad,
                 ]);
 
                 $totalVenta += $precioUnitario * $cantidad;
@@ -284,11 +289,11 @@ class VentaController extends Controller
 
                     $eventosBicicleta[] = [
                         'num_serie' => $bici->num_serie,
-                        'modelo'    => $bici->modelo->nombre_modelo ?? '—',
-                        'marca'     => $bici->modelo->marca->nombre_marca ?? '—',
-                        'voltaje'   => $bici->voltaje->voltaje ?? '—',
-                        'color'     => $bici->color->color ?? '—',
-                        'status'    => 2,
+                        'modelo' => $bici->modelo->nombre_modelo ?? '—',
+                        'marca' => $bici->modelo->marca->nombre_marca ?? '—',
+                        'voltaje' => $bici->voltaje->voltaje ?? '—',
+                        'color' => $bici->color->color ?? '—',
+                        'status' => 2,
                     ];
 
                     $pm = ProductoModelo::where('id_modelo', $bici->id_modelo)
@@ -307,11 +312,11 @@ class VentaController extends Controller
                     $seriesParaInvalidar[] = $bici->num_serie;
 
                     $bicicletasBroadcast[] = [
-                        'num_serie'      => $bici->num_serie,
-                        'modelo'         => $bici->modelo->nombre_modelo ?? '—',
-                        'marca'          => $bici->modelo->marca->nombre_marca ?? '—',
-                        'voltaje'        => $bici->voltaje->voltaje ?? '—',
-                        'color'          => $bici->color->color ?? '—',
+                        'num_serie' => $bici->num_serie,
+                        'modelo' => $bici->modelo->nombre_modelo ?? '—',
+                        'marca' => $bici->modelo->marca->nombre_marca ?? '—',
+                        'voltaje' => $bici->voltaje->voltaje ?? '—',
+                        'color' => $bici->color->color ?? '—',
                         'tiene_garantia' => true,
                     ];
                 } elseif ($producto->tipo === '1') {
@@ -333,14 +338,35 @@ class VentaController extends Controller
 
                 if ($productoGratis) {
                     DetalleVenta::create([
-                        'id_venta'        => $venta->id_venta,
-                        'id_producto'     => $productoGratis->id_producto,
-                        'num_serie'       => null,
+                        'id_venta' => $venta->id_venta,
+                        'id_producto' => $productoGratis->id_producto,
+                        'num_serie' => null,
                         'precio_unitario' => 0.00,
-                        'cantidad'        => 1,
+                        'cantidad' => 1,
                     ]);
                 }
             }
+
+            $sumaPagos = collect($request->pagos)->sum('monto');
+            // $totalVenta - $descuentoTotal se calcula antes de este punto
+            // (ya existía en tu código original)
+            if (round($sumaPagos, 2) < round($totalVenta - $descuentoTotal, 2)) {
+                throw new \Exception('La suma de pagos no cubre el total de la venta.');
+            }
+            // Actualizar monto_recibido y cambio en ventas (solo si hay efectivo)
+            $tieneEfectivo = false;
+            foreach ($request->pagos as $pago) {
+                $metodo = \App\Models\MetodoPago::find($pago['id_metodo']);
+                if ($metodo?->es_efectivo) {
+                    $tieneEfectivo = true;
+                    break;
+                }
+            }
+
+            $venta->monto_recibido = $tieneEfectivo ? ($request->monto_recibido ?? null) : null;
+            $venta->cambio = $tieneEfectivo ? ($request->cambio ?? null) : null;
+            $venta->save();
+
 
             DB::commit();
 
@@ -356,9 +382,10 @@ class VentaController extends Controller
                 );
             }
 
+            // ── Despachar jobs DESPUÉS del commit ───────────────────────────────
             $config     = CatalogService::getConfigNegocio($user->id_negocio);
             $debeCorreo = $config->entregaPorCorreo() && !empty($cliente->correo);
-            $total      = count($jobsPostVenta);
+            $total = count($jobsPostVenta);
 
             foreach ($jobsPostVenta as $i => $job) {
                 if ($debeCorreo && $i === $total - 1) {
@@ -366,6 +393,29 @@ class VentaController extends Controller
                 }
                 dispatch($job);
             }
+
+            foreach ($request->pagos as $pago) {
+                VentaPago::create([
+                    'id_venta' => $venta->id_venta,
+                    'id_metodo' => $pago['id_metodo'],
+                    'id_negocio' => $user->id_negocio,
+                    'monto' => $pago['monto'],
+                    'referencia' => $pago['referencia'] ?? null,
+                ]);
+            }
+
+            // Persistir vendedor (opcional — si no se seleccionó no rompemos)
+            if ($request->filled('id_personal')) {
+                $personal = Personal::find($request->id_personal);
+                if ($personal) {
+                    VentaVendedor::create([
+                        'id_venta' => $venta->id_venta,
+                        'id_personal' => $personal->id_personal,
+                        'nombre_snapshot' => $personal->nombre,
+                    ]);
+                }
+            }
+
 
             // ── Invalidaciones ──────────────────────────────────────────────────
             foreach ($seriesParaInvalidar as $serie) {
@@ -417,7 +467,7 @@ class VentaController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error al registrar venta', [
-                'user'  => $user->id_usuario,
+                'user' => $user->id_usuario,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
@@ -434,7 +484,8 @@ class VentaController extends Controller
     public function show(string $id_venta)
     {
         $user = auth()->user();
-        if ($user->id_rol != 2) abort(403);
+        if ($user->id_rol != 2)
+            abort(403);
 
         $venta = Venta::with([
             'cliente',
@@ -442,6 +493,8 @@ class VentaController extends Controller
             'detalles.bicicleta.modelo.marca',
             'detalles.bicicleta.voltaje',
             'detalles.bicicleta.color',
+            'vendedor.personal',   // ← nuevo
+            'pagos.metodo',        // ← nuevo
         ])
             ->where('id_negocio', $user->id_negocio)
             ->findOrFail($id_venta);
@@ -450,7 +503,8 @@ class VentaController extends Controller
             ->filter(fn($d) => $d->bicicleta !== null)
             ->contains(function ($detalle) use ($user) {
                 $idMarca = $detalle->bicicleta->modelo->id_marca ?? null;
-                if (!$idMarca) return false;
+                if (!$idMarca)
+                    return false;
                 return \App\Models\MarcaGarantiaConfig::where('id_marca', $idMarca)
                     ->where('id_negocio', $user->id_negocio)
                     ->where('activa', true)
@@ -478,6 +532,8 @@ class VentaController extends Controller
             'detalles.bicicleta.modelo.marca',
             'detalles.bicicleta.voltaje',
             'detalles.bicicleta.color',
+            'vendedor.personal',   // ← nuevo
+            'pagos.metodo',        // ← nuevo
         ])
             ->where('id_negocio', $user->id_negocio)
             ->findOrFail($id_venta);
@@ -495,11 +551,15 @@ class VentaController extends Controller
             'cliente' => $venta->cliente,
             'negocio' => $venta->negocio,
             'bicicletas' => $bicicletas,
-            'vendedor' => $user,
+            'vendedor' => $venta->vendedor, // ← ahora es VentaVendedor, no $user
             'fecha' => now()->format('d/m/Y'),
+            'pagos' => $venta->pagos,    // ← nuevo
         ])->setPaper('letter', 'landscape');
 
-        return $pdf->download('poliza-' . $venta->id_venta . '.pdf');
+        return response()->make($pdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="poliza-' . $venta->id_venta . '.pdf"',
+        ]);
     }
 
     public function ticket(string $id_venta)
@@ -515,6 +575,8 @@ class VentaController extends Controller
             'detalles.bicicleta.modelo.marca',
             'detalles.bicicleta.voltaje',
             'detalles.bicicleta.color',
+            'vendedor.personal',
+            'pagos.metodo',
         ])
             ->where('id_negocio', $user->id_negocio)
             ->findOrFail($id_venta);
@@ -532,10 +594,14 @@ class VentaController extends Controller
             'cliente' => $venta->cliente,
             'negocio' => $venta->negocio,
             'bicicletas' => $bicicletas,
-            'vendedor' => $user,
+            'vendedor' => $venta->vendedor, // ← ahora es VentaVendedor, no $user
             'fecha' => now()->format('d/m/Y'),
+            'pagos' => $venta->pagos,    // ← nuevo
         ])->setPaper('letter', 'landscape');
 
-        return $pdf->download('ticket-' . $venta->id_venta . '.pdf');
+        return response()->make($pdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="ticket-' . $venta->id_venta . '.pdf"',
+        ]);
     }
 }

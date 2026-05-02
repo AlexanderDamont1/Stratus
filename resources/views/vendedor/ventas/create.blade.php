@@ -503,22 +503,175 @@
                     </div>
                 </div>
 
-                <button type="button" @click="submitVenta()"
-                    :disabled="carrito.length === 0 || enviando"
-                    class="w-full bg-gray-900 dark:bg-white dark:text-gray-900 text-white py-3 rounded-xl text-sm font-semibold hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                    <template x-if="!enviando">
-                        <span x-text="(descuento > 0 || tieneGratisEnCarrito) ? 'Registrar venta · ' + fmt(totalConDescuento) : 'Registrar venta'"></span>
+                
+{{-- ─── Card: Vendedor ─── --}}
+@if($personal->isNotEmpty())
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+    <div class="px-5 py-4 border-b dark:border-gray-700">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Vendedor</h3>
+        <p class="text-xs text-gray-400 mt-0.5">¿Quién realiza esta venta?</p>
+    </div>
+    <div class="px-5 py-4">
+        <select
+            x-model="idPersonal"
+            class="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm
+                   bg-white dark:bg-gray-900 text-gray-900 dark:text-white
+                   focus:outline-none focus:ring-2 focus:ring-gray-400 transition">
+            <option value="">— Sin especificar —</option>
+            @foreach($personal as $p)
+                <option value="{{ $p->id_personal }}">{{ $p->nombre }}</option>
+            @endforeach
+        </select>
+    </div>
+</div>
+@endif
+
+{{-- ─── Card: Método de pago ─── --}}
+<div x-show="carrito.length > 0"
+     class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+
+    <div class="px-5 py-4 border-b dark:border-gray-700 flex items-center justify-between">
+        <div>
+            <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Método de pago</h3>
+            <p class="text-xs text-gray-400 mt-0.5">Puedes dividir en varios métodos</p>
+        </div>
+        <button type="button" @click="agregarPago()"
+            :disabled="metodosPendientes.length === 0"
+            class="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline
+                   disabled:opacity-30 disabled:no-underline disabled:cursor-not-allowed transition">
+            + Agregar método
+        </button>
+    </div>
+
+    <div class="divide-y divide-gray-100 dark:divide-gray-700">
+        <template x-for="(pago, i) in pagos" :key="i">
+            <div class="px-5 py-3 space-y-2">
+                <div class="flex items-center gap-2">
+                    {{-- Selector de método --}}
+                    <select x-model="pago.id_metodo"
+                            @change="onMetodoChange(i)"
+                            class="flex-1 rounded-lg border border-gray-300 dark:border-gray-600
+                                   px-3 py-2 text-sm bg-white dark:bg-gray-900
+                                   text-gray-900 dark:text-white
+                                   focus:outline-none focus:ring-2 focus:ring-gray-400 transition">
+                        <option value="">— Método —</option>
+                        @foreach($metodos as $m)
+                            <option value="{{ $m->id_metodo }}"
+                                    data-efectivo="{{ $m->es_efectivo ? '1' : '0' }}"
+                                    data-ref="{{ $m->requiere_referencia ? '1' : '0' }}">
+                                {{ $m->nombre }}
+                            </option>
+                        @endforeach
+                    </select>
+
+                    {{-- Monto --}}
+                    <div class="relative w-32 shrink-0">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">$</span>
+                        <input type="number" step="0.01" min="0"
+                               x-model="pago.monto"
+                               @input="recalcularCambio()"
+                               class="w-full pl-6 pr-2 py-2 rounded-lg border border-gray-300
+                                      dark:border-gray-600 text-sm bg-white dark:bg-gray-900
+                                      text-gray-900 dark:text-white
+                                      focus:outline-none focus:ring-2 focus:ring-gray-400 transition">
+                    </div>
+
+                    {{-- Quitar (solo si hay más de uno) --}}
+                    <button type="button" @click="quitarPago(i)"
+                        x-show="pagos.length > 1"
+                        class="shrink-0 text-gray-300 hover:text-red-500 transition p-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                {{-- Referencia (si aplica) --}}
+                <div x-show="pago.requiere_referencia" x-transition.opacity>
+                    <input type="text" x-model="pago.referencia"
+                           placeholder="Referencia (folio, últimos 4 dígitos, etc.)"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-600
+                                  px-3 py-2 text-sm bg-white dark:bg-gray-900
+                                  text-gray-900 dark:text-white
+                                  focus:outline-none focus:ring-2 focus:ring-gray-400 transition">
+                </div>
+
+                {{-- Monto recibido + cambio (solo efectivo) --}}
+                <div x-show="pago.es_efectivo" x-transition.opacity class="space-y-2">
+                    <div class="flex items-center gap-2">
+                        <div class="flex-1 relative">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">$</span>
+                            <input type="number" step="0.01" min="0"
+                                   x-model="montoRecibido"
+                                   @input="recalcularCambio()"
+                                   placeholder="Monto recibido"
+                                   class="w-full pl-6 pr-2 py-2 rounded-lg border border-gray-300
+                                          dark:border-gray-600 text-sm bg-white dark:bg-gray-900
+                                          text-gray-900 dark:text-white
+                                          focus:outline-none focus:ring-2 focus:ring-gray-400 transition">
+                        </div>
+                        <div class="w-32 shrink-0">
+                            <div class="rounded-lg px-3 py-2 text-sm font-semibold text-center"
+                                 :class="cambio >= 0
+                                     ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
+                                     : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'">
+                                <span class="text-xs font-normal">Cambio </span>
+                                <span x-text="fmt(Math.max(0, cambio))"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <template x-if="cambio < 0">
+                        <p class="text-xs text-red-500 dark:text-red-400">
+                            Faltan <span x-text="fmt(Math.abs(cambio))"></span> por cubrir.
+                        </p>
                     </template>
-                    <template x-if="enviando">
-                        <span class="flex items-center gap-2">
-                            <svg class="animate-spin w-4 h-4" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                            </svg>
-                            Registrando...
-                        </span>
-                    </template>
-                </button>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    {{-- Resumen de pagos vs total --}}
+    <div class="px-5 py-3 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-700/30 rounded-b-xl">
+        <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+            <span>Total a cobrar</span>
+            <span class="font-semibold" x-text="fmt(totalConDescuento)"></span>
+        </div>
+        <div class="flex items-center justify-between text-xs mb-2"
+             :class="pagosCubreTotal
+                 ? 'text-green-600 dark:text-green-400'
+                 : 'text-red-500 dark:text-red-400'">
+            <span>Total ingresado</span>
+            <span class="font-semibold" x-text="fmt(sumaPagos)"></span>
+        </div>
+
+        {{-- Diferencia si no cubre --}}
+        <template x-if="!pagosCubreTotal">
+            <p class="text-xs text-red-500 dark:text-red-400 mb-2">
+                Faltan <span x-text="fmt(totalConDescuento - sumaPagos)"></span> por asignar.
+            </p>
+        </template>
+    </div>
+</div>
+
+{{-- ─── Botón final ─── --}}
+<button type="button" @click="submitVenta()"
+    :disabled="carrito.length === 0 || enviando || !pagosCubreTotal"
+    class="w-full bg-gray-900 dark:bg-white dark:text-gray-900 text-white py-3
+           rounded-xl text-sm font-semibold hover:opacity-90 transition
+           disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+    <template x-if="!enviando">
+        <span x-text="'Registrar venta · ' + fmt(totalConDescuento)"></span>
+    </template>
+    <template x-if="enviando">
+        <span class="flex items-center gap-2">
+            <svg class="animate-spin w-4 h-4" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            Registrando...
+        </span>
+    </template>
+</button>
             </form>
         </div>
     </div>
@@ -551,10 +704,17 @@ function ventaCreate() {
          */
         productoGratisExtra: null,
 
+        //Pagos
+        idPersonal:     '',    // id_personal seleccionado
+        pagos:          [],    // array de { id_metodo, monto, referencia, es_efectivo, requiere_referencia }
+        montoRecibido:  '',    // solo efectivo
+        cambio:         0,
+
         init() {
             this.buscarUrl = document.querySelector('[data-buscar-url]')?.dataset?.buscarUrl ?? '';
             this.cuponUrl  = document.querySelector('[data-cupon-url]')?.dataset?.cuponUrl ?? '';
             this.$nextTick(() => this.$refs.serieInputRef?.focus());
+            this.initPagos();
         },
 
         // ── Helpers de carrito ────────────────────────────────────────────────
@@ -575,6 +735,64 @@ function ventaCreate() {
             return this.carrito
                 .filter(i => i.es_gratis && i.origen_cupon)
                 .reduce((s, i) => s + i.precio_unitario * i.cantidad, 0);
+        },
+
+        get sumaPagos() {
+            return this.pagos.reduce((s, p) => s + (parseFloat(p.monto) || 0), 0);
+        },
+ 
+        get pagosCubreTotal() {
+            return this.pagos.length > 0
+                && round2(this.sumaPagos) >= round2(this.totalConDescuento);
+        },
+ 
+        // Métodos que aún no están en pagos[] (para el botón "+ Agregar método")
+        // Solo evita duplicar efectivo — los demás pueden repetirse (ej. 2 tarjetas distintas)
+        get metodosPendientes() {
+            const tieneEfectivo = this.pagos.some(p => p.es_efectivo);
+            // Retornamos al menos un slot disponible salvo que todos sean únicos y ya estén
+            // La lógica real de "si quedan métodos por agregar" la manejamos con:
+            // si la diferencia entre total y sumaPagos > 0 → hay pendiente
+            return this.totalConDescuento - this.sumaPagos > 0 ? [true] : [];
+        },
+
+        // Llamado en init() — agrega el primer pago vacío
+        initPagos() {
+            this.pagos = [{ id_metodo: '', monto: '', referencia: '', es_efectivo: false, requiere_referencia: false }];
+        },
+ 
+        agregarPago() {
+            this.pagos.push({ id_metodo: '', monto: '', referencia: '', es_efectivo: false, requiere_referencia: false });
+        },
+ 
+        quitarPago(idx) {
+            if (this.pagos.length <= 1) return;
+            this.pagos.splice(idx, 1);
+            this.recalcularCambio();
+        },
+ 
+        onMetodoChange(idx) {
+            const select = document.querySelectorAll('[x-model="pago.id_metodo"]')[idx];
+            if (!select) return;
+            const opt = select.options[select.selectedIndex];
+            if (!opt) return;
+ 
+            this.pagos[idx].es_efectivo         = opt.dataset.efectivo === '1';
+            this.pagos[idx].requiere_referencia  = opt.dataset.ref      === '1';
+ 
+            // Auto-rellenar monto con el restante si es el último pago
+            const restante = round2(this.totalConDescuento - this.sumaPagos + (parseFloat(this.pagos[idx].monto) || 0));
+            if (restante > 0) this.pagos[idx].monto = restante.toFixed(2);
+ 
+            this.recalcularCambio();
+        },
+ 
+        recalcularCambio() {
+            const tieneEfectivo = this.pagos.some(p => p.es_efectivo);
+            if (!tieneEfectivo) { this.cambio = 0; return; }
+ 
+            const recibido = parseFloat(this.montoRecibido) || 0;
+            this.cambio    = round2(recibido - this.totalConDescuento);
         },
 
         // ── Bicicletas ────────────────────────────────────────────────────────
@@ -886,11 +1104,11 @@ function ventaCreate() {
 
         // ── Submit ────────────────────────────────────────────────────────────
         submitVenta() {
-            if (this.carrito.length === 0 || this.enviando) return;
-
+            if (this.carrito.length === 0 || this.enviando || !this.pagosCubreTotal) return;
+ 
             const cont = document.getElementById('carrito-inputs');
             cont.innerHTML = '';
-
+ 
             const mk = (name, val) => {
                 const inp = document.createElement('input');
                 inp.type  = 'hidden';
@@ -898,26 +1116,35 @@ function ventaCreate() {
                 inp.value = val ?? '';
                 cont.appendChild(inp);
             };
-
-            /**
-             * Enviamos TODOS los ítems del carrito.
-             * Para los marcados como origen_cupon (gratis ya en carrito),
-             * enviamos el flag `es_gratis=1` para que el backend no los cobre
-             * y no los duplique.
-             * El productoGratisExtra (no estaba en carrito) lo agrega el backend
-             * solo con el código del cupón — NO lo incluimos aquí.
-             */
+ 
+            // Ítems del carrito (igual que antes)
             this.carrito.forEach((item, i) => {
                 mk(`items[${i}][id_producto]`, item.id_producto);
                 mk(`items[${i}][num_serie]`,   item.num_serie);
                 mk(`items[${i}][cantidad]`,     item.cantidad);
                 mk(`items[${i}][es_gratis]`,    item.es_gratis ? '1' : '0');
             });
-
-            if (this.cupon) {
-                mk('codigo_cupon', this.cuponInput.trim().toUpperCase());
+ 
+            // Cupón
+            if (this.cupon) mk('codigo_cupon', this.cuponInput.trim().toUpperCase());
+ 
+            // Vendedor
+            if (this.idPersonal) mk('id_personal', this.idPersonal);
+ 
+            // Pagos
+            this.pagos.forEach((pago, i) => {
+                mk(`pagos[${i}][id_metodo]`,  pago.id_metodo);
+                mk(`pagos[${i}][monto]`,       parseFloat(pago.monto).toFixed(2));
+                mk(`pagos[${i}][referencia]`,  pago.referencia || '');
+            });
+ 
+            // Efectivo
+            const tieneEfectivo = this.pagos.some(p => p.es_efectivo);
+            if (tieneEfectivo) {
+                mk('monto_recibido', parseFloat(this.montoRecibido || 0).toFixed(2));
+                mk('cambio',         Math.max(0, this.cambio).toFixed(2));
             }
-
+ 
             this.enviando = true;
             document.getElementById('form-venta').submit();
         },
@@ -943,6 +1170,8 @@ document.addEventListener('DOMContentLoaded', () => {
             window.dispatchEvent(new CustomEvent('venta-realizada', { detail: e }));
         });
 });
+
+function round2(n) { return Math.round(n * 100) / 100; }
 </script>
 
 <style>[x-cloak] { display: none !important; }</style>

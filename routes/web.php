@@ -31,6 +31,8 @@ use App\Http\Controllers\ReporteRoboController;
 use App\Http\Controllers\Admin\CuponController;
 use App\Http\Controllers\CuponValidarController;
 use Termwind\Components\Raw;
+use App\Http\Controllers\Admin\PersonalController;
+use App\Http\Controllers\Admin\MetodoPagoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -270,6 +272,27 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
             Route::patch('/{id}/toggle', [CuponController::class, 'toggle'])->name('toggle');
             Route::delete('/{id}',    [CuponController::class, 'destroy'])->name('destroy');
         });
+
+
+        // ── Personal / vendedores ─────────────────────────────────────────
+        Route::prefix('admin/personal')->name('admin.personal.')->group(function () {
+            Route::get('/',           [PersonalController::class, 'index'])  ->name('index');
+            Route::get('/create',     [PersonalController::class, 'create']) ->name('create');
+            Route::post('/',          [PersonalController::class, 'store'])  ->name('store');
+            Route::get('/{id}/edit',  [PersonalController::class, 'edit'])   ->name('edit');
+            Route::put('/{id}',       [PersonalController::class, 'update']) ->name('update');
+            Route::delete('/{id}',    [PersonalController::class, 'destroy'])->name('destroy');
+        });
+ 
+        // ── Métodos de pago ───────────────────────────────────────────────
+        Route::prefix('admin/metodos-pago')->name('admin.metodos_pago.')->group(function () {
+            Route::get('/',             [MetodoPagoController::class, 'index'])    ->name('index');
+            Route::post('/',            [MetodoPagoController::class, 'store'])    ->name('store');
+            Route::put('/{id}',         [MetodoPagoController::class, 'update'])   ->name('update');
+            Route::post('/reordenar',   [MetodoPagoController::class, 'reordenar'])->name('reordenar');
+            Route::delete('/{id}',      [MetodoPagoController::class, 'destroy'])  ->name('destroy');
+        });
+ 
 
 
 
