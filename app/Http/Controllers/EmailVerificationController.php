@@ -6,6 +6,7 @@ use App\Models\Usuario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
+
 class EmailVerificationController extends Controller
 {
     // Verificar desde el link del correo
@@ -33,6 +34,13 @@ class EmailVerificationController extends Controller
 
         $usuario->marcarEmailVerificado();
 
+        // Despachar bienvenida en background
+        \App\Jobs\EnviarBienvenidaJob::dispatch(
+            usuario:       $usuario,
+            nombreNegocio: $usuario->negocio?->nombre_negocio ?? 'tu negocio',
+            trialEndsAt:   $usuario->negocio?->trial_ends_at?->toDateTimeString(),
+        );
+
         return redirect()->route('login')
             ->with('success', '¡Correo verificado! Ya puedes iniciar sesión.');
     }
@@ -48,10 +56,11 @@ class EmailVerificationController extends Controller
 
         $token = $usuario->generarTokenVerificacion();
 
-        $usuario->notify(new \App\Notifications\VerificarEmailNotification(
+        \App\Jobs\EnviarVerificacionEmailJob::dispatch(
+            $usuario,
             $token,
             $usuario->nombre_usuario
-        ));
+        );
 
         return back()->with('success', 'Correo de verificación reenviado.');
     }

@@ -4,12 +4,18 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class NoCacheMiddleware
 {
     public function handle(Request $request, Closure $next)
     {
         $response = $next($request);
+
+        // StreamedResponse (SSE) no soporta withHeaders()
+        if ($response instanceof StreamedResponse) {
+            return $response;
+        }
 
         return $response->withHeaders([
             'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
