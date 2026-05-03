@@ -14,7 +14,7 @@ class MetodoPagoController extends Controller
     {
         $user    = auth()->user();
         $metodos = MetodoPago::deNegocio($user->id_negocio)->get();
-        return view('admin.metodos_pago.index', compact('metodos'));
+        return view('administrador.metodos_pago.index', compact('metodos'));
     }
  
     public function store(Request $request)
