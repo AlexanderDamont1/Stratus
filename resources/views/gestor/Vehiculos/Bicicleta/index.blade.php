@@ -81,7 +81,7 @@
         {{-- ===== ESTADÍSTICAS (con skeleton) ===== --}}
         @if(auth()->user()->id_rol === 1)
         {{-- Skeleton estadísticas --}}
-        <div x-show="loading" x-cloak class="grid grid-cols-3 gap-4">
+        <div x-show="loading" x-cloak  class="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
             @for ($i = 0; $i < 3; $i++)
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-5 py-4 animate-pulse">
                 <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded w-12 mb-2"></div>
@@ -90,18 +90,18 @@
         @endfor
     </div>
     {{-- Estadísticas reales --}}
-    <div x-show="!loading" x-cloak class="grid grid-cols-3 gap-4">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-5 py-4">
-            <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Total</p>
-            <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ $stats['total'] }}</p>
+    <div x-show="!loading" x-cloak  class="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-2 py-2 sm:px-4 sm:py-3">
+            <p class="text-[9px] sm:text-[10px] text-gray-400 uppercase tracking-wider mb-0.5 sm:mb-1">Total</p>
+            <p class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">{{ $stats['total'] }}</p>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-5 py-4">
-            <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">En Stock</p>
-            <p class="text-2xl font-semibold text-green-600 dark:text-green-400">{{ $stats['en_stock'] }}</p>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-2 py-2 sm:px-4 sm:py-3">
+            <p class="text-[9px] sm:text-[10px] text-gray-400 uppercase tracking-wider mb-0.5 sm:mb-1">En Stock</p>
+            <p class="text-xl sm:text-2xl font-semibold text-green-600 dark:text-green-400">{{ $stats['en_stock'] }}</p>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-5 py-4">
-            <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Vendidas</p>
-            <p class="text-2xl font-semibold text-blue-600 dark:text-blue-400">{{ $stats['vendidas'] }}</p>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-2 py-2 sm:px-4 sm:py-3">
+            <p class="text-[9px] sm:text-[10px] text-gray-400 uppercase tracking-wider mb-0.5 sm:mb-1">Vendidas</p>
+            <p class="text-xl sm:text-2xl font-semibold text-blue-600 dark:text-blue-400">{{ $stats['vendidas'] }}</p>
         </div>
     </div>
     @else
@@ -115,18 +115,18 @@
     @endfor
     </div>
     {{-- Estadísticas reales --}}
-    <div x-show="!loading" x-cloak class="grid grid-cols-3 gap-4">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-5 py-4">
-            <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Total</p>
-            <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ $bicicletas->total() }}</p>
+    <div x-show="!loading" x-cloak class="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-2 py-2 sm:px-4 sm:py-3">
+            <p class="text-[9px] sm:text-[10px] text-gray-400 uppercase tracking-wider mb-0.5 sm:mb-1">Total</p>
+            <p class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">{{ $bicicletas->total() }}</p>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-5 py-4">
-            <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Esta página</p>
-            <p class="text-2xl font-semibold text-blue-600 dark:text-blue-400">{{ $bicicletas->count() }}</p>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-2 py-2 sm:px-4 sm:py-3">
+            <p class="text-[9px] sm:text-[10px] text-gray-400 uppercase tracking-wider mb-0.5 sm:mb-1">Esta página</p>
+            <p class="text-xl sm:text-2xl font-semibold text-blue-600 dark:text-blue-400">{{ $bicicletas->count() }}</p>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-5 py-4">
-            <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Página</p>
-            <p class="text-2xl font-semibold text-gray-900 dark:text-white">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-2 py-2 sm:px-4 sm:py-3">
+            <p class="text-[9px] sm:text-[10px] text-gray-400 uppercase tracking-wider mb-0.5 sm:mb-1">Página</p>
+            <p class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
                 {{ $bicicletas->currentPage() }}
                 <span class="text-sm font-normal text-gray-400 ml-1">/{{ $bicicletas->lastPage() }}</span>
             </p>

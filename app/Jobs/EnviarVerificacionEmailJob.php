@@ -9,7 +9,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Notification;
 
 class EnviarVerificacionEmailJob implements ShouldQueue
 {
@@ -25,12 +24,11 @@ class EnviarVerificacionEmailJob implements ShouldQueue
 
     public function handle(): void
     {
-        if (!$this->vendedor || empty($this->vendedor->correo)) {
+        if (empty($this->vendedor->correo)) {
             return;
         }
 
-        Notification::sendNow(
-            $this->vendedor,
+        $this->vendedor->notify(
             new VerificarEmailNotification($this->token, $this->nombre)
         );
     }

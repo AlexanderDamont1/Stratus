@@ -12,8 +12,7 @@ use Illuminate\Validation\Rules;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 use App\Services\CatalogService;
-use App\Notifications\VerificarEmailNotification;
-use Illuminate\Support\Facades\Notification;
+use App\Jobs\EnviarVerificacionEmailJob;
 
 class SetupController extends Controller
 {
@@ -97,11 +96,12 @@ class SetupController extends Controller
 
         // Enviar correos FUERA de la transacción
         foreach ($vendedoresCreados as $item) {
-            \Illuminate\Support\Facades\Notification::sendNow(
-                $item['usuario'],
-                new VerificarEmailNotification($item['token'], $item['nombre'])
-            );
-        }
+        EnviarVerificacionEmailJob::dispatch(
+            $item['usuario'],
+            $item['token'],
+            $item['nombre']
+        );
+}
         return redirect()
             ->route('dashboard')
             ->with('success', 'Cuenta activada correctamente');

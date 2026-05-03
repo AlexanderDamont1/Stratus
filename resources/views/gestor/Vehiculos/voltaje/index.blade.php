@@ -47,18 +47,18 @@
 </div>
 
     {{-- ===== ESTADÍSTICAS ===== --}}
-    <div class="grid grid-cols-3 gap-4">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-5 py-4">
-            <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Total voltajes</p>
-            <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ $voltajes->total() }}</p>
+    <div class="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
+       <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-2 py-2 sm:px-4 sm:py-3">
+             <p class="text-[9px] sm:text-[10px] text-gray-400 uppercase tracking-wider mb-0.5 sm:mb-1">Total voltajes</p>
+            <p class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">{{ $voltajes->total() }}</p>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-5 py-4">
-            <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Esta página</p>
-            <p class="text-2xl font-semibold text-blue-600 dark:text-blue-400">{{ $voltajes->count() }}</p>
+       <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-2 py-2 sm:px-4 sm:py-3">
+             <p class="text-[9px] sm:text-[10px] text-gray-400 uppercase tracking-wider mb-0.5 sm:mb-1">Esta página</p>
+            <p class="text-xl sm:text-2xl font-semibold text-blue-600 dark:text-blue-400">{{ $voltajes->count() }}</p>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-5 py-4">
-            <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Página</p>
-            <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ $voltajes->currentPage() }}<span class="text-sm font-normal text-gray-400 ml-1">/{{ $voltajes->lastPage() }}</span></p>
+       <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-2 py-2 sm:px-4 sm:py-3">
+             <p class="text-[9px] sm:text-[10px] text-gray-400 uppercase tracking-wider mb-0.5 sm:mb-1">Página</p>
+            <p class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">{{ $voltajes->currentPage() }}<span class="text-sm font-normal text-gray-400 ml-1">/{{ $voltajes->lastPage() }}</span></p>
         </div>
     </div>
 
@@ -237,7 +237,7 @@
             <form method="POST" action="{{ auth()->user()->id_rol === 1 ? route('admin.catalogo.voltajes.store') : route('gestor.vehiculos.voltajes.store') }}">
                 @csrf
                 <div class="mb-5">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                         Voltaje <span class="text-red-500">*</span>
                     </label>
                     <input

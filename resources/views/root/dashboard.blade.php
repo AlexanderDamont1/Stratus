@@ -59,21 +59,18 @@
                 }
 
                 Echo.private('root')
-
                     .listen('.negocio.expirado', (e) => {
                         if (this.negociosStatus[e.id_negocio]) {
                             this.negociosStatus[e.id_negocio].status         = e.tipo;
                             this.negociosStatus[e.id_negocio].dias_restantes = 0;
                         }
                     })
-
                     .listen('.negocio.activado', (e) => {
                         if (this.negociosStatus[e.id_negocio]) {
                             this.negociosStatus[e.id_negocio].status         = e.negocio_status;
                             this.negociosStatus[e.id_negocio].dias_restantes = e.dias_restantes;
                         }
                     })
-
                     .listen('.stats.actualizadas', (e) => {
                         this.stats = e;
                     });
@@ -114,166 +111,188 @@
     @endif
 
     {{-- ===== ENCABEZADO ===== --}}
-    <div class="flex justify-between items-center">
+    <div class="flex flex-wrap items-start justify-between gap-4 sm:gap-2">
         <div>
             <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Panel Root</h2>
             <p class="text-xs text-gray-400 mt-0.5">Los links expiran en 24h y mueren al usarse.</p>
         </div>
-        <button
-            @click="createModal = true"
-            class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-md text-sm hover:opacity-90 transition"
-        >
-            + Crear link
-        </button>
+        <div class="flex flex-col items-end gap-2 sm:flex-row-reverse sm:items-center">
+            <button
+                @click="createModal = true"
+                class="inline-flex items-center gap-1.5 bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 hover:scale-105 transform transition duration-200 whitespace-nowrap"
+            >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Crear link
+            </button>
+            <a href="{{ route('root.logs.index') }}"
+               class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 px-3 py-1.5 rounded-md border border-gray-200 dark:border-gray-600 transition whitespace-nowrap">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                Logs de eliminación
+            </a>
+        </div>
     </div>
 
     {{-- ===== ESTADÍSTICAS ===== --}}
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-4 py-3">
-            <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Links</p>
-            <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ $links->total() }}</p>
+    <div class="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
+        {{-- Links --}}
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-2 py-2 sm:px-4 sm:py-3">
+            <p class="text-[9px] sm:text-[10px] text-gray-400 uppercase tracking-wider mb-0.5 sm:mb-1">Links</p>
+            <p class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">{{ $links->total() }}</p>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-4 py-3">
-            <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Disponibles</p>
-            <p class="text-2xl font-semibold text-green-600 dark:text-green-400">
+
+        {{-- Disponibles --}}
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-2 py-2 sm:px-4 sm:py-3">
+            <p class="text-[9px] sm:text-[10px] text-gray-400 uppercase tracking-wider mb-0.5 sm:mb-1">Disponibles</p>
+            <p class="text-xl sm:text-2xl font-semibold text-green-600 dark:text-green-400">
                 {{ \App\Models\RegistroLink::disponibles()->count() }}
             </p>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-4 py-3">
+
+        {{-- En trial (oculto en móvil) --}}
+        <div class="hidden sm:block bg-white dark:bg-gray-800 rounded-lg shadow px-4 py-3">
             <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">En trial</p>
-            <p class="text-2xl font-semibold text-blue-600 dark:text-blue-400"
-               x-text="stats.en_trial"></p>
+            <p class="text-2xl font-semibold text-blue-600 dark:text-blue-400" x-text="stats.en_trial"></p>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-4 py-3">
+
+        {{-- Activos (oculto en móvil) --}}
+        <div class="hidden sm:block bg-white dark:bg-gray-800 rounded-lg shadow px-4 py-3">
             <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Activos</p>
-            <p class="text-2xl font-semibold text-emerald-600 dark:text-emerald-400"
-               x-text="stats.activos"></p>
+            <p class="text-2xl font-semibold text-emerald-600 dark:text-emerald-400" x-text="stats.activos"></p>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-4 py-3">
-            <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Expirados</p>
-            <p class="text-2xl font-semibold text-red-500 dark:text-red-400"
-               x-text="stats.trial_expirado + stats.suscripcion_expirada"></p>
+
+        {{-- Expirados (siempre visible) --}}
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-2 py-2 sm:px-4 sm:py-3">
+            <p class="text-[9px] sm:text-[10px] text-gray-400 uppercase tracking-wider mb-0.5 sm:mb-1">Expirados</p>
+            <p class="text-xl sm:text-2xl font-semibold text-red-500 dark:text-red-400"
+            x-text="stats.trial_expirado + stats.suscripcion_expirada"></p>
         </div>
     </div>
 
     {{-- ===== TABLA DE LINKS ===== --}}
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-x-auto">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
         <div class="px-4 py-3 border-b dark:border-gray-700 flex items-center justify-between">
             <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Links de registro</h3>
             <span class="text-xs text-gray-400">{{ $links->total() }} total</span>
         </div>
-        <table class="w-full text-sm">
-            <thead class="bg-gray-50 dark:bg-gray-700/50">
-                <tr>
-                    <th class="px-4 py-2 text-left text-xs text-gray-500 dark:text-gray-400 font-medium">URL</th>
-                    <th class="px-4 py-2 text-left text-xs text-gray-500 dark:text-gray-400 font-medium">Vendedores</th>
-                    <th class="px-4 py-2 text-left text-xs text-gray-500 dark:text-gray-400 font-medium">Expira</th>
-                    <th class="px-4 py-2 text-left text-xs text-gray-500 dark:text-gray-400 font-medium">Estado</th>
-                    <th class="px-4 py-2 text-right text-xs text-gray-500 dark:text-gray-400 font-medium">Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($links as $link)
-                    @php
-                        $expirado    = $link->expires_at && now()->greaterThan($link->expires_at);
-                        $disponible  = !$link->usado && !$expirado;
-                        $url         = route('registro.show', $link->token);
-                        $deleteRoute = route('root.links.destroy', $link);
-                    @endphp
-                    <tr class="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition">
-                        <td class="px-4 py-3">
-                            @if($disponible)
-                                <div class="flex items-center gap-2">
-                                    <span class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[180px] sm:max-w-[220px]">
-                                        {{ $url }}
-                                    </span>
-                                    <button
-                                        type="button"
-                                        x-data="{ copied: false }"
-                                        @click="
-                                            const url = '{{ $url }}';
-                                            if (navigator.clipboard && navigator.clipboard.writeText) {
-                                                navigator.clipboard.writeText(url).then(() => {
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-700/50">
+                    <tr>
+                        <th class="px-4 py-2 text-left text-xs text-gray-500 dark:text-gray-400 font-medium">URL</th>
+                        <th class="px-4 py-2 text-left text-xs text-gray-500 dark:text-gray-400 font-medium">Vendedores</th>
+                        <th class="px-4 py-2 text-left text-xs text-gray-500 dark:text-gray-400 font-medium">Expira</th>
+                        <th class="px-4 py-2 text-left text-xs text-gray-500 dark:text-gray-400 font-medium">Estado</th>
+                        <th class="px-4 py-2 text-right text-xs text-gray-500 dark:text-gray-400 font-medium">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($links as $link)
+                        @php
+                            $expirado    = $link->expires_at && now()->greaterThan($link->expires_at);
+                            $disponible  = !$link->usado && !$expirado;
+                            $url         = route('registro.show', $link->token);
+                            $deleteRoute = route('root.links.destroy', $link);
+                        @endphp
+                        <tr class="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition">
+                            <td class="whitespace-nowrap px-4 py-3">
+                                @if($disponible)
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[180px] sm:max-w-[220px]">
+                                            {{ $url }}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            x-data="{ copied: false }"
+                                            @click="
+                                                const url = '{{ $url }}';
+                                                if (navigator.clipboard && navigator.clipboard.writeText) {
+                                                    navigator.clipboard.writeText(url).then(() => {
+                                                        copied = true;
+                                                        setTimeout(() => copied = false, 1800);
+                                                    });
+                                                } else {
+                                                    const el = document.createElement('textarea');
+                                                    el.value = url;
+                                                    el.setAttribute('readonly', '');
+                                                    el.style.position = 'absolute';
+                                                    el.style.left = '-9999px';
+                                                    document.body.appendChild(el);
+                                                    el.select();
+                                                    el.setSelectionRange(0, 99999);
+                                                    document.execCommand('copy');
+                                                    document.body.removeChild(el);
                                                     copied = true;
                                                     setTimeout(() => copied = false, 1800);
-                                                });
-                                            } else {
-                                                const el = document.createElement('textarea');
-                                                el.value = url;
-                                                el.setAttribute('readonly', '');
-                                                el.style.position = 'absolute';
-                                                el.style.left = '-9999px';
-                                                document.body.appendChild(el);
-                                                el.select();
-                                                el.setSelectionRange(0, 99999);
-                                                document.execCommand('copy');
-                                                document.body.removeChild(el);
-                                                copied = true;
-                                                setTimeout(() => copied = false, 1800);
-                                            }
-                                        "
-                                        class="shrink-0 transition"
-                                        :class="copied ? 'text-green-500' : 'text-gray-400 hover:text-gray-700 dark:hover:text-white'"
-                                        title="Copiar URL"
-                                    >
-                                        <span x-show="!copied">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                                            </svg>
-                                        </span>
-                                        <span x-show="copied" x-cloak>
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                                            </svg>
-                                        </span>
-                                    </button>
-                                </div>
-                            @else
-                                <span class="text-xs text-gray-300 dark:text-gray-600">
-                                    {{ Str::limit($link->token, 24) }}
-                                </span>
-                            @endif
-                        </td>
-                        <td class="px-4 py-3 text-gray-700 dark:text-gray-300">{{ $link->max_users }}</td>
-                        <td class="px-4 py-3 text-xs text-gray-400">
-                            {{ $link->expires_at ? $link->expires_at->diffForHumans() : '—' }}
-                        </td>
-                        <td class="px-4 py-3">
-                            @if($link->usado)
-                                <span class="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800">
-                                    Usado
-                                </span>
-                            @elseif($expirado)
-                                <span class="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800">
-                                    Expirado
-                                </span>
-                            @else
-                                <span class="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"></span>
-                                    Activo
-                                </span>
-                            @endif
-                        </td>
-                        <td class="px-4 py-3 text-right">
-                            <button
-                                type="button"
-                                @click="openDelete('{{ Str::limit($link->token, 16) }}…', '{{ $deleteRoute }}')"
-                                class="text-red-500 hover:text-red-700 dark:hover:text-red-400 text-xs transition"
-                            >
-                                Eliminar
-                            </button>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="5" class="px-4 py-8 text-center text-gray-400 text-sm">
-                            No hay links generados aún.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
+                                                }
+                                            "
+                                            class="shrink-0 transition"
+                                            :class="copied ? 'text-green-500' : 'text-gray-400 hover:text-gray-700 dark:hover:text-white'"
+                                            title="Copiar URL"
+                                        >
+                                            <span x-show="!copied">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                                </svg>
+                                            </span>
+                                            <span x-show="copied" x-cloak>
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                                </svg>
+                                            </span>
+                                        </button>
+                                    </div>
+                                @else
+                                    <span class="text-xs text-gray-300 dark:text-gray-600">
+                                        {{ Str::limit($link->token, 24) }}
+                                    </span>
+                                @endif
+                            </td>
+                            <td class="whitespace-nowrap px-4 py-3 text-gray-700 dark:text-gray-300">{{ $link->max_users }}</td>
+                            <td class="whitespace-nowrap px-4 py-3 text-xs text-gray-400">
+                                {{ $link->expires_at ? $link->expires_at->diffForHumans() : '—' }}
+                            </td>
+                            <td class="whitespace-nowrap px-4 py-3">
+                                @if($link->usado)
+                                    <span class="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800">
+                                        Usado
+                                    </span>
+                                @elseif($expirado)
+                                    <span class="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800">
+                                        Expirado
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"></span>
+                                        Activo
+                                    </span>
+                                @endif
+                            </td>
+                            <td class="whitespace-nowrap px-4 py-3 text-right">
+                                <button
+                                    type="button"
+                                    @click="openDelete('{{ Str::limit($link->token, 16) }}…', '{{ $deleteRoute }}')"
+                                    class="text-red-500 hover:text-red-700 dark:hover:text-red-400 text-xs transition"
+                                >
+                                    Eliminar
+                                </button>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="5" class="px-4 py-8 text-center text-gray-400 text-sm">
+                                No hay links generados aún.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+               
+            </table>
+        </div>
         @if($links->hasPages())
             <div class="px-4 py-3 border-t dark:border-gray-700">
                 {{ $links->links() }}
@@ -282,155 +301,100 @@
     </div>
 
     {{-- ===== TABLA DE NEGOCIOS ===== --}}
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-x-auto">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
         <div class="px-4 py-3 border-b dark:border-gray-700 flex items-center justify-between">
             <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Negocios registrados</h3>
             <span class="text-xs text-gray-400">{{ $negocios->total() }} total</span>
         </div>
-        <table class="w-full text-sm">
-            <thead class="bg-gray-50 dark:bg-gray-700/50">
-                <tr>
-                    <th class="px-4 py-2 text-left text-xs text-gray-500 dark:text-gray-400 font-medium">Negocio</th>
-                    <th class="px-4 py-2 text-left text-xs text-gray-500 dark:text-gray-400 font-medium">Admin</th>
-                    <th class="px-4 py-2 text-left text-xs text-gray-500 dark:text-gray-400 font-medium">Status</th>
-                    <th class="px-4 py-2 text-left text-xs text-gray-500 dark:text-gray-400 font-medium">Días restantes</th>
-                    <th class="px-4 py-2 text-right text-xs text-gray-500 dark:text-gray-400 font-medium">Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($negocios as $negocio)
-                <tr
-                    x-data="{ activarModal: false, dias: 30 }"
-                    class="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition"
-                >
-                    <td class="px-4 py-3">
-                        <p class="font-medium text-gray-800 dark:text-gray-200">{{ $negocio->nombre_negocio }}</p>
-                        <p class="text-[10px] text-gray-400">{{ $negocio->id_negocio }}</p>
-                    </td>
-                    <td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
-                        {{ $negocio->admin?->correo ?? '—' }}
-                    </td>
-
-                    {{-- Status reactivo --}}
-                    <td class="px-4 py-3">
-                        <span
-                            class="inline-flex items-center text-xs px-2 py-0.5 rounded-full border transition-all duration-300"
-                            :class="statusClass(negociosStatus['{{ $negocio->id_negocio }}']?.status)"
-                            x-text="statusLabel(negociosStatus['{{ $negocio->id_negocio }}']?.status)"
-                        ></span>
-                    </td>
-
-                    {{-- Días restantes reactivos --}}
-                    <td class="px-4 py-3 text-xs">
-                        <span
-                            :class="{
-                                'text-red-500 font-semibold': negociosStatus['{{ $negocio->id_negocio }}']?.dias_restantes <= 3
-                                    && negociosStatus['{{ $negocio->id_negocio }}']?.dias_restantes > 0,
-                                'text-gray-300 dark:text-gray-600': negociosStatus['{{ $negocio->id_negocio }}']?.dias_restantes === 0,
-                                'text-gray-500 dark:text-gray-400': negociosStatus['{{ $negocio->id_negocio }}']?.dias_restantes > 3,
-                            }"
-                            x-text="negociosStatus['{{ $negocio->id_negocio }}']?.dias_restantes > 0
-                                ? negociosStatus['{{ $negocio->id_negocio }}'].dias_restantes + ' días'
-                                : '—'"
-                        ></span>
-                    </td>
-
-                    <td class="px-4 py-3 text-right">
-                        <div class="flex items-center justify-end gap-2">
-                            <button
-                                @click="activarModal = true"
-                                class="text-xs px-2.5 py-1 rounded-md bg-gray-100 dark:bg-gray-700
-                                       text-gray-600 dark:text-gray-300 hover:bg-gray-200
-                                       dark:hover:bg-gray-600 transition font-medium"
-                            >
-                                Activar
-                            </button>
-                            <a href="{{ route('root.modulos', $negocio->id_negocio) }}"
-                               class="text-xs px-2.5 py-1 rounded-md bg-gray-100 dark:bg-gray-700
-                                      text-gray-600 dark:text-gray-300 hover:bg-gray-200
-                                      dark:hover:bg-gray-600 transition font-medium">
-                                Módulos
-                            </a>
-                        </div>
-
-                        {{-- Modal activar suscripción --}}
-                        <div
-                            x-show="activarModal"
-                            x-cloak
-                            x-transition:enter="transition ease-out duration-200"
-                            x-transition:enter-start="opacity-0"
-                            x-transition:enter-end="opacity-100"
-                            class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4"
-                            @click.self="activarModal = false"
-                        >
-                            <div
-                                x-show="activarModal"
-                                x-transition:enter="transition ease-out duration-200"
-                                x-transition:enter-start="opacity-0 scale-95"
-                                x-transition:enter-end="opacity-100 scale-100"
-                                class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-sm"
-                                @click.stop
-                            >
-                                <h3 class="text-base font-semibold text-gray-900 dark:text-white mb-1">
-                                    Activar suscripción
-                                </h3>
-                                <p class="text-xs text-gray-400 mb-4">{{ $negocio->nombre_negocio }}</p>
-
-                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                                    Días de suscripción
-                                </label>
-                                <input
-                                    type="number"
-                                    x-model.number="dias"
-                                    min="1" max="365"
-                                    class="w-full border border-gray-300 dark:border-gray-600
-                                           dark:bg-gray-700 dark:text-white rounded-lg
-                                           px-3.5 py-2.5 text-sm focus:outline-none
-                                           focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30"
-                                >
-
-                                <div class="flex justify-end gap-2 mt-4">
-                                    <button
-                                        @click="activarModal = false"
-                                        class="px-4 py-2 text-sm text-gray-500 hover:text-gray-900
-                                               dark:hover:text-white transition rounded-lg
-                                               hover:bg-gray-100 dark:hover:bg-gray-700"
-                                    >
-                                        Cancelar
-                                    </button>
-                                    <button
-                                        @click="
-                                            fetch('{{ route('root.negocios.activar', $negocio->id_negocio) }}', {
-                                                method: 'POST',
-                                                headers: {
-                                                    'Content-Type': 'application/json',
-                                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                                                },
-                                                body: JSON.stringify({ dias })
-                                            })
-                                            .then(r => r.json())
-                                            .then(d => { if (d.ok) activarModal = false; })
-                                        "
-                                        class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white
-                                               px-4 py-2 rounded-lg text-sm font-semibold
-                                               hover:opacity-90 transition active:scale-[.98]"
-                                    >
-                                        Confirmar
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </td>
-                </tr>
-                @empty
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-700/50">
                     <tr>
-                        <td colspan="5" class="px-4 py-8 text-center text-gray-400 text-sm">
-                            Ningún negocio registrado aún.
+                        <th class="px-4 py-2 text-left text-xs text-gray-500 dark:text-gray-400 font-medium">Negocio</th>
+                        <th class="px-4 py-2 text-left text-xs text-gray-500 dark:text-gray-400 font-medium">Admin</th>
+                        <th class="px-4 py-2 text-left text-xs text-gray-500 dark:text-gray-400 font-medium">Status</th>
+                        <th class="px-4 py-2 text-left text-xs text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">Días restantes</th>
+                        <th class="px-4 py-2 text-right text-xs text-gray-500 dark:text-gray-400 font-medium">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($negocios as $negocio)
+                    <tr
+                        x-data="{
+                            activarModal: false,
+                            dias: 30,
+                            eliminarModal: false,
+                            confirmacion: ''
+                        }"
+                        class="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition"
+                    >
+                        <td class="whitespace-nowrap px-4 py-3">
+                            <p class="font-medium text-gray-800 dark:text-gray-200">{{ $negocio->nombre_negocio }}</p>
+                            <p class="text-[10px] text-gray-400">{{ $negocio->id_negocio }}</p>
+                        </td>
+                        <td class="whitespace-nowrap px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+                            {{ $negocio->admin?->correo ?? '—' }}
+                        </td>
+
+                        {{-- Status reactivo --}}
+                        <td class="whitespace-nowrap px-4 py-3">
+                            <span
+                                class="inline-flex items-center text-xs px-2 py-0.5 rounded-full border transition-all duration-300"
+                                :class="statusClass(negociosStatus['{{ $negocio->id_negocio }}']?.status)"
+                                x-text="statusLabel(negociosStatus['{{ $negocio->id_negocio }}']?.status)"
+                            ></span>
+                        </td>
+
+                        {{-- Días restantes reactivos --}}
+                        <td class="whitespace-nowrap px-4 py-3 text-xs">
+                            <span
+                                :class="{
+                                    'text-red-500 font-semibold': negociosStatus['{{ $negocio->id_negocio }}']?.dias_restantes <= 3
+                                        && negociosStatus['{{ $negocio->id_negocio }}']?.dias_restantes > 0,
+                                    'text-gray-300 dark:text-gray-600': negociosStatus['{{ $negocio->id_negocio }}']?.dias_restantes === 0,
+                                    'text-gray-500 dark:text-gray-400': negociosStatus['{{ $negocio->id_negocio }}']?.dias_restantes > 3,
+                                }"
+                                x-text="negociosStatus['{{ $negocio->id_negocio }}']?.dias_restantes > 0
+                                    ? negociosStatus['{{ $negocio->id_negocio }}'].dias_restantes + ' días'
+                                    : '—'"
+                            ></span>
+                        </td>
+
+                        <td class="whitespace-nowrap px-4 py-3 ">
+                            <div class="flex items-center  gap-1.5">
+                                 <button @click="activarModal = true"
+                                    class="text-xs px-2.5 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition font-medium">
+                                    Activar
+                                </button>
+                               <a href="{{ route('root.modulos', $negocio->id_negocio) }}"
+                                   class="text-xs px-2.5 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition font-medium">
+                                    Módulos
+                                </a>
+                               <button @click="eliminarModal = true"
+                                    class="text-xs px-2.5 py-1.5 rounded-lg text-red-400/80 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 border border-transparent hover:border-red-200 dark:hover:border-red-800/40 transition font-medium">
+                                    Eliminar
+                                    
+                                </button>
+                            </div>
+
+                            {{-- Modal activar suscripción --}}
+                            @include('root.partials.modal-activar', ['negocio' => $negocio])
+
+                            {{-- Modal eliminar negocio --}}
+                            @include('root.partials.modal-eliminar-negocio', ['negocio' => $negocio])
                         </td>
                     </tr>
-                @endforelse
-            </tbody>
-        </table>
+                    @empty
+                        <tr>
+                            <td colspan="5" class="px-4 py-8 text-center text-gray-400 text-sm">
+                                Ningún negocio registrado aún.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+                
+            </table>
+        </div>
         @if($negocios->hasPages())
             <div class="px-4 py-3 border-t dark:border-gray-700">
                 {{ $negocios->links() }}
@@ -520,7 +484,7 @@
         </div>
     </div>
 
-    {{-- ===== MODAL: CONFIRMAR ELIMINACIÓN ===== --}}
+    {{-- ===== MODAL: CONFIRMAR ELIMINACIÓN DE LINK ===== --}}
     <div
         x-show="deleteModal"
         x-cloak
@@ -555,7 +519,7 @@
                     <h3 class="text-base font-semibold text-gray-900 dark:text-white">Eliminar link</h3>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                         Vas a eliminar el link
-                        <span class="text-xs font-semibold text-gray-700 dark:text-gray-300" x-text="deleteToken"></span>.
+                        <span class="text-xs font-mono font-semibold text-gray-700 dark:text-gray-300" x-text="deleteToken"></span>.
                         Esta acción no se puede deshacer.
                     </p>
                 </div>

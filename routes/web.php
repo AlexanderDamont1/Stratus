@@ -30,9 +30,9 @@ use App\Http\Controllers\Admin\ConfigController;
 use App\Http\Controllers\ReporteRoboController;
 use App\Http\Controllers\Admin\CuponController;
 use App\Http\Controllers\CuponValidarController;
-use Termwind\Components\Raw;
 use App\Http\Controllers\Admin\PersonalController;
 use App\Http\Controllers\Admin\MetodoPagoController;
+use App\Http\Controllers\Root\RootNegocioController;
 
 /*
 |--------------------------------------------------------------------------
@@ -537,7 +537,16 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
 
         Route::get('/root/negocios/{id}/modulos',        [RootController::class, 'modulos'])->name('root.modulos');
         Route::post('/root/modulos/toggle',              [RootController::class, 'toggleModulo'])->name('root.modulos.toggle');
-    });
+
+        Route::delete('/root/negocios/{idNegocio}', [RootNegocioController::class, 'destroy'])->name('root.negocios.destroy');
+ 
+        Route::get('/root/logs/negocios', [RootNegocioController::class, 'logs'])->name('root.logs.index');
+        
+        Route::get('/root/logs/negocios/ver', [RootNegocioController::class, 'verLog'])->name('root.logs.ver');
+
+        Route::get('logs/stream', [RootNegocioController::class, 'logsStream'])->name('root.logs.stream');
+
+        });
 
    
 

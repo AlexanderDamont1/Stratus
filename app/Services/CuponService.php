@@ -154,10 +154,13 @@ class CuponService
 
     public static function invalidar(string $idCupon, string $idNegocio): void
     {
-        $cupon = Cupon::find($idCupon);
-        if ($cupon) {
-            Cache::forget("cupon:codigo:{$idNegocio}:" . strtoupper($cupon->codigo));
+        if ($idCupon) {
+            $cupon = Cupon::find($idCupon);
+            if ($cupon) {
+                Cache::forget("cupon:codigo:{$idNegocio}:" . strtoupper($cupon->codigo));
+            }
         }
+
         Cache::forget("cupones:negocio:{$idNegocio}");
     }
 

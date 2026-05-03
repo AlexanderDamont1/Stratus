@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use App\Jobs\EnviarVerificacionEmailJob;
 
 class RegistroController extends Controller
 {
@@ -31,32 +32,29 @@ class RegistroController extends Controller
         ]);
 
         $verificationToken = Str::random(64);
+        $usuario = null; // ← declarar fuera para poder usarla después
 
-        DB::transaction(function () use ($request, $link, $verificationToken) {
-
+        DB::transaction(function () use ($request, $link, $verificationToken, &$usuario) {
             $negocio = Negocio::create([
                 'nombre_negocio' => $request->nombre_negocio,
                 'max_users'      => $link->max_users,
             ]);
 
-            $usuario = Usuario::create([
+            $usuario = Usuario::create([  // ← asigna a la variable del scope exterior
                 'id_negocio'               => $negocio->id_negocio,
                 'nombre_usuario'           => $request->nombre_usuario,
                 'correo'                   => $request->correo,
                 'password'                 => Hash::make($request->password),
                 'id_rol'                   => 44,
-                'email_verified_at'        => null,   // ← pendiente
+                'email_verified_at'        => null,
                 'email_verification_token' => $verificationToken,
             ]);
 
             $link->update(['usado' => true]);
-
-            // Enviar correo de verificación
-            $usuario->notify(new VerificarEmailNotification(
-                $verificationToken,
-                $request->nombre_usuario
-            ));
         });
+
+        // Fuera de la transacción, con la variable correcta
+        EnviarVerificacionEmailJob::dispatch($usuario, $verificationToken, $request->nombre_usuario);
 
         return redirect()->route('login')
             ->with('success', 'Cuenta creada. Revisa tu correo para verificarla antes de iniciar sesión.');
