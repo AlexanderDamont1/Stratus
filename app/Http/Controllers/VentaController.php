@@ -57,7 +57,8 @@ class VentaController extends Controller
     public function create()
     {
         $user = auth()->user();
-        if ($user->id_rol != 2) abort(403);
+        if ($user->id_rol != 2)
+            abort(403);
 
         $accesorios = Producto::where('id_negocio', $user->id_negocio)
             ->where('id_usuario', $user->id_usuario)
@@ -65,8 +66,10 @@ class VentaController extends Controller
             ->get()
             ->filter(fn($p) => $p->precio > 0)
             ->values();
+        $metodos = MetodoPago::deNegocio($user->id_negocio)->activo()->get();
+        $personal = Personal::deSucursal($user->id_usuario)->activo()->orderBy('nombre')->get();
 
-        return view('vendedor.ventas.create', compact('accesorios'));
+        return view('vendedor.ventas.create', compact('accesorios', 'metodos', 'personal'));
     }
 
     /* =====================================================
@@ -150,7 +153,8 @@ class VentaController extends Controller
     public function store(Request $request)
     {
         $user = auth()->user();
-        if ($user->id_rol != 2) abort(403);
+        if ($user->id_rol != 2)
+            abort(403);
 
         $request->validate([
             'nombre_cliente' => 'required|string|max:100',
@@ -248,9 +252,9 @@ class VentaController extends Controller
             foreach ($request->items as $item) {
 
                 $producto = Producto::where('id_producto', $item['id_producto'])
-                    ->where('id_usuario', $user->id_usuario)
                     ->where('id_negocio', $user->id_negocio)
                     ->firstOrFail();
+
 
                 $cantidad = (int) ($item['cantidad'] ?? 1);
                 $precioUnitario = (float) $producto->precio;
@@ -270,10 +274,21 @@ class VentaController extends Controller
                     $bici = Bicicleta::with(['modelo.marca', 'voltaje', 'color'])
                         ->where('num_serie', $item['num_serie'])
                         ->where('id_negocio', $user->id_negocio)
-                        ->where('id_usuario', $user->id_usuario)
-                        ->where('status', 1)
                         ->lockForUpdate()
-                        ->firstOrFail();
+                        ->first();
+
+                    // Validaciones explícitas con mensajes útiles
+                    if (!$bici) {
+                        throw new \Exception("Bicicleta {$item['num_serie']} no encontrada en este negocio.");
+                    }
+
+                    if ($bici->status != 1) {
+                        throw new \Exception("La bicicleta {$item['num_serie']} ya fue vendida o no está disponible.");
+                    }
+
+                    if ($bici->id_usuario !== null && $bici->id_usuario !== $user->id_usuario) {
+                        throw new \Exception("La bicicleta {$item['num_serie']} no pertenece a esta sucursal.");
+                    }
 
                     $bici->status = 2;
                     $bici->save();
@@ -298,7 +313,11 @@ class VentaController extends Controller
 
                     $pm = ProductoModelo::where('id_modelo', $bici->id_modelo)
                         ->where('id_voltaje', $bici->id_voltaje)
-                        ->where('id_usuario', $user->id_usuario)
+                        ->where('id_negocio', $user->id_negocio)
+                        ->where(function ($q) use ($user) {
+                            $q->where('id_usuario', $user->id_usuario)
+                                ->orWhereNull('id_usuario');
+                        })
                         ->first();
 
                     if ($pm) {
@@ -383,7 +402,7 @@ class VentaController extends Controller
             }
 
             // ── Despachar jobs DESPUÉS del commit ───────────────────────────────
-            $config     = CatalogService::getConfigNegocio($user->id_negocio);
+            $config = CatalogService::getConfigNegocio($user->id_negocio);
             $debeCorreo = $config->entregaPorCorreo() && !empty($cliente->correo);
             $total = count($jobsPostVenta);
 
