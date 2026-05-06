@@ -27,7 +27,7 @@ class BienvenidaNotification extends Notification
             : null;
 
         return (new MailMessage)
-            ->subject('¡Bienvenido a ArrowX! ')
+            ->subject('Bienvenido a ArrowK, ' . $this->nombre . '')
             ->view('emails.bienvenida', [
                 'nombre'       => $this->nombre,
                 'nombreNegocio'=> $this->nombreNegocio,

@@ -1,123 +1,259 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bienvenido a ArrowX</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f0f0f; color: #e2e8f0; }
-    .wrapper { max-width: 600px; margin: 40px auto; background: #1a1a2e; border-radius: 16px; overflow: hidden; border: 1px solid #2d2d4e; }
-    .header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%); padding: 48px 40px; text-align: center; }
-    .logo { font-size: 28px; font-weight: 800; color: #fff; letter-spacing: -0.5px; }
-    .logo span { color: #a5f3fc; }
-    .header-sub { color: rgba(255,255,255,0.85); margin-top: 8px; font-size: 15px; }
-    .body { padding: 40px; }
-    .greeting { font-size: 22px; font-weight: 700; color: #f1f5f9; margin-bottom: 16px; }
-    .text { color: #94a3b8; font-size: 15px; line-height: 1.7; margin-bottom: 24px; }
-    .highlight { color: #a5b4fc; font-weight: 600; }
-    .card { background: #0f172a; border: 1px solid #2d2d4e; border-radius: 12px; padding: 24px; margin: 28px 0; }
-    .card-title { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 16px; }
-    .card-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #1e293b; }
-    .card-row:last-child { border-bottom: none; }
-    .card-label { color: #64748b; font-size: 14px; }
-    .card-value { color: #e2e8f0; font-size: 14px; font-weight: 600; }
-    .badge { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; padding: 3px 10px; border-radius: 20px; font-size: 12px; }
-    .cta { text-align: center; margin: 32px 0; }
-    .btn { display: inline-block; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff !important; text-decoration: none; padding: 14px 36px; border-radius: 50px; font-size: 15px; font-weight: 700; letter-spacing: 0.3px; }
-    .features { display: grid; gap: 12px; margin: 28px 0; }
-    .feature { display: flex; align-items: flex-start; gap: 12px; }
-    .feature-icon { width: 36px; height: 36px; background: #1e293b; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; line-height: 36px; text-align: center; }
-    .feature-text { flex: 1; }
-    .feature-title { color: #f1f5f9; font-size: 14px; font-weight: 600; margin-bottom: 3px; }
-    .feature-desc { color: #64748b; font-size: 13px; }
-    .divider { height: 1px; background: #1e293b; margin: 28px 0; }
-    .footer { background: #0f0f0f; padding: 28px 40px; text-align: center; }
-    .footer-text { color: #475569; font-size: 13px; line-height: 1.6; }
-    .footer-link { color: #6366f1; text-decoration: none; }
-    @media (max-width: 600px) {
-      .header { padding: 36px 24px; }
-      .body { padding: 28px 24px; }
-      .footer { padding: 24px; }
-    }
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes" />
+    <title>ArrowX · Verificación exitosa</title>
+    
+    <!--[if mso]>
+    <noscript>
+        <xml>
+            <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+    </noscript>
+    <![endif]-->
+    <style>
+        /* Estilos generales para clientes modernos + media queries responsivas */
+        .ExternalClass, .ReadMsgBody {
+            width: 100%;
+            background-color: #f6f7f9;
+        }
+        body, table, td, p, a {
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f6f7f9;
+            font-family: 'Figtree', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.5;
+        }
+        /* Tablas responsivas */
+        .yshortcuts a {
+            border-bottom: none !important;
+        }
+        @media screen and (max-width: 560px) {
+            .responsive-table {
+                width: 100% !important;
+            }
+            .stack-cell {
+                display: block !important;
+                width: 100% !important;
+                text-align: left !important;
+                padding: 12px 16px !important;
+            }
+            .stack-row td {
+                display: block !important;
+                width: 100% !important;
+                text-align: left !important;
+                padding: 12px 20px !important;
+                border-bottom: 1px solid #eef2f6 !important;
+            }
+            .stack-row:last-child td {
+                border-bottom: none !important;
+            }
+            .card-inner .stack-row td:first-child {
+                padding-bottom: 0 !important;
+            }
+            .card-inner .stack-row td:last-child {
+                padding-top: 0 !important;
+            }
+            .btn-table {
+                width: 100% !important;
+                text-align: center !important;
+            }
+            .btn-link {
+                width: 100% !important;
+                display: block !important;
+                text-align: center !important;
+                box-sizing: border-box !important;
+            }
+            .header-padding, .body-padding, .footer-padding {
+                padding-left: 20px !important;
+                padding-right: 20px !important;
+            }
+            h1 {
+                font-size: 28px !important;
+                line-height: 1.2 !important;
+            }
+            .status-badge {
+                font-size: 11px !important;
+                padding: 6px 12px !important;
+            }
+        }
+        @media only screen and (max-width: 480px) {
+            .responsive-padding {
+                padding-left: 20px !important;
+                padding-right: 20px !important;
+            }
+            .feature-item {
+                padding: 16px 0 !important;
+            }
+        }
+    </style>
 </head>
-<body>
-  <div class="wrapper">
-    <div class="header">
-      <div class="logo">Arrow<span>X</span></div>
-      <div class="header-sub">Sistema de gestión para bicicletas eléctricas</div>
-    </div>
 
-    <div class="body">
-      <div class="greeting">¡Bienvenido, {{ $nombre }}! 🎉</div>
-      <p class="text">
-        Tu cuenta en <span class="highlight">ArrowX</span> ha sido verificada exitosamente.
-        Estamos muy contentos de tenerte a bordo. Tu negocio
-        <span class="highlight">{{ $nombreNegocio }}</span> ya está listo para despegar.
-      </p>
+<body style="margin:0; padding:0; background:#f6f7f9; font-family:'Figtree','Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
 
-      <div class="card">
-        <div class="card-title">Resumen de tu cuenta</div>
-        <div class="card-row">
-          <span class="card-label">Negocio</span>
-          <span class="card-value">{{ $nombreNegocio }}</span>
-        </div>
-        <div class="card-row">
-          <span class="card-label">Plan</span>
-          <span class="card-value"><span class="badge">Trial gratuito</span></span>
-        </div>
-        @if($trialFecha)
-        <div class="card-row">
-          <span class="card-label">Trial válido hasta</span>
-          <span class="card-value">{{ $trialFecha }}</span>
-        </div>
-        @endif
-      </div>
+    <!-- Contenedor principal centrado / tabla envolvente 100% -->
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#f6f7f9" style="background-color:#f6f7f9; width:100%;">
+        <tr>
+            <td align="center" style="padding:40px 16px 40px 16px;">
+                <!-- Tarjeta principal: ancho máximo 560px -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" align="center" style="max-width:700px; width:100%; background:#ffffff; border:1px solid #e9edf2; border-radius:20px; border-collapse:separate; overflow:hidden;">                    
+                    <!-- CABECERA -->
+                    <tr>
+                        <td style="padding:36px 40px; border-bottom:1px solid #eef2f6; background:#ffffff;" class="header-padding">
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <td style="font-size:22px; font-weight:600; letter-spacing:-0.04em; color:#020617;">
+                                        Arrow<span style="color:#64748b; font-weight:500;">X</span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
 
-      <div class="features">
-        <div class="feature">
-          <div class="feature-icon">📦</div>
-          <div class="feature-text">
-            <div class="feature-title">Inventario en tiempo real</div>
-            <div class="feature-desc">Controla el stock de cada sucursal al instante con caché inteligente.</div>
-          </div>
-        </div>
-        <div class="feature">
-          <div class="feature-icon">⚡</div>
-          <div class="feature-text">
-            <div class="feature-title">Gestión multi-sucursal</div>
-            <div class="feature-desc">Administra varias tiendas desde un solo panel centralizado.</div>
-          </div>
-        </div>
-        <div class="feature">
-          <div class="feature-icon">🔔</div>
-          <div class="feature-text">
-            <div class="feature-title">Alertas y notificaciones</div>
-            <div class="feature-desc">Recibe avisos de ventas, robos reportados y movimientos clave.</div>
-          </div>
-        </div>
-      </div>
+                    <!-- CUERPO PRINCIPAL -->
+                    <tr>
+                        <td style="padding:48px 40px;" class="body-padding responsive-padding">
+                            
+                            <!-- Estado: cuenta verificada (sin SVG, con check unicode + estilos inline) -->
+                            <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:26px;">
+                                <tr>
+                                    <td style="background:#f0fdf4; border:1px solid #dcfce7; border-radius:999px; padding:8px 16px 8px 14px;">
+                                        <table cellpadding="0" cellspacing="0" border="0">
+                                            <tr>
+                                                <td style="font-size:16px; color:#16a34a; font-weight:700; padding-right:8px;">✓</td>
+                                                <td style="font-size:12px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:#15803d;">Cuenta verificada</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
 
-      <div class="divider"></div>
+                            <!-- Título dinámico -->
+                            <h1 style="font-size:34px; line-height:1.05; letter-spacing:-0.06em; font-weight:600; color:#020617; margin:0 0 24px 0; padding:0;">
+                                Bienvenido, {{ $nombre }}
+                            </h1>
 
-      <p class="text">
-        Si tienes dudas o necesitas ayuda para configurar tu cuenta, escríbenos.
-        Estaremos encantados de acompañarte en cada paso.
-      </p>
+                            <!-- textos descriptivos -->
+                            <p style="font-size:15px; line-height:1.9; color:#475569; margin:0 0 18px 0;">
+                                Tu empresa <strong style="color:#0f172a; font-weight:600;">{{ $nombreNegocio }}</strong> ha sido verificada correctamente y ya puede operar dentro de ArrowX.
+                            </p>
 
-      <div class="cta">
-        <a href="{{ route('dashboard') }}" class="btn">Ir a mi panel →</a>
-      </div>
-    </div>
+                            <p style="font-size:15px; line-height:1.9; color:#475569; margin:0 0 28px 0;">
+                                Nuestra plataforma está diseñada para negocios que requieren una operación moderna, estable dejando de lado los sistemas tradicionales (Excel estaticos, software de escritorio, etc.) y buscan una solución en la nube que les permita crecer sin preocuparse por limitaciones técnicas.
+                            </p>
 
-    <div class="footer">
-      <p class="footer-text">
-        © {{ date('Y') }} ArrowX · Sistema de gestión para e-bikes<br>
-        Recibiste este correo porque registraste una cuenta en nuestra plataforma.<br>
-        <a href="#" class="footer-link">Política de privacidad</a>
-      </p>
-    </div>
-  </div>
+                            <!-- Tarjeta de información (datos empresa / plan) -->
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #eef2f6; border-radius:16px; background:#fcfcfd; margin:0 0 0 0;">
+                                <!-- Fila: Empresa -->
+                                <tr class="stack-row" style="border-bottom:1px solid #eef2f6;">
+                                    <td class="label-col" style="padding:18px 22px; font-size:14px; color:#64748b; width:40%; border-bottom:inherit;">
+                                        Empresa
+                                    </td>
+                                    <td class="value-col" style="padding:18px 22px; font-size:14px; font-weight:600; color:#020617; text-align:right; border-bottom:inherit;">
+                                        {{ $nombreNegocio }}
+                                    </td>
+                                </tr>
+                                <!-- Fila: Plan con badge -->
+                                <tr class="stack-row" style="border-bottom:1px solid #eef2f6;">
+                                    <td style="padding:18px 22px; font-size:14px; color:#64748b;">
+                                        Plan
+                                    </td>
+                                    <td style="padding:18px 22px; text-align:right;">
+                                        <span style="display:inline-block; padding:6px 12px; border-radius:999px; background:#f8fafc; border:1px solid #e2e8f0; color:#0f172a; font-size:12px; font-weight:600;">Trial gratuito</span>
+                                    </td>
+                                </tr>
+                                <!-- Fila condicional: Válido hasta -->
+                                @if($trialFecha)
+                                <tr class="stack-row" style="border-bottom:none;">
+                                    <td style="padding:18px 22px; font-size:14px; color:#64748b;">
+                                        Válido hasta
+                                    </td>
+                                    <td style="padding:18px 22px; font-size:14px; font-weight:600; color:#020617; text-align:right;">
+                                        {{ $trialFecha }}
+                                    </td>
+                                </tr>
+                                @endif
+                            </table>
+
+                            <!-- Sección de características (Feature list) -->
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:42px; border-top:1px solid #f1f5f9; padding-top:34px;">
+                                <tr>
+                                    <td style="padding:0 0 16px 0;">
+                                        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                            <tr>
+                                                <td style="padding-bottom:24px;">
+                                                    <div style="font-size:14px; font-weight:600; color:#020617; margin-bottom:6px; letter-spacing:-0.01em;">Gestión centralizada</div>
+                                                    <div style="font-size:14px; line-height:1.8; color:#64748b;">Administra inventario, sucursales y operaciones desde un único entorno.</div>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding-bottom:24px;">
+                                                    <div style="font-size:14px; font-weight:600; color:#020617; margin-bottom:6px; letter-spacing:-0.01em;">Información en tiempo real</div>
+                                                    <div style="font-size:14px; line-height:1.8; color:#64748b;">Visualiza movimientos y métricas actualizadas para una mejor toma de decisiones.</div>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding-bottom:0;">
+                                                    <div style="font-size:14px; font-weight:600; color:#020617; margin-bottom:6px; letter-spacing:-0.01em;">Monitoreo operativo</div>
+                                                    <div style="font-size:14px; line-height:1.8; color:#64748b;">Mantente informado sobre eventos relevantes y actividad importante dentro de tu empresa.</div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Botón de acceso (renderizado bulletproof) -->
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:40px;">
+                                <tr>
+                                    <td align="left" class="btn-table">
+                                        <table cellpadding="0" cellspacing="0" border="0" style="display:inline-block;">
+                                            <tr>
+                                                <td align="center" bgcolor="#020617" style="background:#020617; border-radius:12px;">
+                                                    <a href="{{ route('dashboard') }}" style="display:inline-block; background:#020617; color:#ffffff; font-size:14px; font-weight:600; text-decoration:none; padding:12px 28px; border-radius:12px; letter-spacing:-0.01em; line-height:1.4; font-family:'Figtree','Inter',sans-serif;" target="_blank">
+                                                        Acceder al panel
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+
+                        </td>
+                    </tr>
+
+                    <!-- FOOTER (limpio y sutil) -->
+                    <tr>
+                        <td style="padding:28px 40px 34px; border-top:1px solid #eef2f6; background:#ffffff; text-align:center;" class="footer-padding responsive-padding">
+                            <p style="font-size:12px; line-height:1.8; color:#94a3b8; margin:0;">
+                                Powered by CloudLabs · {{ date('Y') }} ©
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+                <!-- fin main card -->
+            </td>
+        </tr>
+    </table>
+
+    <!-- Corrección para Outlook añadiendo mayor responsividad en botón (extra) -->
+    <!--[if mso]>
+    <style>
+        .btn-link {
+            font-family: 'Figtree', 'Inter', sans-serif !important;
+        }
+        .stack-row td {
+            width: 50% !important;
+        }
+    </style>
+    <![endif]-->
 </body>
 </html>
