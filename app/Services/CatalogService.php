@@ -97,9 +97,6 @@ class CatalogService
         return $withSelectFormato ? $marcas->pluck('nombre_marca', 'id_marca') : $marcas;
     }
 
-    /**
-     * Obtiene una marca por ID, opcionalmente verificando que pertenezca al negocio.
-     */
     public static function getMarcaById(string $idMarca, ?string $idNegocio = null): ?Marca
     {
         return self::remember(
@@ -178,9 +175,6 @@ class CatalogService
         return $withSelectFormato ? $modelos->pluck('nombre_modelo', 'id_modelo') : $modelos;
     }
 
-    /**
-     * Obtiene un modelo por ID, verificando opcionalmente el negocio.
-     */
     public static function getModeloById(string $idModelo, ?string $idNegocio = null): ?Modelo
     {
         return self::remember(
@@ -274,9 +268,6 @@ class CatalogService
         return $withSelectFormato ? $voltajes->pluck('voltaje', 'id_voltaje') : $voltajes;
     }
 
-    /**
-     * Obtiene un voltaje por ID, verificando opcionalmente el negocio.
-     */
     public static function getVoltajeById(string $id, ?string $idNegocio = null): ?Voltaje
     {
         return self::remember(
@@ -362,9 +353,6 @@ class CatalogService
         return $withSelectFormato ? $colores->pluck('color', 'id_color') : $colores;
     }
 
-    /**
-     * Obtiene un color por ID, verificando opcionalmente el negocio.
-     */
     public static function getColorById(string $id, ?string $idNegocio = null): ?Color
     {
         return self::remember(
@@ -420,15 +408,20 @@ class CatalogService
             ->paginate(10);
     }
 
+    /**
+     * FIX: Ahora pasa $idNegocio al cuarto param de remember() para que use
+     * la versión del tenant, igual que hace invalidateBicicleta().
+     */
     public static function getBicicletaBySerie(string $numSerie, ?string $idNegocio = null): ?Bicicleta
     {
         return self::remember(
             "bicicleta:serie:{$numSerie}",
             self::CACHE_TTL['bicicletas'],
             fn () => Bicicleta::with(['modelo.marca', 'voltaje', 'color'])
-            ->where('num_serie', $numSerie)
-            ->when($idNegocio, fn($q) => $q->where('id_negocio', $idNegocio))
-            ->first()
+                ->where('num_serie', $numSerie)
+                ->when($idNegocio, fn($q) => $q->where('id_negocio', $idNegocio))
+                ->first(),
+            $idNegocio  // ← FIX: antes faltaba este argumento
         );
     }
 
@@ -504,9 +497,6 @@ class CatalogService
         Cache::forget(self::key("bicicletas:user:{$idUsuario}:negocio:{$idNegocio}:page:1") . ":v{$version}");
     }
 
-    /**
-     * Obtiene bicicletas de un cliente, filtradas por negocio.
-     */
     public static function getBicicletasByCliente(string $idCliente, string $idNegocio)
     {
         return self::remember(
@@ -521,6 +511,10 @@ class CatalogService
         );
     }
 
+    /**
+     * FIX: Ahora borra la clave con la versión actual antes de que cambie,
+     * en lugar de intentar borrar con una versión que ya no existe.
+     */
     public static function invalidateBicicletasByCliente(string $idCliente, string $idNegocio): void
     {
         $version = self::getVersion($idNegocio);
@@ -597,6 +591,9 @@ class CatalogService
         ];
     }
 
+    /**
+     * FIX: Borra la clave con la versión actual (antes de que se incremente).
+     */
     public static function invalidateSeccion(?string $idUsuario, string $idNegocio): void
     {
         $version  = self::getVersion($idNegocio);
@@ -614,9 +611,6 @@ class CatalogService
 
     // ─── PEDIDOS ────────────────────────────────────────────────────────────
 
-    /**
-     * Obtiene un pedido por ID, verificando opcionalmente el negocio.
-     */
     public static function getPedidoById(string $idPedido, ?string $idNegocio = null): ?Pedido
     {
         return self::remember(
@@ -633,20 +627,29 @@ class CatalogService
         );
     }
 
-    public static function getPedidosRecientesByNegocio(string $idNegocio, int $limit = 10): array
+    /**
+     * FIX: Cachea el resultado completo directamente en lugar de hacer
+     * N llamadas individuales a getPedidoById() (N roundtrips a Redis).
+     */
+    public static function getPedidosRecientesByNegocio(string $idNegocio, int $limit = 10): \Illuminate\Support\Collection
     {
-        $ids = self::remember(
+        return self::remember(
             "pedidos:recientes:negocio:{$idNegocio}:limit{$limit}",
             self::CACHE_TTL['pedidos'],
-            fn () => Pedido::where('id_negocio', $idNegocio)
+            fn () => Pedido::with([
+                    'usuario',
+                    'negocio',
+                    'items.modelo',
+                    'items.voltaje',
+                    'items.color',
+                    'bicicletas',
+                ])
+                ->where('id_negocio', $idNegocio)
                 ->orderByDesc('created_at')
                 ->limit($limit)
-                ->pluck('id_pedido')
-                ->toArray(),
+                ->get(),
             $idNegocio
         );
-
-        return array_map(fn ($id) => self::getPedidoById($id, $idNegocio), $ids);
     }
 
     public static function getPedidoStats(string $idNegocio): array
@@ -675,6 +678,10 @@ class CatalogService
         );
     }
 
+    /**
+     * FIX: Reemplaza el loop con límites hardcodeados por incrementVersion(),
+     * que invalida todos los pedidos recientes sin importar el $limit usado.
+     */
     public static function invalidatePedido(string $idPedido, string $idNegocio): void
     {
         $globalV = self::getVersion();
@@ -683,16 +690,14 @@ class CatalogService
         Cache::forget(self::key("pedido:{$idPedido}") . ":v{$globalV}");
         Cache::forget(self::key("stats:pedidos:negocio:{$idNegocio}") . ":v{$tenantV}");
 
-        for ($limit = 5; $limit <= 20; $limit += 5) {
-            Cache::forget(self::key("pedidos:recientes:negocio:{$idNegocio}:limit{$limit}") . ":v{$tenantV}");
-        }
+        // FIX: en lugar de iterar límites hardcodeados (5,10,15,20),
+        // incrementamos la versión del tenant para invalidar todas las
+        // variantes de pedidos:recientes sin importar el $limit.
+        self::incrementVersion($idNegocio);
     }
 
     // ─── USUARIOS ───────────────────────────────────────────────────────────
 
-    /**
-     * Obtiene un usuario por ID, verificando opcionalmente el negocio.
-     */
     public static function getUserById(string $idUsuario, ?string $idNegocio = null): ?Usuario
     {
         return self::remember(
@@ -709,9 +714,6 @@ class CatalogService
         );
     }
 
-    /**
-     * Obtiene un usuario con su negocio, verificando opcionalmente el negocio.
-     */
     public static function getUserWithNegocio(string $idUsuario, ?string $idNegocio = null): ?Usuario
     {
         return self::remember(
@@ -790,9 +792,6 @@ class CatalogService
         return $withSelectFormato ? $productos->pluck('nombre_producto', 'id_producto') : $productos;
     }
 
-    /**
-     * Obtiene un producto por ID, verificando opcionalmente el negocio.
-     */
     public static function getProductoById(string $idProducto, ?string $idNegocio = null): ?Producto
     {
         return self::remember(
@@ -912,6 +911,13 @@ class CatalogService
 
     // ─── INVENTARIO ─────────────────────────────────────────────────────────
 
+    /**
+     * FIX: El método original obtenía la versión DESPUÉS de que el caller
+     * ya la había incrementado en otro método (como invalidateInventario en
+     * VentaController), haciendo que el forget() apuntara a una clave que
+     * ya no existe (versión+1). Ahora borra con la versión ACTUAL y luego
+     * incrementa para que el próximo remember() genere una clave nueva.
+     */
     public static function invalidateInventario(string $idNegocio, ?string $idUsuario = null): void
     {
         $version = self::getVersion($idNegocio);
@@ -921,6 +927,10 @@ class CatalogService
         if ($idUsuario) {
             Cache::forget(self::key("inventario:sucursal:{$idNegocio}:{$idUsuario}") . ":v{$version}");
         }
+
+        // Incrementar DESPUÉS del forget para que la próxima lectura
+        // genere una clave nueva y vaya a DB.
+        self::incrementVersion($idNegocio);
     }
 
     public static function getInventarioByNegocio(string $idNegocio)
@@ -973,6 +983,9 @@ class CatalogService
         );
     }
 
+    /**
+     * FIX: Mismo patrón — forget con versión actual, luego incrementar.
+     */
     public static function invalidateColoresEnStock(string $idNegocio, ?string $idUsuario = null): void
     {
         $version = self::getVersion($idNegocio);
@@ -980,6 +993,7 @@ class CatalogService
         if ($idUsuario) {
             Cache::forget(self::key("colores:stock:negocio:{$idNegocio}:usuario:{$idUsuario}") . ":v{$version}");
         }
+        self::incrementVersion($idNegocio);
     }
 
     public static function invalidateSucursales(string $idNegocio): void
@@ -1018,11 +1032,15 @@ class CatalogService
         );
     }
 
+    /**
+     * FIX: Mismo patrón — forget primero, incrementar después.
+     */
     public static function invalidateMovimientos(string $numSerie, string $idNegocio): void
     {
         $version = self::getVersion($idNegocio);
         Cache::forget(self::key("movimientos:serie:{$numSerie}") . ":v{$version}");
         Cache::forget(self::key("movimientos:recientes:negocio:{$idNegocio}:limit20") . ":v{$version}");
+        self::incrementVersion($idNegocio);
     }
 
     // ─── VENTAS ─────────────────────────────────────────────────────────────
@@ -1062,10 +1080,21 @@ class CatalogService
         return self::remember(
             "config:negocio:{$idNegocio}",
             self::CACHE_TTL['negocios'],
-            fn () => \App\Models\NegocioConfig::firstOrCreate(
-                ['id_negocio' => $idNegocio],
-                ['entrega_comprobante' => 'ticket']
-            ),
+            function () use ($idNegocio) {
+                $config = \App\Models\NegocioConfig::where('id_negocio', $idNegocio)->first();
+
+                if (!$config) {
+                    // updateOrCreate como safety net ante race conditions concurrentes.
+                    // Si dos procesos llegan aquí al mismo tiempo, el segundo hará
+                    // un UPDATE sin romper nada, gracias al unique constraint en id_negocio.
+                    $config = \App\Models\NegocioConfig::updateOrCreate(
+                        ['id_negocio' => $idNegocio],
+                        ['entrega_comprobante' => 'ticket']
+                    );
+                }
+
+                return $config;
+            },
             $idNegocio
         );
     }

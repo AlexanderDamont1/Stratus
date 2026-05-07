@@ -2,7 +2,25 @@
 <x-app-layout>
     <div class="mx-auto space-y-6" x-data="editarMarca()" x-init="init()">
 
-        {{-- Flash --}}
+       
+
+        {{-- Header --}}
+        <div>
+            <a href="{{ route('admin.garantias.index') }}" class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200
+                  flex items-center gap-1 mb-2 transition w-fit">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+                Volver a garantías
+            </a>
+            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">
+                Garantía — {{ $marca->nombre_marca }}
+            </h2>
+            <p class="text-xs text-gray-400 mt-0.5">Sube la póliza PDF y configura los componentes</p>
+        </div>
+
+
+         {{-- Flash --}}
         <div x-show="flashVisible" x-cloak x-transition:enter="transition ease-out duration-300"
             x-transition:enter-start="opacity-0 -translate-y-2" x-transition:leave="transition ease-in duration-200"
             x-transition:leave-end="opacity-0 translate-y-2" class="fixed top-6 left-1/2 -translate-x-1/2 z-50">
@@ -22,21 +40,6 @@
                 </svg>
                 <p class="text-sm font-medium text-gray-900 dark:text-white" x-text="flashMsg"></p>
             </div>
-        </div>
-
-        {{-- Header --}}
-        <div>
-            <a href="{{ route('admin.garantias.index') }}" class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200
-                  flex items-center gap-1 mb-2 transition w-fit">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                </svg>
-                Volver a garantías
-            </a>
-            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">
-                Garantía — {{ $marca->nombre_marca }}
-            </h2>
-            <p class="text-xs text-gray-400 mt-0.5">Sube la póliza PDF y configura los componentes</p>
         </div>
 
         {{-- ── Sección 1: PDF ── --}}

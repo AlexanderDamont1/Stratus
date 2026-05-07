@@ -127,7 +127,7 @@ class Usuario extends Authenticatable
 
     public function requiereSesionUnica(): bool
     {
-        return in_array($this->id_rol, [2, 44]);
+        return in_array($this->id_rol, [6, 44]);
     }
 
     public function routeNotificationForMail($notification = null): string
