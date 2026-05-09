@@ -18,11 +18,15 @@ class CuponRegla extends Model
     protected $fillable = [
         'id_regla',
         'id_cupon',
+        'id_negocio', // ← FIX
         'tipo',
         'valor',
     ];
 
-    protected function idPrefix(): string { return 'REG'; }
+    protected function idPrefix(): string
+    {
+        return 'REG';
+    }
 
     public function cupon()
     {

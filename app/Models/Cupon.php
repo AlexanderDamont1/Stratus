@@ -17,11 +17,14 @@ class Cupon extends Model
     protected $fillable = [
         'id_cupon',
         'id_negocio',
+        'tipo_cupon',        // ← nuevo
         'codigo',
         'nombre',
         'tipo_descuento',
         'valor_descuento',
         'aplica_a',
+        'monto_minimo',      // ← nuevo
+        'mensaje_vendedor',  // ← nuevo (antes se perdía)
         'id_producto_gratis',
         'activo',
         'usos_maximos',
@@ -33,6 +36,7 @@ class Cupon extends Model
     protected $casts = [
         'activo'          => 'boolean',
         'valor_descuento' => 'float',
+        'monto_minimo'    => 'float',   // ← nuevo
         'usos_maximos'    => 'integer',
         'usos_actuales'   => 'integer',
         'fecha_inicio'    => 'datetime',
@@ -55,6 +59,21 @@ class Cupon extends Model
     public function esPorcentaje(): bool { return $this->tipo_descuento === 'porcentaje'; }
     public function esMonto(): bool      { return $this->tipo_descuento === 'monto_fijo'; }
     public function aplicaAlTotal(): bool { return $this->aplica_a === 'total'; }
+
+    public function esNormal(): bool        { return $this->tipo_cupon === '1'; }
+    public function esAccesorioGratis(): bool { return $this->tipo_cupon === '2'; }
+    public function esMantenimiento(): bool  { return $this->tipo_cupon === '3'; }
+
+
+    public function labelTipo(): string
+    {
+        return match($this->tipo_cupon) {
+            '1' => 'Descuento',
+            '2' => 'Accesorio gratis',
+            '3' => 'Mantenimiento',
+            default => '—',
+        };
+    }
 
     // ── Relaciones ────────────────────────────────────────
 

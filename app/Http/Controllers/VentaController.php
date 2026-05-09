@@ -104,7 +104,7 @@ class VentaController extends Controller
             !$bici ||
             $bici->id_negocio !== $user->id_negocio ||
             $bici->status != 1 ||
-            ($bici->id_usuario !== null && $bici->id_usuario !== $user->id_usuario)
+            ($bici->id_usuario == null && $bici->id_usuario !== $user->id_usuario)
         ) {
             return response()->json([
                 'ok'     => false,
@@ -322,7 +322,8 @@ class VentaController extends Controller
                 }
 
                 $cantidad       = (int) ($item['cantidad'] ?? 1);
-                $precioUnitario = (float) $producto->precio;
+                $esGratis       = ($item['es_gratis'] ?? '0') === '1'; // ← FIX
+                $precioUnitario = $esGratis ? 0.00 : (float) $producto->precio; // ← FIX
 
                 DetalleVenta::create([
                     'id_venta'        => $venta->id_venta,
@@ -405,22 +406,30 @@ class VentaController extends Controller
                 }
             }
 
-            // ── Accesorio gratis por cupón ──────────────────────────────────────
+           // ── Accesorio gratis por cupón ──────────────────────────────────────
             if ($cuponAplicado?->id_producto_gratis) {
-                // FIX: intentamos usar la colección pre-cargada primero
-                $productoGratis = $productos[$cuponAplicado->id_producto_gratis]
-                    ?? Producto::where('id_producto', $cuponAplicado->id_producto_gratis)
-                    ->where('id_negocio', $user->id_negocio)
-                    ->first();
+                $idGratis = $cuponAplicado->id_producto_gratis;
 
-                if ($productoGratis) {
-                    DetalleVenta::create([
-                        'id_venta'        => $venta->id_venta,
-                        'id_producto'     => $productoGratis->id_producto,
-                        'num_serie'       => null,
-                        'precio_unitario' => 0.00,
-                        'cantidad'        => 1,
-                    ]);
+                // Si el frontend ya lo mandó en items[] con es_gratis=1,
+                // el precio ya quedó en 0 arriba — no insertar de nuevo
+                $yaInsertado = collect($request->items)
+                    ->contains(fn($i) => $i['id_producto'] === $idGratis);
+
+                if (!$yaInsertado) {
+                    $productoGratis = $productos[$idGratis]
+                        ?? Producto::where('id_producto', $idGratis)
+                        ->where('id_negocio', $user->id_negocio)
+                        ->first();
+
+                    if ($productoGratis) {
+                        DetalleVenta::create([
+                            'id_venta'        => $venta->id_venta,
+                            'id_producto'     => $productoGratis->id_producto,
+                            'num_serie'       => null,
+                            'precio_unitario' => 0.00,
+                            'cantidad'        => 1,
+                        ]);
+                    }
                 }
             }
 

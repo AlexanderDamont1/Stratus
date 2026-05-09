@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Producto;
 use App\Services\CuponService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class CuponValidarController extends Controller
 {
@@ -27,7 +26,7 @@ class CuponValidarController extends Controller
             return response()->json(['valido' => false, 'mensaje' => 'Cupón no encontrado.'], 404);
         }
 
-        // ── Enriquecer items con datos de modelo/marca ────────────────────────
+        // ── Enriquecer items con datos de modelo/marca/voltaje ────────────────
         $items = collect($request->items)->map(function ($item) use ($user) {
             $producto = Producto::with([
                 'productoModelo.modelo.marca',
@@ -39,17 +38,23 @@ class CuponValidarController extends Controller
 
             if (!$producto) return null;
 
-            // productoModelo puede ser hasMany → tomamos el primero
-            $pm = is_iterable($producto->productoModelo)
-                ? collect($producto->productoModelo)->first()
-                : $producto->productoModelo;
+            // productoModelo es hasMany — tomamos el que corresponde a esta sucursal,
+            // o si no hay uno específico, el primero disponible.
+            $pms = collect($producto->productoModelo ?? []);
+
+            // Priorizar el que pertenece a esta sucursal
+            $pm = $pms->firstWhere('id_usuario', $user->id_usuario)
+                ?? $pms->firstWhere('id_usuario', null)
+                ?? $pms->first();
 
             return [
                 'id_producto' => $item['id_producto'],
+                // FIX: antes tomaba $pm?->voltaje?->id_voltaje que es una relación
+                // belongsTo ya cargada — ahora usamos directamente id_voltaje del PM
+                'id_voltaje'  => $pm?->id_voltaje,
                 'id_modelo'   => $pm?->id_modelo,
-                'id_voltaje'  => $pm?->id_voltaje ?? $pm?->voltaje?->id_voltaje,
                 'id_marca'    => $pm?->modelo?->id_marca,
-                'precio'      => (float) $producto->precio,
+                'precio'      => (float) ($producto->precio ?? 0),
                 'cantidad'    => (int) $item['cantidad'],
             ];
         })->filter()->values()->toArray();
@@ -64,13 +69,18 @@ class CuponValidarController extends Controller
         }
 
         // ── Resolver producto gratis ──────────────────────────────────────────
-        $productoGratis      = CuponService::getProductoGratis($cupon);
-        $gratisYaEnCarrito   = false;
+        $productoGratis    = CuponService::getProductoGratis($cupon);
+        $gratisYaEnCarrito = false;
+        $cantidadEnCarrito = 0;
 
         if ($productoGratis) {
-            $idGratis          = $productoGratis['id_producto'];
-            $gratisYaEnCarrito = collect($request->items)
-                ->contains('id_producto', $idGratis);
+            $idGratis      = $productoGratis['id_producto'];
+            $itemEnCarrito = collect($request->items)->firstWhere('id_producto', $idGratis);
+
+            if ($itemEnCarrito) {
+                $gratisYaEnCarrito = true;
+                $cantidadEnCarrito = (int) $itemEnCarrito['cantidad'];
+            }
         }
 
         return response()->json([
@@ -78,8 +88,7 @@ class CuponValidarController extends Controller
             'mensaje'              => $resultado['mensaje'],
             'descuento'            => $resultado['descuento'],
             'producto_gratis'      => $productoGratis,
-            // true  → ya está en carrito, el front lo marca como "gratis" sin duplicar
-            // false → no está, el front puede mostrarlo aparte como regalo
+            'cantidad_en_carrito'  => $cantidadEnCarrito,
             'gratis_ya_en_carrito' => $gratisYaEnCarrito,
             'cupon' => [
                 'id_cupon'           => $cupon->id_cupon,

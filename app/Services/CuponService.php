@@ -8,61 +8,80 @@ use Illuminate\Support\Facades\Cache;
 
 class CuponService
 {
-    const TTL = 300; // 5 min
-
-    // ── Buscar y validar cupón por código ────────────────────────────────
+    const TTL = 300;
 
     public static function buscarPorCodigo(string $codigo, string $idNegocio): ?Cupon
     {
         return Cache::remember(
             "cupon:codigo:{$idNegocio}:" . strtoupper(trim($codigo)),
             self::TTL,
-            fn () => Cupon::with('reglas')
+            fn() => Cupon::with('reglas')
                 ->where('codigo', strtoupper(trim($codigo)))
                 ->where('id_negocio', $idNegocio)
                 ->first()
         );
     }
 
-    public static function validar(
-        Cupon $cupon,
-        array $items,
-        string $idUsuario, // sucursal que aplica el cupón
-    ): array // ['valido' => bool, 'mensaje' => string, 'descuento' => float]
+    public static function validar(Cupon $cupon, array $items, string $idUsuario, string $contexto = 'venta'): array
     {
+        // Tipos permitidos por contexto:
+        // 'venta'        → tipo 1 (descuento) y tipo 2 (accesorio gratis)
+        // 'mantenimiento' → tipo 3 (mantenimiento)
+        $tiposPermitidos = match ($contexto) {
+            'mantenimiento' => ['3'],
+            default         => ['1', '2'],
+        };
+
+        if (!in_array($cupon->tipo_cupon, $tiposPermitidos, strict: true)) {
+            return ['valido' => false, 'mensaje' => 'Este cupón no es válido para ventas.', 'descuento' => 0];
+        }
+
         if (!$cupon->estaVigente()) {
             return ['valido' => false, 'mensaje' => 'El cupón no está vigente o ya fue agotado.', 'descuento' => 0];
         }
 
-        $reglas = $cupon->reglas;
+        // ── Monto mínimo (campo directo del cupón) ────────────────────────────
+        if ($cupon->monto_minimo > 0) {
+            $totalCarrito = collect($items)->sum(fn($i) => $i['precio'] * $i['cantidad']);
+            if ($totalCarrito < $cupon->monto_minimo) {
+                return [
+                    'valido'    => false,
+                    'mensaje'   => 'Este cupón requiere una compra mínima de $'
+                                . number_format($cupon->monto_minimo, 2) . '.',
+                    'descuento' => 0,
+                ];
+            }
+        }
 
-        // ── Validar reglas ────────────────────────────────────────────────
-
-        foreach ($reglas as $regla) {
+        // ── Reglas (sucursal, marca, modelo, voltaje, monto_minimo como regla) ─
+        foreach ($cupon->reglas as $regla) {
             switch ($regla->tipo) {
 
                 case 'sucursal':
-                    // null = todas las sucursales
+                    // null = aplica a todas las sucursales
                     if ($regla->valor !== null && $regla->valor !== $idUsuario) {
                         return ['valido' => false, 'mensaje' => 'Este cupón no aplica para tu sucursal.', 'descuento' => 0];
                     }
                     break;
 
-                case 'cantidad_minima':
-                    $totalCantidad = collect($items)->sum('cantidad');
-                    if ($totalCantidad < (int) $regla->valor) {
-                        return [
-                            'valido'    => false,
-                            'mensaje'   => "El cupón requiere mínimo {$regla->valor} productos.",
-                            'descuento' => 0,
-                        ];
+                case 'voltaje':
+                    if ($regla->valor !== null) {
+                        // FIX: compara id_voltaje (string) con el valor de la regla usando
+                        // comparación laxa para evitar falsos negativos por tipo (int vs string)
+                        $tieneVoltaje = collect($items)->contains(
+                            fn($i) => (string) ($i['id_voltaje'] ?? '') === (string) $regla->valor
+                        );
+                        if (!$tieneVoltaje) {
+                            return ['valido' => false, 'mensaje' => 'El cupón no aplica para el voltaje de los productos seleccionados.', 'descuento' => 0];
+                        }
                     }
                     break;
 
                 case 'modelo':
-                    // Al menos un item debe ser del modelo requerido
                     if ($regla->valor !== null) {
-                        $tieneModelo = collect($items)->contains('id_modelo', $regla->valor);
+                        $tieneModelo = collect($items)->contains(
+                            fn($i) => (string) ($i['id_modelo'] ?? '') === (string) $regla->valor
+                        );
                         if (!$tieneModelo) {
                             return ['valido' => false, 'mensaje' => 'El cupón no aplica para los productos seleccionados.', 'descuento' => 0];
                         }
@@ -71,28 +90,47 @@ class CuponService
 
                 case 'marca':
                     if ($regla->valor !== null) {
-                        $tieneMarca = collect($items)->contains('id_marca', $regla->valor);
+                        $tieneMarca = collect($items)->contains(
+                            fn($i) => (string) ($i['id_marca'] ?? '') === (string) $regla->valor
+                        );
                         if (!$tieneMarca) {
                             return ['valido' => false, 'mensaje' => 'El cupón no aplica para la marca seleccionada.', 'descuento' => 0];
+                        }
+                    }
+                    break;
+
+                // FIX: regla monto_minimo guardada en cupon_reglas (alternativa al campo directo)
+                case 'monto_minimo':
+                    if ($regla->valor !== null && (float) $regla->valor > 0) {
+                        $totalCarrito = collect($items)->sum(fn($i) => $i['precio'] * $i['cantidad']);
+                        if ($totalCarrito < (float) $regla->valor) {
+                            return [
+                                'valido'    => false,
+                                'mensaje'   => 'Este cupón requiere una compra mínima de $'
+                                            . number_format((float) $regla->valor, 2) . '.',
+                                'descuento' => 0,
+                            ];
                         }
                     }
                     break;
             }
         }
 
-        // ── Calcular descuento (puede ser 0 si es solo regalo) ────────────
         $descuento = self::calcularDescuento($cupon, $items);
+
+        $mensaje = $cupon->mensaje_vendedor
+            ? $cupon->mensaje_vendedor
+            : '¡Cupón aplicado correctamente!';
 
         return [
             'valido'    => true,
-            'mensaje'   => '¡Cupón aplicado correctamente!',
+            'mensaje'   => $mensaje,
             'descuento' => $descuento,
         ];
     }
 
     public static function calcularDescuento(Cupon $cupon, array $items): float
     {
-        // Si el cupón no tiene tipo de descuento (solo regalo), el descuento es 0
         if (empty($cupon->tipo_descuento)) {
             return 0.0;
         }
@@ -103,32 +141,31 @@ class CuponService
             if ($cupon->esPorcentaje()) {
                 return round($total * ($cupon->valor_descuento / 100), 2);
             }
-            return min($cupon->valor_descuento, $total); // no puede ser mayor al total
+            return min((float) $cupon->valor_descuento, $total);
         }
 
-        // Aplica por producto — solo a los items que cumplen las reglas
-        $reglas   = $cupon->reglas->keyBy('tipo');
-        $idModelo = $reglas->get('modelo')?->valor;
+        $reglas    = $cupon->reglas->keyBy('tipo');
+        $idModelo  = $reglas->get('modelo')?->valor;
         $idVoltaje = $reglas->get('voltaje')?->valor;
-        $idMarca  = $reglas->get('marca')?->valor;
+        $idMarca   = $reglas->get('marca')?->valor;
 
         $itemsAplicables = collect($items)->filter(function ($item) use ($idModelo, $idVoltaje, $idMarca) {
-            if ($idModelo  && ($item['id_modelo']  ?? null) !== $idModelo)  return false;
-            if ($idVoltaje && ($item['id_voltaje'] ?? null) !== $idVoltaje) return false;
-            if ($idMarca   && ($item['id_marca']   ?? null) !== $idMarca)   return false;
+            if ($idModelo  && (string) ($item['id_modelo']  ?? '') !== (string) $idModelo)  return false;
+            if ($idVoltaje && (string) ($item['id_voltaje'] ?? '') !== (string) $idVoltaje) return false;
+            if ($idMarca   && (string) ($item['id_marca']   ?? '') !== (string) $idMarca)   return false;
             return true;
         });
 
-        $subtotalAplicable = $itemsAplicables->sum(fn($i) => $i['precio'] * $i['cantidad']);
+        if ($itemsAplicables->isEmpty()) return 0.0;
 
         if ($cupon->esPorcentaje()) {
-            return round($subtotalAplicable * ($cupon->valor_descuento / 100), 2);
+            $subtotal = $itemsAplicables->sum(fn($i) => $i['precio'] * $i['cantidad']);
+            return round($subtotal * ($cupon->valor_descuento / 100), 2);
         }
 
-        return min($cupon->valor_descuento, $subtotalAplicable);
+        $primerItem = $itemsAplicables->first();
+        return min((float) $cupon->valor_descuento, (float) $primerItem['precio']);
     }
-
-    // ── Registrar uso ─────────────────────────────────────────────────────
 
     public static function registrarUso(
         string $idCupon,
@@ -146,22 +183,19 @@ class CuponService
         ]);
 
         Cupon::where('id_cupon', $idCupon)->increment('usos_actuales');
-
         self::invalidar($idCupon, $idNegocio);
     }
 
-    // ── Invalidar caché ───────────────────────────────────────────────────
-
     public static function invalidar(string $idCupon, string $idNegocio): void
     {
+        Cache::forget("cupones:negocio:{$idNegocio}");
+
         if ($idCupon) {
             $cupon = Cupon::find($idCupon);
             if ($cupon) {
                 Cache::forget("cupon:codigo:{$idNegocio}:" . strtoupper($cupon->codigo));
             }
         }
-
-        Cache::forget("cupones:negocio:{$idNegocio}");
     }
 
     public static function getCuponesByNegocio(string $idNegocio)
@@ -169,7 +203,7 @@ class CuponService
         return Cache::remember(
             "cupones:negocio:{$idNegocio}",
             self::TTL,
-            fn () => Cupon::with('reglas')
+            fn() => Cupon::with('reglas')
                 ->where('id_negocio', $idNegocio)
                 ->orderByDesc('created_at')
                 ->get()
@@ -184,9 +218,9 @@ class CuponService
         if (!$producto) return null;
 
         return [
-            'id_producto'    => $producto->id_producto,
-            'nombre_producto'=> $producto->nombre_producto,
-            'precio'         => (float) $producto->precio,
+            'id_producto'     => $producto->id_producto,
+            'nombre_producto' => $producto->nombre_producto,
+            'precio'          => (float) $producto->precio,
         ];
     }
 }

@@ -1105,8 +1105,28 @@
                     finally   { this.validandoCupon = false; }
                 },
                 quitarCupon() {
-                    this.carrito = this.carrito.filter(i => !i.origen_cupon);
-                    this.cupon   = null; this.descuento = 0; this.cuponInput = '';
+                    // Restaurar la unidad gratis al item pagado antes de limpiar
+                    const gratisEnCarrito = this.carrito.filter(i => i.origen_cupon);
+                    gratisEnCarrito.forEach(item => {
+                        const existente = this.carrito.find(
+                            i => i.id_producto === item.id_producto && !i.origen_cupon
+                        );
+                        if (existente) {
+                            existente.cantidad += 1;
+                        } else {
+                            this.carrito.push({
+                                ...item,
+                                key:          item.id_producto,
+                                es_gratis:    false,
+                                origen_cupon: false,
+                            });
+                        }
+                    });
+
+                    this.carrito         = this.carrito.filter(i => !i.origen_cupon);
+                    this.cupon           = null;
+                    this.descuento       = 0;
+                    this.cuponInput      = '';
                     this.productoGratisExtra = null;
                     this._autoCompletarPago();
                 },
@@ -1129,21 +1149,63 @@
                     } catch { /* silencioso */ }
                 },
                 _aplicarProductoGratis(data) {
-                    if (!data.producto_gratis) {
-                        this.productoGratisExtra = null;
-                        this.carrito = this.carrito.filter(i => !i.origen_cupon);
-                        return;
-                    }
+                    // Antes de aplicar, restaurar cualquier item gratis anterior
+                    const gratisAnterior = this.carrito.filter(i => i.origen_cupon);
+                    gratisAnterior.forEach(item => {
+                        const existente = this.carrito.find(
+                            i => i.id_producto === item.id_producto && !i.origen_cupon
+                        );
+                        if (existente) {
+                            existente.cantidad += 1;
+                        } else {
+                            this.carrito.push({
+                                ...item,
+                                key:          item.id_producto,
+                                es_gratis:    false,
+                                origen_cupon: false,
+                            });
+                        }
+                    });
+                    this.carrito = this.carrito.filter(i => !i.origen_cupon);
+                    this.productoGratisExtra = null;
+
+                    if (!data.producto_gratis) return;
+
                     const pg = data.producto_gratis;
-                    this.carrito.forEach(i => { if (i.origen_cupon) { i.es_gratis = false; i.origen_cupon = false; } });
+
                     if (data.gratis_ya_en_carrito) {
-                        this.productoGratisExtra = null;
-                        const item = this.carrito.find(i => i.id_producto === pg.id_producto && !i.es_gratis);
-                        if (item) { item.es_gratis = true; item.origen_cupon = true; }
+                        const itemExistente = this.carrito.find(
+                            i => i.id_producto === pg.id_producto && !i.origen_cupon
+                        );
+                        if (itemExistente) {
+                            // Separar 1 unidad como gratis
+                            if (itemExistente.cantidad > 1) {
+                                itemExistente.cantidad -= 1;
+                            } else {
+                                // Solo había 1, quitarlo (el gratis lo reemplaza)
+                                this.carrito = this.carrito.filter(
+                                    i => !(i.id_producto === pg.id_producto && !i.origen_cupon)
+                                );
+                            }
+                            this.carrito.push({
+                                key:             pg.id_producto + '_gratis',
+                                tipo:            '1',
+                                id_producto:     pg.id_producto,
+                                num_serie:       '',
+                                nombre:          pg.nombre_producto,
+                                precio_unitario: pg.precio,
+                                cantidad:        1,
+                                color_hexes:     [],
+                                color_nombre:    '',
+                                es_gratis:       true,
+                                origen_cupon:    true,
+                            });
+                        }
                     } else {
                         this.productoGratisExtra = pg;
                     }
                 },
+
                 async _llamarValidar() {
                     const itemsReales = this.carrito
                         .filter(i => !i.origen_cupon)
