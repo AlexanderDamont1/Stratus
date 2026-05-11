@@ -1075,22 +1075,26 @@ class CatalogService
         Cache::forget(self::key("ventas:vendedor:{$idUsuario}:negocio:{$idNegocio}:page:1") . ":v{$version}");
     }
 
-    public static function getConfigNegocio(string $idNegocio): \App\Models\NegocioConfig
+
+    public static function getConfigNegocio(string $idNegocio): array
     {
         return self::remember(
             "config:negocio:{$idNegocio}",
             self::CACHE_TTL['negocios'],
             function () use ($idNegocio) {
-                $config = \App\Models\NegocioConfig::where('id_negocio', $idNegocio)->first();
+                $definiciones = \App\Models\NegocioConfig::where('activo', true)->get();
 
-                if (!$config) {
-                    // updateOrCreate como safety net ante race conditions concurrentes.
-                    // Si dos procesos llegan aquí al mismo tiempo, el segundo hará
-                    // un UPDATE sin romper nada, gracias al unique constraint en id_negocio.
-                    $config = \App\Models\NegocioConfig::updateOrCreate(
-                        ['id_negocio' => $idNegocio],
-                        ['entrega_comprobante' => 'ticket']
-                    );
+                $valores = \App\Models\NegocioConfigValor::where('id_negocio', $idNegocio)
+                    ->pluck('valor', 'clave');
+
+                $config = [];
+                foreach ($definiciones as $def) {
+                    $valor = $valores[$def->clave] ?? $def->valor_default;
+
+                    // checkbox_multi se guardó como JSON, lo devolvemos como array
+                    $config[$def->clave] = $def->tipo === 'checkbox_multi'
+                        ? json_decode($valor, true)
+                        : $valor;
                 }
 
                 return $config;

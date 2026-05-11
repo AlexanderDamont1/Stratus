@@ -139,7 +139,7 @@
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
                 <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Cupones</h2>
-                <p class="text-xs text-gray-900 dark:text-gray-400 mt-0.5">Crea y gestiona descuentos para tus sucursales</p>
+                <p class="text-xs text-gray-900 dark:text-white mt-0.5">Crea y gestiona descuentos para tus sucursales</p>
             </div>
             <button @click="abrirCrear()"
                 class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition active:scale-95 flex items-center gap-1.5">
@@ -156,8 +156,8 @@
             <svg class="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
             </svg>
-            <p class="text-sm font-medium text-gray-900 dark:text-gray-400">No hay cupones creados.</p>
-            <p class="text-xs text-gray-900 dark:text-gray-400 mt-1">Crea tu primer cupón con el botón de arriba.</p>
+            <p class="text-sm font-medium text-gray-900 dark:text-white">No hay cupones creados.</p>
+            <p class="text-xs text-gray-900 dark:text-white mt-1">Crea tu primer cupón con el botón de arriba.</p>
         </div>
         @else
         <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -200,7 +200,7 @@
                 $estadoBadge = $vigente
                     ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                     : ($activo
-                        ? 'bg-gray-100 text-gray-500 dark:bg-gray-700/50 dark:text-gray-400'
+                        ? 'bg-gray-100 text-gray-500 dark:bg-gray-700/50 dark:text-white'
                         : 'bg-gray-100 text-gray-400 dark:bg-gray-700/50 dark:text-gray-500');
                 $estadoLabel = $vigente ? 'Vigente' : ($activo ? 'Activo' : 'Inactivo');
 
@@ -214,7 +214,7 @@
 
             <div class="flex flex-col rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md hover:-translate-y-0.5 transition duration-200"
                  style="border-left: 3px solid {{ $accentColor }};"
-                 x-data="{ toggling: false, eliminando: false }">
+                 x-data="{ toggling: false }">
 
                 {{-- ── CUERPO ── --}}
                 <div class="px-4 pt-4 pb-3 flex flex-col gap-2.5 flex-1">
@@ -222,10 +222,10 @@
                     {{-- Fila 1: código + badges --}}
                     <div class="flex items-start justify-between gap-2">
                         <div class="min-w-0">
-                            <span class=" text-sm font-medium tracking-[0.12em] text-gray-900 dark:text-gray-400 uppercase block">
+                            <span class=" text-sm font-medium tracking-[0.12em] text-gray-900 dark:text-white uppercase block">
                                 {{ $cupon->codigo }}
                             </span>
-                            <span class="text-xs text-gray-900 dark:text-gray-400 block mt-0.5 truncate">
+                            <span class="text-xs text-gray-900 dark:text-white block mt-0.5 truncate">
                                 {{ $cupon->nombre }}
                             </span>
                         </div>
@@ -239,47 +239,47 @@
                         </div>
                     </div>
 
-                    {{-- Valor principal (más grande) --}}
+                    {{-- Valor principal (más grande para todos los tipos) --}}
                     <div class="flex items-baseline gap-2">
                         @if($cupon->tipo_cupon === '1' && $cupon->tipo_descuento)
-                            <span class="text-3xl font-medium leading-none text-gray-900 dark:text-gray-400">
+                            <span class="text-3xl font-medium leading-none text-gray-900 dark:text-white">
                                 @if($cupon->tipo_descuento === 'porcentaje')
                                     {{ $cupon->valor_descuento }}%
                                 @else
                                     ${{ number_format($cupon->valor_descuento, 0) }}
                                 @endif
                             </span>
-                            <span class="text-xs text-gray-900 dark:text-gray-400">
+                            <span class="text-xs text-gray-900 dark:text-white">
                                 {{ $cupon->aplica_a === 'total' ? 'descuento · total' : 'descuento · producto' }}
                             </span>
                         @elseif($cupon->tipo_cupon === '2' && $cupon->productoGratis)
-                            <span class="text-xl font-medium text-gray-900 dark:text-gray-400">
+                            <span class="text-xl font-medium text-gray-900 dark:text-white">
                                 {{ $cupon->productoGratis->nombre_producto }}
                             </span>
-                            <span class="text-xs text-gray-900 dark:text-gray-400">se añade al carrito</span>
+                            <span class="text-xs text-gray-900 dark:text-white">se añade al carrito</span>
                         @elseif($cupon->tipo_cupon === '3')
                             @if($cupon->tipo_descuento === 'porcentaje' && $cupon->valor_descuento)
-                                <span class="text-3xl font-medium leading-none text-gray-900 dark:text-gray-400">{{ $cupon->valor_descuento }}%</span>
-                                <span class="text-xs text-gray-900 dark:text-gray-400">en mantenimiento</span>
+                                <span class="text-3xl font-medium leading-none text-gray-900 dark:text-white">{{ $cupon->valor_descuento }}%</span>
+                                <span class="text-xs text-gray-900 dark:text-white">en mantenimiento</span>
                             @elseif($cupon->tipo_descuento === 'monto_fijo' && $cupon->valor_descuento)
-                                <span class="text-3xl font-medium leading-none text-gray-900 dark:text-gray-400">${{ number_format($cupon->valor_descuento, 0) }}</span>
-                                <span class="text-xs text-gray-900 dark:text-gray-400">en mantenimiento</span>
+                                <span class="text-3xl font-medium leading-none text-gray-900 dark:text-white">${{ number_format($cupon->valor_descuento, 0) }}</span>
+                                <span class="text-xs text-gray-900 dark:text-white">en mantenimiento</span>
                             @else
-                                <span class="text-3xl font-medium leading-none text-gray-900 dark:text-gray-400">Gratis</span>
-                                <span class="text-xs text-gray-900 dark:text-gray-400">mantenimiento</span>
+                                <span class="text-3xl font-medium leading-none text-gray-900 dark:text-white">Gratis</span>
+                                <span class="text-xs text-gray-900 dark:text-white">mantenimiento</span>
                             @endif
                         @endif
                     </div>
 
                     {{-- Meta: usos y fechas --}}
-                    <div class="flex items-center gap-4 text-xs text-gray-900 dark:text-gray-400">
+                    <div class="flex items-center gap-4 text-xs text-gray-900 dark:text-white">
                         <span>
                             Usos
-                            <span class="font-medium text-gray-900 dark:text-gray-400 ml-1">
+                            <span class="font-medium text-gray-900 dark:text-white ml-1">
                                 {{ $cupon->usos_actuales }}
                                 @if($cupon->usos_maximos)
                                     / {{ $cupon->usos_maximos }}
-                                    <span class="text-gray-900 dark:text-gray-400 font-normal">({{ $pct }}%)</span>
+                                    <span class="text-gray-900 dark:text-white font-normal">({{ $pct }}%)</span>
                                 @else
                                     / ∞
                                 @endif
@@ -288,7 +288,7 @@
                         @if($cupon->fecha_fin)
                         <span>
                             Hasta
-                            <span class="font-medium text-gray-900 dark:text-gray-400 ml-1">
+                            <span class="font-medium text-gray-900 dark:text-white ml-1">
                                 {{ $cupon->fecha_fin->format('d/m/Y') }}
                             </span>
                         </span>
@@ -296,7 +296,7 @@
                         @if($cupon->monto_minimo)
                         <span>
                             Mín.
-                            <span class="font-medium text-gray-900 dark:text-gray-400 ml-1">
+                            <span class="font-medium text-gray-900 dark:text-white ml-1">
                                 ${{ number_format($cupon->monto_minimo, 0) }}
                             </span>
                         </span>
@@ -314,7 +314,7 @@
                     @if($cupon->reglas->isNotEmpty())
                     <div class="flex flex-wrap gap-1 pt-1">
                         @foreach($cupon->reglas as $regla)
-                        <span class="text-[10px] px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700/80 text-gray-500 dark:text-gray-400 font-medium flex items-center gap-1">
+                        <span class="text-[10px] px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700/80 text-gray-900 dark:text-white font-medium flex items-center gap-1">
                             @switch($regla->tipo)
                                 @case('sucursal')
                                     <svg class="w-2.5 h-2.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
@@ -355,35 +355,12 @@
                             Editar
                         </button>
                         <button
-                            @click="
-                                if (!confirm('¿Eliminar este cupón? Esta acción no se puede deshacer.')) return;
-                                eliminando = true;
-                                fetch('{{ route('admin.cupones.destroy', $cupon->id_cupon) }}', {
-                                    method: 'DELETE',
-                                    headers: {
-                                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
-                                        'Accept': 'application/json',
-                                    }
-                                })
-                                .then(r => r.json())
-                                .then(() => window.location.reload())
-                                .catch(() => eliminando = false);
-                            "
-                            :disabled="eliminando"
-                            class="text-xs text-red-400 hover:text-red-600 transition disabled:opacity-40 flex items-center gap-1 border border-gray-200 dark:border-gray-600 rounded-md px-2.5 py-1 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-200 dark:hover:border-red-700/50">
-                            <span x-show="!eliminando" class="flex items-center gap-1">
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                </svg>
-                                Eliminar
-                            </span>
-                            <span x-show="eliminando" class="flex items-center gap-1">
-                                <svg class="animate-spin w-3 h-3" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                                </svg>
-                                Eliminando...
-                            </span>
+                            @click="abrirDeleteModal('{{ $cupon->id_cupon }}', '{{ $cupon->codigo }}')"
+                            class="text-xs text-red-400 hover:text-red-600 transition flex items-center gap-1 border border-gray-200 dark:border-gray-600 rounded-md px-2.5 py-1 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-200 dark:hover:border-red-700/50">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                            Eliminar
                         </button>
                     </div>
 
@@ -418,7 +395,7 @@
         </div>
         @endif
 
-        {{-- ===== MODAL ===== --}}
+        {{-- ===== MODAL CREAR/EDITAR ===== --}}
         <div x-show="crearModal" x-cloak
             x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0"
             x-transition:leave="transition ease-in duration-150" x-transition:leave-end="opacity-0"
@@ -432,15 +409,15 @@
                 {{-- Header modal --}}
                 <div class="flex items-center justify-between gap-3 px-6 py-5 border-b dark:border-gray-700">
                     <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
-                            <svg class="w-4.5 h-4.5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:18px;height:18px">
+                        <div class="w-9 h-9 rounded-xl bg-gray-900 dark:bg-gray-100 flex items-center justify-center shrink-0">
+                            <svg class="w-4.5 h-4.5 text-gray-100 dark:text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:18px;height:18px">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
                             </svg>
                         </div>
                         <div>
                             <h3 class="text-sm font-semibold text-gray-900 dark:text-white"
                                 x-text="modoEdicion ? 'Editar cupón' : 'Nuevo cupón'"></h3>
-                            <p class="text-xs text-gray-900 dark:text-gray-400 mt-0.5"
+                            <p class="text-xs text-gray-900 dark:text-white mt-0.5"
                                 x-text="modoEdicion ? 'Modifica los datos del cupón' : 'Configura el descuento y sus condiciones'"></p>
                         </div>
                     </div>
@@ -456,13 +433,13 @@
 
                     {{-- Tipo de cupón --}}
                     <div>
-                        <label class="block text-xs font-medium text-gray-900 dark:text-gray-400 mb-2">Tipo de cupón</label>
+                        <label class="block text-xs font-medium text-gray-900 dark:text-white mb-2">Tipo de cupón</label>
                         <div class="grid grid-cols-3 gap-3">
                             <button type="button" @click="form.tipo_cupon = '1'; resetBeneficio()"
                                 class="flex flex-col items-center gap-1.5 px-3 py-4 rounded-xl border text-xs font-medium transition"
                                 :class="form.tipo_cupon === '1'
                                     ? 'border-green-400 bg-[#EAF3DE] dark:bg-green-900/20 text-[#27500A] dark:text-green-400'
-                                    : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-400'">
+                                    : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-white hover:border-gray-400'">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
                                 </svg>
@@ -472,7 +449,7 @@
                                 class="flex flex-col items-center gap-1.5 px-3 py-4 rounded-xl border text-xs font-medium transition"
                                 :class="form.tipo_cupon === '2'
                                     ? 'border-purple-400 bg-[#EEEDFE] dark:bg-purple-900/20 text-[#26215C] dark:text-purple-400'
-                                    : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-400'">
+                                    : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-white hover:border-gray-400'">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/>
                                 </svg>
@@ -482,7 +459,7 @@
                                 class="flex flex-col items-center gap-1.5 px-3 py-4 rounded-xl border text-xs font-medium transition"
                                 :class="form.tipo_cupon === '3'
                                     ? 'border-orange-400 bg-[#FAEEDA] dark:bg-orange-900/20 text-[#412402] dark:text-orange-400'
-                                    : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-400'">
+                                    : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-white hover:border-gray-400'">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -495,12 +472,12 @@
                     {{-- Nombre y código --}}
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-xs text-gray-900 dark:text-gray-400 mb-1">Nombre del cupón</label>
+                            <label class="block text-xs text-gray-900 dark:text-white mb-1">Nombre del cupón</label>
                             <input type="text" x-model="form.nombre" placeholder="Ej. Promoción de verano"
                                 class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-400">
                         </div>
                         <div>
-                            <label class="block text-xs text-gray-900 dark:text-gray-400 mb-1">
+                            <label class="block text-xs text-gray-900 dark:text-white mb-1">
                                 Código
                                 <button type="button" @click="generarCodigo()"
                                     class="inline-flex items-center gap-1 ml-1 text-[10px] text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition">
@@ -522,7 +499,7 @@
                             <p class="text-xs font-medium text-[#27500A] dark:text-green-400">Configurar descuento</p>
                             <div class="grid grid-cols-3 gap-3">
                                 <div>
-                                    <label class="block text-xs text-gray-900 dark:text-gray-400 mb-1">Tipo</label>
+                                    <label class="block text-xs text-gray-900 dark:text-white mb-1">Tipo</label>
                                     <select x-model="form.tipo_descuento"
                                         class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-400">
                                         <option value="porcentaje">Porcentaje (%)</option>
@@ -530,32 +507,25 @@
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="block text-xs text-gray-900 dark:text-gray-400 mb-1">
+                                    <label class="block text-xs text-gray-900 dark:text-white mb-1">
                                         Valor <span x-text="form.tipo_descuento === 'porcentaje' ? '(%)' : '($)'"></span>
                                     </label>
                                     <div class="relative">
-                                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-900 dark:text-gray-400 text-sm"
+                                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-900 dark:text-white text-sm"
                                             x-text="form.tipo_descuento === 'porcentaje' ? '%' : '$'"></span>
                                         <input type="number" x-model="form.valor_descuento" min="0" step="0.01"
                                             class="w-full border border-gray-200 dark:border-gray-600 rounded-lg pl-7 pr-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-400">
                                     </div>
                                 </div>
                                 <div>
-                                    <label class="block text-xs text-gray-900 dark:text-gray-400 mb-1">Aplica a</label>
+                                    <label class="block text-xs text-gray-900 dark:text-white mb-1">Aplica a</label>
                                     <div class="flex gap-2 mt-1">
                                         <button type="button" @click="form.aplica_a = 'total'"
                                             class="flex-1 px-2 py-2 rounded-lg border text-xs font-medium transition"
                                             :class="form.aplica_a === 'total'
                                                 ? 'border-gray-900 dark:border-white bg-gray-900 dark:bg-white text-white dark:text-gray-900'
-                                                : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-400'">
+                                                : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-white hover:border-gray-400'">
                                             Total
-                                        </button>
-                                        <button type="button" @click="form.aplica_a = 'producto'"
-                                            class="flex-1 px-2 py-2 rounded-lg border text-xs font-medium transition"
-                                            :class="form.aplica_a === 'producto'
-                                                ? 'border-gray-900 dark:border-white bg-gray-900 dark:bg-white text-white dark:text-gray-900'
-                                                : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-400'">
-                                            Producto
                                         </button>
                                     </div>
                                 </div>
@@ -586,27 +556,27 @@
                                     class="px-3 py-2 rounded-lg border text-xs font-medium transition"
                                     :class="form.mantenimiento_tipo === 'gratis'
                                         ? 'border-orange-400 bg-[#FAEEDA] dark:bg-orange-900/30 text-[#412402] dark:text-orange-400'
-                                        : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-400'">
+                                        : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-white hover:border-gray-400'">
                                     Gratis
                                 </button>
                                 <button type="button" @click="form.mantenimiento_tipo = 'porcentaje'; form.tipo_descuento = 'porcentaje'"
                                     class="px-3 py-2 rounded-lg border text-xs font-medium transition"
                                     :class="form.mantenimiento_tipo === 'porcentaje'
                                         ? 'border-orange-400 bg-[#FAEEDA] dark:bg-orange-900/30 text-[#412402] dark:text-orange-400'
-                                        : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-400'">
+                                        : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-white hover:border-gray-400'">
                                     % Descuento
                                 </button>
                                 <button type="button" @click="form.mantenimiento_tipo = 'monto_fijo'; form.tipo_descuento = 'monto_fijo'"
                                     class="px-3 py-2 rounded-lg border text-xs font-medium transition"
                                     :class="form.mantenimiento_tipo === 'monto_fijo'
                                         ? 'border-orange-400 bg-[#FAEEDA] dark:bg-orange-900/30 text-[#412402] dark:text-orange-400'
-                                        : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-400'">
+                                        : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-white hover:border-gray-400'">
                                     $ Fijo
                                 </button>
                             </div>
                             <template x-if="form.mantenimiento_tipo !== 'gratis'">
                                 <div class="relative">
-                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-900 dark:text-gray-400 text-sm"
+                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-900 dark:text-white text-sm"
                                         x-text="form.mantenimiento_tipo === 'porcentaje' ? '%' : '$'"></span>
                                     <input type="number" x-model="form.valor_descuento" min="0" step="0.01"
                                         :placeholder="form.mantenimiento_tipo === 'porcentaje' ? 'Ej. 20' : 'Ej. 150'"
@@ -619,19 +589,19 @@
                     {{-- Usos y fechas --}}
                     <div class="grid grid-cols-3 gap-4">
                         <div>
-                            <label class="block text-xs text-gray-900 dark:text-gray-400 mb-1">
-                                Usos máximos <span class="text-gray-900 dark:text-gray-400">(vacío = ∞)</span>
+                            <label class="block text-xs text-gray-900 dark:text-white mb-1">
+                                Usos máximos <span class="text-gray-900 dark:text-white">(vacío = ∞)</span>
                             </label>
                             <input type="number" x-model="form.usos_maximos" min="1" placeholder="∞"
                                 class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-400">
                         </div>
                         <div>
-                            <label class="block text-xs text-gray-900 dark:text-gray-400 mb-1">Fecha inicio</label>
+                            <label class="block text-xs text-gray-900 dark:text-white mb-1">Fecha inicio</label>
                             <input type="date" x-model="form.fecha_inicio"
                                 class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-400">
                         </div>
                         <div>
-                            <label class="block text-xs text-gray-900 dark:text-gray-400 mb-1">Fecha fin</label>
+                            <label class="block text-xs text-gray-900 dark:text-white mb-1">Fecha fin</label>
                             <input type="date" x-model="form.fecha_fin"
                                 class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-400">
                         </div>
@@ -641,11 +611,11 @@
                     <div>
                         <div class="flex items-center justify-between mb-3">
                             <div>
-                                <p class="text-xs font-medium text-gray-900 dark:text-gray-400">Condiciones</p>
-                                <p class="text-[10px] text-gray-900 dark:text-gray-400 mt-0.5">La sucursal es obligatoria. Agrega más si necesitas.</p>
+                                <p class="text-xs font-medium text-gray-900 dark:text-white">Condiciones</p>
+                                <p class="text-[10px] text-gray-900 dark:text-white mt-0.5">La sucursal es obligatoria. Agrega más si necesitas.</p>
                             </div>
                             <button type="button" @click="agregarRegla()"
-                                class="text-xs text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 transition active:scale-95 flex items-center gap-1">
+                                class="text-xs text-gray-500 dark:text-white border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 transition active:scale-95 flex items-center gap-1">
                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                                 </svg>
@@ -659,7 +629,7 @@
 
                                     <template x-if="regla.tipo === 'sucursal'">
                                         <div class="flex items-center gap-2 flex-1">
-                                            <span class="text-xs font-medium text-gray-900 dark:text-gray-400 shrink-0 w-20">Sucursal</span>
+                                            <span class="text-xs font-medium text-gray-900 dark:text-white shrink-0 w-20">Sucursal</span>
                                             <select x-model="regla.valor"
                                                 class="flex-1 border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-400">
                                                 <option value="">Todas las sucursales</option>
@@ -694,7 +664,7 @@
                                                         @endforeach
                                                     </select>
                                                     <template x-if="regla.valor && modelosCargando">
-                                                        <div class="flex items-center gap-2 text-xs text-gray-900 dark:text-gray-400 py-1">
+                                                        <div class="flex items-center gap-2 text-xs text-gray-900 dark:text-white py-1">
                                                             <svg class="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24">
                                                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
                                                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
@@ -736,7 +706,7 @@
 
                                             <template x-if="regla.tipo === 'monto_minimo'">
                                                 <div class="relative flex-1">
-                                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-900 dark:text-gray-400 text-xs pointer-events-none">$</span>
+                                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-900 dark:text-white text-xs pointer-events-none">$</span>
                                                     <input type="number" x-model="regla.valor" min="0" step="0.01" placeholder="Ej. 5000"
                                                         class="w-full pl-6 border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-400">
                                                 </div>
@@ -754,7 +724,6 @@
                             </template>
                         </div>
                     </div>
-
                 </div>
 
                 {{-- Footer modal --}}
@@ -777,6 +746,58 @@
                 </div>
             </div>
         </div>
+
+        {{-- ===== MODAL ELIMINAR CUPÓN ===== --}}
+            <div x-show="deleteModal" x-cloak
+                x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100"
+                x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0"
+                class="fixed inset-0 bg-black/50 flex items-center backdrop-blur-[2px] justify-center z-50 px-4"
+                @click.self="deleteModal = false">
+                <div x-show="deleteModal"
+                    x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95"
+                    x-transition:enter-end="opacity-100 scale-100"
+                    x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100"
+                    x-transition:leave-end="opacity-0 scale-95"
+                    class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-sm" @click.stop>
+                    <div class="flex items-start gap-4 mb-5">
+                        <div class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0">
+                            <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-base font-semibold text-gray-900 dark:text-white">Eliminar cupón</h3>
+                            <p class="text-sm text-gray-500 dark:text-white mt-1">Se eliminará permanentemente</p>
+                            <div class="text-center mt-1">
+                                <span class="inline-block px-3 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-sm  font-semibold text-gray-800 dark:text-gray-200"
+                                    x-text="deleteCuponCode"></span>
+                            </div>
+                            <p class="text-sm text-gray-500 dark:text-white mt-3">
+                                Esta acción no se puede deshacer.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" @click="deleteModal = false"
+                            class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">
+                            Cancelar
+                        </button>
+                        <button type="button" @click="confirmDelete" :disabled="deleteLoading"
+                            class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition disabled:opacity-40 disabled:cursor-not-allowed">
+                            <span x-show="!deleteLoading">Sí, eliminar</span>
+                            <span x-show="deleteLoading" class="inline-flex items-center gap-1">
+                                <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                </svg>
+                                Eliminando...
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
 
         {{-- ===== DATOS PARA ALPINE ===== --}}
         @php
@@ -821,6 +842,11 @@
                 submitting:       false,
                 modelosFiltrados: [],
                 modelosCargando:  false,
+                // Delete modal
+                deleteModal:      false,
+                deleteId:         null,
+                deleteCuponCode:  '',
+                deleteLoading:    false,
 
                 form: {
                     tipo_cupon:         '1',
@@ -1062,6 +1088,46 @@
                         this.submitting = false;
                     }
                 },
+
+                // Delete modal methods
+                abrirDeleteModal(id, code) {
+                    this.deleteId = id;
+                    this.deleteCuponCode = code;
+                    this.deleteModal = true;
+                },
+
+                async confirmDelete() {
+                    if (this.deleteLoading) return;
+                    this.deleteLoading = true;
+                    try {
+                        const res = await fetch(`{{ url('admin/cupones') }}/${this.deleteId}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                                'Accept': 'application/json',
+                            }
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                            window.dispatchEvent(new CustomEvent('notify-cupon', {
+                                detail: { msg: 'Cupón eliminado correctamente.', tipo: 'success' }
+                            }));
+                            setTimeout(() => window.location.reload(), 1200);
+                        } else {
+                            window.dispatchEvent(new CustomEvent('notify-cupon', {
+                                detail: { msg: data.message || 'Error al eliminar.', tipo: 'error' }
+                            }));
+                            this.deleteModal = false;
+                        }
+                    } catch {
+                        window.dispatchEvent(new CustomEvent('notify-cupon', {
+                            detail: { msg: 'Error de conexión.', tipo: 'error' }
+                        }));
+                        this.deleteModal = false;
+                    } finally {
+                        this.deleteLoading = false;
+                    }
+                }
             };
         }
         </script>

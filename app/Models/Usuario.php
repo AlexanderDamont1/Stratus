@@ -8,7 +8,7 @@ use Illuminate\Notifications\Notifiable;
 
 class Usuario extends Authenticatable
 {
-    use  GeneratesCustomId, Notifiable;
+    use GeneratesCustomId, Notifiable;
 
     protected $table      = 'usuarios';
     protected $primaryKey = 'id_usuario';
@@ -27,6 +27,11 @@ class Usuario extends Authenticatable
         'google_id',
         'email_verified_at',
         'email_verification_token',
+        // Ubicación (sucursales / rol 2)
+        'direccion',
+        'lat',
+        'lng',
+        'place_id',
     ];
 
     protected $hidden = [
@@ -36,8 +41,10 @@ class Usuario extends Authenticatable
     ];
 
     protected $casts = [
-        'id_rol'             => 'integer',
-        'email_verified_at'  => 'datetime',
+        'id_rol'            => 'integer',
+        'email_verified_at' => 'datetime',
+        'lat'               => 'float',
+        'lng'               => 'float',
     ];
 
     protected function idPrefix(): string
@@ -98,6 +105,13 @@ class Usuario extends Authenticatable
             'email_verified_at'        => now(),
             'email_verification_token' => null,
         ]);
+    }
+
+    // ── Helpers de ubicación ──────────────────────────────
+
+    public function tieneUbicacion(): bool
+    {
+        return $this->lat !== null && $this->lng !== null;
     }
 
     // ── Relaciones ────────────────────────────────────────

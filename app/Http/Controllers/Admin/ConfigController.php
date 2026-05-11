@@ -12,15 +12,18 @@ class ConfigController extends Controller
 {
     public function index()
     {
-        $user   = Auth::user();
+        $user = Auth::user();
         if ($user->id_rol !== 1) abort(403);
 
-        $config = NegocioConfig::firstOrCreate(
-            ['id_negocio' => $user->id_negocio],
-            ['entrega_comprobante' => 'ticket']
-        );
+        $definiciones = NegocioConfig::where('activo', true)
+            ->orderBy('grupo')
+            ->orderBy('orden')
+            ->get();
 
-        return view('administrador.config.index', compact('config'));
+        // Valores actuales del negocio desde caché
+        $valores = CatalogService::getConfigNegocio($user->id_negocio);
+
+        return view('administrador.config.index', compact('definiciones', 'valores'));
     }
 
     public function update(Request $request)
@@ -28,16 +31,22 @@ class ConfigController extends Controller
         $user = Auth::user();
         if ($user->id_rol !== 1) abort(403);
 
-        $request->validate([
-            'entrega_comprobante' => 'required|in:ticket,correo',
-        ]);
+        $definiciones = NegocioConfig::where('activo', true)->get()->keyBy('clave');
 
-        NegocioConfig::updateOrCreate(
-            ['id_negocio' => $user->id_negocio],
-            ['entrega_comprobante' => $request->entrega_comprobante]
-        );
-        CatalogService::invalidateConfigNegocio($user->id_negocio); // ← agregar esto
+        foreach ($definiciones as $clave => $def) {
+            if (!$request->has($clave)) continue;
 
+            $valor = $def->tipo === 'checkbox_multi'
+                ? json_encode($request->input($clave, []))
+                : $request->input($clave);
+
+            \App\Models\NegocioConfigValor::updateOrCreate(
+                ['id_negocio' => $user->id_negocio, 'clave' => $clave],
+                ['valor' => $valor]
+            );
+        }
+
+        CatalogService::invalidateConfigNegocio($user->id_negocio);
 
         return back()->with('success', 'Configuración guardada correctamente.');
     }

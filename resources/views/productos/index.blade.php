@@ -286,12 +286,12 @@
 
                 {{-- Header --}}
                 <div class="bg-gray-50 dark:bg-gray-700/50 px-4 py-5 text-center">
-                    <div class="w-8 h-8 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center mx-auto mb-2">
-                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="w-8 h-8 rounded-full bg-gray-900 dark:bg-gray-100 flex items-center justify-center mx-auto mb-2">
+                        <svg class="w-4 h-4 text-gray-100 dark:text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                         </svg>
                     </div>
-                    <p class="text-xs text-gray-400 dark:text-gray-500 mb-1 truncate px-2">{{ $producto->nombre_producto }}</p>
+                    <p class="text-xs text-gray-700 dark:text-gray-300 mb-1 truncate px-2">{{ $producto->nombre_producto }}</p>
                     <p class="text-2xl font-semibold text-gray-900 dark:text-white">${{ number_format($producto->precio, 0) }}</p>
                 </div>
 
@@ -382,7 +382,7 @@
             class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md" @click.stop>
 
             <div class="flex items-center gap-3 mb-5">
-                 <div class="w-10 h-10 rounded-xl bg-gray-900 dark:bg-gray-100 flex items-center justify-center shrink-0">
+                   <div class="w-10 h-10 rounded-xl bg-gray-900 dark:bg-gray-100 flex items-center justify-center shrink-0">
                         <svg class="w-5 h-5 text-gray-100 dark:text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                         </svg>

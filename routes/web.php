@@ -33,6 +33,8 @@ use App\Http\Controllers\CuponValidarController;
 use App\Http\Controllers\Admin\PersonalController;
 use App\Http\Controllers\Admin\MetodoPagoController;
 use App\Http\Controllers\Root\RootNegocioController;
+use App\Http\Controllers\UbicacionController;
+use App\Http\Controllers\SucursalesPublicasController;
 
 /*
 |--------------------------------------------------------------------------
@@ -55,6 +57,8 @@ Route::get('/verificar-email/{token}', [EmailVerificationController::class, 'ver
 Route::post('/verificar-email/{token}', [EmailVerificationController::class, 'confirmar'])->name('verificar.email.confirmar');
 
 Route::get('/robo/confirmar/{token}', [ReporteRoboController::class, 'confirmar'])->name('robo.confirmar');
+
+Route::get('/sucursales', [SucursalesPublicasController::class, 'index'])->name('sucursales.index');
 
 /*
 |--------------------------------------------------------------------------
@@ -137,7 +141,7 @@ Route::middleware(['auth', 'email.verificado'])->group(function () {
 
     Route::post('/reenviar-verificacion', [EmailVerificationController::class, 'reenviar'])
         ->name('verificacion.reenviar')
-        ->middleware('throttle:3,1');
+        ->middleware('throttle:3,1');  
 });
 
 
@@ -145,7 +149,7 @@ Route::middleware(['auth', 'email.verificado'])->group(function () {
 
 
 
-Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'email.verificado', 'no.cache'])->group(function () {
+Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'email.verificado', 'no.cache', 'requiere.ubicacion',])->group(function () {
 
     Route::get('/dashboard', fn() => view('dashboard'))->name('dashboard');
 
@@ -155,6 +159,9 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
     Route::get('/modelo-voltaje', [ModeloVoltajeController::class, 'modeloVoltaje'])->name('modelo-voltaje');
 
     Route::post('/admin/setup/completar', [SetupController::class, 'completar'])->name('admin.setup.completar');
+
+    Route::get('/ubicacion/sucursal',  [UbicacionController::class, 'index'])->name('ubicacion.index');
+    Route::post('/ubicacion/sucursal', [UbicacionController::class, 'guardar'])->name('ubicacion.guardar');
 
     /*
     |----------------------------------------------------------------------

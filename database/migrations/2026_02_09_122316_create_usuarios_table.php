@@ -19,6 +19,13 @@ return new class extends Migration
             $table->string('email_verification_token', 64)->nullable();
             $table->string('session_token')->nullable();
             $table->unsignedTinyInteger('id_rol')->default(1);
+
+            // Ubicación (solo se usa para id_rol = 2 / sucursales)
+            $table->string('direccion')->nullable();
+            $table->decimal('lat', 10, 7)->nullable();
+            $table->decimal('lng', 10, 7)->nullable();
+            $table->string('place_id')->nullable();
+
             $table->rememberToken();
             $table->timestamps();
 

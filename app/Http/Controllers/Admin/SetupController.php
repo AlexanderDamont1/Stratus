@@ -18,9 +18,9 @@ class SetupController extends Controller
 {
     private function generarIdUsuario(): string
     {
-        $fecha  = Carbon::now()->format('ymd'); // Ejemplo: 260314
-        $letras = Str::upper(Str::random(3));   // Genera exactamente 3 letras
-        $random = random_int(100, 999);         // Bajé a 3 dígitos para que el ID sea simétrico, pero puedes dejar 9999 si prefieres.
+        $fecha  = Carbon::now()->format('ymd');
+        $letras = Str::upper(Str::random(3));
+        $random = random_int(100, 999);
 
         return 'USR' . $fecha . $letras . $random;
     }
@@ -48,16 +48,16 @@ class SetupController extends Controller
         $messages = [];
         for ($i = 0; $i < $maxUsuarios; $i++) {
             $num = $i + 1;
-            $messages["vendedores.$i.nombre.required"]   = "El nombre del vendedor $num es obligatorio.";
-            $messages["vendedores.$i.correo.required"]   = "El correo del vendedor $num es obligatorio.";
-            $messages["vendedores.$i.correo.email"]      = "El correo del vendedor $num no es válido.";
+            $messages["vendedores.$i.nombre.required"]   = "El nombre de la sucursal # $num es obligatorio.";
+            $messages["vendedores.$i.correo.required"]   = "El correo de la sucursal # $num es obligatorio.";
+            $messages["vendedores.$i.correo.email"]      = "El correo de la sucursal # $num no es válido.";
             $messages["vendedores.$i.correo.unique"]     = "Intenta con otro correo";
-            $messages["vendedores.$i.password.required"] = "La contraseña del vendedor $num es obligatoria.";
+            $messages["vendedores.$i.password.required"] = "La contraseña de la sucursal # $num es obligatoria.";
+            $messages["vendedores.$i.password.min"]      = "La contraseña de la sucursal # $num debe ser de al menos 8 caracteres";
         }
 
         $data = $request->validate($rules, $messages);
 
-        // En SetupController
         $vendedoresCreados = [];
 
         DB::transaction(function () use ($data, $admin, &$vendedoresCreados) {
@@ -75,7 +75,6 @@ class SetupController extends Controller
                     'email_verification_token' => $verificationToken,
                 ]);
 
-                // Guardar para enviar después de la transacción
                 $vendedoresCreados[] = [
                     'usuario' => $nuevoVendedor,
                     'token'   => $verificationToken,
@@ -94,14 +93,14 @@ class SetupController extends Controller
             CatalogService::invalidateSucursales($admin->id_negocio);
         });
 
-        // Enviar correos FUERA de la transacción
         foreach ($vendedoresCreados as $item) {
-        EnviarVerificacionEmailJob::dispatch(
-            $item['usuario'],
-            $item['token'],
-            $item['nombre']
-        );
-}
+            EnviarVerificacionEmailJob::dispatch(
+                $item['usuario'],
+                $item['token'],
+                $item['nombre']
+            );
+        }
+
         return redirect()
             ->route('dashboard')
             ->with('success', 'Cuenta activada correctamente');
