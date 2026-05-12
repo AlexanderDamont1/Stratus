@@ -22,13 +22,45 @@ class GarantiaController extends Controller
 
     // ─── INDEX: buscador ─────────────────────────────────────────────────
     public function index()
-    {
-        $user = auth()->user();
-        if ($user->id_rol != 2)
-            abort(403);
+{
+    $user = auth()->user();
+    if ($user->id_rol != 2)
+        abort(403);
 
-        return view('vendedor.garantias.index');
-    }
+    $idNegocio = $user->id_negocio;
+
+    // Subquery: trae el estado de la garantía activa de cada bici
+    $bicicletas = Bicicleta::with(['modelo', 'marca', 'color', 'voltaje'])
+        ->where('bicicletas.id_negocio', $idNegocio)
+        ->where('bicicletas.status', 2)
+        ->addSelect([
+            'status_garantia' => BicicletaGarantia::select('estado')
+                ->whereColumn('num_serie', 'bicicletas.num_serie')
+                ->where('id_negocio', $idNegocio)
+                ->whereNull('id_reemplazada_por')
+                ->orderByRaw("FIELD(estado, 'vigente', 'por_vencer', 'expirada')")
+                ->limit(1)
+        ])
+        ->latest()
+        ->paginate(15);
+
+    // Última garantía: traemos la bicicleta relacionada para acceder a ->modelo
+    $ultimaGarantia = BicicletaGarantia::with('bicicleta.modelo')
+        ->where('id_negocio', $idNegocio)
+        ->latest()
+        ->first();
+
+    $stats = [
+        'activas'    => BicicletaGarantia::where('id_negocio', $idNegocio)
+                            ->where('estado', 'vigente')->count(),
+        'consultas'  => BicicletaGarantia::where('id_negocio', $idNegocio)->count(),
+        'reclamos'   => GarantiaReclamo::where('id_negocio', $idNegocio)->count(),
+        'reemplazos' => BicicletaGarantia::where('id_negocio', $idNegocio)
+                            ->whereNotNull('id_reemplazada_por')->count(),
+    ];
+
+    return view('vendedor.garantias.index', compact('bicicletas', 'ultimaGarantia', 'stats'));
+}
 
     // ─── AJAX: buscar bicicleta ───────────────────────────────────────────
     public function buscar(Request $request)
