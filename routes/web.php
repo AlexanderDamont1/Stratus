@@ -242,18 +242,21 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
         });
 
         Route::prefix('admin/garantias')->name('admin.garantias.')->group(function () {
-            Route::get('/', [AdminGarantiaController::class, 'index'])->name('index');
-            Route::get('/reclamos', [AdminGarantiaController::class, 'reclamos'])->name('reclamos');
-            Route::get('/marcas', [AdminGarantiaController::class, 'marcas'])->name('marcas');
-            Route::get('/marcas/{idMarca}', [AdminGarantiaController::class, 'editarMarca'])->name('marcas.editar');
-            Route::post('/marcas/{idMarca}/pdf', [AdminGarantiaController::class, 'subirPdf'])->name('marcas.pdf');
-            Route::post('/marcas/{idMarca}/activar', [AdminGarantiaController::class, 'activar'])->name('marcas.activar');
-            Route::post('/componentes', [AdminGarantiaController::class, 'guardarDefs'])->name('componentes.guardar');
-            Route::delete('/componentes/{id}', [AdminGarantiaController::class, 'borrarDef'])->name('componentes.borrar');
-            Route::patch('/reclamo/{id}/estado', [AdminGarantiaController::class, 'estadoReclamo'])->name('reclamo.estado');
-            Route::post('/reclamo/{id}/reemplazo', [AdminGarantiaController::class, 'reemplazo'])->name('reclamo.reemplazo');
-            Route::post('/politica', [AdminGarantiaController::class, 'guardarPolitica'])->name('politica');
-        });
+    Route::get('/',                                [AdminGarantiaController::class, 'index'])->name('index');
+    Route::get('/reclamos',                        [AdminGarantiaController::class, 'reclamos'])->name('reclamos');
+    Route::get('/marcas',                          [AdminGarantiaController::class, 'marcas'])->name('marcas');
+    Route::get('/marcas/{idMarca}',                [AdminGarantiaController::class, 'editarMarca'])->name('marcas.editar');
+    Route::post('/marcas/{idMarca}/pdf',           [AdminGarantiaController::class, 'subirPdf'])->name('marcas.pdf');
+    Route::post('/marcas/{idMarca}/activar',       [AdminGarantiaController::class, 'activar'])->name('marcas.activar');
+    Route::post('/marcas/{idMarca}/politica',      [AdminGarantiaController::class, 'guardarPolitica'])->name('marcas.politica'); // ← nueva
+    Route::post('/componentes',                    [AdminGarantiaController::class, 'guardarDefs'])->name('componentes.guardar');
+    Route::delete('/componentes/{id}',             [AdminGarantiaController::class, 'borrarDef'])->name('componentes.borrar');
+    Route::patch('/reclamo/{id}/estado',           [AdminGarantiaController::class, 'estadoReclamo'])->name('reclamo.estado');
+    Route::post('/reclamo/{id}/reemplazo',         [AdminGarantiaController::class, 'reemplazo'])->name('reclamo.reemplazo');
+    Route::post('/politica', [AdminGarantiaController::class, 'guardarPolitica'])->name('politica');
+});
+ 
+
 
 
         // ── Productos (admin) ──────────────────────────────────────────────

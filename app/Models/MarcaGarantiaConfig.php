@@ -20,6 +20,8 @@ class MarcaGarantiaConfig extends Model
         'id_negocio',
         'id_marca',
         'activa',
+        'politica_reemplazo',   // ← nuevo
+        'mini_garantia_dias',   // ← nuevo
         'pdf_texto_extraido',
         'pdf_nombre_original',
         'estado_procesamiento',
@@ -29,15 +31,36 @@ class MarcaGarantiaConfig extends Model
     ];
 
     protected $casts = [
-    'ia_raw_json'  => 'array',
-    'activa'       => 'boolean',
-    'ia_procesado_at' => 'datetime',
-];
+        'ia_raw_json'        => 'array',
+        'activa'             => 'boolean',
+        'ia_procesado_at'    => 'datetime',
+        'mini_garantia_dias' => 'integer',
+    ];
 
-    // Nunca exponer el base64 en listados
     protected $hidden = ['pdf_base64'];
 
     protected function idPrefix(): string { return 'MGC'; }
+
+    // ─── Helpers ─────────────────────────────────────────────────────────
+
+    public function tienePdf(): bool
+    {
+        return !empty($this->pdf_nombre_original);
+    }
+
+    /** Política efectiva con fallback seguro */
+    public function politicaEfectiva(): string
+    {
+        return $this->politica_reemplazo ?? 'mini';
+    }
+
+    /** Días mini efectivos con fallback */
+    public function miniDiasEfectivos(): int
+    {
+        return $this->mini_garantia_dias ?? 7;
+    }
+
+    // ─── Relaciones ───────────────────────────────────────────────────────
 
     public function marca()
     {
@@ -56,10 +79,5 @@ class MarcaGarantiaConfig extends Model
             'id_marca_garantia',
             'id_marca_garantia'
         );
-    }
-
-    public function tienePdf(): bool
-    {
-        return !empty($this->pdf_base64);
     }
 }
