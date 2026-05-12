@@ -1085,11 +1085,11 @@ class CatalogService
                 $definiciones = \App\Models\NegocioConfig::where('activo', true)->get();
 
                 $valores = \App\Models\NegocioConfigValor::where('id_negocio', $idNegocio)
-                    ->pluck('valor', 'clave');
+                    ->pluck('valor', 'id_ncf');
 
                 $config = [];
                 foreach ($definiciones as $def) {
-                    $valor = $valores[$def->clave] ?? $def->valor_default;
+                    $valor = $valores[$def->id_ncf] ?? $def->valor_default;
 
                     // checkbox_multi se guardó como JSON, lo devolvemos como array
                     $config[$def->clave] = $def->tipo === 'checkbox_multi'

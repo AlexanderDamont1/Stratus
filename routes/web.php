@@ -33,6 +33,7 @@ use App\Http\Controllers\CuponValidarController;
 use App\Http\Controllers\Admin\PersonalController;
 use App\Http\Controllers\Admin\MetodoPagoController;
 use App\Http\Controllers\Root\RootNegocioController;
+use App\Http\Controllers\Root\RootConfigController;
 use App\Http\Controllers\UbicacionController;
 use App\Http\Controllers\SucursalesPublicasController;
 
@@ -556,6 +557,16 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
         Route::get('/root/logs/negocios/ver', [RootNegocioController::class, 'verLog'])->name('root.logs.ver');
 
         Route::get('logs/stream', [RootNegocioController::class, 'logsStream'])->name('root.logs.stream');
+
+
+        // ── Config definiciones (root) ────────────────────────
+        Route::prefix('/root/config')->name('root.config.')->group(function () {
+            Route::get('/', [RootConfigController::class, 'index'])->name('index');
+            Route::post('/', [RootConfigController::class, 'store'])->name('store');
+            Route::put('/{id}', [RootConfigController::class, 'update'])->name('update');
+            Route::patch('/{id}/toggle', [RootConfigController::class, 'toggle'])->name('toggle');
+            Route::delete('/{id}', [RootConfigController::class, 'destroy'])->name('destroy');
+        });
 
         });
 

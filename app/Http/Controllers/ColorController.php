@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Color;
-use App\Models\Modelo;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use App\Services\CatalogService;

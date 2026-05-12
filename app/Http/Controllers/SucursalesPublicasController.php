@@ -32,13 +32,6 @@ class SucursalesPublicasController extends Controller
 }
 
 
-// ─────────────────────────────────────────────────────────────
-// En routes/web.php — ruta pública (sin middleware auth)
-// ─────────────────────────────────────────────────────────────
-
-// Route::get('/sucursales', [SucursalesPublicasController::class, 'index'])
-//     ->name('sucursales.index');
-
 
 // ─────────────────────────────────────────────────────────────
 // COLUMNAS OPCIONALES — migración si quieres agregar

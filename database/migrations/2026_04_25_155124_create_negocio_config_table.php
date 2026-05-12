@@ -10,7 +10,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('negocio_config', function (Blueprint $table) {
-            $table->id();
+             $table->char('id_ncf', 25)->primary();
             $table->string('clave')->unique();
             $table->string('nombre');
             $table->string('descripcion')->nullable();
@@ -26,6 +26,7 @@ return new class extends Migration
 
         DB::table('negocio_config')->insert([
             [
+                'id_ncf'        => 'NCF230425ABC123',
                 'clave'         => 'entrega_comprobante',
                 'nombre'        => 'Entrega de comprobante',
                 'descripcion'   => 'Cómo se enviará el ticket al cliente después de cada venta.',
