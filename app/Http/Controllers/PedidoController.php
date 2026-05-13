@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-
 use App\Services\CatalogService;
 use App\Models\Pedido;
 use App\Models\PedidoItem;
@@ -619,5 +618,36 @@ class PedidoController extends Controller
         return response($mpdf->Output("emision_rapida.pdf", 'S'))
             ->header('Content-Type', 'application/pdf')
             ->header('Content-Disposition', 'inline; filename="emision_rapida.pdf"');
+    }
+
+
+    public function apiGet(int $id): array
+    {
+        $pedido = CatalogService::getPedidoById(
+            (string) $id,
+            (string) auth()->user()->id_negocio
+        );
+
+        abort_if(!$pedido, 404);
+
+        return [
+            'id_pedido'  => $pedido->id_pedido,
+            'negocio'    => $pedido->negocio->nombre_negocio ?? '—',
+            'usuario'    => $pedido->usuario->nombre_usuario ?? '—',
+            'status'     => $pedido->status_label,
+            'status_num' => $pedido->status,
+            'notas'      => $pedido->notas ?? '',
+            'fecha'      => $pedido->created_at->format('d/m/Y H:i'),
+            'updated_at' => $pedido->updated_at->format('d/m/Y H:i'),
+            'items'      => $pedido->items->map(fn($i) => [
+                'id_modelo'  => $i->id_modelo,
+                'id_voltaje' => $i->id_voltaje,
+                'id_color'   => $i->id_color,
+                'modelo'     => $i->modelo->nombre_modelo ?? '—',
+                'voltaje'    => $i->voltaje->voltaje      ?? '—',
+                'color'      => $i->color->color          ?? '—',
+                'cantidad'   => $i->cantidad,
+            ]),
+        ];
     }
 }

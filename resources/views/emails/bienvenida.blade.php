@@ -126,7 +126,6 @@
                                                 <td style="font-size:16px; color:#16a34a; font-weight:700; padding-right:8px; font-family:'Figtree','Inter',sans-serif !important;">✓</td>
                                                 <td style="font-size:12px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:#15803d; font-family:'Figtree','Inter',sans-serif !important;">Cuenta verificada</td>
                                             </tr>
-                                         licensierad
                                     </td>
                                 </tr>
                             </table>

@@ -17,12 +17,22 @@ return new class extends Migration {
         });
 
         DB::table('modulos')->insert([
-            'id_modulo'          => 'tracking',
-            'nombre'             => 'Tracking de Bicicletas',
-            'descripcion'        => 'Historial de movimientos por número de serie.',
-            'activo_por_defecto' => false,
-            'created_at'         => now(),
-            'updated_at'         => now(),
+            [
+                'id_modulo'          => 'tracking',
+                'nombre'             => 'Tracking de Bicicletas',
+                'descripcion'        => 'Historial de movimientos por número de serie.',
+                'activo_por_defecto' => false,
+                'created_at'         => now(),
+                'updated_at'         => now(),
+            ],
+            [
+                'id_modulo'          => 'pedidos',
+                'nombre'             => 'Control de Pedidos',
+                'descripcion'        => 'Creacion de pedidos para la Fabrica Evobike.',
+                'activo_por_defecto' => true,
+                'created_at'         => now(),
+                'updated_at'         => now(),
+            ],
         ]);
     }
 

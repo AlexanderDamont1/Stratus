@@ -39,27 +39,25 @@ use App\Http\Controllers\SucursalesPublicasController;
 
 /*
 |--------------------------------------------------------------------------
-| PÚBLICAS
+| Públicas
 |--------------------------------------------------------------------------
 */
 
-
-
 Route::get('/', fn() => view('welcome'));
+
+Route::get('/sucursales', [SucursalesPublicasController::class, 'index'])->name('sucursales.index');
+
+Route::get('/robo/confirmar/{token}', [ReporteRoboController::class, 'confirmar'])->name('robo.confirmar');
 
 Route::post('/contact', [ContactController::class, 'send'])
     ->name('contact.send')
     ->middleware('throttle:5,1');
 
-Route::get('/registro/{token}', [RegistroController::class, 'show'])->name('registro.show');
+Route::get('/registro/{token}',  [RegistroController::class, 'show'])->name('registro.show');
 Route::post('/registro/{token}', [RegistroController::class, 'store'])->name('registro.store');
 
-Route::get('/verificar-email/{token}', [EmailVerificationController::class, 'verify'])->name('verificar.email');
+Route::get('/verificar-email/{token}',  [EmailVerificationController::class, 'verify'])->name('verificar.email');
 Route::post('/verificar-email/{token}', [EmailVerificationController::class, 'confirmar'])->name('verificar.email.confirmar');
-
-Route::get('/robo/confirmar/{token}', [ReporteRoboController::class, 'confirmar'])->name('robo.confirmar');
-
-Route::get('/sucursales', [SucursalesPublicasController::class, 'index'])->name('sucursales.index');
 
 /*
 |--------------------------------------------------------------------------
@@ -68,7 +66,7 @@ Route::get('/sucursales', [SucursalesPublicasController::class, 'index'])->name(
 */
 
 Route::middleware('guest')->group(function () {
-    Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
+    Route::get('/login',  [AuthenticatedSessionController::class, 'create'])->name('login');
     Route::post('/login', [AuthenticatedSessionController::class, 'store']);
 });
 
@@ -76,63 +74,65 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->middleware('auth')
     ->name('logout');
 
-
-// ── Google OAuth ──────────────────────────────────────
-Route::get('/auth/google/login', [GoogleAuthController::class, 'redirectLogin'])->name('google.login');
-Route::get('/auth/google/registro/{token}', [GoogleAuthController::class, 'redirectRegistro'])->name('google.registro.redirect');
-Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])->name('google.callback');
-Route::get('/registro/google/negocio', [GoogleAuthController::class, 'formNegocio'])->name('registro.google.negocio');
-Route::post('/registro/google/negocio', [GoogleAuthController::class, 'storeNegocio'])->name('registro.google.negocio.store');
-Route::get('/auth/google/finalizar', function () {
-    $id = session('google_login_usuario_id');
-
-    if (!$id) {
-        return redirect()->route('login')
-            ->withErrors(['correo' => 'Error al iniciar sesión. Intenta de nuevo.']);
-    }
-
-    $usuario = App\Models\Usuario::find($id);
-
-    if (!$usuario) {
-        return redirect()->route('login');
-    }
-
-    session()->forget('google_login_usuario_id');
-
-    Auth::login($usuario, true);
-    request()->session()->regenerate();
-
-    // ── Igual que el login manual ─────────────────────────
-    if ($usuario->requiereSesionUnica()) {
-        $newToken = \Illuminate\Support\Str::uuid()->toString();
-
-        $usuario->session_token = $newToken;
-        $usuario->save();
-
-        session(['session_token' => $newToken]);
-
-        broadcast(new \App\Events\SessionTokenUpdated(
-            $usuario->id_usuario,
-            $newToken
-        ));
-    }
-    // ─────────────────────────────────────────────────────
-
-    return redirect()->route('dashboard');
-})->name('google.login.finalizar');
-
-
 /*
 |--------------------------------------------------------------------------
-| PROTEGIDAS
+| Google OAuth
 |--------------------------------------------------------------------------
 */
 
+Route::prefix('auth/google')->group(function () {
+    Route::get('/login',              [GoogleAuthController::class, 'redirectLogin'])->name('google.login');
+    Route::get('/registro/{token}',   [GoogleAuthController::class, 'redirectRegistro'])->name('google.registro.redirect');
+    Route::get('/callback',           [GoogleAuthController::class, 'callback'])->name('google.callback');
+    Route::get('/finalizar',          function () {
+        $id = session('google_login_usuario_id');
 
-Route::middleware(['auth', 'email.verificado'])->group(function () {
-    Route::get('/trial/expirado', [TrialController::class, 'expirado'])->name('trial.expirado');
-    Route::get('/suscripcion/expirada', [TrialController::class, 'suscripcionExpirada'])->name('suscripcion.expirada');
+        if (!$id) {
+            return redirect()->route('login')
+                ->withErrors(['correo' => 'Error al iniciar sesión. Intenta de nuevo.']);
+        }
 
+        $usuario = App\Models\Usuario::find($id);
+
+        if (!$usuario) {
+            return redirect()->route('login');
+        }
+
+        session()->forget('google_login_usuario_id');
+
+        Auth::login($usuario, true);
+        request()->session()->regenerate();
+
+        if ($usuario->requiereSesionUnica()) {
+            $newToken = \Illuminate\Support\Str::uuid()->toString();
+            $usuario->session_token = $newToken;
+            $usuario->save();
+
+            session(['session_token' => $newToken]);
+
+            broadcast(new \App\Events\SessionTokenUpdated(
+                $usuario->id_usuario,
+                $newToken
+            ));
+        }
+
+        return redirect()->route('dashboard');
+    })->name('google.login.finalizar');
+});
+
+Route::prefix('registro/google')->group(function () {
+    Route::get('/negocio',  [GoogleAuthController::class, 'formNegocio'])->name('registro.google.negocio');
+    Route::post('/negocio', [GoogleAuthController::class, 'storeNegocio'])->name('registro.google.negocio.store');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Verificación de correo
+| Solo 'auth' — sin email.verificado para evitar redirect loop
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware('auth')->group(function () {
     Route::get('/verificacion-pendiente', function () {
         if (auth()->user()->emailVerificado()) {
             return redirect()->route('dashboard');
@@ -142,69 +142,65 @@ Route::middleware(['auth', 'email.verificado'])->group(function () {
 
     Route::post('/reenviar-verificacion', [EmailVerificationController::class, 'reenviar'])
         ->name('verificacion.reenviar')
-        ->middleware('throttle:3,1');  
+        ->middleware('throttle:3,1');
 });
 
+/*
+|--------------------------------------------------------------------------
+| Páginas de estado (auth + email verificado, sin los demás guards)
+|--------------------------------------------------------------------------
+*/
 
+Route::middleware(['auth', 'email.verificado'])->group(function () {
+    Route::get('/trial/expirado',        [TrialController::class, 'expirado'])->name('trial.expirado');
+    Route::get('/suscripcion/expirada',  [TrialController::class, 'suscripcionExpirada'])->name('suscripcion.expirada');
+});
 
+/*
+|--------------------------------------------------------------------------
+| Protegidas (todos los guards activos)
+|--------------------------------------------------------------------------
+*/
 
+Route::middleware(['auth','single.session','force.setup','trial.expirado','email.verificado','no.cache','requiere.ubicacion',])->group(function () {
 
-
-Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'email.verificado', 'no.cache', 'requiere.ubicacion',])->group(function () {
+    /*
+    |----------------------------------------------------------------------
+    | Generales (cualquier rol autenticado)
+    |----------------------------------------------------------------------
+    */
 
     Route::get('/dashboard', fn() => view('dashboard'))->name('dashboard');
 
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::get('/profile',    [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile',  [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    Route::get('/modelo-voltaje', [ModeloVoltajeController::class, 'modeloVoltaje'])->name('modelo-voltaje');
 
-    Route::post('/admin/setup/completar', [SetupController::class, 'completar'])->name('admin.setup.completar');
+    Route::get('/modelo-voltaje', [ModeloVoltajeController::class, 'modeloVoltaje'])->name('modelo-voltaje');
 
     Route::get('/ubicacion/sucursal',  [UbicacionController::class, 'index'])->name('ubicacion.index');
     Route::post('/ubicacion/sucursal', [UbicacionController::class, 'guardar'])->name('ubicacion.guardar');
 
+    Route::post('/admin/setup/completar', [SetupController::class, 'completar'])->name('admin.setup.completar');
+
     /*
     |----------------------------------------------------------------------
-    | AJAX compartidas (todos los roles autenticados)
-    | Registradas UNA sola vez aquí arriba para evitar duplicados.
+    | AJAX compartidas
     |----------------------------------------------------------------------
     */
-    Route::get('/api/pedidos/{id}', function ($id) {
-        $pedido = \App\Models\Pedido::with(['negocio', 'usuario', 'items.modelo', 'items.voltaje', 'items.color'])
-            ->findOrFail($id);
 
-        return [
-            'id_pedido' => $pedido->id_pedido,
-            'negocio' => $pedido->negocio->nombre_negocio ?? '—',
-            'usuario' => $pedido->usuario->nombre_usuario ?? '—',
-            'status' => $pedido->status_label,
-            'status_num' => $pedido->status,
-            'notas' => $pedido->notas ?? '',
-            'fecha' => $pedido->created_at->format('d/m/Y H:i'),
-            'updated_at' => $pedido->updated_at->format('d/m/Y H:i'),
-            'items' => $pedido->items->map(fn($i) => [
-                'id_modelo' => $i->id_modelo,
-                'id_voltaje' => $i->id_voltaje,
-                'id_color' => $i->id_color,
-                'modelo' => $i->modelo->nombre_modelo ?? '—',
-                'voltaje' => $i->voltaje->voltaje ?? '—',
-                'color' => $i->color->color ?? '—',
-                'cantidad' => $i->cantidad,
-            ]),
-        ];
-    })->name('pedidos.api.get');
-
+    Route::get('/api/pedidos/{id}',             [PedidoController::class, 'apiGet'])->name('pedidos.api.get');
     Route::get('/voltaje-por-modelo/{id_modelo}', [ModeloVoltajeController::class, 'voltajesPorModelo'])->name('voltajes.porModelo');
     Route::get('/colores-por-modelo/{id_modelo}', [BicicletaController::class, 'coloresPorModelo'])->name('colores.porModelo');
 
-
+   
 
     /*
     |----------------------------------------------------------------------
-    | Admin (rol 1)
+    | Administrador (rol 1)
     |----------------------------------------------------------------------
     */
+
     Route::middleware('administrador')->group(function () {
 
         Route::get('/Inicio', function () {
@@ -217,153 +213,126 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
 
         // Vendedores
         Route::get('/admin/vendedores/create', [VendedorController::class, 'create'])->name('admin.vendedores.create');
-        Route::post('/admin/vendedores', [VendedorController::class, 'store'])->name('admin.vendedores.store');
+        Route::post('/admin/vendedores',        [VendedorController::class, 'store'])->name('admin.vendedores.store');
 
-        // Bicicletas admin
-        Route::get('/admin/stock-seccion', [BicicletaController::class, 'stockSeccion'])->name('bicicletas.stock.seccion');
-        Route::get('/admin/bicicletas/crear', [BicicletaController::class, 'create'])->name('admin.bicicletas.create');
-        Route::post('/admin/bicicletas', [BicicletaController::class, 'store'])->name('admin.bicicletas.store');
-        Route::post('/admin/bicicletas/masivo', [BicicletaController::class, 'storeMasivo'])->name('admin.bicicletas.storeMasivo');
+        // Bicicletas
+        Route::get('/admin/stock-seccion',          [BicicletaController::class, 'stockSeccion'])->name('bicicletas.stock.seccion');
+        Route::get('/admin/bicicletas/crear',       [BicicletaController::class, 'create'])->name('admin.bicicletas.create');
+        Route::post('/admin/bicicletas',            [BicicletaController::class, 'store'])->name('admin.bicicletas.store');
+        Route::post('/admin/bicicletas/masivo',     [BicicletaController::class, 'storeMasivo'])->name('admin.bicicletas.storeMasivo');
 
-        // Pedidos (solo admin puede crear/editar/eliminar pedidos)
-        Route::get('/pedidos/crear', [PedidoController::class, 'create'])->name('pedidos.create');
-        Route::post('/pedidos', [PedidoController::class, 'store'])->name('pedidos.store');
-        Route::get('/pedidos/{id_pedido}/edit', [PedidoController::class, 'edit'])->name('pedidos.edit');
-        Route::put('/pedidos/{id_pedido}', [PedidoController::class, 'update'])->name('pedidos.update');
-        Route::delete('/pedidos/{id_pedido}', [PedidoController::class, 'destroy'])->name('pedidos.destroy');
-        Route::get('/ver/{id_pedido}/token', [PedidoController::class, 'token'])->name('pedidos.token');
+        // Pedidos
+        Route::get('/pedidos/crear',                [PedidoController::class, 'create'])->name('pedidos.create');
+        Route::post('/pedidos',                     [PedidoController::class, 'store'])->name('pedidos.store');
+        Route::get('/pedidos/{id_pedido}/edit',     [PedidoController::class, 'edit'])->name('pedidos.edit');
+        Route::put('/pedidos/{id_pedido}',          [PedidoController::class, 'update'])->name('pedidos.update');
+        Route::delete('/pedidos/{id_pedido}',       [PedidoController::class, 'destroy'])->name('pedidos.destroy');
+        Route::get('/ver/{id_pedido}/token',        [PedidoController::class, 'token'])->name('pedidos.token');
 
-
-
-        Route::prefix('admin/movimientos')->name('admin.movimientos.')->middleware(['modulo:tracking'])->group(function () {
-            Route::get('/', [MovimientoController::class, 'index'])->name('index');
-            Route::get('/historial/{serie}', [MovimientoController::class, 'historial'])->name('historial');
-            Route::get('/buscar', [MovimientoController::class, 'buscar'])->name('buscar');
+        // Movimientos
+        Route::prefix('admin/movimientos')->name('admin.movimientos.')->middleware('modulo:tracking')->group(function () {
+            Route::get('/',                   [MovimientoController::class, 'index'])->name('index');
+            Route::get('/historial/{serie}',  [MovimientoController::class, 'historial'])->name('historial');
+            Route::get('/buscar',             [MovimientoController::class, 'buscar'])->name('buscar');
         });
 
+        // Garantías
         Route::prefix('admin/garantias')->name('admin.garantias.')->group(function () {
-    Route::get('/',                                [AdminGarantiaController::class, 'index'])->name('index');
-    Route::get('/reclamos',                        [AdminGarantiaController::class, 'reclamos'])->name('reclamos');
-    Route::get('/marcas',                          [AdminGarantiaController::class, 'marcas'])->name('marcas');
-    Route::get('/marcas/{idMarca}',                [AdminGarantiaController::class, 'editarMarca'])->name('marcas.editar');
-    Route::post('/marcas/{idMarca}/pdf',           [AdminGarantiaController::class, 'subirPdf'])->name('marcas.pdf');
-    Route::post('/marcas/{idMarca}/activar',       [AdminGarantiaController::class, 'activar'])->name('marcas.activar');
-    Route::post('/marcas/{idMarca}/politica',      [AdminGarantiaController::class, 'guardarPolitica'])->name('marcas.politica'); // ← nueva
-    Route::post('/componentes',                    [AdminGarantiaController::class, 'guardarDefs'])->name('componentes.guardar');
-    Route::delete('/componentes/{id}',             [AdminGarantiaController::class, 'borrarDef'])->name('componentes.borrar');
-    Route::patch('/reclamo/{id}/estado',           [AdminGarantiaController::class, 'estadoReclamo'])->name('reclamo.estado');
-    Route::post('/reclamo/{id}/reemplazo',         [AdminGarantiaController::class, 'reemplazo'])->name('reclamo.reemplazo');
-    Route::post('/politica', [AdminGarantiaController::class, 'guardarPolitica'])->name('politica');
-});
- 
+            Route::get('/',                              [AdminGarantiaController::class, 'index'])->name('index');
+            Route::get('/reclamos',                      [AdminGarantiaController::class, 'reclamos'])->name('reclamos');
+            Route::get('/marcas',                        [AdminGarantiaController::class, 'marcas'])->name('marcas');
+            Route::get('/marcas/{idMarca}',              [AdminGarantiaController::class, 'editarMarca'])->name('marcas.editar');
+            Route::post('/marcas/{idMarca}/pdf',         [AdminGarantiaController::class, 'subirPdf'])->name('marcas.pdf');
+            Route::post('/marcas/{idMarca}/activar',     [AdminGarantiaController::class, 'activar'])->name('marcas.activar');
+            Route::post('/marcas/{idMarca}/politica',    [AdminGarantiaController::class, 'guardarPolitica'])->name('marcas.politica');
+            Route::post('/componentes',                  [AdminGarantiaController::class, 'guardarDefs'])->name('componentes.guardar');
+            Route::delete('/componentes/{id}',           [AdminGarantiaController::class, 'borrarDef'])->name('componentes.borrar');
+            Route::patch('/reclamo/{id}/estado',         [AdminGarantiaController::class, 'estadoReclamo'])->name('reclamo.estado');
+            Route::post('/reclamo/{id}/reemplazo',       [AdminGarantiaController::class, 'reemplazo'])->name('reclamo.reemplazo');
+            Route::post('/politica',                     [AdminGarantiaController::class, 'guardarPolitica'])->name('politica');
+        });
 
-
-
-        // ── Productos (admin) ──────────────────────────────────────────────
+        // Productos
         Route::prefix('admin/productos')->name('admin.productos.')->group(function () {
-            Route::get('/', [ProductoController::class, 'index'])->name('index');
-            Route::post('/accesorio', [ProductoController::class, 'storeAccesorio'])->name('storeAccesorio');
-            Route::post('/bicicleta', [ProductoController::class, 'storeBicicleta'])->name('storeBicicleta');
-            Route::put('/{id}', [ProductoController::class, 'update'])->name('update');
-            Route::delete('/{id}', [ProductoController::class, 'destroy'])->name('destroy');
-            // AJAX: voltajes disponibles (ya excluye los usados en el controlador)
-            Route::get('/voltajes/{idModelo}', [ProductoController::class, 'voltajesPorModelo'])->name('voltajes');
-            // AJAX: modelos de una marca
-            Route::get('/modelos-por-marca/{idMarca}', [ProductoController::class, 'modelosPorMarca'])->name('modelosPorMarca');
-            Route::post('/filtro-sucursal', [ProductoController::class, 'setFiltroSucursal'])->name('filtroSucursal');
+            Route::get('/',                              [ProductoController::class, 'index'])->name('index');
+            Route::post('/accesorio',                    [ProductoController::class, 'storeAccesorio'])->name('storeAccesorio');
+            Route::post('/bicicleta',                    [ProductoController::class, 'storeBicicleta'])->name('storeBicicleta');
+            Route::put('/{id}',                          [ProductoController::class, 'update'])->name('update');
+            Route::delete('/{id}',                       [ProductoController::class, 'destroy'])->name('destroy');
+            Route::get('/voltajes/{idModelo}',           [ProductoController::class, 'voltajesPorModelo'])->name('voltajes');
+            Route::get('/modelos-por-marca/{idMarca}',   [ProductoController::class, 'modelosPorMarca'])->name('modelosPorMarca');
+            Route::post('/filtro-sucursal',              [ProductoController::class, 'setFiltroSucursal'])->name('filtroSucursal');
         });
 
-
-
-        // ── Cupones (admin) ───────────────────────────────────────────────
+        // Cupones
         Route::prefix('admin/cupones')->name('admin.cupones.')->group(function () {
-            Route::get('/', [CuponController::class, 'index'])->name('index');
-            Route::post('/', [CuponController::class, 'store'])->name('store');
-            Route::put('/{id}', [CuponController::class, 'update'])->name('update');
+            Route::get('/',           [CuponController::class, 'index'])->name('index');
+            Route::post('/',          [CuponController::class, 'store'])->name('store');
+            Route::put('/{id}',       [CuponController::class, 'update'])->name('update');
             Route::patch('/{id}/toggle', [CuponController::class, 'toggle'])->name('toggle');
-            Route::delete('/{id}', [CuponController::class, 'destroy'])->name('destroy');
+            Route::delete('/{id}',    [CuponController::class, 'destroy'])->name('destroy');
         });
 
-
-        // ── Personal / vendedores ─────────────────────────────────────────
+        // Personal
         Route::prefix('admin/personal')->name('admin.personal.')->group(function () {
-            Route::get('/', [PersonalController::class, 'index'])->name('index');
-            Route::post('/', [PersonalController::class, 'store'])->name('store');   // JSON
-            Route::put('/{id}', [PersonalController::class, 'update'])->name('update');  // JSON
-            Route::delete('/{id}', [PersonalController::class, 'destroy'])->name('destroy'); // JSON (toggle)
+            Route::get('/',       [PersonalController::class, 'index'])->name('index');
+            Route::post('/',      [PersonalController::class, 'store'])->name('store');
+            Route::put('/{id}',   [PersonalController::class, 'update'])->name('update');
+            Route::delete('/{id}',[PersonalController::class, 'destroy'])->name('destroy');
         });
 
-        // ── Métodos de pago ───────────────────────────────────────────────
+        // Métodos de pago
         Route::prefix('admin/metodos-pago')->name('admin.metodos_pago.')->group(function () {
-            Route::get('/', [MetodoPagoController::class, 'index'])->name('index');
-            Route::post('/', [MetodoPagoController::class, 'store'])->name('store');
-            Route::put('/{id}', [MetodoPagoController::class, 'update'])->name('update');
-            Route::post('/reordenar', [MetodoPagoController::class, 'reordenar'])->name('reordenar');
-            Route::delete('/{id}', [MetodoPagoController::class, 'destroy'])->name('destroy');
+            Route::get('/',            [MetodoPagoController::class, 'index'])->name('index');
+            Route::post('/',           [MetodoPagoController::class, 'store'])->name('store');
+            Route::put('/{id}',        [MetodoPagoController::class, 'update'])->name('update');
+            Route::post('/reordenar',  [MetodoPagoController::class, 'reordenar'])->name('reordenar');
+            Route::delete('/{id}',     [MetodoPagoController::class, 'destroy'])->name('destroy');
         });
 
-
-
-
-
-
-        // ── Catálogo admin ────────────────────────────────────────────────────
+        // Catálogo
         Route::prefix('admin/catalogo')->name('admin.catalogo.')->middleware('prefijo.admin')->group(function () {
 
             Route::get('/', [MarcaController::class, 'catalogo'])->name('index');
             Route::get('/marca-card/{idMarca}', [MarcaController::class, 'card'])->name('marca.card');
 
             // Marcas
-            Route::get('/marcas/crear', [MarcaController::class, 'create'])->name('marcas.create');
-            Route::post('/marcas', [MarcaController::class, 'store'])->name('marcas.store');
+            Route::get('/marcas/crear',          [MarcaController::class, 'create'])->name('marcas.create');
+            Route::post('/marcas',               [MarcaController::class, 'store'])->name('marcas.store');
             Route::get('/marcas/{marca}/editar', [MarcaController::class, 'edit'])->name('marcas.edit');
-            Route::put('/marcas/{marca}', [MarcaController::class, 'update'])->name('marcas.update');
-            Route::delete('/marcas/{marca}', [MarcaController::class, 'destroy'])->name('marcas.destroy');
+            Route::put('/marcas/{marca}',        [MarcaController::class, 'update'])->name('marcas.update');
+            Route::delete('/marcas/{marca}',     [MarcaController::class, 'destroy'])->name('marcas.destroy');
 
             // Modelos
-            Route::get('/modelos', fn() => redirect()->route('admin.catalogo.index'));
-            Route::get('/modelos/crear', [ModeloController::class, 'create'])->name('modelos.create');
-            Route::post('/modelos', [ModeloController::class, 'store'])->name('modelos.store');
-            Route::get('/modelos/{modelo}/editar', [ModeloController::class, 'edit'])->name('modelos.edit');
-            Route::put('/modelos/{modelo}', [ModeloController::class, 'update'])->name('modelos.update');
-            Route::delete('/modelos/{modelo}', [ModeloController::class, 'destroy'])->name('modelos.destroy');
+            Route::get('/modelos',               fn() => redirect()->route('admin.catalogo.index'));
+            Route::get('/modelos/crear',         [ModeloController::class, 'create'])->name('modelos.create');
+            Route::post('/modelos',              [ModeloController::class, 'store'])->name('modelos.store');
+            Route::get('/modelos/{modelo}/editar',[ModeloController::class, 'edit'])->name('modelos.edit');
+            Route::put('/modelos/{modelo}',      [ModeloController::class, 'update'])->name('modelos.update');
+            Route::delete('/modelos/{modelo}',   [ModeloController::class, 'destroy'])->name('modelos.destroy');
 
             // Colores
-            Route::get('/colores', fn() => redirect()->route('admin.catalogo.index'));
-            Route::get('/colores/crear', [ColorController::class, 'create'])->name('colores.create');
-            Route::post('/colores', [ColorController::class, 'store'])->name('colores.store');
-            Route::get('/colores/{color}/editar', [ColorController::class, 'edit'])->name('colores.edit');
-            Route::put('/colores/{color}', [ColorController::class, 'update'])->name('colores.update');
-            Route::delete('/colores/{color}', [ColorController::class, 'destroy'])->name('colores.destroy');
+            Route::get('/colores',               fn() => redirect()->route('admin.catalogo.index'));
+            Route::get('/colores/crear',         [ColorController::class, 'create'])->name('colores.create');
+            Route::post('/colores',              [ColorController::class, 'store'])->name('colores.store');
+            Route::get('/colores/{color}/editar',[ColorController::class, 'edit'])->name('colores.edit');
+            Route::put('/colores/{color}',       [ColorController::class, 'update'])->name('colores.update');
+            Route::delete('/colores/{color}',    [ColorController::class, 'destroy'])->name('colores.destroy');
 
             // Voltajes
-            Route::get('/voltajes', [VoltajeController::class, 'index'])->name('voltajes.index');
-            Route::get('/voltajes/crear', [VoltajeController::class, 'create'])->name('voltajes.create');
-            Route::post('/voltajes', [VoltajeController::class, 'store'])->name('voltajes.store');
-            Route::get('/voltajes/{voltaje}/editar', [VoltajeController::class, 'edit'])->name('voltajes.edit');
-            Route::put('/voltajes/{voltaje}', [VoltajeController::class, 'update'])->name('voltajes.update');
-            Route::delete('/voltajes/{voltaje}', [VoltajeController::class, 'destroy'])->name('voltajes.destroy');
+            Route::get('/voltajes',                [VoltajeController::class, 'index'])->name('voltajes.index');
+            Route::get('/voltajes/crear',          [VoltajeController::class, 'create'])->name('voltajes.create');
+            Route::post('/voltajes',               [VoltajeController::class, 'store'])->name('voltajes.store');
+            Route::get('/voltajes/{voltaje}/editar',[VoltajeController::class, 'edit'])->name('voltajes.edit');
+            Route::put('/voltajes/{voltaje}',      [VoltajeController::class, 'update'])->name('voltajes.update');
+            Route::delete('/voltajes/{voltaje}',   [VoltajeController::class, 'destroy'])->name('voltajes.destroy');
 
-            Route::post('/modelo-voltaje', [ModeloVoltajeController::class, 'store'])->name('modelo-voltaje.store');
+            // Modelo–Voltaje
+            Route::post('/modelo-voltaje',        [ModeloVoltajeController::class, 'store'])->name('modelo-voltaje.store');
             Route::delete('/modelo-voltaje/{id}', [ModeloVoltajeController::class, 'destroy'])->name('modelo-voltaje.destroy');
 
-            // Voltajes disponibles para asignar a modelo (distintos de los de productos)
-            Route::get('/voltajes-disponibles/{modelo}', function (\App\Models\Modelo $modelo) {
-                $user = auth()->user();
-                if ($user->id_rol !== 1 || $modelo->id_negocio !== $user->id_negocio)
-                    abort(403);
-
-                $asignados = \App\Models\ModeloVoltaje::where('id_modelo', $modelo->id_modelo)->pluck('id_voltaje');
-
-                return response()->json(
-                    \App\Models\Voltaje::where('id_negocio', $user->id_negocio)
-                        ->whereNotIn('id_voltaje', $asignados)
-                        ->orderBy('voltaje')
-                        ->get(['id_voltaje', 'voltaje'])
-                );
-            })->name('voltajes.disponibles');
-
-
+            // Voltajes disponibles para un modelo
+           Route::get('/voltajes-disponibles/{modelo}', [ModeloVoltajeController::class, 'voltajesDisponibles'])->name('voltajes.disponibles');
 
             // Sugerir hex por IA
             Route::post('/sugerir-hex', function (Request $request) {
@@ -371,15 +340,15 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
 
                 $response = \Illuminate\Support\Facades\Http::withHeaders([
                     'Authorization' => 'Bearer ' . config('services.groq.key'),
-                    'Content-Type' => 'application/json',
+                    'Content-Type'  => 'application/json',
                 ])->post('https://api.groq.com/openai/v1/chat/completions', [
-                            'model' => 'llama-3.1-8b-instant',
-                            'max_tokens' => 10,
-                            'messages' => [
-                                ['role' => 'system', 'content' => 'Eres un asistente que SOLO responde con colores hexadecimales en formato #RRGGBB. Sin explicaciones, sin texto extra, solo el hex.'],
-                                ['role' => 'user', 'content' => "¿Qué color hexadecimal representa \"{$request->nombre}\"?"],
-                            ],
-                        ]);
+                    'model'      => 'llama-3.1-8b-instant',
+                    'max_tokens' => 10,
+                    'messages'   => [
+                        ['role' => 'system', 'content' => 'Eres un asistente que SOLO responde con colores hexadecimales en formato #RRGGBB. Sin explicaciones, sin texto extra, solo el hex.'],
+                        ['role' => 'user',   'content' => "¿Qué color hexadecimal representa \"{$request->nombre}\"?"],
+                    ],
+                ]);
 
                 $hex = trim($response->json('choices.0.message.content') ?? '');
 
@@ -389,89 +358,31 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
             })->name('sugerir-hex');
         });
 
-
+        // Config
         Route::prefix('admin/config')->name('admin.config.')->group(function () {
-            Route::get('/', [ConfigController::class, 'index'])->name('index');
+            Route::get('/',  [ConfigController::class, 'index'])->name('index');
             Route::post('/', [ConfigController::class, 'update'])->name('update');
         });
-
-
     });
 
-    /*
-    |----------------------------------------------------------------------
-    | Gestor (rol 5)
-    |----------------------------------------------------------------------
-    */
-    Route::middleware('gestor')->group(function () {
-
-        Route::get('/gestor/dashboard', [EnlaceController::class, 'dashboard'])->name('gestor.dashboard');
-
-        Route::prefix('gestor')->name('gestor.')->group(function () {
-            Route::prefix('vehiculos')->name('vehiculos.')->group(function () {
-
-                // Bicicletas
-                Route::post('/bicicletas', [BicicletaController::class, 'store'])->name('bicicletas.store');
-                Route::put('/bicicletas/{id}', [BicicletaController::class, 'update'])->name('bicicletas.update');
-                Route::delete('/bicicletas/{num_serie}/pedido', [BicicletaController::class, 'destroyFromPedido'])->name('bicicletas.destroyFromPedido');
-                Route::get('bicicletas/cliente/{id_cliente}', [BicicletaController::class, 'getByCliente'])->name('bicicletas.por-cliente');
 
 
-                // Modelos
-                Route::get('/modelos/crear', [ModeloController::class, 'create'])->name('modelos.create');
-                Route::get('/modelos', [ModeloController::class, 'index'])->name('modelos.index');
-                Route::post('/modelos', [ModeloController::class, 'store'])->name('modelos.store');
-                Route::get('/modelos/{modelo}/editar', [ModeloController::class, 'edit'])->name('modelos.edit');
-                Route::put('/modelos/{modelo}', [ModeloController::class, 'update'])->name('modelos.update');
-                Route::delete('/modelos/{modelo}', [ModeloController::class, 'destroy'])->name('modelos.destroy');
-
-                // Colores
-                Route::get('/colores/crear', [ColorController::class, 'create'])->name('colores.create');
-                Route::get('/colores', [ColorController::class, 'index'])->name('colores.index');
-                Route::post('/colores', [ColorController::class, 'store'])->name('colores.store');
-                Route::get('/colores/{color}/editar', [ColorController::class, 'edit'])->name('colores.edit');
-                Route::put('/colores/{color}', [ColorController::class, 'update'])->name('colores.update');
-                Route::delete('/colores/{color}', [ColorController::class, 'destroy'])->name('colores.destroy');
-
-                // Voltajes
-                Route::get('/voltajes', [VoltajeController::class, 'index'])->name('voltajes.index');
-                Route::get('/voltajes/crear', [VoltajeController::class, 'create'])->name('voltajes.create');
-                Route::post('/voltajes', [VoltajeController::class, 'store'])->name('voltajes.store');
-                Route::get('/voltajes/{voltaje}/editar', [VoltajeController::class, 'edit'])->name('voltajes.edit');
-                Route::put('/voltajes/{voltaje}', [VoltajeController::class, 'update'])->name('voltajes.update');
-                Route::delete('/voltajes/{voltaje}', [VoltajeController::class, 'destroy'])->name('voltajes.destroy');
-            });
-        });
-
-        Route::get('/pedidos/{id_pedido}/realizar', [PedidoController::class, 'realizar'])->name('pedidos.realizar');
-        Route::get('/pedidos/{id_pedido}/pdf', [PedidoController::class, 'pdf'])->name('pedidos.pdf');
-        Route::post('/pedidos/{id_pedido}/completar', [PedidoController::class, 'completarEntrega'])->name('pedidos.completar');
-        Route::post('/pedidos/{id_pedido}/status', [PedidoController::class, 'updateStatus'])->name('pedidos.status.post');
-
-        Route::get('/bicicletas/{num_serie}', [BicicletaController::class, 'showApi'])->name('api.bicicletas.show');
-
-        Route::patch('/enlaces/{id}/activar', [EnlaceController::class, 'activar'])->name('enlaces.activar');
-        Route::get('/enlaces/pedidos', [EnlaceController::class, 'pedidosDeEnlaces'])->name('enlaces.pedidos');
-        Route::post('/enlaces/aceptar', [EnlaceController::class, 'aceptar'])->name('enlaces.aceptar');
-
-        Route::get('/pedidos/rapido/crear', [PedidoController::class, 'crearRapido'])->name('pedidos.rapido.crear');
-        Route::post('/pedidos/rapido/pdf', [PedidoController::class, 'generarPdfRapido'])->name('pedidos.rapido.pdf');
-    });
-
-    /*
+     /*
     |----------------------------------------------------------------------
     | Enlace (rol 1 y rol 5)
     |----------------------------------------------------------------------
     */
+
     Route::middleware('enlace')->group(function () {
-        Route::post('/enlaces/generar', [EnlaceController::class, 'generar'])->name('enlaces.generar');
-        Route::patch('/enlaces/{id}/cancelar', [EnlaceController::class, 'cancelar'])->name('enlaces.cancelar');
-        Route::get('vehiculos/stock', [BicicletaController::class, 'index'])->name('bicicletas.index');
-        Route::post('/modelo-voltaje', [ModeloVoltajeController::class, 'store'])->name('modelo-voltaje.store');
-        Route::delete('/modelo-voltaje/{id}', [ModeloVoltajeController::class, 'destroy'])->name('modelo-voltaje.destroy');
+        Route::post('/enlaces/generar',          [EnlaceController::class, 'generar'])->name('enlaces.generar');
+        Route::patch('/enlaces/{id}/cancelar',   [EnlaceController::class, 'cancelar'])->name('enlaces.cancelar');
 
+        Route::get('/vehiculos/stock', [BicicletaController::class, 'index'])->name('bicicletas.index');
 
-        Route::get('/pedidos', function () {
+        Route::post('/modelo-voltaje',         [ModeloVoltajeController::class, 'store'])->name('modelo-voltaje.store');
+        Route::delete('/modelo-voltaje/{id}',  [ModeloVoltajeController::class, 'destroy'])->name('modelo-voltaje.destroy');
+
+        Route::get('/pedidos',function () {
             $user = auth()->user();
             if ($user->id_rol === 1 && !\App\Services\ModuloService::tiene($user->id_negocio, 1, 'pedidos')) {
                 abort(403, 'Tu plan no incluye este módulo.');
@@ -479,8 +390,64 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
             return app(\App\Http\Controllers\PedidoController::class)->index(request());
         })->name('pedidos.index');
 
-        Route::get('/pedidos/{id_pedido}', [PedidoController::class, 'show'])->name('pedidos.show');
+        Route::get('/pedidos/{id_pedido}',         [PedidoController::class, 'show'])->name('pedidos.show');
         Route::patch('/pedidos/{id_pedido}/status', [PedidoController::class, 'updateStatus'])->name('pedidos.status');
+    });
+
+    /*
+    |----------------------------------------------------------------------
+    | Gestor (rol 5)
+    |----------------------------------------------------------------------
+    */
+
+    Route::middleware('gestor')->group(function () {
+
+        Route::get('/gestor/dashboard', [EnlaceController::class, 'dashboard'])->name('gestor.dashboard');
+
+        Route::prefix('gestor')->name('gestor.')->group(function () {
+            Route::prefix('vehiculos')->name('vehiculos.')->group(function () {
+
+                Route::post('/bicicletas',                          [BicicletaController::class, 'store'])->name('bicicletas.store');
+                Route::put('/bicicletas/{id}',                      [BicicletaController::class, 'update'])->name('bicicletas.update');
+                Route::delete('/bicicletas/{num_serie}/pedido',     [BicicletaController::class, 'destroyFromPedido'])->name('bicicletas.destroyFromPedido');
+                Route::get('bicicletas/cliente/{id_cliente}',       [BicicletaController::class, 'getByCliente'])->name('bicicletas.por-cliente');
+
+                Route::get('/modelos/crear',              [ModeloController::class, 'create'])->name('modelos.create');
+                Route::get('/modelos',                    [ModeloController::class, 'index'])->name('modelos.index');
+                Route::post('/modelos',                   [ModeloController::class, 'store'])->name('modelos.store');
+                Route::get('/modelos/{modelo}/editar',    [ModeloController::class, 'edit'])->name('modelos.edit');
+                Route::put('/modelos/{modelo}',           [ModeloController::class, 'update'])->name('modelos.update');
+                Route::delete('/modelos/{modelo}',        [ModeloController::class, 'destroy'])->name('modelos.destroy');
+
+                Route::get('/colores/crear',              [ColorController::class, 'create'])->name('colores.create');
+                Route::get('/colores',                    [ColorController::class, 'index'])->name('colores.index');
+                Route::post('/colores',                   [ColorController::class, 'store'])->name('colores.store');
+                Route::get('/colores/{color}/editar',     [ColorController::class, 'edit'])->name('colores.edit');
+                Route::put('/colores/{color}',            [ColorController::class, 'update'])->name('colores.update');
+                Route::delete('/colores/{color}',         [ColorController::class, 'destroy'])->name('colores.destroy');
+
+                Route::get('/voltajes',                   [VoltajeController::class, 'index'])->name('voltajes.index');
+                Route::get('/voltajes/crear',             [VoltajeController::class, 'create'])->name('voltajes.create');
+                Route::post('/voltajes',                  [VoltajeController::class, 'store'])->name('voltajes.store');
+                Route::get('/voltajes/{voltaje}/editar',  [VoltajeController::class, 'edit'])->name('voltajes.edit');
+                Route::put('/voltajes/{voltaje}',         [VoltajeController::class, 'update'])->name('voltajes.update');
+                Route::delete('/voltajes/{voltaje}',      [VoltajeController::class, 'destroy'])->name('voltajes.destroy');
+            });
+        });
+
+        Route::get('/pedidos/{id_pedido}/realizar',       [PedidoController::class, 'realizar'])->name('pedidos.realizar');
+        Route::get('/pedidos/{id_pedido}/pdf',            [PedidoController::class, 'pdf'])->name('pedidos.pdf');
+        Route::post('/pedidos/{id_pedido}/completar',     [PedidoController::class, 'completarEntrega'])->name('pedidos.completar');
+        Route::post('/pedidos/{id_pedido}/status',        [PedidoController::class, 'updateStatus'])->name('pedidos.status.post');
+
+        Route::get('/bicicletas/{num_serie}',             [BicicletaController::class, 'showApi'])->name('api.bicicletas.show');
+
+        Route::patch('/enlaces/{id}/activar',             [EnlaceController::class, 'activar'])->name('enlaces.activar');
+        Route::get('/enlaces/pedidos',                    [EnlaceController::class, 'pedidosDeEnlaces'])->name('enlaces.pedidos');
+        Route::post('/enlaces/aceptar',                   [EnlaceController::class, 'aceptar'])->name('enlaces.aceptar');
+
+        Route::get('/pedidos/rapido/crear',               [PedidoController::class, 'crearRapido'])->name('pedidos.rapido.crear');
+        Route::post('/pedidos/rapido/pdf',                [PedidoController::class, 'generarPdfRapido'])->name('pedidos.rapido.pdf');
     });
 
     /*
@@ -488,54 +455,52 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
     | Ventas (rol 2)
     |----------------------------------------------------------------------
     */
-    Route::middleware('ventas')->group(function () {
-        Route::get('vendedor/dashboard', [BicicletaController::class, 'showB'])->name('stock.index');
-        Route::get('/bicicletas/qrv/{num_serie}', [BicicletaController::class, 'buscarPorSerieQr'])->name('bicicletas.qr');
-        Route::post('/bicicletas/asignar-usuario', [BicicletaController::class, 'asignarUsuario'])->name('bicicletas.asignarUsuario');
 
-        // ── Productos (sucursal) ──────────────────────────────────────────────
-        // Mismo controlador que admin pero bajo /sucursal/productos
+    Route::middleware('ventas')->group(function () {
+
+        Route::get('/vendedor/dashboard',                  [BicicletaController::class, 'showB'])->name('stock.index');
+        Route::get('/bicicletas/qrv/{num_serie}',          [BicicletaController::class, 'buscarPorSerieQr'])->name('bicicletas.qr');
+        Route::post('/bicicletas/asignar-usuario',         [BicicletaController::class, 'asignarUsuario'])->name('bicicletas.asignarUsuario');
+
         Route::prefix('sucursal/productos')->name('sucursal.productos.')->group(function () {
-            Route::get('/', [ProductoController::class, 'index'])->name('index');
-            Route::post('/accesorio', [ProductoController::class, 'storeAccesorio'])->name('storeAccesorio');
-            Route::post('/bicicleta', [ProductoController::class, 'storeBicicleta'])->name('storeBicicleta');
-            Route::put('/{id}', [ProductoController::class, 'update'])->name('update');
-            Route::delete('/{id}', [ProductoController::class, 'destroy'])->name('destroy');
-            Route::get('/voltajes/{idModelo}', [ProductoController::class, 'voltajesPorModelo'])->name('voltajes');
-            Route::get('/modelos-por-marca/{idMarca}', [ProductoController::class, 'modelosPorMarca'])->name('modelosPorMarca');
-            Route::patch('/inventario/{idInventario}/cantidad', [ProductoController::class, 'updateCantidadAccesorio'])->name('updateCantidad'); // ← nuevo
+            Route::get('/',                              [ProductoController::class, 'index'])->name('index');
+            Route::post('/accesorio',                    [ProductoController::class, 'storeAccesorio'])->name('storeAccesorio');
+            Route::post('/bicicleta',                    [ProductoController::class, 'storeBicicleta'])->name('storeBicicleta');
+            Route::put('/{id}',                          [ProductoController::class, 'update'])->name('update');
+            Route::delete('/{id}',                       [ProductoController::class, 'destroy'])->name('destroy');
+            Route::get('/voltajes/{idModelo}',           [ProductoController::class, 'voltajesPorModelo'])->name('voltajes');
+            Route::get('/modelos-por-marca/{idMarca}',   [ProductoController::class, 'modelosPorMarca'])->name('modelosPorMarca');
+            Route::patch('/inventario/{idInventario}/cantidad', [ProductoController::class, 'updateCantidadAccesorio'])->name('updateCantidad');
         });
 
         Route::prefix('sucursal/garantias')->name('garantias.')->group(function () {
-            Route::get('/', [GarantiaController::class, 'index'])->name('index');
-            Route::get('/buscar', [GarantiaController::class, 'buscar'])->name('buscar');   // AJAX
-            Route::get('/bici/{numSerie}', [GarantiaController::class, 'show'])->name('show');
-            Route::post('/reclamo', [GarantiaController::class, 'reclamo'])->name('reclamo');
+            Route::get('/',              [GarantiaController::class, 'index'])->name('index');
+            Route::get('/buscar',        [GarantiaController::class, 'buscar'])->name('buscar');
+            Route::get('/bici/{numSerie}',[GarantiaController::class, 'show'])->name('show');
+            Route::post('/reclamo',      [GarantiaController::class, 'reclamo'])->name('reclamo');
             Route::patch('/reclamo/{id}/estado', [GarantiaController::class, 'estado'])->name('estado');
         });
 
         Route::prefix('sucursal/ventas')->name('ventas.')->group(function () {
-            Route::get('/', [VentaController::class, 'index'])->name('index');
-            Route::get('/crear', [VentaController::class, 'create'])->name('create');
-            Route::post('/', [VentaController::class, 'store'])->name('store');
-            Route::get('/buscar-serie', [VentaController::class, 'buscarSerie'])->name('buscar-serie');
-            Route::get('/{id}', [VentaController::class, 'show'])->name('show');
-            Route::get('/{id}/poliza', [VentaController::class, 'poliza'])->name('poliza');
-            Route::get('/{id}/ticket', [VentaController::class, 'ticket'])->name('ticket');
+            Route::get('/',              [VentaController::class, 'index'])->name('index');
+            Route::get('/crear',         [VentaController::class, 'create'])->name('create');
+            Route::post('/',             [VentaController::class, 'store'])->name('store');
+            Route::get('/buscar-serie',  [VentaController::class, 'buscarSerie'])->name('buscar-serie');
+            Route::get('/{id}',          [VentaController::class, 'show'])->name('show');
+            Route::get('/{id}/poliza',   [VentaController::class, 'poliza'])->name('poliza');
+            Route::get('/{id}/ticket',   [VentaController::class, 'ticket'])->name('ticket');
         });
 
         Route::post('/sucursal/cupones/validar', [CuponValidarController::class, 'validar'])->name('cupones.validar');
 
         Route::prefix('sucursal/reporte/robo')->name('robo.')->group(function () {
-            Route::get('/', [ReporteRoboController::class, 'index'])->name('index');
-            Route::get('/buscar', [ReporteRoboController::class, 'buscar'])->name('buscar');
-            Route::post('/reportar', [ReporteRoboController::class, 'reportar'])->name('reportar');
+            Route::get('/',              [ReporteRoboController::class, 'index'])->name('index');
+            Route::get('/buscar',        [ReporteRoboController::class, 'buscar'])->name('buscar');
+            Route::post('/reportar',     [ReporteRoboController::class, 'reportar'])->name('reportar');
             Route::get('/verificar/{serie}', [ReporteRoboController::class, 'verificar'])->name('verificar');
         });
 
-        Route::get('/sucursal/personal', [PersonalController::class, 'porSucursal'])
-            ->name('personal.por-sucursal');
-
+        Route::get('/sucursal/personal', [PersonalController::class, 'porSucursal'])->name('personal.por-sucursal');
     });
 
     /*
@@ -543,38 +508,33 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
     | Root
     |----------------------------------------------------------------------
     */
+
     Route::middleware('es.root')->group(function () {
+
         Route::get('/root', [RootController::class, 'index'])->name('root.dashboard');
-        Route::post('/root/links', [RootController::class, 'storeLink'])->name('root.links.store');
+
+        Route::post('/root/links',          [RootController::class, 'storeLink'])->name('root.links.store');
         Route::delete('/root/links/{link}', [RootController::class, 'destroyLink'])->name('root.links.destroy');
-        Route::post('/root/negocios/{id}/activar', [RootController::class, 'activarSuscripcion'])->name('root.negocios.activar');
+
+        Route::post('/root/negocios/{id}/activar',   [RootController::class, 'activarSuscripcion'])->name('root.negocios.activar');
         Route::post('/root/negocios/{id}/suspender', [RootController::class, 'suspender'])->name('root.negocios.suspender');
+        Route::delete('/root/negocios/{idNegocio}',  [RootNegocioController::class, 'destroy'])->name('root.negocios.destroy');
 
-        Route::get('/root/negocios/{id}/modulos',        [RootController::class, 'modulos'])->name('root.modulos');
-        Route::post('/root/modulos/toggle',              [RootController::class, 'toggleModulo'])->name('root.modulos.toggle');
+        Route::get('/root/negocios/{id}/modulos', [RootController::class, 'modulos'])->name('root.modulos');
+        Route::post('/root/modulos/toggle',       [RootController::class, 'toggleModulo'])->name('root.modulos.toggle');
 
-        Route::delete('/root/negocios/{idNegocio}', [RootNegocioController::class, 'destroy'])->name('root.negocios.destroy');
- 
-        Route::get('/root/logs/negocios', [RootNegocioController::class, 'logs'])->name('root.logs.index');
-        
-        Route::get('/root/logs/negocios/ver', [RootNegocioController::class, 'verLog'])->name('root.logs.ver');
+        Route::get('/root/logs/negocios',      [RootNegocioController::class, 'logs'])->name('root.logs.index');
+        Route::get('/root/logs/negocios/ver',  [RootNegocioController::class, 'verLog'])->name('root.logs.ver');
+        Route::get('/logs/stream',             [RootNegocioController::class, 'logsStream'])->name('root.logs.stream');
 
-        Route::get('logs/stream', [RootNegocioController::class, 'logsStream'])->name('root.logs.stream');
-
-
-        // ── Config definiciones (root) ────────────────────────
         Route::prefix('/root/config')->name('root.config.')->group(function () {
-            Route::get('/', [RootConfigController::class, 'index'])->name('index');
-            Route::post('/', [RootConfigController::class, 'store'])->name('store');
-            Route::put('/{id}', [RootConfigController::class, 'update'])->name('update');
+            Route::get('/',         [RootConfigController::class, 'index'])->name('index');
+            Route::post('/',        [RootConfigController::class, 'store'])->name('store');
+            Route::put('/{id}',     [RootConfigController::class, 'update'])->name('update');
             Route::patch('/{id}/toggle', [RootConfigController::class, 'toggle'])->name('toggle');
-            Route::delete('/{id}', [RootConfigController::class, 'destroy'])->name('destroy');
+            Route::delete('/{id}',  [RootConfigController::class, 'destroy'])->name('destroy');
         });
-
-        });
-
-
-
+    });
 });
 
 require __DIR__ . '/auth.php';

@@ -156,4 +156,24 @@ class ModeloVoltajeController extends Controller
             CatalogService::getVoltajesByModelo($id_modelo, null)->values()
         );
     }
+
+    public function voltajesDisponibles(\App\Models\Modelo $modelo): \Illuminate\Http\JsonResponse
+    {
+        $user = auth()->user();
+
+        if ($user->id_rol !== 1 || $modelo->id_negocio !== $user->id_negocio) {
+            abort(403);
+        }
+
+        // Los ya asignados al modelo (cualquier negocio, igual que antes)
+        $asignados = \App\Models\ModeloVoltaje::where('id_modelo', $modelo->id_modelo)
+            ->pluck('id_voltaje');
+
+        // Los disponibles del negocio, excluyendo asignados
+        $voltajes = CatalogService::getVoltajesByNegocio($user->id_negocio)
+            ->whereNotIn('id_voltaje', $asignados)
+            ->values();
+
+        return response()->json($voltajes);
+    }
 }
