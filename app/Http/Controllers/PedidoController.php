@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Services\CatalogService;
 use App\Models\Pedido;
 use App\Models\PedidoItem;
 use App\Models\Enlace;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -26,6 +26,7 @@ class PedidoController extends Controller
     }
 
     // ─── LISTAR PEDIDOS ───────────────────────────────────────────────
+
     public function index(Request $request)
     {
         $usuario = auth()->user();
@@ -33,7 +34,7 @@ class PedidoController extends Controller
         $status  = $request->input('status', 'all');
         $search  = $request->input('search', 'all');
 
-        // ✅ Pedidos siempre usan atributos públicos (id_negocio = null)
+        // Pedidos siempre usan atributos públicos (id_negocio = null)
         $modelos = CatalogService::getModelos();
 
         $canalesVendedor = [];
@@ -47,6 +48,8 @@ class PedidoController extends Controller
                 ->toArray();
         }
 
+        // Rol 5 (gestor): ve pedidos de todos sus vendedores enlazados.
+        // No se cachea porque el filtrado es dinámico y el volumen es bajo.
         if ($usuario->id_rol === 5) {
             $idsUsuario1 = Enlace::where('id_usuario2', $usuario->id_usuario)
                 ->where('estado', 'activo')
@@ -63,31 +66,45 @@ class PedidoController extends Controller
             return view('pedidos.index', compact('pedidos', 'modelos', 'canalesVendedor'));
         }
 
-        $cacheKey = "pedidos:index:{$usuario->id_usuario}:{$status}:{$search}:page:{$page}";
+        // Rol 1 (admin/vendedor): solo cachea página 1 sin filtros activos.
+        // Con filtros o páginas posteriores siempre va a DB para resultados exactos.
+        $sinFiltros = ($status === 'all' && $search === 'all' && $page == 1);
 
-        $pedidos = Cache::remember($cacheKey, 300, fn() =>
-            Pedido::with(['negocio', 'usuario', 'items.modelo', 'items.voltaje', 'items.color'])
+        if ($sinFiltros) {
+            // FIX: Se usa CatalogService::remember() (versión del tenant) en lugar
+            // de Cache::remember() directo, para que invalidatePedido() lo limpie.
+            $pedidos = CatalogService::getPedidosRecientesByNegocio($usuario->id_negocio, 10);
+
+            // getPedidosRecientesByNegocio devuelve una Collection, no un Paginator.
+            // Convertimos a LengthAwarePaginator para que la vista sea uniforme.
+            $pedidos = new \Illuminate\Pagination\LengthAwarePaginator(
+                $pedidos->forPage($page, 10),
+                $pedidos->count(),
+                10,
+                $page,
+                ['path' => $request->url(), 'query' => $request->query()]
+            );
+        } else {
+            $pedidos = Pedido::with(['negocio', 'usuario', 'items.modelo', 'items.voltaje', 'items.color'])
                 ->where('id_usuario', $usuario->id_usuario)
                 ->when($search !== 'all', fn($q) => $q->where('id_pedido', 'like', "%{$search}%"))
                 ->when($status !== 'all', fn($q) => $q->where('status', $status))
                 ->orderByDesc('created_at')
                 ->paginate(10)
-                ->withQueryString()
-        );
+                ->withQueryString();
+        }
 
         return view('pedidos.index', compact('pedidos', 'modelos', 'canalesVendedor'));
     }
 
     // ─── CREAR PEDIDO ────────────────────────────────────────────────
-   public function create()
+
+    public function create()
     {
-        // Bloqueo directo: Si el rol no es 1, lanza un 403 (Prohibido)
         if (auth()->user()->id_rol !== 1) {
             abort(403, 'No tienes permisos para crear pedidos.');
         }
 
-        $usuario = auth()->user();
-        
         $modelos  = CatalogService::getModelos();
         $voltajes = [];
         $colores  = [];
@@ -101,14 +118,14 @@ class PedidoController extends Controller
     }
 
     // ─── GUARDAR PEDIDO ──────────────────────────────────────────────
+
     public function store(Request $request)
     {
-        $usuario   = auth()->user();
+        $usuario = auth()->user();
 
         $validator = Validator::make($request->all(), [
             'notas'               => 'nullable|string|max:500',
             'items'               => 'required|array|min:1',
-            // ✅ Pedidos siempre usan atributos públicos (id_negocio = null)
             'items.*.id_modelo'   => [
                 'required',
                 Rule::exists('modelos', 'id_modelo')->whereNull('id_negocio'),
@@ -148,9 +165,11 @@ class PedidoController extends Controller
                 ]);
             }
 
+            // FIX: Se eliminó el Cache::forget() manual de "pedidos:index:..."
+            // porque ese caché ya no existe — ahora el index usa
+            // getPedidosRecientesByNegocio(), que se invalida con invalidatePedido().
             CatalogService::invalidatePedido($pedido->id_pedido, $pedido->id_negocio);
             CatalogService::invalidateNegocio($pedido->id_negocio);
-            Cache::forget("pedidos:index:{$usuario->id_usuario}:all:all:page:1");
 
             $nuevoPedidoId = $pedido->id_pedido;
 
@@ -167,15 +186,19 @@ class PedidoController extends Controller
     }
 
     // ─── MOSTRAR PEDIDO ──────────────────────────────────────────────
+
     public function show(string $id_pedido)
     {
-        $pedido = CatalogService::getPedidoById($id_pedido);
+        // FIX: Se pasa id_negocio para que la clave de caché use la versión
+        // del tenant y se invalide correctamente con invalidatePedido().
+        $pedido = CatalogService::getPedidoById($id_pedido, auth()->user()->id_negocio);
         abort_if(!$pedido, 404);
 
         return view('pedidos.show', compact('pedido'));
     }
 
     // ─── EDITAR PEDIDO ───────────────────────────────────────────────
+
     public function edit(string $id_pedido)
     {
         $usuario = auth()->user();
@@ -187,10 +210,10 @@ class PedidoController extends Controller
         abort_if($pedido->id_usuario !== $usuario->id_usuario, 403);
         abort_if($pedido->status !== 1, 403, 'Solo se puede editar un pedido en estado Solicitado.');
 
-        // ✅ Pedidos siempre usan atributos públicos (id_negocio = null)
         $modelos  = CatalogService::getModelos();
         $voltajes = [];
         $colores  = [];
+
         foreach ($modelos as $modelo) {
             $voltajes[$modelo->id_modelo] = CatalogService::getVoltajesByModelo($modelo->id_modelo, null, true);
             $colores[$modelo->id_modelo]  = CatalogService::getColoresByModelo($modelo->id_modelo, null, true);
@@ -200,10 +223,11 @@ class PedidoController extends Controller
     }
 
     // ─── ACTUALIZAR PEDIDO ───────────────────────────────────────────
+
     public function update(Request $request, string $id_pedido)
     {
-        $usuario   = auth()->user();
-        $pedido    = Pedido::findOrFail($id_pedido);
+        $usuario = auth()->user();
+        $pedido  = Pedido::findOrFail($id_pedido);
 
         abort_if($usuario->id_rol !== 1, 403);
         abort_if($pedido->id_usuario !== $usuario->id_usuario, 403);
@@ -212,7 +236,6 @@ class PedidoController extends Controller
         $validator = Validator::make($request->all(), [
             'notas'               => 'nullable|string|max:500',
             'items'               => 'required|array|min:1',
-            // ✅ Pedidos siempre usan atributos públicos (id_negocio = null)
             'items.*.id_modelo'   => [
                 'required',
                 Rule::exists('modelos', 'id_modelo')->whereNull('id_negocio'),
@@ -233,9 +256,9 @@ class PedidoController extends Controller
         }
 
         DB::transaction(function () use ($request, $pedido, $usuario) {
-        $pedido->update(['notas' => $request->notas]);
-        $pedido->items()->delete();
-        $pedido->touch();
+            $pedido->update(['notas' => $request->notas]);
+            $pedido->items()->delete();
+            $pedido->touch();
 
             foreach ($request->items as $item) {
                 PedidoItem::create([
@@ -247,9 +270,9 @@ class PedidoController extends Controller
                 ]);
             }
 
+            // FIX: Se eliminó Cache::forget() manual — misma razón que en store().
             CatalogService::invalidatePedido($pedido->id_pedido, $pedido->id_negocio);
             CatalogService::invalidateNegocio($pedido->id_negocio);
-            Cache::forget("pedidos:index:{$usuario->id_usuario}:all:all:page:1");
 
             event(new PedidoUpdated(
                 $pedido->fresh(['negocio', 'usuario', 'items.modelo', 'items.voltaje', 'items.color']),
@@ -263,6 +286,7 @@ class PedidoController extends Controller
     }
 
     // ─── ACTUALIZAR STATUS ───────────────────────────────────────────
+
     public function updateStatus(Request $request, string $id_pedido)
     {
         $pedido = Pedido::findOrFail($id_pedido);
@@ -270,8 +294,9 @@ class PedidoController extends Controller
 
         $pedido->update(['status' => $request->status]);
 
+        // FIX: Se eliminó Cache::forget() manual — invalidatePedido() ya cubre
+        // las claves de pedidos:recientes y stats para este tenant.
         CatalogService::invalidatePedido($id_pedido, $pedido->id_negocio);
-        Cache::forget("pedidos:index:" . auth()->user()->id_usuario . ":all:all:page:1");
 
         event(new PedidoUpdated(
             $pedido->fresh(['negocio', 'usuario', 'items.modelo', 'items.voltaje', 'items.color']),
@@ -282,20 +307,20 @@ class PedidoController extends Controller
     }
 
     // ─── ELIMINAR PEDIDO ─────────────────────────────────────────────
+
     public function destroy(string $id_pedido)
     {
         $pedido = Pedido::with(['negocio', 'usuario', 'items'])->findOrFail($id_pedido);
         abort_if($pedido->status > 1, 403, 'No se puede eliminar un pedido que ya fue preparado o entregado.');
 
-        $usuarioId = $pedido->id_usuario;
         $pedidoId  = $pedido->id_pedido;
         $idNegocio = $pedido->id_negocio;
 
         $pedido->delete();
 
+        // FIX: Se eliminó Cache::forget() manual — invalidatePedido() cubre todo.
         CatalogService::invalidatePedido($pedidoId, $idNegocio);
         CatalogService::invalidateNegocio($idNegocio);
-        Cache::forget("pedidos:index:" . auth()->user()->id_usuario . ":all:all:page:1");
 
         event(new PedidoUpdated($pedido, 'deleted'));
 
@@ -305,6 +330,7 @@ class PedidoController extends Controller
     }
 
     // ─── VISTA REALIZAR PEDIDO ────────────────────────────────────
+
     public function realizar(string $id_pedido)
     {
         $usuario = auth()->user();
@@ -340,16 +366,17 @@ class PedidoController extends Controller
             }
         }
 
-        // ✅ Rol 5 siempre usa modelos públicos
         $modelos = CatalogService::getModelos();
 
         return view('pedidos.realizar', compact('pedido', 'resumen', 'modelos'));
     }
 
     // ─── GENERAR PDF DEL PEDIDO ──────────────────────────────────
+
     public function pdf(Request $request, string $id_pedido)
     {
-        $pedido = CatalogService::getPedidoById($id_pedido);
+        // FIX: Se pasa id_negocio para versión del tenant correcta.
+        $pedido = CatalogService::getPedidoById($id_pedido, auth()->user()->id_negocio);
         abort_if(!$pedido, 404);
 
         $cliente     = $request->input('cliente',     optional($pedido->usuario)->nombre_usuario ?? '');
@@ -400,7 +427,8 @@ class PedidoController extends Controller
     }
 
     // ─── COMPLETAR ENTREGA ───────────────────────────────────────
-   public function completarEntrega(Request $request, string $id_pedido)
+
+    public function completarEntrega(Request $request, string $id_pedido)
     {
         $usuario = auth()->user();
         abort_if($usuario->id_rol !== 5, 403);
@@ -430,7 +458,7 @@ class PedidoController extends Controller
             $pedido->update(['status' => 4]);
 
             foreach ($pedido->bicicletas as $bici) {
-                // 1. Invalidar caché con el negocio ANTERIOR
+                // 1. Invalidar caché con el negocio ANTERIOR (antes de cambiar)
                 CatalogService::invalidateBicicleta($bici->num_serie, $bici->id_negocio);
                 CatalogService::invalidateSeccion($bici->id_usuario, $idNegocioGestor);
 
@@ -440,23 +468,22 @@ class PedidoController extends Controller
                 // 3. Invalidar caché con el negocio NUEVO
                 CatalogService::invalidateBicicleta($bici->num_serie, $pedido->id_negocio);
 
-                // 4. Registrar movimiento — caché ya limpio con el negocio correcto
+                // 4. Registrar movimiento
                 Log::info('[completarEntrega] Antes de entradaStockGeneral', [
-                    'num_serie'   => $bici->num_serie,
-                    'id_negocio'  => $bici->id_negocio,
-                    'id_pedido'   => $pedido->id_pedido,
+                    'num_serie'  => $bici->num_serie,
+                    'id_negocio' => $bici->id_negocio,
+                    'id_pedido'  => $pedido->id_pedido,
                 ]);
 
                 $movimientoService->entradaStockGeneral(
-                    $bici->num_serie, 
+                    $bici->num_serie,
                     $pedido->id_pedido,
-                    $pedido->id_negocio  // ← negocio correcto
+                    $pedido->id_negocio
                 );
 
                 Log::info('[completarEntrega] Después de entradaStockGeneral', [
                     'num_serie' => $bici->num_serie,
                 ]);
-
 
                 CatalogService::invalidateSeccion($bici->id_usuario, $pedido->id_negocio);
 
@@ -506,6 +533,7 @@ class PedidoController extends Controller
     }
 
     // ─── OBTENER TOKEN DE ENTREGA ─────────────────────────────────
+
     public function token(string $id_pedido)
     {
         $usuario = auth()->user();
@@ -534,12 +562,12 @@ class PedidoController extends Controller
     }
 
     // ─── CREAR PEDIDO RÁPIDO ─────────────────────────────────────
+
     public function crearRapido()
     {
         $usuario = auth()->user();
         abort_if($usuario->id_rol !== 5, 403);
 
-        // ✅ Rol 5 siempre usa modelos públicos
         $modelos  = CatalogService::getModelos();
         $voltajes = [];
         $colores  = [];
@@ -553,6 +581,7 @@ class PedidoController extends Controller
     }
 
     // ─── GENERAR PDF RÁPIDO ──────────────────────────────────────
+
     public function generarPdfRapido(Request $request)
     {
         $usuario = auth()->user();
@@ -577,7 +606,7 @@ class PedidoController extends Controller
         $baterias   = [];
 
         foreach ($request->items as $item) {
-            // ✅ Rol 5 usa modelos/voltajes/colores públicos (id_negocio = null)
+            // Rol 5 usa modelos/voltajes/colores públicos (id_negocio = null)
             $modelo  = CatalogService::getModeloById($item['id_modelo']);
             $voltaje = CatalogService::getVoltajeById($item['id_voltaje']);
             $color   = CatalogService::getColorById($item['id_color']);
@@ -620,12 +649,16 @@ class PedidoController extends Controller
             ->header('Content-Disposition', 'inline; filename="emision_rapida.pdf"');
     }
 
+    // ─── API GET ──────────────────────────────────────────────────
 
     public function apiGet(int $id): array
     {
+        $user   = auth()->user();
+
+        // FIX: Se pasa id_negocio para versión del tenant correcta.
         $pedido = CatalogService::getPedidoById(
             (string) $id,
-            (string) auth()->user()->id_negocio
+            (string) $user->id_negocio
         );
 
         abort_if(!$pedido, 404);

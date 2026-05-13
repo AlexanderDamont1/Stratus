@@ -14,6 +14,7 @@ use App\Events\CatalogoActualizado;
 class VoltajeController extends Controller
 {
     use ResolvesAdminRoute;
+
     // ─── INDEX ──────────────────────────────────────────────────────────────
 
     public function index()
@@ -23,17 +24,12 @@ class VoltajeController extends Controller
         if (!in_array($user->id_rol, [1, 5])) abort(403);
 
         if ($user->id_rol === 5) {
-            $voltajes = Voltaje::whereNull('id_negocio')
-                ->orderBy('voltaje')
-                ->paginate(15);
+
+            $voltajes = CatalogService::getAllVoltajes();
 
             return view('gestor.Vehiculos.voltaje.index', compact('voltajes'));
         }
-
-        // Rol 1 — solo voltajes de su negocio
-        $voltajes = Voltaje::where('id_negocio', $user->id_negocio)
-            ->orderBy('voltaje')
-            ->paginate(15);
+        $voltajes = CatalogService::getVoltajesByNegocio($user->id_negocio);
 
         return view('gestor.Vehiculos.voltaje.index', compact('voltajes'));
     }
@@ -61,7 +57,6 @@ class VoltajeController extends Controller
         $request->validate([
             'voltaje' => [
                 'required', 'string', 'max:10',
-                // Unicidad dentro del mismo negocio
                 Rule::unique('voltajes', 'voltaje')
                     ->where('id_negocio', $idNegocio),
             ],
@@ -70,8 +65,8 @@ class VoltajeController extends Controller
         $voltaje = Voltaje::create([
             'voltaje'    => $request->voltaje,
             'id_negocio' => $idNegocio,
-            'created_at'  => now(),
-            'updated_at'  => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
 
         CatalogService::invalidateVoltaje($voltaje->id_voltaje, $idNegocio);
@@ -101,7 +96,7 @@ class VoltajeController extends Controller
     public function update(Request $request, Voltaje $voltaje)
     {
         $user      = auth()->user();
-        $idNegocio = $voltaje->id_negocio; // mantener negocio original
+        $idNegocio = $voltaje->id_negocio;
 
         if (!in_array($user->id_rol, [1, 5])) abort(403);
 
@@ -141,7 +136,6 @@ class VoltajeController extends Controller
 
         if ($user->id_rol === 5 && !is_null($voltaje->id_negocio)) abort(403);
 
-        // Verificar que no tenga bicicletas asociadas a través de modelo_voltaje
         $tieneBicicletas = ModeloVoltaje::where('id_voltaje', $voltaje->id_voltaje)
             ->whereHas('modelo', fn($q) => $q->whereHas('bicicletas'))
             ->exists();
@@ -153,14 +147,12 @@ class VoltajeController extends Controller
         $idVoltaje = $voltaje->id_voltaje;
         $idNegocio = $voltaje->id_negocio;
 
-        // Eliminar correlaciones modelo_voltaje primero
         ModeloVoltaje::where('id_voltaje', $idVoltaje)->delete();
-
         $voltaje->delete();
 
         CatalogService::invalidateVoltaje($idVoltaje, $idNegocio);
 
-       return redirect()
+        return redirect()
             ->route($this->routeByRol('voltajes'))
             ->with('success', 'Voltaje eliminado correctamente.');
     }

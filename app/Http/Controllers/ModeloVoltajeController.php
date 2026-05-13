@@ -12,6 +12,7 @@ use App\Events\CatalogoActualizado;
 class ModeloVoltajeController extends Controller
 {
     use ResolvesAdminRoute;
+
     // ─── INDEX ──────────────────────────────────────────────────────────────
 
     public function modeloVoltaje()
@@ -68,9 +69,10 @@ class ModeloVoltajeController extends Controller
         $fecha  = now()->format('ymd');
         $letras = strtoupper(substr(str_shuffle('ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 0, 3));
         $nums   = random_int(100, 999);
+        $idMv   = "MV{$fecha}{$letras}{$nums}";
 
         ModeloVoltaje::create([
-            'id_mvoltaje' => "MV{$fecha}{$letras}{$nums}",
+            'id_mvoltaje' => $idMv,
             'id_modelo'   => $request->id_modelo,
             'id_voltaje'  => $request->id_voltaje,
             'id_negocio'  => $idNegocio,
@@ -79,11 +81,17 @@ class ModeloVoltajeController extends Controller
         $idMarca = \App\Models\Modelo::find($request->id_modelo)?->id_marca ?? '';
         CatalogoActualizado::dispatch($user->id_negocio, 'voltaje', 'creado', $idMarca);
 
+        // FIX: invalidateCatalogoCompleto necesita id_negocio del usuario,
+        // no null, incluso cuando la relación es pública (rol 5), porque el
+        // catálogo completo se cachea por tenant. Rol 5 no tiene catálogo
+        // completo propio, por lo que solo se invalida si hay un id_negocio.
         CatalogService::invalidateModelo($request->id_modelo, $idNegocio);
         CatalogService::invalidateVoltaje($request->id_voltaje, $idNegocio);
-        CatalogService::invalidateCatalogoCompleto($user->id_negocio);
+        if ($user->id_negocio) {
+            CatalogService::invalidateCatalogoCompleto($user->id_negocio);
+        }
 
-        $mv = ModeloVoltaje::with('voltaje')->find("MV{$fecha}{$letras}{$nums}");
+        $mv = ModeloVoltaje::with('voltaje')->find($idMv);
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -129,7 +137,7 @@ class ModeloVoltajeController extends Controller
 
         $relacion->delete();
 
-        $idMarca = \App\Models\Modelo::find($relacion->id_modelo)?->id_marca ?? '';
+        $idMarca = \App\Models\Modelo::find($idModelo)?->id_marca ?? '';
         CatalogoActualizado::dispatch(
             $user->id_negocio,
             'voltaje',
@@ -139,9 +147,9 @@ class ModeloVoltajeController extends Controller
 
         CatalogService::invalidateModelo($idModelo, $idNegocio);
         CatalogService::invalidateVoltaje($idVoltaje, $idNegocio);
-        CatalogService::invalidateCatalogoCompleto($user->id_negocio);
-
-        
+        if ($user->id_negocio) {
+            CatalogService::invalidateCatalogoCompleto($user->id_negocio);
+        }
 
         return redirect()
             ->route($this->routeByRol('modelo-voltaje'))
@@ -165,11 +173,9 @@ class ModeloVoltajeController extends Controller
             abort(403);
         }
 
-        // Los ya asignados al modelo (cualquier negocio, igual que antes)
         $asignados = \App\Models\ModeloVoltaje::where('id_modelo', $modelo->id_modelo)
             ->pluck('id_voltaje');
 
-        // Los disponibles del negocio, excluyendo asignados
         $voltajes = CatalogService::getVoltajesByNegocio($user->id_negocio)
             ->whereNotIn('id_voltaje', $asignados)
             ->values();

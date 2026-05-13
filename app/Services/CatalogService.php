@@ -391,10 +391,18 @@ class CatalogService
         return $withSelectFormato ? $negocios->pluck('nombre_negocio', 'id_negocio') : $negocios;
     }
 
+    /**
+     * FIX: Ahora cachea usando la versión del tenant (idNegocio como cuarto
+     * parámetro), igual que hace invalidateNegocio() al borrar la clave.
+     * Antes cacheaba con versión global y nunca se invalidaba correctamente.
+     */
     public static function getNegocioById(string $idNegocio): ?Negocio
     {
-        return self::remember("negocio:{$idNegocio}", self::CACHE_TTL['negocios'],
-            fn () => Negocio::find($idNegocio)
+        return self::remember(
+            "negocio:{$idNegocio}",
+            self::CACHE_TTL['negocios'],
+            fn () => Negocio::find($idNegocio),
+            $idNegocio  // ← FIX: antes faltaba este argumento
         );
     }
 
@@ -408,10 +416,6 @@ class CatalogService
             ->paginate(10);
     }
 
-    /**
-     * FIX: Ahora pasa $idNegocio al cuarto param de remember() para que use
-     * la versión del tenant, igual que hace invalidateBicicleta().
-     */
     public static function getBicicletaBySerie(string $numSerie, ?string $idNegocio = null): ?Bicicleta
     {
         return self::remember(
@@ -421,7 +425,7 @@ class CatalogService
                 ->where('num_serie', $numSerie)
                 ->when($idNegocio, fn($q) => $q->where('id_negocio', $idNegocio))
                 ->first(),
-            $idNegocio  // ← FIX: antes faltaba este argumento
+            $idNegocio
         );
     }
 
@@ -511,10 +515,6 @@ class CatalogService
         );
     }
 
-    /**
-     * FIX: Ahora borra la clave con la versión actual antes de que cambie,
-     * en lugar de intentar borrar con una versión que ya no existe.
-     */
     public static function invalidateBicicletasByCliente(string $idCliente, string $idNegocio): void
     {
         $version = self::getVersion($idNegocio);
@@ -591,9 +591,6 @@ class CatalogService
         ];
     }
 
-    /**
-     * FIX: Borra la clave con la versión actual (antes de que se incremente).
-     */
     public static function invalidateSeccion(?string $idUsuario, string $idNegocio): void
     {
         $version  = self::getVersion($idNegocio);
@@ -627,10 +624,6 @@ class CatalogService
         );
     }
 
-    /**
-     * FIX: Cachea el resultado completo directamente en lugar de hacer
-     * N llamadas individuales a getPedidoById() (N roundtrips a Redis).
-     */
     public static function getPedidosRecientesByNegocio(string $idNegocio, int $limit = 10): \Illuminate\Support\Collection
     {
         return self::remember(
@@ -679,73 +672,87 @@ class CatalogService
     }
 
     /**
-     * FIX: Reemplaza el loop con límites hardcodeados por incrementVersion(),
-     * que invalida todos los pedidos recientes sin importar el $limit usado.
+     * FIX: invalidatePedido ya no llama incrementVersion() para evitar
+     * over-invalidation de todo el tenant. En su lugar borra quirúrgicamente
+     * las claves afectadas con la versión actual del tenant.
+     * Las variantes de pedidos:recientes se borran para los límites comunes;
+     * si usas límites distintos, agrégalos aquí o usa incrementVersion().
      */
     public static function invalidatePedido(string $idPedido, string $idNegocio): void
     {
-        $globalV = self::getVersion();
         $tenantV = self::getVersion($idNegocio);
+        $globalV = self::getVersion();
 
         Cache::forget(self::key("pedido:{$idPedido}") . ":v{$globalV}");
+        Cache::forget(self::key("pedido:{$idPedido}") . ":v{$tenantV}");
         Cache::forget(self::key("stats:pedidos:negocio:{$idNegocio}") . ":v{$tenantV}");
 
-        // FIX: en lugar de iterar límites hardcodeados (5,10,15,20),
-        // incrementamos la versión del tenant para invalidar todas las
-        // variantes de pedidos:recientes sin importar el $limit.
-        self::incrementVersion($idNegocio);
+        // Borrar variantes conocidas de pedidos:recientes sin invalidar todo el tenant
+        foreach ([5, 10, 15, 20] as $limit) {
+            Cache::forget(self::key("pedidos:recientes:negocio:{$idNegocio}:limit{$limit}") . ":v{$tenantV}");
+        }
     }
 
     // ─── USUARIOS ───────────────────────────────────────────────────────────
 
-    public static function getUserById(string $idUsuario, ?string $idNegocio = null): ?Usuario
+    /**
+     * FIX: Ahora requiere $idNegocio obligatorio para que remember() use la
+     * versión del tenant, igual que hace invalidateUsuario(). Antes, si se
+     * pasaba $idNegocio, la clave se construía con versión del tenant pero
+     * invalidateUsuario usaba la versión global → nunca se borraba nada.
+     */
+    public static function getUserById(string $idUsuario, string $idNegocio): ?Usuario
     {
         return self::remember(
             "usuario:{$idUsuario}",
             self::CACHE_TTL['usuarios'],
-            function () use ($idUsuario, $idNegocio) {
-                $query = Usuario::query();
-                if ($idNegocio) {
-                    $query->where('id_negocio', $idNegocio);
-                }
-                return $query->find($idUsuario);
-            },
-            $idNegocio
+            fn () => Usuario::where('id_negocio', $idNegocio)->find($idUsuario),
+            $idNegocio  // ← FIX: siempre versión del tenant
         );
     }
 
-    public static function getUserWithNegocio(string $idUsuario, ?string $idNegocio = null): ?Usuario
+    /**
+     * FIX: Igual que getUserById — versión del tenant obligatoria.
+     */
+    public static function getUserWithNegocio(string $idUsuario, string $idNegocio): ?Usuario
     {
         return self::remember(
             "usuario:negocio:{$idUsuario}",
             self::CACHE_TTL['usuarios'],
-            function () use ($idUsuario, $idNegocio) {
-                $query = Usuario::with('negocio');
-                if ($idNegocio) {
-                    $query->where('id_negocio', $idNegocio);
-                }
-                return $query->find($idUsuario);
-            },
-            $idNegocio
+            fn () => Usuario::with('negocio')->where('id_negocio', $idNegocio)->find($idUsuario),
+            $idNegocio  // ← FIX: siempre versión del tenant
         );
     }
 
-    public static function invalidateUsuario(string $idUsuario): void
+    /**
+     * FIX: Ahora recibe $idNegocio y borra las claves usando la versión del
+     * tenant, que es la misma versión con la que getUserById/getUserWithNegocio
+     * construyeron las claves. Antes usaba versión global y no borraba nada.
+     */
+    public static function invalidateUsuario(string $idUsuario, string $idNegocio): void
     {
-        $version = self::getVersion();
+        $version = self::getVersion($idNegocio);  // ← FIX: versión del tenant
         Cache::forget(self::key("usuario:{$idUsuario}") . ":v{$version}");
         Cache::forget(self::key("usuario:negocio:{$idUsuario}") . ":v{$version}");
     }
 
     // ─── NEGOCIOS INVALIDACIÓN ───────────────────────────────────────────────
 
+    /**
+     * FIX: El orden ahora es correcto — primero leemos la versión global
+     * (con la que se construyó la clave en getNegocioById), luego hacemos
+     * el forget con esa versión, y finalmente incrementamos la versión del
+     * tenant para que futuros remember() generen claves nuevas.
+     */
     public static function invalidateNegocio(string $idNegocio): void
     {
-        self::incrementVersion($idNegocio);
+        $globalV = self::getVersion();          // leer ANTES de incrementar
+        $tenantV = self::getVersion($idNegocio); // leer ANTES de incrementar
 
-        $globalV = self::getVersion();
-        Cache::forget(self::key("negocio:{$idNegocio}") . ":v{$globalV}");
+        Cache::forget(self::key("negocio:{$idNegocio}") . ":v{$tenantV}");  // ← FIX: versión tenant
         Cache::forget(self::key('negocios') . ":v{$globalV}");
+
+        self::incrementVersion($idNegocio);  // incrementar DESPUÉS del forget
     }
 
     // ─── STATS GLOBALES ─────────────────────────────────────────────────────
@@ -911,13 +918,6 @@ class CatalogService
 
     // ─── INVENTARIO ─────────────────────────────────────────────────────────
 
-    /**
-     * FIX: El método original obtenía la versión DESPUÉS de que el caller
-     * ya la había incrementado en otro método (como invalidateInventario en
-     * VentaController), haciendo que el forget() apuntara a una clave que
-     * ya no existe (versión+1). Ahora borra con la versión ACTUAL y luego
-     * incrementa para que el próximo remember() genere una clave nueva.
-     */
     public static function invalidateInventario(string $idNegocio, ?string $idUsuario = null): void
     {
         $version = self::getVersion($idNegocio);
@@ -928,8 +928,6 @@ class CatalogService
             Cache::forget(self::key("inventario:sucursal:{$idNegocio}:{$idUsuario}") . ":v{$version}");
         }
 
-        // Incrementar DESPUÉS del forget para que la próxima lectura
-        // genere una clave nueva y vaya a DB.
         self::incrementVersion($idNegocio);
     }
 
@@ -983,9 +981,6 @@ class CatalogService
         );
     }
 
-    /**
-     * FIX: Mismo patrón — forget con versión actual, luego incrementar.
-     */
     public static function invalidateColoresEnStock(string $idNegocio, ?string $idUsuario = null): void
     {
         $version = self::getVersion($idNegocio);
@@ -1032,9 +1027,6 @@ class CatalogService
         );
     }
 
-    /**
-     * FIX: Mismo patrón — forget primero, incrementar después.
-     */
     public static function invalidateMovimientos(string $numSerie, string $idNegocio): void
     {
         $version = self::getVersion($idNegocio);
@@ -1075,6 +1067,7 @@ class CatalogService
         Cache::forget(self::key("ventas:vendedor:{$idUsuario}:negocio:{$idNegocio}:page:1") . ":v{$version}");
     }
 
+    // ─── CONFIG NEGOCIO ──────────────────────────────────────────────────────
 
     public static function getConfigNegocio(string $idNegocio): array
     {
@@ -1091,7 +1084,6 @@ class CatalogService
                 foreach ($definiciones as $def) {
                     $valor = $valores[$def->id_ncf] ?? $def->valor_default;
 
-                    // checkbox_multi se guardó como JSON, lo devolvemos como array
                     $config[$def->clave] = $def->tipo === 'checkbox_multi'
                         ? json_decode($valor, true)
                         : $valor;
@@ -1103,9 +1095,11 @@ class CatalogService
         );
     }
 
+    
     public static function invalidateConfigNegocio(string $idNegocio): void
     {
         $version = self::getVersion($idNegocio);
         Cache::forget(self::key("config:negocio:{$idNegocio}") . ":v{$version}");
+        self::incrementVersion($idNegocio);  // ← FIX: incrementar DESPUÉS del forget
     }
 }

@@ -9,12 +9,16 @@ use Illuminate\Http\Request;
 
 class MovimientoController extends Controller
 {
+    // ─── INDEX ───────────────────────────────────────────────────────────────
+
     public function index()
     {
         $user = auth()->user();
 
         if (!in_array($user->id_rol, [1, 2])) abort(403);
 
+        // CatalogService::getMovimientosRecientes usa remember() con versión del
+        // tenant — se invalida automáticamente con invalidateMovimientos().
         $recientes = CatalogService::getMovimientosRecientes($user->id_negocio)
             ->map(fn ($m) => [
                 'id'               => $m->id_movimiento,
@@ -30,7 +34,8 @@ class MovimientoController extends Controller
         return view('administrador.movimientos.index', compact('recientes'));
     }
 
-    /* ─── AUTOCOMPLETE ─────────────────────────────────── */
+    // ─── AUTOCOMPLETE ────────────────────────────────────────────────────────
+
     public function buscar(Request $request)
     {
         $user = auth()->user();
@@ -38,25 +43,25 @@ class MovimientoController extends Controller
 
         if (strlen($q) < 2) return response()->json([]);
 
-        // ✅ searchBicicletas ya usa cache (TTL 1h, clave md5 del query)
+        // searchBicicletas usa remember() con versión del tenant (TTL 1h).
         $resultados = CatalogService::searchBicicletas($q, $user->id_negocio, 8);
 
         return response()->json($resultados);
     }
 
-    /* ─── HISTORIAL POR SERIE ──────────────────────────── */
+    // ─── HISTORIAL POR SERIE ─────────────────────────────────────────────────
+
     public function historial(string $numSerie)
     {
         $user = auth()->user();
 
-        // ✅ Cache — no toca la tabla bicicletas directamente
         $bicicleta = CatalogService::getBicicletaBySerie($numSerie, $user->id_negocio);
 
         if (!$bicicleta || $bicicleta->id_negocio !== $user->id_negocio) {
             return response()->json(['error' => 'Serie no encontrada.'], 404);
         }
 
-        // ✅ Cache — no toca la tabla bicicleta_movimientos directamente
+        // getHistorialMovimientos usa remember() con versión del tenant (TTL 10m).
         $movimientos = CatalogService::getHistorialMovimientos($numSerie, $user->id_negocio)
             ->map(fn ($m) => [
                 'id'               => $m->id_movimiento,

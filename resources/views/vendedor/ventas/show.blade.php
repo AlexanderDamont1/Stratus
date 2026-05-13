@@ -100,44 +100,105 @@
         </div>
 
         {{-- ===== CLIENTE ===== --}}
-        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
-            <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700
-                        bg-gray-50 dark:bg-gray-700/30">
-                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                </svg>
-                <p class="text-sm font-medium text-gray-800 dark:text-gray-200">Cliente</p>
-            </div>
-            <div class="p-5">
-                <dl class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-                    <div>
-                        <dt class="text-xs text-gray-400 mb-0.5">Nombre completo</dt>
-                        <dd class="font-medium text-gray-900 dark:text-white">
-                            {{ $venta->cliente->nombre_cliente }}
-                            {{ $venta->cliente->apellido1 }}
-                            {{ $venta->cliente->apellido2 }}
-                        </dd>
-                    </div>
-                    <div>
-                        <dt class="text-xs text-gray-400 mb-0.5">Teléfono</dt>
-                        <dd class="font-medium text-gray-900 dark:text-white">{{ $venta->cliente->telefono }}</dd>
-                    </div>
-                    @if($venta->cliente->correo)
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+                <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700
+                            bg-gray-50 dark:bg-gray-700/30">
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                    <p class="text-sm font-medium text-gray-800 dark:text-gray-200">Cliente</p>
+                </div>
+                <div class="p-5">
+                    <dl class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
                         <div>
-                            <dt class="text-xs text-gray-400 mb-0.5">Correo</dt>
-                            <dd class="font-medium text-gray-900 dark:text-white text-xs">{{ $venta->cliente->correo }}</dd>
+                            <dt class="text-xs text-gray-500 mb-0.5">Nombre completo</dt>
+                            <dd class="font-medium text-gray-900 dark:text-white">
+                                {{ $venta->cliente->nombre_cliente }}
+                                {{ $venta->cliente->apellido1 }}
+                                {{ $venta->cliente->apellido2 }}
+                            </dd>
                         </div>
-                    @endif
-                    <div>
-                        <dt class="text-xs text-gray-400 mb-0.5">Vendedor</dt>
-                        <dd class="font-medium text-gray-900 dark:text-white">
-                            {{ $venta->user->name ?? '—' }}
-                        </dd>
-                    </div>
-                </dl>
+                        <div>
+                            <dt class="text-xs text-gray-500 mb-0.5">Teléfono</dt>
+                            <dd class="font-medium text-gray-900 dark:text-white">{{ $venta->cliente->telefono }}</dd>
+                        </div>
+                        @if($venta->cliente->correo)
+                            <div>
+                                <dt class="text-xs text-gray-500 mb-0.5">Correo</dt>
+                                <dd class="font-medium text-gray-900 dark:text-white text-xs">{{ $venta->cliente->correo }}</dd>
+                            </div>
+                        @endif
+                        <div>
+                            <dt class="text-xs text-gray-500 mb-0.5">Vendedor</dt>
+                            <dd>
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-sky-100 dark:bg-purple-800/30 font-medium text-sky-700 dark:text-purple-300">
+                                    {{ $venta->vendedor?->personal?->nombre ?? '—' }}
+                                </span>
+                            </dd>
+                        </div>
+                    </dl>
+                </div>
             </div>
-        </div>
+
+            {{-- 
+                En el card de tipo de pago necesita un icono svg de un ojo, para ver la referencia bancaria (si aplica). Al hacer click en el icono, se muestra un modal 
+                con la información de la referencia (número de referencia, banco, monto, etc). Este modal puede ser un simple div que se muestra/oculta con Alpine.js.
+
+
+                
+            --}}
+
+
+
+            @php
+                $pagosConReferencia = collect($venta->pagos ?? [])->filter(function ($pago) {
+                    return !$pago->es_efectivo && ($pago->metodoPago->requiere_referencia ?? false);
+                });
+            @endphp
+
+            @if($pagosConReferencia->isNotEmpty())
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden mt-6">
+                <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700
+                            bg-gray-50 dark:bg-gray-700/30">
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                    </svg>
+                    <p class="text-sm font-medium text-gray-800 dark:text-gray-200">Referencia bancaria</p>
+                </div>
+                <div class="p-5 space-y-4">
+                    @foreach($pagosConReferencia as $pago)
+                    <div class="border-b border-gray-100 dark:border-gray-700 last:border-0 pb-3 last:pb-0">
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                            <span class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                                {{ $pago->metodoPago->nombre ?? 'Pago bancario' }}
+                            </span>
+                            <span class="text-xs text-gray-400">
+                                Monto: {{ number_format($pago->monto, 2) }} MXN
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                            <div>
+                                <dt class="text-xs text-gray-500 mb-0.5">Referencia / Autorización</dt>
+                                <dd class="font-mono text-sm font-medium text-gray-900 dark:text-white">
+                                    {{ $pago->referencia ?? '—' }}
+                                </dd>
+                            </div>
+                            @if(isset($pago->ultimos_cuatro) && $pago->ultimos_cuatro)
+                            <div>
+                                <dt class="text-xs text-gray-500 mb-0.5">Últimos 4 dígitos</dt>
+                                <dd class="font-mono text-sm font-medium text-gray-900 dark:text-white">
+                                    **** {{ $pago->ultimos_cuatro }}
+                                </dd>
+                            </div>
+                            @endif
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+            @endif
 
         {{-- ===== PRODUCTOS ===== --}}
         <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
