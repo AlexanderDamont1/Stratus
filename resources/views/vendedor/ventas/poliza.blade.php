@@ -9,432 +9,576 @@
 
         body {
             font-family: Arial, Helvetica, sans-serif;
-            font-size: 8px;
+            font-size: 7.5px;
             color: #1a1a1a;
             background: #fff;
         }
 
-        /* ─── Layout principal: izquierda | derecha ─── */
+        /* ══ LAYOUT PRINCIPAL ══ */
         .page {
             width: 100%;
             display: table;
             table-layout: fixed;
         }
-
         .col-left {
             display: table-cell;
-            width: 44%;
-            padding: 14px 12px 14px 14px;
-            border-right: 1px solid #ccc;
+            width: 45%;
             vertical-align: top;
+            border-right: 1px solid #e2e8f0;
         }
-
         .col-right {
             display: table-cell;
-            width: 56%;
-            padding: 14px 14px 14px 12px;
+            width: 55%;
             vertical-align: top;
         }
 
-        /* ─── Cabecera izquierda ─── */
-        .header-left {
+        /* ══ HEADER IZQUIERDO ══ */
+        .header-band {
+            background: #0f172a;
+            padding: 11px 13px 9px 13px;
+        }
+        .header-brand-row {
             display: table;
             width: 100%;
-            margin-bottom: 10px;
         }
-        .header-logo-cell {
+        .header-brand-cell {
             display: table-cell;
-            width: 50%;
             vertical-align: middle;
+            width: 60%;
         }
-        .header-info-cell {
+        .header-meta-cell {
             display: table-cell;
-            width: 50%;
             vertical-align: middle;
             text-align: right;
+            width: 40%;
         }
         .brand-name {
-            font-size: 22px;
+            font-size: 17px;
             font-weight: 900;
-            letter-spacing: -1px;
-            color: #111;
+            letter-spacing: -0.5px;
+            color: #ffffff;
+            line-height: 1;
         }
-        .brand-name span { color: #2563eb; }
-        .negocio-info {
-            font-size: 6.5px;
-            color: #444;
-            line-height: 1.5;
+        .brand-tagline {
+            font-size: 5.5px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 3px;
         }
-
-        /* ─── Separador ─── */
-        hr { border: none; border-top: 1px solid #ddd; margin: 8px 0; }
-        hr.bold { border-top: 2px solid #111; }
-
-        /* ─── Campo de datos ─── */
-        .field-label {
-            font-size: 6.5px;
-            color: #555;
-            margin-bottom: 1px;
+        .folio-label {
+            font-size: 5.5px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
         }
-        .field-value {
-            border: 1px solid #bbb;
-            border-radius: 3px;
-            padding: 3px 6px;
-            min-height: 14px;
-            font-size: 7.5px;
-            color: #111;
-            background: #f9f9f9;
-            margin-bottom: 6px;
-        }
-        .field-value.lg {
-            min-height: 22px;
+        .folio-num {
+            font-size: 9px;
+            font-weight: 700;
+            color: #38bdf8;
+            font-family: "Courier New", monospace;
         }
 
-        .row-2 {
+        /* ══ STRIP SUCURSAL ══ */
+        .sucursal-strip {
+            background: #0ea5e9;
+            padding: 4px 13px;
+        }
+        .sucursal-strip-inner {
             display: table;
             width: 100%;
         }
-        .cell-half {
-            display: table-cell;
-            width: 50%;
-            padding-right: 6px;
+        .sucursal-strip-left  { display: table-cell; vertical-align: middle; }
+        .sucursal-strip-right { display: table-cell; vertical-align: middle; text-align: right; }
+        .strip-label {
+            font-size: 5.5px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #e0f2fe;
         }
-        .cell-half:last-child { padding-right: 0; }
+        .sucursal-name {
+            font-size: 8px;
+            font-weight: 700;
+            color: #ffffff;
+        }
+        .fecha-value {
+            font-size: 7.5px;
+            font-weight: 700;
+            color: #ffffff;
+            font-family: "Courier New", monospace;
+        }
 
-        /* ─── Fecha ─── */
-        .fecha-row {
-            display: table;
-            width: 50%;
-            margin: 0 auto 10px auto;
-            text-align: center;
+        /* ══ CUERPO IZQUIERDO ══ */
+        .left-body { padding: 9px 13px; }
+
+        /* ══ LABELS DE SECCIÓN ══ */
+        .section-label {
+            font-size: 5.5px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #64748b;
+            font-weight: 700;
+            margin-bottom: 5px;
+            padding-bottom: 3px;
+            border-bottom: 1px solid #e2e8f0;
         }
-        .fecha-label {
-            font-size: 7px;
-            color: #444;
-            margin-bottom: 4px;
+
+        /* ══ CLIENTE ══ */
+        .client-grid  { display: table; width: 100%; margin-bottom: 7px; }
+        .client-cell  { display: table-cell; padding-right: 7px; vertical-align: top; }
+        .client-cell:last-child { padding-right: 0; }
+        .field-key {
+            font-size: 5.5px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 1px;
         }
-        .fecha-boxes {
-            display: table;
-            margin: 0 auto;
-        }
-        .fecha-box {
-            display: table-cell;
-            border: 1px solid #bbb;
+        .field-val {
+            font-size: 7.5px;
+            font-weight: 700;
+            color: #0f172a;
+            background: #f8fafc;
+            border: 0.5px solid #e2e8f0;
             border-radius: 3px;
-            padding: 3px 10px;
-            font-size: 9px;
-            text-align: center;
-            background: #f9f9f9;
+            padding: 2px 5px;
+            min-height: 13px;
         }
-        .fecha-sep {
-            display: table-cell;
-            padding: 0 4px;
-            vertical-align: middle;
-            font-size: 10px;
-            color: #888;
-        }
+        .field-val.mono { font-family: "Courier New", monospace; letter-spacing: 0.5px; }
 
-        /* ─── Tabla de series/garantía ─── */
+        /* ══ TARJETA UNIDAD ══ */
+        .unit-card {
+            border: 0.5px solid #cbd5e1;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+        .unit-header {
+            display: table;
+            width: 100%;
+            background: #0f172a;
+            padding: 4px 7px;
+        }
+        .unit-hl { display: table-cell; vertical-align: middle; }
+        .unit-hr { display: table-cell; vertical-align: middle; text-align: right; }
+        .unit-num   { font-size: 5.5px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.5px; }
+        .unit-model { font-size: 8.5px; font-weight: 700; color: #ffffff; }
+        .unit-sl    { font-size: 5.5px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; }
+        .unit-sv    { font-size: 7px; font-weight: 700; color: #38bdf8; font-family: "Courier New", monospace; }
+        .unit-body  { display: table; width: 100%; padding: 5px 7px; background: #fff; }
+        .unit-spec  { display: table-cell; width: 33%; padding-right: 4px; vertical-align: top; }
+        .unit-spec:last-child { padding-right: 0; }
+
+        /* ══ TABLA GARANTÍA ══ */
         .garantia-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 6.5px;
-            margin-top: 8px;
+            font-size: 6px;
+            margin-top: 5px;
         }
-        .garantia-table th {
-            background: #111;
-            color: #fff;
-            padding: 4px 5px;
-            text-align: center;
-            font-size: 6.5px;
-        }
-        .garantia-table td {
-            border: 1px solid #ccc;
-            padding: 4px 5px;
-            vertical-align: top;
-            color: #222;
-            line-height: 1.35;
-        }
-        .garantia-table tr:nth-child(even) td { background: #f5f5f5; }
-        .serie-num {
-            text-align: center;
-            font-weight: bold;
-            width: 24px;
-        }
-
-        /* ─── Términos lado derecho ─── */
-        .terminos-title {
-            font-size: 7.5px;
-            font-weight: bold;
-            margin-bottom: 5px;
-            color: #111;
-        }
-        .terminos-list {
-            padding-left: 0;
-            list-style: none;
-        }
-        .terminos-list li {
-            margin-bottom: 3px;
-            font-size: 6.2px;
-            color: #333;
-            line-height: 1.4;
-            padding-left: 0;
-        }
-        .terminos-list li::before {
-            content: attr(data-n) ". ";
-            font-weight: bold;
-        }
-
-        .excepciones-title {
-            font-size: 7.5px;
-            font-weight: bold;
-            color: #c00;
-            text-align: center;
-            margin: 7px 0 4px;
+        .garantia-table thead tr { background: #0f172a; }
+        .garantia-table thead th {
+            color: #e2e8f0;
+            padding: 3px 5px;
+            text-align: left;
+            font-size: 5.5px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 1px;
+            font-weight: 700;
         }
-
-        /* ─── Firma ─── */
-        .firma-section {
-            margin-top: 10px;
-            text-align: right;
+        .garantia-table thead th.tc { text-align: center; }
+        .garantia-table tbody td {
+            border-bottom: 0.5px solid #e2e8f0;
+            padding: 3.5px 5px;
+            vertical-align: top;
+            color: #334155;
+            line-height: 1.4;
         }
-        .firma-line {
-            display: inline-block;
-            border-top: 1px solid #333;
-            width: 140px;
-            margin-top: 22px;
-        }
-        .firma-label {
-            font-size: 6.5px;
-            color: #555;
+        .garantia-table tbody tr:nth-child(even) td { background: #f8fafc; }
+        .garantia-table tbody tr:last-child td      { border-bottom: none; }
+        .td-num {
             text-align: center;
-            width: 140px;
+            font-weight: 700;
+            color: #94a3b8;
+            font-size: 6px;
+            width: 14px;
+        }
+        .comp-name  { font-weight: 700; color: #0f172a; font-size: 6px; }
+        .comp-items { color: #64748b; font-size: 5.5px; margin-top: 1px; }
+
+        /* Pill plazos */
+        .pill {
             display: inline-block;
+            border-radius: 2px;
+            padding: 1px 5px;
+            font-size: 5.8px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .pill-blue  { background: #e0f2fe; color: #0369a1; }
+        .pill-green { background: #dcfce7; color: #166534; }
+        .pill-gray  { background: #f1f5f9; color: #94a3b8; }
+
+        .td-consumible { text-align: center; color: #94a3b8; font-style: italic; font-size: 5.5px; }
+        .sin-config {
+            border: 0.5px dashed #cbd5e1;
+            border-radius: 3px;
+            padding: 7px;
+            font-size: 6px;
+            color: #94a3b8;
+            text-align: center;
+            margin-top: 5px;
+        }
+        .marca-titulo {
+            font-size: 6px;
+            font-weight: 700;
+            color: #0ea5e9;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 7px 0 2px;
         }
 
-        /* Datos de la unidad vendida (bloque destacado) */
-        .unidad-bloque {
-            background: #f0f4ff;
-            border: 1px solid #c3d0f0;
-            border-radius: 4px;
-            padding: 6px 8px;
-            margin-bottom: 8px;
+        /* ══ COLUMNA DERECHA ══ */
+        .right-header-band {
+            background: #0f172a;
+            padding: 11px 13px 9px 13px;
         }
-        .unidad-bloque .ub-title {
-            font-size: 7px;
-            font-weight: bold;
-            color: #2563eb;
-            margin-bottom: 4px;
+        .poliza-title    { font-size: 11px; font-weight: 900; color: #ffffff; letter-spacing: -0.3px; }
+        .poliza-subtitle { font-size: 5.5px; color: #64748b; text-transform: uppercase; letter-spacing: 2px; margin-top: 2px; }
+
+        .right-strip {
+            background: #0284c7;
+            padding: 4px 13px;
         }
-        .ub-grid {
+        .right-strip-text { font-size: 5.5px; color: #bae6fd; text-transform: uppercase; letter-spacing: 1.5px; }
+
+        .right-body { padding: 9px 13px; }
+
+        /* ══ LISTA TÉRMINOS ══ */
+        .terminos-list { list-style: none; padding: 0; margin: 0 0 5px 0; }
+        .terminos-list li {
+            font-size: 5.8px;
+            color: #475569;
+            line-height: 1.5;
+            margin-bottom: 2.5px;
+            padding-left: 13px;
+            position: relative;
+        }
+        .terminos-list li .n {
+            position: absolute;
+            left: 0;
+            font-weight: 700;
+            color: #0ea5e9;
+        }
+
+        /* ══ HEADER EXCEPCIONES ══ */
+        .excepciones-block {
+            background: #fff1f2;
+            border: 0.5px solid #fecdd3;
+            border-radius: 3px;
+            padding: 4px 7px;
+            margin: 6px 0 4px;
+        }
+        .excepciones-title { font-size: 7px; font-weight: 700; color: #be123c; text-transform: uppercase; letter-spacing: 0.8px; }
+        .excepciones-sub   { font-size: 5.5px; color: #fb7185; margin-top: 1px; }
+
+        /* ══ FIRMA ══ */
+        .firma-wrap {
+            margin-top: 9px;
             display: table;
             width: 100%;
+            border-top: 0.5px solid #e2e8f0;
+            padding-top: 7px;
         }
-        .ub-cell {
-            display: table-cell;
-            width: 33%;
-            padding-right: 4px;
+        .firma-left  { display: table-cell; width: 50%; vertical-align: bottom; }
+        .firma-right { display: table-cell; width: 50%; vertical-align: bottom; text-align: right; }
+        .firma-line  {
+            border-top: 0.5px solid #334155;
+            width: 110px;
+            display: inline-block;
+            padding-top: 16px;
         }
-        .ub-cell:last-child { padding-right: 0; }
+        .firma-key  { font-size: 5.5px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; display: block; margin-top: 2px; }
+        .firma-val  { font-size: 6.5px; font-weight: 700; color: #0f172a; }
+
+        /* ══ PIE ══ */
+        .pie-row {
+            display: table;
+            width: 100%;
+            margin-top: 7px;
+            border-top: 0.5px solid #f1f5f9;
+            padding-top: 5px;
+        }
+        .pie-cell  { display: table-cell; vertical-align: middle; }
+        .pie-cell.r { text-align: right; }
+        .pie-text  { font-size: 5.5px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 1.5px; }
     </style>
 </head>
 <body>
+
+@php
+    function formatearPlazo(int $meses): string {
+        if ($meses === 0) return 'Sin garantía';
+        if ($meses % 12 === 0) {
+            $a = $meses / 12;
+            return $a === 1 ? '1 año' : "{$a} años";
+        }
+        return "{$meses} meses";
+    }
+    function pillCls(int $meses): string {
+        if ($meses === 0) return 'pill pill-gray';
+        if ($meses >= 12)  return 'pill pill-green';
+        return 'pill pill-blue';
+    }
+
+    $sucursalNombre = $vendedor->nombre_usuario ?? ($negocio->nombre_negocio ?? '—');
+    $totalMarcas    = $componentesPorMarca->count();
+@endphp
+
 <div class="page">
 
-    {{-- ══════════════ COLUMNA IZQUIERDA ══════════════ --}}
+    {{-- ═══════════ IZQUIERDA ═══════════ --}}
     <div class="col-left">
 
-        {{-- Cabecera: marca + info negocio --}}
-        <div class="header-left">
-            <div class="header-logo-cell">
-                <div class="brand-name">{{ strtoupper($negocio->nombre_negocio ?? 'GARANTÍA') }}</div>
+        <div class="header-band">
+            <div class="header-brand-row">
+                <div class="header-brand-cell">
+                    <div class="brand-name">{{ strtoupper($negocio->nombre_negocio ?? 'GARANTÍA') }}</div>
+                    <div class="brand-tagline">Póliza de garantía oficial</div>
+                </div>
+                <div class="header-meta-cell">
+                    <div class="folio-label">Folio</div>
+                    <div class="folio-num">#{{ substr($venta->id_venta, -8) }}</div>
+                </div>
             </div>
-            <div class="header-info-cell negocio-info">
-                @if($negocio)
-                    RFC: {{ $negocio->rfc ?? '—' }}<br>
-                    {{ $negocio->direccion ?? '' }}<br>
-                    Tel: {{ $negocio->telefono ?? '' }}
+        </div>
+
+        <div class="sucursal-strip">
+            <div class="sucursal-strip-inner">
+                <div class="sucursal-strip-left">
+                    <div class="strip-label">Sucursal</div>
+                    <div class="sucursal-name">{{ $sucursalNombre }}</div>
+                </div>
+                <div class="sucursal-strip-right">
+                    <div class="strip-label">Fecha de compra</div>
+                    <div class="fecha-value">{{ now()->format('d / m / Y') }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="left-body">
+
+            {{-- Cliente --}}
+            <div class="section-label">Datos del cliente</div>
+            <div class="client-grid">
+                <div class="client-cell" style="width:62%">
+                    <div class="field-key">Nombre completo</div>
+                    <div class="field-val">
+                        {{ $cliente->nombre_cliente }} {{ $cliente->apellido1 }} {{ $cliente->apellido2 }}
+                    </div>
+                </div>
+                <div class="client-cell" style="width:38%">
+                    <div class="field-key">Teléfono</div>
+                    <div class="field-val mono">{{ $cliente->telefono }}</div>
+                </div>
+            </div>
+            @if($cliente->correo)
+                <div class="field-key">Correo electrónico</div>
+                <div class="field-val" style="margin-bottom:7px;">{{ $cliente->correo }}</div>
+            @endif
+
+            {{-- Unidades --}}
+            <div class="section-label" style="margin-top:5px;">Unidades vendidas</div>
+
+            @foreach($bicicletas as $detalle)
+                @php $bici = $detalle->bicicleta; @endphp
+                <div class="unit-card">
+                    <div class="unit-header">
+                        <div class="unit-hl">
+                            <div class="unit-num">Unidad #{{ $loop->iteration }}</div>
+                            <div class="unit-model">
+                                {{ $bici->modelo->marca->nombre_marca ?? '' }}
+                                {{ $bici->modelo->nombre_modelo ?? '—' }}
+                            </div>
+                        </div>
+                        <div class="unit-hr">
+                            <div class="unit-sl">No. Serie</div>
+                            <div class="unit-sv">{{ $bici->num_serie }}</div>
+                        </div>
+                    </div>
+                    <div class="unit-body">
+                        <div class="unit-spec">
+                            <div class="field-key">Voltaje</div>
+                            <div class="field-val mono">{{ $bici->voltaje->voltaje ?? '—' }}</div>
+                        </div>
+                        <div class="unit-spec">
+                            <div class="field-key">Color</div>
+                            <div class="field-val">{{ $bici->color->color ?? '—' }}</div>
+                        </div>
+                        <div class="unit-spec">
+                            <div class="field-key">Cantidad</div>
+                            <div class="field-val mono">{{ $detalle->cantidad }}</div>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+
+            {{-- Tabla garantía dinámica --}}
+            <div class="section-label" style="margin-top:5px;">Cobertura de garantía</div>
+
+            @forelse($componentesPorMarca as $idMarca => $entry)
+                @php
+                    $nombreMarca = $entry['marca']->nombre_marca ?? 'Marca desconocida';
+                    $componentes = $entry['componentes'];
+                @endphp
+
+                @if($totalMarcas > 1)
+                    <div class="marca-titulo">{{ $nombreMarca }}</div>
+                @endif
+
+                @if($componentes->isEmpty())
+                    <div class="sin-config">
+                        Sin configuración registrada para <strong>{{ $nombreMarca }}</strong>
+                    </div>
+                @else
+                    <table class="garantia-table">
+                        <thead>
+                            <tr>
+                                <th style="width:14px;">#</th>
+                                <th>Componente / Partes</th>
+                                <th class="tc" style="width:50px;">Plazo</th>
+                                <th style="width:58px;">Cobertura</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($componentes as $comp)
+                                @php
+                                    $partes = is_array($comp->incluye) && count($comp->incluye)
+                                        ? implode(', ', $comp->incluye) : null;
+                                @endphp
+                                <tr>
+                                    <td class="td-num">{{ $loop->iteration }}</td>
+                                    <td>
+                                        <div class="comp-name">{{ $comp->nombre_componente }}</div>
+                                        @if($partes)
+                                            <div class="comp-items">{{ $partes }}</div>
+                                        @endif
+                                    </td>
+                                    @if($comp->excluido)
+                                        <td colspan="2" class="td-consumible">
+                                            Piezas consumibles — sin cobertura
+                                        </td>
+                                    @else
+                                        <td style="text-align:center;">
+                                            <span class="{{ pillCls((int)$comp->duracion_meses) }}">
+                                                {{ formatearPlazo((int)$comp->duracion_meses) }}
+                                            </span>
+                                        </td>
+                                        <td style="color:#475569; font-size:5.5px;">
+                                            {{ $comp->cobertura ?? 'Defecto de fábrica' }}
+                                        </td>
+                                    @endif
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endif
+
+            @empty
+                <div class="sin-config">
+                    Sin configuración de garantía activa. Contacta al administrador.
+                </div>
+            @endforelse
+
+        </div>
+    </div>
+
+    {{-- ═══════════ DERECHA ═══════════ --}}
+    <div class="col-right">
+
+        <div class="right-header-band">
+            <div class="poliza-title">Términos y condiciones</div>
+            <div class="poliza-subtitle">Garantía del fabricante — Leer antes de firmar</div>
+        </div>
+
+        <div class="right-strip">
+            <div class="right-strip-text">
+                RFC: {{ $negocio->rfc ?? '—' }}
+                &nbsp;·&nbsp; Tel: {{ $negocio->telefono ?? '—' }}
+                @if($negocio->direccion ?? false)
+                    &nbsp;·&nbsp; {{ $negocio->direccion }}
                 @endif
             </div>
         </div>
 
-        <hr>
+        <div class="right-body">
 
-        {{-- Fecha de compra --}}
-        <div class="fecha-label" style="text-align:center; margin-bottom:4px;">Fecha de compra:</div>
-        <div class="fecha-row">
-            <div class="fecha-boxes">
-                <div class="fecha-box">{{ now()->format('d') }}</div>
-                <div class="fecha-sep">/</div>
-                <div class="fecha-box">{{ now()->format('m') }}</div>
-                <div class="fecha-sep">/</div>
-                <div class="fecha-box">{{ now()->format('Y') }}</div>
+            <div class="section-label">Condiciones generales</div>
+
+            <ol class="terminos-list">
+                <li><span class="n">1.</span>Se garantiza este producto por el término de un año.</li>
+                <li><span class="n">2.</span>Se responsabiliza por cualquier defecto o falla en el material de fabricación, siempre que sea debidamente verificado por el área de Servicio Técnico Autorizado.</li>
+                <li><span class="n">3.</span>La garantía será válida a partir de la fecha de compra.</li>
+                <li><span class="n">4.</span>La tienda o distribuidor autorizado está obligado a proporcionar al propietario el manual de uso, nota de venta y póliza de garantía.</li>
+                <li><span class="n">5.</span>Para activar la garantía el propietario deberá presentar la nota de venta y esta póliza como requisito para el diagnóstico y la solución correspondiente.</li>
+                <li><span class="n">6.</span>Se considera uso inadecuado la negligencia, abuso o manejo que difiera de las instrucciones del manual de uso.</li>
+                <li><span class="n">7.</span>El Servicio Técnico Autorizado será la instancia final para evaluar si la falla cumple los términos de este certificado.</li>
+                <li><span class="n">8.</span>No se asume responsabilidad por daños al usuario o terceros, ni por accidentes derivados del uso indebido del vehículo.</li>
+                <li><span class="n">9.</span>Componentes de desgaste natural (llantas, pastillas de freno, transmisión, cable acelerador, amortiguadores, bujes, pistas de dirección, aceite de suspensión y líquido de frenos) no están cubiertos por la garantía.</li>
+                <li><span class="n">10.</span>La garantía no cubre corrosión ni deterioro de pintura, cromado, niquelado u otros daños por condiciones ambientales adversas.</li>
+                <li><span class="n">11.</span>No cubre pinchazos, impactos en baterías, daños en plásticos o espejos, ni tareas de limpieza o lubricación.</li>
+                <li><span class="n">12.</span>Accesorios o regalos (canastillas, cascos, etc.) no están cubiertos.</li>
+                <li><span class="n">13.</span>Retrasos en reparaciones cubiertas por causas atribuibles no generan indemnización ni extensión. Las acciones legales y sus costos no están contemplados.</li>
+                <li><span class="n">14.</span>Retrasos por causas no atribuibles (fuerza mayor) tampoco generan indemnización ni extensión de garantía.</li>
+            </ol>
+
+            <div class="excepciones-block">
+                <div class="excepciones-title">Excepciones de la garantía</div>
+                <div class="excepciones-sub">Evaluadas previamente por el Servicio Técnico Autorizado</div>
             </div>
-        </div>
 
-        {{-- Datos del cliente --}}
-        <div class="field-label">Nombre del cliente:</div>
-        <div class="field-value">
-            {{ $cliente->nombre_cliente }} {{ $cliente->apellido1 }} {{ $cliente->apellido2 }}
-        </div>
+            <ol class="terminos-list">
+                <li><span class="n">1.</span>Cortos circuitos por mal uso o modificaciones en controlador, motor, sistema eléctrico, suspensión, frenos u otro componente no original.</li>
+                <li><span class="n">2.</span>Sobrecarga o descarga excesiva de las baterías.</li>
+                <li><span class="n">3.</span>Daños por impactos o choques del vehículo.</li>
+                <li><span class="n">4.</span>Eventos externos: inundaciones, terremotos, incendios, accidentes o robos.</li>
+                <li><span class="n">5.</span>Uso de lubricantes no recomendados.</li>
+                <li><span class="n">6.</span>Acumulación excesiva de suciedad en componentes electrónicos.</li>
+                <li><span class="n">7.</span>Falta de sustitución oportuna de piezas de desgaste natural.</li>
+                <li><span class="n">8.</span>Almacenamiento inadecuado del vehículo.</li>
+                <li><span class="n">9.</span>Baterías con ácido derramado o infladas — garantía anulada.</li>
+                <li><span class="n">10.</span>Daños en cargador por golpes, vibración excesiva o conexiones prolongadas innecesarias.</li>
+                <li><span class="n">11.</span>Toda reparación genera costo adicional por mano de obra, independientemente de la garantía.</li>
+            </ol>
 
-        <div class="field-label">Teléfono:</div>
-        <div class="field-value">{{ $cliente->telefono }}</div>
-
-        <div class="field-label">Dirección:</div>
-        <div class="field-value lg">{{ $cliente->correo ?? '' }}{{ ($cliente->correo && isset($ventaDireccion)) ? ' — ' : '' }}{{ $ventaDireccion ?? '' }}</div>
-
-        <hr style="margin: 6px 0;">
-
-        {{-- Por cada bicicleta vendida --}}
-        @foreach($bicicletas as $detalle)
-        @php $bici = $detalle->bicicleta; @endphp
-        <div class="unidad-bloque">
-            <div class="ub-title">Unidad #{{ $loop->iteration }}</div>
-            <div class="ub-grid">
-                <div class="ub-cell">
-                    <div class="field-label">Marca:</div>
-                    <div class="field-value">{{ $bici->modelo->marca->nombre_marca ?? '—' }}</div>
+            {{-- Firma --}}
+            <div class="firma-wrap">
+                <div class="firma-left">
+                    <div class="firma-line"></div>
+                    <span class="firma-key">Nombre y firma del cliente</span>
                 </div>
-                <div class="ub-cell">
-                    <div class="field-label">Modelo:</div>
-                    <div class="field-value">{{ $bici->modelo->nombre_modelo ?? '—' }}</div>
-                </div>
-                <div class="ub-cell">
-                    <div class="field-label">Color:</div>
-                    <div class="field-value">{{ $bici->color->color ?? '—' }}</div>
+                <div class="firma-right">
+                    <span class="firma-key">Atendido en sucursal</span>
+                    <div class="firma-val">{{ $sucursalNombre }}</div>
+                    @if($negocio->telefono ?? false)
+                        <div style="font-size:5.5px; color:#94a3b8; margin-top:1px;">{{ $negocio->telefono }}</div>
+                    @endif
                 </div>
             </div>
-            <div class="field-label">Nº de Serie:</div>
-            <div class="field-value" style="font-family: monospace; letter-spacing:0.5px;">{{ $bici->num_serie }}</div>
+
+            {{-- Pie --}}
+            <div class="pie-row">
+                <div class="pie-cell">
+                    <span class="pie-text">{{ strtoupper($negocio->nombre_negocio ?? '') }} &middot; Póliza oficial de garantía</span>
+                </div>
+                <div class="pie-cell r">
+                    <span class="pie-text">Folio #{{ substr($venta->id_venta, -8) }}</span>
+                </div>
+            </div>
+
         </div>
-        @endforeach
-
-        <div class="field-label">Sucursal:</div>
-        <div class="field-value">{{ $vendedor->nombre_usuario }}</div>
-
-        <hr style="margin-top:8px;">
-
-        {{-- Tabla de series de garantía --}}
-        <table class="garantia-table">
-            <thead>
-                <tr>
-                    <th class="serie-num">Serie</th>
-                    <th style="width:45%">Partes</th>
-                    <th style="width:18%">Plazo de garantía</th>
-                    <th style="width:24%">Contenido de la garantía</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td class="serie-num">1</td>
-                    <td>Mango de velocidad, mango de freno, convertidor, claxon, dispositivo anti robo, luces de led, medidor, lazo, máquina de voz.</td>
-                    <td style="text-align:center">3 meses</td>
-                    <td>Defecto de fábrica</td>
-                </tr>
-                <tr>
-                    <td class="serie-num">2</td>
-                    <td>Cargador</td>
-                    <td style="text-align:center">6 meses</td>
-                    <td>Defecto de fábrica</td>
-                </tr>
-                <tr>
-                    <td class="serie-num">3</td>
-                    <td>Batería de plomo ácido</td>
-                    <td style="text-align:center">6 meses</td>
-                    <td>Reemplazo de batería (únicamente por defecto de fábrica)</td>
-                </tr>
-                <tr>
-                    <td class="serie-num">4</td>
-                    <td>Batería de litio</td>
-                    <td style="text-align:center">6 meses</td>
-                    <td>Reemplazar batería después de 6 meses (únicamente por defecto de fábrica)</td>
-                </tr>
-                <tr>
-                    <td class="serie-num">5</td>
-                    <td>Amortiguadores delanteros y traseros, rejilla trasera, tubo de escape, soporte principal, soporte lateral</td>
-                    <td style="text-align:center">6 meses</td>
-                    <td>Rotura de herrajes, desolado.</td>
-                </tr>
-                <tr>
-                    <td class="serie-num">6</td>
-                    <td>Motor</td>
-                    <td style="text-align:center">1 año</td>
-                    <td>Defecto de fábrica</td>
-                </tr>
-                <tr>
-                    <td class="serie-num">7</td>
-                    <td>Controlador</td>
-                    <td style="text-align:center">1 año</td>
-                    <td>Defecto de fábrica</td>
-                </tr>
-                <tr>
-                    <td class="serie-num">8</td>
-                    <td>Manija de dirección, marco, horquilla delantera, columna de dirección, horquilla trasera</td>
-                    <td style="text-align:center">1 año</td>
-                    <td>Rotura, desolado</td>
-                </tr>
-                <tr>
-                    <td class="serie-num">9</td>
-                    <td>Piezas consumibles: neumáticos, espejos retrovisores, fusibles, faro led, direccionales cables, interruptores, zapatas de freno, volante, cojín de asiento.</td>
-                    <td colspan="2" style="text-align:center">Las piezas consumibles no están cubiertas por la garantía.</td>
-                </tr>
-            </tbody>
-        </table>
-
     </div>
 
-    {{-- ══════════════ COLUMNA DERECHA ══════════════ --}}
-    <div class="col-right">
-
-        <div class="terminos-title">Términos y condiciones de la garantía</div>
-
-        <ol class="terminos-list">
-            <li data-n="1">Se garantiza este producto por el término de un año.</li>
-            <li data-n="2">Se responsabiliza por cualquier defecto o falla en el material de fabricación, siempre que sea debidamente verificado por el área de Servicio Técnico Autorizado.</li>
-            <li data-n="3">La garantía será válida a partir de la fecha de compra.</li>
-            <li data-n="4">La tienda principal o el distribuidor autorizado que venda el vehículo está obligado a proporcionar al propietario el manual de uso, nota de venta y póliza de garantía.</li>
-            <li data-n="5">Para activar la garantía del vehículo, el propietario deberá presentar la nota de venta y la póliza de garantía como requisito para llevar a cabo el diagnóstico y la correspondiente solución.</li>
-            <li data-n="6">Se considera como uso inadecuado del vehículo la negligencia, abuso o manejo que difiera de las instrucciones proporcionadas en el manual de uso.</li>
-            <li data-n="7">El área de Servicio Técnico Autorizado será la instancia final encargada de evaluar el vehículo y decidir si la falla o avería cumple con los términos de este certificado para ser cubierta por la garantía.</li>
-            <li data-n="8">No se asume responsabilidad por daños sufridos por el usuario o terceras personas. Además, exime de responsabilidad en casos de accidentes u otras situaciones derivadas del uso indebido del vehículo.</li>
-            <li data-n="9">Se reconoce como componentes sujetos al desgaste natural los siguientes elementos: llantas, pastillas o cintas de freno, sistema de transmisión, cable de acelerador, amortiguadores, bujes de suspensión trasera y pistas de dirección. Esto también incluye sustancias o materiales de consumo como aceite de suspensión y líquido de frenos. Estos elementos no estarán cubiertos por la garantía ya que se espera que experimenten desgaste como parte normal de la operación del vehículo.</li>
-            <li data-n="10">La garantía no incluye la cobertura de corrosión ni el deterioro de la pintura, cromado, niquelado u otros daños causados por condiciones ambientales adversas o factores externos.</li>
-            <li data-n="11">Es importante tener en cuenta que la garantía no se extiende a gastos externos, como pinchazos en las llantas, impactos en las baterías, daños en piezas de plástico o espejos, ni a tareas de limpieza o lubricación del vehículo.</li>
-            <li data-n="12">Los accesorios o regalos adicionales como canastillas, cascos, entre otros, no están cubiertos por la garantía.</li>
-            <li data-n="13">En el caso de retrasos en las reparaciones cubiertas por la garantía debido a circunstancias atribuibles, no conlleva a indemnización ni extensión de la garantía. Cualquier acción legal, penal o administrativa llevada a cabo ante cualquier autoridad y los costos asociados a estas no están contemplados dentro de la garantía.</li>
-            <li data-n="14">Los retrasos en las reparaciones cubiertas por la garantía debido a circunstancias no atribuibles (casos fortuitos o fuerza mayor) no conllevan indemnización ni extensión de la garantía.</li>
-        </ol>
-
-        <div class="excepciones-title">Excepciones de la garantía</div>
-
-        <p style="font-size:6.2px; color:#444; margin-bottom:4px; line-height:1.4;">
-            Nuestras tiendas principales y distribuidores autorizados no asumen responsabilidad por garantía en los siguientes casos, siempre y cuando sean previamente evaluados por el Servicio Técnico Autorizado:
-        </p>
-
-        <ol class="terminos-list">
-            <li data-n="1">Problemas derivados de conectar cables, cortos circuitos por mal uso o modificaciones en controlador, motor, sistema eléctrico, suspensión, frenos o cualquier otro componente que no sea original ni esté respaldado.</li>
-            <li data-n="2">Problemas resultantes de una sobrecarga o descarga excesiva de las baterías.</li>
-            <li data-n="3">Problemas que tengan su origen en impactos o choques del vehículo.</li>
-            <li data-n="4">Problemas surgidos como consecuencia de eventos externos, como inundaciones, terremotos, incendios, accidentes, robos o daños originados en situaciones fortuitas.</li>
-            <li data-n="5">Problemas causados por el uso de lubricantes que no estén recomendados.</li>
-            <li data-n="6">Problemas generados por una acumulación excesiva de suciedad en los componentes electrónicos.</li>
-            <li data-n="7">Problemas resultantes de la falta de sustitución oportuna de las piezas de desgaste natural del vehículo.</li>
-            <li data-n="8">Problemas que se deban a un inadecuado almacenamiento del vehículo.</li>
-            <li data-n="9">La garantía de los vehículos quedará anulada en caso de que las baterías presenten ácido derramado o estén infladas.</li>
-            <li data-n="10">Problemas en el cargador resultantes por golpes, exceso de vibración o conexiones prolongadas innecesarias.</li>
-            <li data-n="11">Todas las reparaciones incurrirán en un costo adicional por la mano de obra de nuestros técnicos, independientemente de la garantía.</li>
-        </ol>
-
-        {{-- Firma --}}
-        <div class="firma-section">
-            <div class="firma-line"></div><br>
-            <div class="firma-label">Nombre y firma del cliente</div>
-        </div>
-
-    </div>
 </div>
 </body>
 </html>
