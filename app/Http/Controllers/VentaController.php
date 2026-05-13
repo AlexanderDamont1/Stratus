@@ -601,7 +601,7 @@ class VentaController extends Controller
     public function poliza(string $id_venta)
     {
         $user = auth()->user();
-
+ 
         $venta = Venta::with([
             'cliente',
             'negocio',
@@ -614,30 +614,65 @@ class VentaController extends Controller
         ])
             ->where('id_negocio', $user->id_negocio)
             ->findOrFail($id_venta);
-
+ 
         $bicicletas = $venta->detalles
             ->filter(fn($d) => $d->bicicleta !== null)
             ->values();
-
+ 
         if ($bicicletas->isEmpty()) {
             return back()->with('error', 'Esta venta no tiene bicicletas para generar póliza.');
         }
-
+ 
+        // ── Obtener componentes de garantía agrupados por marca ──────────────
+        // Recolectamos los id_marca únicos de las bicicletas vendidas
+        $idMarcas = $bicicletas
+            ->map(fn($d) => $d->bicicleta->modelo->id_marca ?? null)
+            ->filter()
+            ->unique()
+            ->values();
+ 
+        // Cargamos los configs activos con sus componentes para esas marcas
+        $configs = \App\Models\MarcaGarantiaConfig::with([
+                'componenteDefs' => fn($q) => $q->where('activo', true)->orderBy('duracion_meses'),
+                'marca',
+            ])
+            ->where('id_negocio', $user->id_negocio)
+            ->whereIn('id_marca', $idMarcas)
+            ->where('activa', true)
+            ->get()
+            ->keyBy('id_marca');
+ 
+        // Construimos $componentesPorMarca indexado por id_marca
+        // Cada entrada: ['marca' => Marca, 'componentes' => Collection]
+        $componentesPorMarca = $idMarcas->mapWithKeys(function ($idMarca) use ($configs) {
+            $config = $configs->get($idMarca);
+ 
+            return [
+                $idMarca => [
+                    'marca'       => $config?->marca,
+                    'componentes' => $config?->componenteDefs ?? collect(),
+                ],
+            ];
+        });
+ 
         $pdf = Pdf::loadView('vendedor.ventas.poliza', [
-            'venta'      => $venta,
-            'cliente'    => $venta->cliente,
-            'negocio'    => $venta->negocio,
-            'bicicletas' => $bicicletas,
-            'vendedor'   => $venta->vendedor,
-            'fecha'      => now()->format('d/m/Y'),
-            'pagos'      => $venta->pagos,
+            'venta'              => $venta,
+            'cliente'            => $venta->cliente,
+            'negocio'            => $venta->negocio,
+            'bicicletas'         => $bicicletas,
+            'vendedor'           => $venta->vendedor,
+            'fecha'              => now()->format('d/m/Y'),
+            'pagos'              => $venta->pagos,
+            'componentesPorMarca'=> $componentesPorMarca,  // ← NUEVO
         ])->setPaper('letter', 'landscape');
-
+ 
         return response()->make($pdf->output(), 200, [
             'Content-Type'        => 'application/pdf',
             'Content-Disposition' => 'inline; filename="poliza-' . $venta->id_venta . '.pdf"',
         ]);
     }
+ 
+
 
     /* =====================================================
      | PDF — ticket

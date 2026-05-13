@@ -1,21 +1,49 @@
 <x-app-layout>
 <div class="max-w-2xl mx-auto space-y-6">
 
-    {{-- Flash --}}
+    {{-- ══ NOTIFICATION CARD ══ --}}
     @if(session('success'))
-    <div x-data="{ show: true }" x-show="show"
-         x-init="setTimeout(() => show = false, 3000)"
-         class="fixed top-6 left-1/2 -translate-x-1/2 z-50"
-         x-transition:enter="transition ease-out duration-300"
-         x-transition:enter-start="opacity-0 -translate-y-2"
-         x-transition:leave="transition ease-in duration-200"
-         x-transition:leave-end="opacity-0 translate-y-2">
-        <div class="flex items-center gap-3 rounded-lg bg-white dark:bg-gray-800
-                    p-4 shadow-xl ring-1 ring-gray-200 dark:ring-gray-700 min-w-[300px]">
-            <svg class="h-5 w-5 text-green-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+    <div x-data="{ show: true }"
+         x-show="show"
+         x-init="setTimeout(() => show = false, 3500)"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 -translate-y-1 scale-95"
+         x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-end="opacity-0 -translate-y-1 scale-95"
+         class="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none"
+         style="min-width: 300px; max-width: 400px;">
+        <div class="flex items-center gap-3 rounded-xl px-4 py-3 border shadow-sm
+                    bg-green-50 dark:bg-green-950/40
+                    border-green-100 dark:border-green-900/50
+                    text-green-800 dark:text-green-300">
+            <svg class="w-4 h-4 shrink-0 text-green-500 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
             </svg>
-            <p class="text-sm font-medium text-gray-900 dark:text-white">{{ session('success') }}</p>
+            <p class="text-xs font-semibold leading-snug">{{ session('success') }}</p>
+        </div>
+    </div>
+    @endif
+
+    @if(session('error'))
+    <div x-data="{ show: true }"
+         x-show="show"
+         x-init="setTimeout(() => show = false, 3500)"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 -translate-y-1 scale-95"
+         x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-end="opacity-0 -translate-y-1 scale-95"
+         class="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none"
+         style="min-width: 300px; max-width: 400px;">
+        <div class="flex items-center gap-3 rounded-xl px-4 py-3 border shadow-sm
+                    bg-red-50 dark:bg-red-950/40
+                    border-red-100 dark:border-red-900/50
+                    text-red-800 dark:text-red-300">
+            <svg class="w-4 h-4 shrink-0 text-red-500 dark:text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+            </svg>
+            <p class="text-xs font-semibold leading-snug">{{ session('error') }}</p>
         </div>
     </div>
     @endif
@@ -53,7 +81,6 @@
 
                     {{-- Vista normal --}}
                     <div x-show="!editando" class="flex items-center gap-3">
-                        {{-- Ícono de estado --}}
                         <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
                              :class="activo ? 'bg-gray-100 dark:bg-gray-700' : 'bg-gray-50 dark:bg-gray-800'">
                             <svg class="w-4 h-4" :class="activo ? 'text-gray-600 dark:text-gray-300' : 'text-gray-300 dark:text-gray-600'"
