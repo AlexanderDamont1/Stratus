@@ -13,6 +13,7 @@ use App\Events\CatalogoActualizado;
 class ColorController extends Controller
 {
     use ResolvesAdminRoute;
+
     // ─── INDEX ──────────────────────────────────────────────────────────────
 
     public function index()
@@ -22,6 +23,7 @@ class ColorController extends Controller
         if (!in_array($user->id_rol, [1, 5])) abort(403);
 
         if ($user->id_rol === 5) {
+           
             $colores = Color::with('modelo')
                 ->whereNull('id_negocio')
                 ->orderBy('color')
@@ -32,7 +34,7 @@ class ColorController extends Controller
             return view('gestor.Vehiculos.color.index', compact('colores', 'modelos'));
         }
 
-        // Rol 1 — solo colores de su negocio
+        
         $colores = Color::with('modelo')
             ->where('id_negocio', $user->id_negocio)
             ->orderBy('color')
@@ -60,7 +62,6 @@ class ColorController extends Controller
 
     // ─── STORE ──────────────────────────────────────────────────────────────
 
-    // ColorController@store
     public function store(StoreColorRequest $request)
     {
         $user      = auth()->user();
@@ -81,8 +82,13 @@ class ColorController extends Controller
             $idMarca,
         );
 
+       
         CatalogService::invalidateColor($color->id_color, $request->id_modelo, $idNegocio);
-        CatalogService::invalidateCatalogoCompleto($user->id_negocio);
+
+        // FIX: guard para rol 5 donde id_negocio puede ser null.
+        if ($user->id_negocio) {
+            CatalogService::invalidateCatalogoCompleto($user->id_negocio);
+        }
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -90,7 +96,7 @@ class ColorController extends Controller
                 'color' => [
                     'id_color'  => $color->id_color,
                     'id_modelo' => $color->id_modelo,
-                    'color'     => $color->color,  // "Rojo|#EF4444" o "Rojo/Azul|#EF4444/#3B82F6"
+                    'color'     => $color->color,
                 ],
             ]);
         }
@@ -107,9 +113,7 @@ class ColorController extends Controller
         $user = auth()->user();
 
         if (!in_array($user->id_rol, [1, 5])) abort(403);
-
         if ($user->id_rol === 1 && $color->id_negocio !== $user->id_negocio) abort(403);
-
         if ($user->id_rol === 5 && !is_null($color->id_negocio)) abort(403);
 
         $modelos = $user->id_rol === 1
@@ -202,12 +206,9 @@ class ColorController extends Controller
         );
 
         CatalogService::invalidateColor($color->id_color, $oldModeloId, $idNegocio);
-        CatalogService::invalidateCatalogoCompleto($user->id_negocio);
-        CatalogService::invalidateModelo( $request->id_modelo, $idNegocio);
-        
-        
-        if ($oldModeloId !== $request->id_modelo) {
-            CatalogService::invalidateColor($color->id_color, $request->id_modelo, $idNegocio);
+
+        if ($user->id_negocio) {
+            CatalogService::invalidateCatalogoCompleto($user->id_negocio);
         }
 
         if ($request->expectsJson()) {
@@ -232,22 +233,20 @@ class ColorController extends Controller
         $user = auth()->user();
 
         if (!in_array($user->id_rol, [1, 5])) abort(403);
-
         if ($user->id_rol === 1 && $color->id_negocio !== $user->id_negocio) abort(403);
-
         if ($user->id_rol === 5 && !is_null($color->id_negocio)) abort(403);
 
-        // Verificar que no tenga bicicletas asociadas
         if ($color->bicicletas()->exists()) {
             return back()->with('error', 'No se puede eliminar: tiene bicicletas asociadas.');
         }
 
+        
         $idColor   = $color->id_color;
         $idModelo  = $color->id_modelo;
         $idNegocio = $color->id_negocio;
+        $idMarca   = \App\Models\Modelo::find($idModelo)?->id_marca ?? '';
 
         $color->delete();
-        $idMarca = \App\Models\Modelo::find($color->id_modelo)?->id_marca ?? '';
 
         CatalogoActualizado::dispatch(
             $user->id_negocio,
@@ -257,9 +256,10 @@ class ColorController extends Controller
         );
 
         CatalogService::invalidateColor($idColor, $idModelo, $idNegocio);
-        CatalogService::invalidateCatalogoCompleto($user->id_negocio);
 
-        
+        if ($user->id_negocio) {
+            CatalogService::invalidateCatalogoCompleto($user->id_negocio);
+        }
 
         return redirect()
             ->route($this->routeByRol('colores'))

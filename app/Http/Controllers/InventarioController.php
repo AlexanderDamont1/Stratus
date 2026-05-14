@@ -14,12 +14,14 @@ class InventarioController extends Controller
     /* =====================================================
      | INDEX
      ===================================================== */
+
     public function index()
     {
         $user      = auth()->user();
         $idNegocio = $user->id_negocio;
         $esAdmin   = $user->id_rol === 1;
 
+        
         if ($esAdmin) {
             $inventario = CatalogService::getInventarioByNegocio($idNegocio);
         } else {
@@ -33,9 +35,10 @@ class InventarioController extends Controller
      | SINCRONIZAR DESDE BICICLETAS
      | Fallback manual si el conteo se desincroniza
      ===================================================== */
+
     public function sincronizar()
     {
-        $user      = auth()->user();
+        $user = auth()->user();
         if ($user->id_rol !== 1) abort(403);
 
         $idNegocio = $user->id_negocio;
@@ -60,6 +63,7 @@ class InventarioController extends Controller
             }
         });
 
+        
         CatalogService::invalidateInventario($idNegocio);
 
         return response()->json([
@@ -73,6 +77,7 @@ class InventarioController extends Controller
      | Solo stock_minimo para bicicletas
      | cantidad + stock_minimo para accesorios
      ===================================================== */
+
     public function update(Request $request, string $idInventario)
     {
         $user      = auth()->user();
@@ -101,7 +106,8 @@ class InventarioController extends Controller
 
         $inventario->update($data);
 
-        CatalogService::invalidateInventario($idNegocio);
+      
+        CatalogService::invalidateInventario($idNegocio, $inventario->id_usuario);
 
         return response()->json(['ok' => true]);
     }
@@ -109,12 +115,14 @@ class InventarioController extends Controller
     /* =====================================================
      | STOCK BAJO — ALERTA
      ===================================================== */
+
     public function stockBajo()
     {
         $user      = auth()->user();
         $idNegocio = $user->id_negocio;
         $esAdmin   = $user->id_rol === 1;
 
+       
         $query = Inventario::with(['productoModelo.producto', 'sucursal'])
             ->where('id_negocio', $idNegocio)
             ->stockBajo();

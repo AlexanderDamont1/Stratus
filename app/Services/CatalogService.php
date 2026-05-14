@@ -880,6 +880,7 @@ class CatalogService
             fn () => Producto::where('id_negocio', $idNegocio)
                 ->when($idUsuario, fn ($q) => $q->where('id_usuario', $idUsuario))
                 ->with([
+                    'productoModelo.modelo.marca',
                     'productoModelo.modelo.colores' => fn ($q) => $q->where('id_negocio', $idNegocio),
                     'productoModelo.voltaje',
                 ])
@@ -1094,7 +1095,6 @@ class CatalogService
             $idNegocio
         );
     }
-
     
     public static function invalidateConfigNegocio(string $idNegocio): void
     {

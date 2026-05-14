@@ -9,7 +9,7 @@
         deleteNombre: '',
 
         tipoActual: 'radio',
-        opcionesJson: '[]',
+        opcionesJson: '',
         opcionesEditar: '[]',
 
         openEdit(def) {

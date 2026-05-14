@@ -24,11 +24,13 @@ class VoltajeController extends Controller
         if (!in_array($user->id_rol, [1, 5])) abort(403);
 
         if ($user->id_rol === 5) {
-
+           
             $voltajes = CatalogService::getAllVoltajes();
 
             return view('gestor.Vehiculos.voltaje.index', compact('voltajes'));
         }
+
+       
         $voltajes = CatalogService::getVoltajesByNegocio($user->id_negocio);
 
         return view('gestor.Vehiculos.voltaje.index', compact('voltajes'));

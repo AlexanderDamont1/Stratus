@@ -1,5 +1,4 @@
 <?php
-// app/Http/Controllers/GarantiaController.php
 
 namespace App\Http\Controllers;
 
@@ -9,7 +8,6 @@ use App\Models\GarantiaReclamo;
 use App\Models\Mantenimiento;
 use App\Services\CatalogService;
 use App\Services\GarantiaService;
-use App\Traits\GeneratesCustomId;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -21,53 +19,53 @@ class GarantiaController extends Controller
     }
 
     // ─── INDEX: buscador ─────────────────────────────────────────────────
+
     public function index()
-{
-    $user = auth()->user();
-    if ($user->id_rol != 2)
-        abort(403);
+    {
+        $user      = auth()->user();
+        $idNegocio = $user->id_negocio;
 
-    $idNegocio = $user->id_negocio;
+        if ($user->id_rol != 2) abort(403);
 
-    // Subquery: trae el estado de la garantía activa de cada bici
-    $bicicletas = Bicicleta::with(['modelo', 'marca', 'color', 'voltaje'])
-        ->where('bicicletas.id_negocio', $idNegocio)
-        ->where('bicicletas.status', 2)
-        ->addSelect([
-            'status_garantia' => BicicletaGarantia::select('estado')
-                ->whereColumn('num_serie', 'bicicletas.num_serie')
-                ->where('id_negocio', $idNegocio)
-                ->whereNull('id_reemplazada_por')
-                ->orderByRaw("FIELD(estado, 'vigente', 'por_vencer', 'expirada')")
-                ->limit(1)
-        ])
-        ->latest()
-        ->paginate(15);
+       
+        $bicicletas = Bicicleta::with(['modelo', 'marca', 'color', 'voltaje'])
+            ->where('bicicletas.id_negocio', $idNegocio)
+            ->where('bicicletas.status', 2)
+            ->addSelect([
+                'status_garantia' => BicicletaGarantia::select('estado')
+                    ->whereColumn('num_serie', 'bicicletas.num_serie')
+                    ->where('id_negocio', $idNegocio)
+                    ->whereNull('id_reemplazada_por')
+                    ->orderByRaw("FIELD(estado, 'vigente', 'por_vencer', 'expirada')")
+                    ->limit(1),
+            ])
+            ->latest()
+            ->paginate(15);
 
-    // Última garantía: traemos la bicicleta relacionada para acceder a ->modelo
-    $ultimaGarantia = BicicletaGarantia::with('bicicleta.modelo')
-        ->where('id_negocio', $idNegocio)
-        ->latest()
-        ->first();
+      
+        $ultimaGarantia = BicicletaGarantia::with('bicicleta.modelo')
+            ->where('id_negocio', $idNegocio)
+            ->latest()
+            ->first();
 
-    $stats = [
-        'activas'    => BicicletaGarantia::where('id_negocio', $idNegocio)
-                            ->where('estado', 'vigente')->count(),
-        'consultas'  => BicicletaGarantia::where('id_negocio', $idNegocio)->count(),
-        'reclamos'   => GarantiaReclamo::where('id_negocio', $idNegocio)->count(),
-        'reemplazos' => BicicletaGarantia::where('id_negocio', $idNegocio)
-                            ->whereNotNull('id_reemplazada_por')->count(),
-    ];
+        $stats = [
+            'activas'    => BicicletaGarantia::where('id_negocio', $idNegocio)
+                                ->where('estado', 'vigente')->count(),
+            'consultas'  => BicicletaGarantia::where('id_negocio', $idNegocio)->count(),
+            'reclamos'   => GarantiaReclamo::where('id_negocio', $idNegocio)->count(),
+            'reemplazos' => BicicletaGarantia::where('id_negocio', $idNegocio)
+                                ->whereNotNull('id_reemplazada_por')->count(),
+        ];
 
-    return view('vendedor.garantias.index', compact('bicicletas', 'ultimaGarantia', 'stats'));
-}
+        return view('vendedor.garantias.index', compact('bicicletas', 'ultimaGarantia', 'stats'));
+    }
 
     // ─── AJAX: buscar bicicleta ───────────────────────────────────────────
+
     public function buscar(Request $request)
     {
         $user = auth()->user();
-        if ($user->id_rol != 2)
-            abort(403);
+        if ($user->id_rol != 2) abort(403);
 
         $numSerie = strtoupper(trim($request->get('num_serie', '')));
 
@@ -75,60 +73,61 @@ class GarantiaController extends Controller
             return response()->json(['ok' => false, 'mensaje' => 'Indica un número de serie.'], 422);
         }
 
-        // Usar CatalogService — misma lógica que VentaController
+        // getBicicletaBySerie cachea con versión del tenant (TTL 1h).
         $bici = CatalogService::getBicicletaBySerie($numSerie, $user->id_negocio);
 
         if (!$bici || $bici->id_negocio !== $user->id_negocio) {
             return response()->json(['ok' => false, 'mensaje' => 'Bicicleta no encontrada.'], 404);
         }
 
-        // Solo bicis vendidas tienen garantía
         if ($bici->status != 2) {
-            return response()->json(['ok' => false, 'mensaje' => 'Esta bicicleta no ha sido vendida, no tiene garantía activa.'], 422);
+            return response()->json([
+                'ok'      => false,
+                'mensaje' => 'Esta bicicleta no ha sido vendida, no tiene garantía activa.',
+            ], 422);
         }
 
         return response()->json([
-            'ok' => true,
+            'ok'       => true,
             'redirect' => route('garantias.show', $numSerie),
         ]);
     }
 
     // ─── SHOW: mapa + reclamos ────────────────────────────────────────────
+
     public function show(string $numSerie)
     {
         $user = auth()->user();
-        if ($user->id_rol != 2)
-            abort(403);
+        if ($user->id_rol != 2) abort(403);
 
+        // getBicicletaBySerie cachea con versión del tenant.
         $bici = CatalogService::getBicicletaBySerie($numSerie, $user->id_negocio);
 
         if (!$bici || $bici->id_negocio !== $user->id_negocio || $bici->status != 2) {
             abort(404);
         }
 
-        // Mapa de garantías — una query, todo calculado en PHP via accessors
+      
         $garantias = BicicletaGarantia::with('garantiaDef')
             ->where('num_serie', $numSerie)
             ->where('id_negocio', $user->id_negocio)
             ->whereIn('estado', ['vigente', 'por_vencer', 'expirada'])
-            // Solo la garantía activa de cada componente (no historiales)
             ->whereNull('id_reemplazada_por')
             ->get()
             ->map(fn($g) => [
-                'id' => $g->id_bicicleta_garantia,
-                'clave' => $g->clave_componente,
-                'nombre' => $g->garantiaDef->nombre_componente ?? $g->clave_componente,
-                'incluye' => $g->garantiaDef->incluye ?? [],
-                'estado_visual' => $g->estado_visual,
-                'color_mapa' => $g->color_mapa,
-                'dias_restantes' => $g->dias_restantes,
-                'porcentaje_vida' => $g->porcentaje_vida,
+                'id'               => $g->id_bicicleta_garantia,
+                'clave'            => $g->clave_componente,
+                'nombre'           => $g->garantiaDef->nombre_componente ?? $g->clave_componente,
+                'incluye'          => $g->garantiaDef->incluye ?? [],
+                'estado_visual'    => $g->estado_visual,
+                'color_mapa'       => $g->color_mapa,
+                'dias_restantes'   => $g->dias_restantes,
+                'porcentaje_vida'  => $g->porcentaje_vida,
                 'fecha_expiracion' => $g->fecha_expiracion->format('d/m/Y'),
-                'num_serie_comp' => $g->num_serie_componente,
-                'cobertura' => $g->garantiaDef->cobertura ?? null,
+                'num_serie_comp'   => $g->num_serie_componente,
+                'cobertura'        => $g->garantiaDef->cobertura ?? null,
             ]);
 
-        // Reclamos históricos de esta bici
         $reclamos = GarantiaReclamo::with(['mantenimiento', 'bicicletaGarantia.garantiaDef'])
             ->where('num_serie', $numSerie)
             ->where('id_negocio', $user->id_negocio)
@@ -139,17 +138,16 @@ class GarantiaController extends Controller
     }
 
     // ─── POST: abrir reclamo ──────────────────────────────────────────────
-    // Regla: reclamo siempre crea un mantenimiento en la misma transacción
+
     public function reclamo(Request $request)
     {
         $user = auth()->user();
-        if ($user->id_rol != 2)
-            abort(403);
+        if ($user->id_rol != 2) abort(403);
 
         $request->validate([
-            'num_serie' => 'required|string',
-            'id_bicicleta_garantia' => 'required|string',
-            'motivo_reclamo' => 'required|string|max:1000',
+            'num_serie'              => 'required|string',
+            'id_bicicleta_garantia'  => 'required|string',
+            'motivo_reclamo'         => 'required|string|max:1000',
         ]);
 
         $garantia = BicicletaGarantia::where('id_bicicleta_garantia', $request->id_bicicleta_garantia)
@@ -160,77 +158,71 @@ class GarantiaController extends Controller
 
         if (!$garantia || $garantia->dias_restantes < 0) {
             return response()->json([
-                'ok' => false,
+                'ok'      => false,
                 'mensaje' => 'La garantía de este componente no está vigente.',
             ], 422);
         }
 
-        // Verificar que no haya reclamo activo para este componente
         $reclamoActivo = GarantiaReclamo::where('id_bicicleta_garantia', $request->id_bicicleta_garantia)
             ->whereNotIn('estado', ['finalizado', 'rechazado'])
             ->exists();
 
         if ($reclamoActivo) {
             return response()->json([
-                'ok' => false,
+                'ok'      => false,
                 'mensaje' => 'Ya existe un reclamo activo para este componente.',
             ], 422);
         }
 
-        // En GarantiaController::reclamo()
         try {
             DB::beginTransaction();
 
-            // Crear mantenimiento — asegura que todos los campos requeridos van
             $mantenimiento = new Mantenimiento([
-                'id_negocio' => $user->id_negocio,
-                'num_serie' => $request->num_serie,
-                'estado' => 'EN_REPARACION',  // ← ENUM exacto de la migración
-                'ubicacion' => 'EN_TIENDA',      // ← ENUM exacto, no string libre
-                'fecha_ingreso' => now(),            // ← dateTime, no toDateString()
-                'motivo' => 'Reclamo de garantía: ' . $request->motivo_reclamo,
+                'id_negocio'    => $user->id_negocio,
+                'num_serie'     => $request->num_serie,
+                'estado'        => 'EN_REPARACION',
+                'ubicacion'     => 'EN_TIENDA',
+                'fecha_ingreso' => now(),
+                'motivo'        => 'Reclamo de garantía: ' . $request->motivo_reclamo,
             ]);
             $mantenimiento->save();
 
             GarantiaReclamo::create([
-                'id_negocio' => $user->id_negocio,
-                'id_mantenimiento' => $mantenimiento->id_mantenimiento,
-                'id_bicicleta_garantia' => $garantia->id_bicicleta_garantia,
-                'num_serie' => $request->num_serie,
-                'clave_componente' => $garantia->clave_componente,
-                'estado' => 'pendiente',
-                'motivo_reclamo' => $request->motivo_reclamo,
+                'id_negocio'             => $user->id_negocio,
+                'id_mantenimiento'       => $mantenimiento->id_mantenimiento,
+                'id_bicicleta_garantia'  => $garantia->id_bicicleta_garantia,
+                'num_serie'              => $request->num_serie,
+                'clave_componente'       => $garantia->clave_componente,
+                'estado'                 => 'pendiente',
+                'motivo_reclamo'         => $request->motivo_reclamo,
             ]);
 
             DB::commit();
 
             return response()->json([
-                'ok' => true,
+                'ok'      => true,
                 'mensaje' => 'Reclamo registrado. Se abrió un mantenimiento automáticamente.',
             ]);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            // ← Log detallado para ver el error real
             Log::error('Error al crear reclamo de garantía', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
             return response()->json([
-                'ok' => false,
-                // ← Temporal: mostrar el error real para diagnosticar
+                'ok'      => false,
                 'mensaje' => 'Error: ' . $e->getMessage(),
             ], 500);
         }
     }
 
-    // ─── PATCH: actualizar estado de reclamo (vendedor) ──────────────────
-    // El vendedor solo puede mover entre: pendiente → en_diagnostico → finalizado/rechazado
+    // ─── PATCH: actualizar estado de reclamo ─────────────────────────────
+
     public function estado(Request $request, string $id)
     {
         $user = auth()->user();
-        if ($user->id_rol != 2)
-            abort(403);
+        if ($user->id_rol != 2) abort(403);
 
         $request->validate(['estado' => 'required|string|max:40']);
 

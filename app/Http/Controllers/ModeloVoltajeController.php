@@ -81,10 +81,7 @@ class ModeloVoltajeController extends Controller
         $idMarca = \App\Models\Modelo::find($request->id_modelo)?->id_marca ?? '';
         CatalogoActualizado::dispatch($user->id_negocio, 'voltaje', 'creado', $idMarca);
 
-        // FIX: invalidateCatalogoCompleto necesita id_negocio del usuario,
-        // no null, incluso cuando la relación es pública (rol 5), porque el
-        // catálogo completo se cachea por tenant. Rol 5 no tiene catálogo
-        // completo propio, por lo que solo se invalida si hay un id_negocio.
+        
         CatalogService::invalidateModelo($request->id_modelo, $idNegocio);
         CatalogService::invalidateVoltaje($request->id_voltaje, $idNegocio);
         if ($user->id_negocio) {

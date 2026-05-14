@@ -13,6 +13,7 @@ use App\Events\CatalogoActualizado;
 class MarcaController extends Controller
 {
     use ResolvesAdminRoute;
+
     // ─── INDEX ──────────────────────────────────────────────────────────────
 
     public function index()
@@ -21,9 +22,7 @@ class MarcaController extends Controller
 
         if ($user->id_rol !== 1) abort(403);
 
-        $marcas = Marca::where('id_negocio', $user->id_negocio)
-            ->orderBy('nombre_marca')
-            ->paginate(15);
+        $marcas = CatalogService::getMarcasByNegocio($user->id_negocio);
 
         return view('administrador.catalogo.marca.index', compact('marcas'));
     }
@@ -52,7 +51,6 @@ class MarcaController extends Controller
                 'required',
                 'string',
                 'max:50',
-                // Unicidad dentro del mismo negocio
                 Rule::unique('marcas', 'nombre_marca')
                     ->where('id_negocio', $user->id_negocio),
             ],
@@ -70,6 +68,7 @@ class MarcaController extends Controller
             $marca->id_marca,
         );
 
+        
         CatalogService::invalidateMarca($marca->id_marca, $user->id_negocio);
         CatalogService::invalidateCatalogoCompleto($user->id_negocio);
 
@@ -83,7 +82,10 @@ class MarcaController extends Controller
                 ],
             ]);
         }
-        return redirect()->route($this->routeByRol('marcas'))->with('success', 'Marca creada correctamente.');
+
+        return redirect()
+            ->route($this->routeByRol('marcas'))
+            ->with('success', 'Marca creada correctamente.');
     }
 
     // ─── EDIT ────────────────────────────────────────────────────────────────
@@ -93,8 +95,6 @@ class MarcaController extends Controller
         $user = auth()->user();
 
         if ($user->id_rol !== 1) abort(403);
-
-        // Solo puede editar marcas de su propio negocio
         if ($marca->id_negocio !== $user->id_negocio) abort(403);
 
         return view('administrador.catalogo.marca.edit', compact('marca'));
@@ -107,7 +107,6 @@ class MarcaController extends Controller
         $user = auth()->user();
 
         if ($user->id_rol !== 1) abort(403);
-
         if ($marca->id_negocio !== $user->id_negocio) abort(403);
 
         $request->validate([
@@ -145,7 +144,10 @@ class MarcaController extends Controller
                 ],
             ]);
         }
-        return redirect()->route($this->routeByRol('marcas'))->with('success', 'Marca actualizada correctamente.');
+
+        return redirect()
+            ->route($this->routeByRol('marcas'))
+            ->with('success', 'Marca actualizada correctamente.');
     }
 
     // ─── DESTROY ─────────────────────────────────────────────────────────────
@@ -155,14 +157,13 @@ class MarcaController extends Controller
         $user = auth()->user();
 
         if ($user->id_rol !== 1) abort(403);
-
         if ($marca->id_negocio !== $user->id_negocio) abort(403);
 
-        // No eliminar si tiene modelos asociados
         if ($marca->modelos()->exists()) {
             return back()->with('error', 'No se puede eliminar: tiene modelos asociados.');
         }
 
+       
         $idMarca   = $marca->id_marca;
         $idNegocio = $marca->id_negocio;
 
@@ -172,7 +173,7 @@ class MarcaController extends Controller
             $user->id_negocio,
             'marca',
             'eliminado',
-            $idMarca, // ya lo tienes guardado antes del delete
+            $idMarca,
         );
 
         CatalogService::invalidateMarca($idMarca, $idNegocio);
@@ -183,40 +184,40 @@ class MarcaController extends Controller
             ->with('success', 'Marca eliminada correctamente.');
     }
 
+    // ─── CATÁLOGO ────────────────────────────────────────────────────────────
 
-    
-
-    // En MarcaController, agrega este método:
     public function catalogo(): View
     {
-        $user      = auth()->user();
+        $user = auth()->user();
         if ($user->id_rol !== 1) abort(403);
 
         $idNegocio = $user->id_negocio;
-        $marcas    = CatalogService::getCatalogoCompleto($idNegocio);
 
-        return view('administrador.catalogo.index', compact(
-            'marcas',
-            'idNegocio',
-        ))->with([
-            'totalMarcas'  => $marcas->count(),
-            'limiteMarcas' => 10,
-        ]);
+       
+        $marcas = CatalogService::getCatalogoCompleto($idNegocio);
+
+        return view('administrador.catalogo.index', compact('marcas', 'idNegocio'))
+            ->with([
+                'totalMarcas'  => $marcas->count(),
+                'limiteMarcas' => 10,
+            ]);
     }
 
+    // ─── CARD AJAX ───────────────────────────────────────────────────────────
 
     public function card(string $idMarca): \Illuminate\Http\Response
-{
-    $user  = auth()->user();
-    if ($user->id_rol !== 1) abort(403);
+    {
+        $user = auth()->user();
+        if ($user->id_rol !== 1) abort(403);
 
-    $marca = \App\Models\Marca::with([
-        'modelos.colores',
-        'modelos.voltajes',
-    ])
-    ->where('id_negocio', $user->id_negocio)
-    ->findOrFail($idMarca);
+        
+        $marca = \App\Models\Marca::with([
+            'modelos.colores',
+            'modelos.voltajes',
+        ])
+            ->where('id_negocio', $user->id_negocio)
+            ->findOrFail($idMarca);
 
-    return response(view('administrador.catalogo._marca_card', compact('marca'))->render());
-}
+        return response(view('administrador.catalogo._marca_card', compact('marca'))->render());
+    }
 }

@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Producto;
+use App\Services\CatalogService;
 use App\Services\CuponService;
 use Illuminate\Http\Request;
 
@@ -26,33 +26,30 @@ class CuponValidarController extends Controller
             return response()->json(['valido' => false, 'mensaje' => 'Cupón no encontrado.'], 404);
         }
 
+     
+        $todosLosProductos = CatalogService::getProductosConRelaciones(
+            $user->id_negocio,
+            $user->id_usuario
+        )->keyBy('id_producto');
+
         // ── Enriquecer items con datos de modelo/marca/voltaje ────────────────
-        $items = collect($request->items)->map(function ($item) use ($user) {
-            $producto = Producto::with([
-                'productoModelo.modelo.marca',
-                'productoModelo.voltaje',
-            ])
-                ->where('id_producto', $item['id_producto'])
-                ->where('id_negocio', $user->id_negocio)
-                ->first();
+        $items = collect($request->items)->map(function ($item) use ($todosLosProductos, $user) {
+            $producto = $todosLosProductos[$item['id_producto']] ?? null;
 
             if (!$producto) return null;
 
-            // productoModelo es hasMany — tomamos el que corresponde a esta sucursal,
-            // o si no hay uno específico, el primero disponible.
             $pms = collect($producto->productoModelo ?? []);
 
-            // Priorizar el que pertenece a esta sucursal
+            // Priorizar el ProductoModelo de esta sucursal, luego genérico, luego cualquiera
             $pm = $pms->firstWhere('id_usuario', $user->id_usuario)
                 ?? $pms->firstWhere('id_usuario', null)
                 ?? $pms->first();
 
             return [
                 'id_producto' => $item['id_producto'],
-                // FIX: antes tomaba $pm?->voltaje?->id_voltaje que es una relación
-                // belongsTo ya cargada — ahora usamos directamente id_voltaje del PM
                 'id_voltaje'  => $pm?->id_voltaje,
                 'id_modelo'   => $pm?->id_modelo,
+              
                 'id_marca'    => $pm?->modelo?->id_marca,
                 'precio'      => (float) ($producto->precio ?? 0),
                 'cantidad'    => (int) $item['cantidad'],
