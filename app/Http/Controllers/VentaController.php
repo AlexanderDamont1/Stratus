@@ -538,6 +538,26 @@ class VentaController extends Controller
             }
 
             DB::commit();
+ 
+            // ── Registrar pagos en caja (post-commit, nunca falla el flujo) ──
+            // CajaService::registrarVenta() es silent-fail: si no hay caja
+            // configurada o sesión activa, solo loguea y continúa.
+            try {
+                \App\Services\CajaService::registrarVenta(
+                    venta:     $venta,
+                    idUsuario: $user->id_usuario,
+                    idNegocio: $user->id_negocio,
+                );
+            } catch (\Throwable $cajaEx) {
+                // Nunca debe llegar aquí (CajaService ya lo maneja internamente),
+                // pero si llega, lo logueamos sin romper la respuesta.
+                Log::error('CajaService: error inesperado al registrar venta', [
+                    'id_venta' => $venta->id_venta,
+                    'mensaje'  => $cajaEx->getMessage(),
+                ]);
+            }
+
+            
 
             // ── Post-commit ───────────────────────────────────────────────────────
             if ($cuponAplicado) {
