@@ -158,7 +158,7 @@
                                 type="button"
                                 x-data="{ activo: {{ $def->activo ? 'true' : 'false' }} }"
                                 @click="
-                                    fetch('{{ route('root.config.toggle', $def->id_ncf) }}', {
+                                    fetch('/root/config/{{ $def->getKey() }}/toggle', {
                                         method: 'PATCH',
                                         headers: {
                                             'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
@@ -182,7 +182,7 @@
                                     Editar
                                 </button>
                                 <button type="button"
-                                        @click="openDelete({{ $def->id }}, '{{ $def->nombre }}')"
+                                        @click="openDelete('{{ $def->getKey() }}', '{{ addslashes($def->nombre) }}')"
                                         class="text-xs px-2.5 py-1.5 rounded-lg text-red-400/80 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 border border-transparent hover:border-red-200 dark:hover:border-red-800/40 transition font-medium">
                                     Eliminar
                                 </button>
@@ -229,7 +229,7 @@
                 </button>
             </div>
 
-            <form method="POST" action="{{ route('root.config.store') }}" class="px-6 py-5 space-y-4">
+            <form method="POST" action="/root/config" class="px-6 py-5 space-y-4">
                 @csrf
 
                 <div class="grid grid-cols-2 gap-4">

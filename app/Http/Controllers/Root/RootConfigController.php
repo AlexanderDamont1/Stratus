@@ -44,7 +44,7 @@ class RootConfigController extends Controller
         return back()->with('success', 'Configuración creada correctamente.');
     }
 
-    public function update(Request $request, int $id)
+    public function update(Request $request, string $id)
     {
         $def = NegocioConfig::findOrFail($id);
 
@@ -71,14 +71,15 @@ class RootConfigController extends Controller
         return back()->with('success', 'Configuración actualizada.');
     }
 
-    public function toggle(int $id)
+    public function toggle(string $id)
     {
         $def = NegocioConfig::findOrFail($id);
         $def->update(['activo' => !$def->activo]);
-        return response()->json(['ok' => true, 'activo' => $def->activo]);
+        return response()->json(['activo' => (bool) $def->activo]);
     }
 
-    public function destroy(int $id)
+
+    public function destroy(string $id)
     {
         NegocioConfig::findOrFail($id)->delete();
         return back()->with('success', 'Configuración eliminada.');

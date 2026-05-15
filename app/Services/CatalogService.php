@@ -213,8 +213,15 @@ class CatalogService
 
     // ─── VOLTAJES ───────────────────────────────────────────────────────────
 
-    public static function getVoltajesByNegocio(string $idNegocio, bool $withSelectFormato = false)
+    public static function getVoltajesByNegocio(string $idNegocio, bool $withSelectFormato = false, bool $paginar = false)
     {
+        if ($paginar) {
+            return Voltaje::where('id_negocio', $idNegocio)
+                ->select('id_voltaje', 'voltaje')
+                ->orderBy('voltaje')
+                ->paginate(20);
+        }
+
         $voltajes = self::remember(
             "voltajes:negocio:{$idNegocio}",
             self::CACHE_TTL['voltajes'],
@@ -256,8 +263,15 @@ class CatalogService
         return $withSelectFormato ? $voltajes->pluck('voltaje', 'id_voltaje') : $voltajes;
     }
 
-    public static function getAllVoltajes(bool $withSelectFormato = false)
+    public static function getAllVoltajes(bool $withSelectFormato = false, bool $paginar = false)
     {
+        if ($paginar) {
+            return Voltaje::whereNull('id_negocio')
+                ->select('id_voltaje', 'voltaje')
+                ->orderBy('voltaje')
+                ->paginate(20);
+        }
+
         $voltajes = self::remember('voltajes:publicos', self::CACHE_TTL['voltajes'],
             fn () => Voltaje::whereNull('id_negocio')
                 ->select('id_voltaje', 'voltaje')
@@ -1101,5 +1115,15 @@ class CatalogService
         $version = self::getVersion($idNegocio);
         Cache::forget(self::key("config:negocio:{$idNegocio}") . ":v{$version}");
         self::incrementVersion($idNegocio);  // ← FIX: incrementar DESPUÉS del forget
+    }
+
+    
+
+    public static function getAllVoltajesPaginados(): LengthAwarePaginator
+    {
+        return Voltaje::whereNull('id_negocio')
+            ->select('id_voltaje', 'voltaje')
+            ->orderBy('voltaje')
+            ->paginate(20);
     }
 }

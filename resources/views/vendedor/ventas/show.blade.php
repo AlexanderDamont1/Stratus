@@ -2,8 +2,7 @@
     <div class="mx-auto space-y-5">
 
         {{-- ===== ENCABEZADO ===== --}}
-        <div class="flex flex-wrap items-start justify-between gap-">
-            {{-- Lado izquierdo: back link + título --}}
+        <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
                 <a href="{{ route('ventas.index') }}"
                 class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200
@@ -17,11 +16,9 @@
                 <p class="text-xs text-gray-400 mt-0.5 font-mono">{{ $venta->id_venta }}</p>
             </div>
 
-            {{-- Lado derecho: botones (alineación tipo catálogo) --}}
             <div class="flex flex-col items-end gap-2 sm:flex-row-reverse sm:items-center">
-                {{-- Ticket siempre visible --}}
                 <button onclick="openPreview('{{ route('ventas.ticket', $venta->id_venta) }}')"
-                        class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-md text-sm hover:opacity-90 transition whitespace-nowrap hover:scale-105 transform duration-200 flex items-center gap-1.5">
+                        class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-md text-sm hover:opacity-90 transition whitespace-nowrap flex items-center gap-1.5">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M15 5v2m0 4v2m0 4v2M5 5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z"/>
@@ -29,10 +26,9 @@
                     Ver ticket
                 </button>
 
-                {{-- Póliza solo si aplica --}}
                 @if($tieneGarantia)
                     <button onclick="openPreview('{{ route('ventas.poliza', $venta->id_venta) }}')"
-                            class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-md text-sm hover:opacity-90 transition whitespace-nowrap hover:scale-105 transform duration-200 flex items-center gap-1.5">
+                            class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-md text-sm hover:opacity-90 transition whitespace-nowrap flex items-center gap-1.5">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
@@ -66,31 +62,32 @@
 
         {{-- ===== MÉTRICAS RÁPIDAS ===== --}}
         @php
-            $totalVenta = $venta->detalles->sum(fn($d) => $d->precio_unitario * $d->cantidad);
+            $totalVenta    = $venta->detalles->sum(fn($d) => $d->precio_unitario * $d->cantidad);
             $cantArticulos = $venta->detalles->sum('cantidad');
+            $pagos         = $venta->pagos ?? collect();
+
+            // Resumen de métodos de pago
+            $resumenPagos = $pagos->map(fn($p) => ($p->label ?? $p->metodo))->implode(' + ');
         @endphp
+
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700
-                        rounded-xl p-4">
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
                 <p class="text-[11px] uppercase tracking-wider text-gray-400 mb-1">Artículos</p>
                 <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ $cantArticulos }}</p>
             </div>
-            <div class="bg-green-100 dark:bg-green-800/30 border border-green-100 dark:border-green-800/30
-                        rounded-xl p-4">
+            <div class="bg-green-100 dark:bg-green-800/30 border border-green-100 dark:border-green-800/30 rounded-xl p-4">
                 <p class="text-[11px] uppercase tracking-wider text-green-400 mb-1">Total</p>
-                <p class="text-2xl font-semibold text-green-800 dark:text-green-400"> 
+                <p class="text-2xl font-semibold text-green-800 dark:text-green-400">
                     ${{ number_format($totalVenta, 2) }}
                 </p>
             </div>
-            <div class="bg-yellow-100 dark:bg-yellow-800/30 border border-yellow-100 dark:border-yellow-800/30
-                        rounded-xl p-4">
-                <p class="text-[11px] uppercase tracking-wider text-yellow-400 mb-1">Tipo de pago</p>
-                <p class="text-2xl font-semibold text-yellow-800 dark:text-yellow-400">
-                    {{ $venta->cliente->tipo_pago }}
+            <div class="bg-yellow-100 dark:bg-yellow-800/30 border border-yellow-100 dark:border-yellow-800/30 rounded-xl p-4">
+                <p class="text-[11px] uppercase tracking-wider text-yellow-400 mb-1">Método de pago</p>
+                <p class="text-sm font-semibold text-yellow-800 dark:text-yellow-400 leading-tight mt-1">
+                    {{ $resumenPagos ?: '—' }}
                 </p>
             </div>
-            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700
-                        rounded-xl p-4">
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
                 <p class="text-[11px] uppercase tracking-wider text-gray-400 mb-1">Fecha</p>
                 <p class="text-base font-semibold text-gray-900 dark:text-white leading-tight mt-1">
                     {{ $venta->created_at->format('d/m/Y') }}
@@ -100,110 +97,129 @@
         </div>
 
         {{-- ===== CLIENTE ===== --}}
-            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
-                <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700
-                            bg-gray-50 dark:bg-gray-700/30">
-                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                    </svg>
-                    <p class="text-sm font-medium text-gray-800 dark:text-gray-200">Cliente</p>
-                </div>
-                <div class="p-5">
-                    <dl class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-                        <div>
-                            <dt class="text-xs text-gray-500 mb-0.5">Nombre completo</dt>
-                            <dd class="font-medium text-gray-900 dark:text-white">
-                                {{ $venta->cliente->nombre_cliente }}
-                                {{ $venta->cliente->apellido1 }}
-                                {{ $venta->cliente->apellido2 }}
-                            </dd>
-                        </div>
-                        <div>
-                            <dt class="text-xs text-gray-500 mb-0.5">Teléfono</dt>
-                            <dd class="font-medium text-gray-900 dark:text-white">{{ $venta->cliente->telefono }}</dd>
-                        </div>
-                        @if($venta->cliente->correo)
-                            <div>
-                                <dt class="text-xs text-gray-500 mb-0.5">Correo</dt>
-                                <dd class="font-medium text-gray-900 dark:text-white text-xs">{{ $venta->cliente->correo }}</dd>
-                            </div>
-                        @endif
-                        <div>
-                            <dt class="text-xs text-gray-500 mb-0.5">Vendedor</dt>
-                            <dd>
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-sky-100 dark:bg-purple-800/30 font-medium text-sky-700 dark:text-purple-300">
-                                    {{ $venta->vendedor?->personal?->nombre ?? '—' }}
-                                </span>
-                            </dd>
-                        </div>
-                    </dl>
-                </div>
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+            <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700
+                        bg-gray-50 dark:bg-gray-700/30">
+                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+                <p class="text-sm font-medium text-gray-800 dark:text-gray-200">Cliente</p>
             </div>
-
-            {{-- 
-                En el card de tipo de pago necesita un icono svg de un ojo, para ver la referencia bancaria (si aplica). Al hacer click en el icono, se muestra un modal 
-                con la información de la referencia (número de referencia, banco, monto, etc). Este modal puede ser un simple div que se muestra/oculta con Alpine.js.
-
-
-                
-            --}}
-
-
-
-            @php
-                $pagosConReferencia = collect($venta->pagos ?? [])->filter(function ($pago) {
-                    return !$pago->es_efectivo && ($pago->metodoPago->requiere_referencia ?? false);
-                });
-            @endphp
-
-            @if($pagosConReferencia->isNotEmpty())
-            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden mt-6">
-                <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700
-                            bg-gray-50 dark:bg-gray-700/30">
-                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
-                    </svg>
-                    <p class="text-sm font-medium text-gray-800 dark:text-gray-200">Referencia bancaria</p>
-                </div>
-                <div class="p-5 space-y-4">
-                    @foreach($pagosConReferencia as $pago)
-                    <div class="border-b border-gray-100 dark:border-gray-700 last:border-0 pb-3 last:pb-0">
-                        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
-                            <span class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                                {{ $pago->metodoPago->nombre ?? 'Pago bancario' }}
-                            </span>
-                            <span class="text-xs text-gray-400">
-                                Monto: {{ number_format($pago->monto, 2) }} MXN
-                            </span>
+            <div class="p-5">
+                <dl class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                    <div>
+                        <dt class="text-xs text-gray-500 mb-0.5">Nombre completo</dt>
+                        <dd class="font-medium text-gray-900 dark:text-white">
+                            {{ $venta->cliente->nombre_cliente }}
+                            {{ $venta->cliente->apellido1 }}
+                            {{ $venta->cliente->apellido2 }}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs text-gray-500 mb-0.5">Teléfono</dt>
+                        <dd class="font-medium text-gray-900 dark:text-white">{{ $venta->cliente->telefono }}</dd>
+                    </div>
+                    @if($venta->cliente->correo)
+                        <div>
+                            <dt class="text-xs text-gray-500 mb-0.5">Correo</dt>
+                            <dd class="font-medium text-gray-900 dark:text-white text-xs">{{ $venta->cliente->correo }}</dd>
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                            <div>
-                                <dt class="text-xs text-gray-500 mb-0.5">Referencia / Autorización</dt>
-                                <dd class="font-mono text-sm font-medium text-gray-900 dark:text-white">
-                                    {{ $pago->referencia ?? '—' }}
-                                </dd>
-                            </div>
-                            @if(isset($pago->ultimos_cuatro) && $pago->ultimos_cuatro)
-                            <div>
-                                <dt class="text-xs text-gray-500 mb-0.5">Últimos 4 dígitos</dt>
-                                <dd class="font-mono text-sm font-medium text-gray-900 dark:text-white">
-                                    **** {{ $pago->ultimos_cuatro }}
-                                </dd>
-                            </div>
+                    @endif
+                    <div>
+                        <dt class="text-xs text-gray-500 mb-0.5">Vendedor</dt>
+                        <dd>
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-sky-100 dark:bg-sky-800/30 text-sky-700 dark:text-sky-300">
+                                {{ $venta->vendedor?->personal?->nombre ?? '—' }}
+                            </span>
+                        </dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+
+        {{-- ===== PAGOS ===== --}}
+        @if($pagos->isNotEmpty())
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+            <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700
+                        bg-gray-50 dark:bg-gray-700/30">
+                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                </svg>
+                <p class="text-sm font-medium text-gray-800 dark:text-gray-200">Pagos</p>
+            </div>
+            <div class="divide-y divide-gray-100 dark:divide-gray-700">
+                @foreach($pagos as $pago)
+                <div class="px-5 py-4 flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        {{-- Ícono según tipo --}}
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0
+                            {{ $pago->es_efectivo
+                                ? 'bg-green-100 dark:bg-green-900/30'
+                                : 'bg-blue-100 dark:bg-blue-900/30' }}">
+                            @if($pago->es_efectivo)
+                                <svg class="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                </svg>
+                            @else
+                                <svg class="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                                </svg>
+                            @endif
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">
+                                {{ $pago->label ?? $pago->metodo }}
+                            </p>
+                            @if($pago->requiere_referencia && $pago->referencia)
+                                <p class="text-xs text-gray-400 font-mono mt-0.5">
+                                    Ref: {{ $pago->referencia }}
+                                </p>
                             @endif
                         </div>
                     </div>
-                    @endforeach
+                    <div class="text-right">
+                        <p class="text-sm font-semibold text-gray-900 dark:text-white tabular-nums">
+                            ${{ number_format($pago->monto, 2) }}
+                        </p>
+                        @if($pago->es_efectivo && $venta->cambio > 0)
+                            <p class="text-xs text-gray-400 mt-0.5">
+                                Recibido: ${{ number_format($venta->monto_recibido, 2) }}
+                                · Cambio: ${{ number_format($venta->cambio, 2) }}
+                            </p>
+                        @endif
+                    </div>
                 </div>
+                @endforeach
+            </div>
+
+            {{-- Total pagado vs total venta --}}
+            @if($pagos->count() > 1 || $venta->descuento_total > 0)
+            <div class="px-5 py-3 bg-gray-50 dark:bg-gray-700/30 border-t border-gray-100 dark:border-gray-700
+                        flex flex-wrap items-center justify-between gap-2">
+                @if($venta->descuento_total > 0)
+                    <span class="text-xs text-green-600 dark:text-green-400 font-medium">
+                        Descuento aplicado: −${{ number_format($venta->descuento_total, 2) }}
+                    </span>
+                @else
+                    <span></span>
+                @endif
+                <span class="text-xs text-gray-500 tabular-nums">
+                    Total pagado:
+                    <span class="font-semibold text-gray-900 dark:text-white">
+                        ${{ number_format($pagos->sum('monto'), 2) }}
+                    </span>
+                </span>
             </div>
             @endif
+        </div>
+        @endif
 
         {{-- ===== PRODUCTOS ===== --}}
         <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
-
-            {{-- Header de la sección --}}
             <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700
                         bg-gray-50 dark:bg-gray-700/30">
                 <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -213,7 +229,6 @@
                 <p class="text-sm font-medium text-gray-800 dark:text-gray-200">Productos vendidos</p>
             </div>
 
-            {{-- Banner de garantía --}}
             @if($tieneGarantia)
                 <div class="flex items-center gap-2 px-5 py-2.5 bg-green-50 dark:bg-green-900/20
                             border-b border-green-100 dark:border-green-800/30">
@@ -230,7 +245,6 @@
                 </div>
             @endif
 
-            {{-- Tabla --}}
             <div class="overflow-x-auto">
                 <table class="min-w-full text-sm">
                     <thead class="bg-gray-50 dark:bg-gray-700/30">
@@ -250,14 +264,22 @@
                                 $colorRaw  = $detalle->bicicleta->color->color ?? '';
                                 $colorInfo = parsearColor($colorRaw);
                                 $esBici    = ($detalle->producto->tipo ?? '') === '2';
+                                $esGratis  = $detalle->precio_unitario == 0;
                             @endphp
                             <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
 
-                                {{-- Producto --}}
                                 <td class="px-4 py-3 align-top">
-                                    <p class="font-medium text-gray-900 dark:text-white">
-                                        {{ $detalle->producto->nombre_producto ?? '—' }}
-                                    </p>
+                                    <div class="flex items-center gap-2">
+                                        <p class="font-medium text-gray-900 dark:text-white">
+                                            {{ $detalle->producto->nombre_producto ?? '—' }}
+                                        </p>
+                                        @if($esGratis && !$esBici)
+                                            <span class="px-1.5 py-0.5 text-[9px] font-bold rounded-full
+                                                         bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 uppercase">
+                                                Gratis
+                                            </span>
+                                        @endif
+                                    </div>
                                     <span class="inline-block mt-1 px-2 py-0.5 text-[10px] font-semibold rounded-full
                                         {{ $esBici
                                             ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-800/30 dark:text-indigo-400'
@@ -266,12 +288,10 @@
                                     </span>
                                 </td>
 
-                                {{-- N° serie --}}
                                 <td class="px-4 py-3 text-gray-500 dark:text-gray-400 font-mono text-xs align-top">
                                     {{ $detalle->num_serie ?? '—' }}
                                 </td>
 
-                                {{-- Detalle / color --}}
                                 <td class="px-4 py-3 align-top whitespace-nowrap">
                                     @if($detalle->bicicleta)
                                         <p class="text-xs text-gray-700 dark:text-gray-300 mb-1">
@@ -298,17 +318,23 @@
                                     @endif
                                 </td>
 
-                                {{-- Cantidad --}}
                                 <td class="px-4 py-3 text-center text-gray-800 dark:text-gray-200 font-medium align-top">
                                     {{ $detalle->cantidad }}
                                 </td>
 
-                                {{-- Precio unitario --}}
-                                <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300 align-top">
-                                    ${{ number_format($detalle->precio_unitario, 2) }}
+                                <td class="px-4 py-3 text-right align-top">
+                                    @if($esGratis)
+                                        <span class="line-through text-gray-300 text-xs mr-1">
+                                            {{-- precio original no disponible en detalle, mostrar $0.00 --}}
+                                        </span>
+                                        <span class="text-green-600 dark:text-green-400 font-semibold">$0.00</span>
+                                    @else
+                                        <span class="text-gray-700 dark:text-gray-300">
+                                            ${{ number_format($detalle->precio_unitario, 2) }}
+                                        </span>
+                                    @endif
                                 </td>
 
-                                {{-- Subtotal --}}
                                 <td class="px-4 py-3 text-right font-semibold text-gray-900 dark:text-white align-top">
                                     ${{ number_format($subtotal, 2) }}
                                 </td>
@@ -316,12 +342,22 @@
                         @endforeach
                     </tbody>
                     <tfoot class="bg-gray-50 dark:bg-gray-700/30 border-t-2 border-gray-200 dark:border-gray-600">
+                        @if($venta->descuento_total > 0)
+                        <tr>
+                            <td colspan="5" class="px-4 py-2 text-right text-xs text-green-600 dark:text-green-400">
+                                Descuento cupón
+                            </td>
+                            <td class="px-4 py-2 text-right text-xs font-semibold text-green-600 dark:text-green-400">
+                                −${{ number_format($venta->descuento_total, 2) }}
+                            </td>
+                        </tr>
+                        @endif
                         <tr>
                             <td colspan="5" class="px-4 py-4 text-right text-sm font-semibold text-gray-700 dark:text-gray-300">
                                 Total de la venta
                             </td>
                             <td class="px-4 py-4 text-right text-xl font-bold text-gray-900 dark:text-white">
-                                ${{ number_format($totalVenta, 2) }}
+                                ${{ number_format($totalVenta - $venta->descuento_total, 2) }}
                             </td>
                         </tr>
                     </tfoot>
@@ -350,7 +386,6 @@
         </div>
     </div>
 
-    {{-- Auto-abrir ticket si viene del flujo de creación --}}
     @if($autoTicket)
         <script>
             document.addEventListener('DOMContentLoaded', function () {
