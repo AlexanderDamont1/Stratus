@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
  
 class CajaSesion extends Model
 {
+    protected $table = 'caja_sesiones';
     protected $primaryKey  = 'id_sesion';
     public    $incrementing = false;
     protected $keyType     = 'string';

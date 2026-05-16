@@ -109,19 +109,21 @@ table.hist tr:hover td{background:rgba(255,255,255,.02);}
     if (p.get('abrir') === '1') modal = 'abrir';
 ">
 
+    {{-- ── Alertas ── --}}
     @if(session('success'))
-    <div class="alert alert-ok">
-        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 11 4 11"/></svg>
+    <div class="alert alert-ok" role="alert">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="shrink:0;margin-top:.1rem"><polyline points="20 6 9 17 4 12"/></svg>
         {{ session('success') }}
     </div>
     @endif
     @if(session('error'))
-    <div class="alert alert-err">
-        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <div class="alert alert-err" role="alert">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="shrink:0;margin-top:.1rem"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         {{ session('error') }}
     </div>
     @endif
 
+    {{-- ── Header ── --}}
     <div class="page-hd">
         <div>
             <h1>🏧 Mi Caja</h1>
@@ -134,7 +136,9 @@ table.hist tr:hover td{background:rgba(255,255,255,.02);}
         @endif
     </div>
 
-    {{-- ── SESIÓN ABIERTA ── --}}
+    {{-- ══════════════════════════════════════════════
+         SESIÓN ABIERTA
+    ══════════════════════════════════════════════ --}}
     @if($sesion && $snapshot)
 
     <div class="card">
@@ -156,28 +160,38 @@ table.hist tr:hover td{background:rgba(255,255,255,.02);}
                 <div class="stat-lbl"># Ventas</div>
                 <div class="stat-val">{{ $snapshot['ventas_count'] }}</div>
             </div>
-            @if($snapshot['totales']['ingresos_manuales'] > 0)
+            @if(($snapshot['totales']['ingresos_manuales'] ?? 0) > 0)
             <div class="stat">
                 <div class="stat-lbl">Ing. manuales</div>
                 <div class="stat-val cv-blue">${{ number_format($snapshot['totales']['ingresos_manuales'], 2) }}</div>
             </div>
             @endif
-            @if($snapshot['totales']['retiros'] > 0)
+            @if(($snapshot['totales']['retiros'] ?? 0) > 0)
             <div class="stat">
                 <div class="stat-lbl">Retiros</div>
-                <div class="stat-val cv-red">${{ number_format($snapshot['totales']['retiros'], 2) }}</div>
+                <div class="stat-val cv-red">-${{ number_format($snapshot['totales']['retiros'], 2) }}</div>
+            </div>
+            @endif
+            @if(($snapshot['totales']['ajustes_neto'] ?? 0) != 0)
+            <div class="stat">
+                <div class="stat-lbl">Ajustes</div>
+                @php $aj = $snapshot['totales']['ajustes_neto']; @endphp
+                <div class="stat-val {{ $aj >= 0 ? 'cv-green' : 'cv-red' }}">
+                    {{ $aj >= 0 ? '+' : '' }}${{ number_format($aj, 2) }}
+                </div>
             </div>
             @endif
         </div>
 
+        {{-- Por método de pago — FIX: clave 'label' no 'nombre' --}}
         @if(!empty($snapshot['por_metodo']))
-        <div class="card-lbl">Por método de pago</div>
+        <div class="card-lbl" style="margin-top:.5rem">Por método de pago</div>
         <div class="metodo-list">
             @foreach($snapshot['por_metodo'] as $m)
             <div class="metodo-row">
                 <div class="metodo-name">
-                    <div class="metodo-icon">{{ $m['es_efectivo'] ? '💵' : '💳' }}</div>
-                    <span>{{ $m['nombre'] }}</span>
+                    <div class="metodo-icon">{{ ($m['es_efectivo'] ?? false) ? '💵' : '💳' }}</div>
+                    <span>{{ $m['label'] }}</span>  {{-- ← corregido: era $m['nombre'] --}}
                 </div>
                 <span class="metodo-val">${{ number_format($m['total'], 2) }}</span>
             </div>
@@ -196,6 +210,7 @@ table.hist tr:hover td{background:rgba(255,255,255,.02);}
         </div>
     </div>
 
+    {{-- Operaciones --}}
     <div class="card mt1">
         <div class="card-lbl">Operaciones</div>
         <div class="actions">
@@ -216,7 +231,9 @@ table.hist tr:hover td{background:rgba(255,255,255,.02);}
 
     @else
 
-    {{-- ── CAJA CERRADA ── --}}
+    {{-- ══════════════════════════════════════════════
+         CAJA CERRADA
+    ══════════════════════════════════════════════ --}}
     <div class="card empty-card">
         <div class="empty-icon">🔒</div>
         <div class="empty-title">Caja cerrada</div>
@@ -229,7 +246,9 @@ table.hist tr:hover td{background:rgba(255,255,255,.02);}
 
     @endif
 
-    {{-- ── Historial ── --}}
+    {{-- ══════════════════════════════════════════════
+         Historial de sesiones
+    ══════════════════════════════════════════════ --}}
     @if($historial->count())
     <div class="card mt15">
         <div class="card-lbl">Últimas sesiones</div>
@@ -249,16 +268,19 @@ table.hist tr:hover td{background:rgba(255,255,255,.02);}
                     <td>{{ $ses->cerrada_at?->format('d/m H:i') ?? '—' }}</td>
                     <td class="mono">${{ number_format($ses->fondo_inicial, 2) }}</td>
                     <td class="mono">${{ number_format($ses->monto_cierre_sistema ?? 0, 2) }}</td>
-                    <td class="mono" style="color:{{ ($ses->diferencia ?? 0) < 0 ? 'var(--c-red)' : 'var(--c-green)' }}">
+                    <td class="mono" style="color:{{ (($ses->diferencia ?? 0) < 0) ? 'var(--c-red)' : 'var(--c-green)' }}">
                         @if($ses->diferencia !== null)
                             {{ $ses->diferencia >= 0 ? '+' : '' }}${{ number_format($ses->diferencia, 2) }}
                         @else —
                         @endif
                     </td>
                     <td>
-                        @if($ses->estado === 'abierta')          <span class="chip chip-open">Abierta</span>
-                        @elseif($ses->estado === 'auto_cerrada')  <span class="chip chip-auto">Auto</span>
-                        @else                                     <span class="chip chip-closed">Cerrada</span>
+                        @if($ses->estado === 'abierta')
+                            <span class="chip chip-open">Abierta</span>
+                        @elseif($ses->estado === 'auto_cerrada')
+                            <span class="chip chip-auto">Auto</span>
+                        @else
+                            <span class="chip chip-closed">Cerrada</span>
                         @endif
                     </td>
                     <td>
@@ -274,7 +296,9 @@ table.hist tr:hover td{background:rgba(255,255,255,.02);}
     </div>
     @endif
 
-    {{-- ════ MODAL: ABRIR ════ --}}
+    {{-- ════════════════════════════════════════
+         MODAL: ABRIR SESIÓN
+    ════════════════════════════════════════ --}}
     <div class="overlay" x-show="modal==='abrir'" x-cloak @click.self="modal=''"
          x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
          x-transition:leave="transition duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
@@ -298,20 +322,32 @@ table.hist tr:hover td{background:rgba(255,255,255,.02);}
         </div>
     </div>
 
-    {{-- ════ MODAL: INGRESO MANUAL ════ --}}
+    {{-- ════════════════════════════════════════
+         MODAL: INGRESO MANUAL
+    ════════════════════════════════════════ --}}
     <div class="overlay" x-show="modal==='ingreso'" x-cloak @click.self="modal=''"
          x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
          x-transition:leave="transition duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
-        <div class="modal" @click.stop>
+        <div class="modal" @click.stop
+             x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100">
             <div class="modal-title">Registrar ingreso manual</div>
             <div class="modal-desc">Entrada de dinero que no proviene de una venta del sistema.</div>
-            <form method="POST" action="{{ route('caja.ingreso.vendedor') }}">
+            <form method="POST" action="{{ route('caja.ingreso') }}">
                 @csrf
                 <div class="field">
                     <label>Monto</label>
                     <input type="number" name="monto" step="0.01" min="0.01" max="999999.99"
                            placeholder="0.00" class="mono-input" required
                            x-init="$watch('modal', v => v==='ingreso' && $nextTick(() => $el.focus()))">
+                </div>
+                <div class="field">
+                    <label>Método de pago</label>
+                    <select name="metodo">
+                        <option value="efectivo">Efectivo</option>
+                        <option value="transferencia">Transferencia</option>
+                        <option value="tarjeta">Tarjeta</option>
+                        <option value="otro">Otro</option>
+                    </select>
                 </div>
                 <div class="field">
                     <label>Concepto</label>
@@ -329,18 +365,36 @@ table.hist tr:hover td{background:rgba(255,255,255,.02);}
         </div>
     </div>
 
-    {{-- ════ MODAL: CORTE PARCIAL ════ --}}
+    {{-- ════════════════════════════════════════
+         MODAL: CORTE PARCIAL
+    ════════════════════════════════════════ --}}
     <div class="overlay" x-show="modal==='corte'" x-cloak @click.self="modal=''"
          x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
          x-transition:leave="transition duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
-        <div class="modal" @click.stop>
+        <div class="modal" @click.stop
+             x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100">
             <div class="modal-title">Generar corte parcial</div>
             <div class="modal-desc">Se genera un PDF con el resumen actual. <strong>La sesión no se cierra.</strong></div>
             @if($snapshot)
             <div class="preview-box">
-                <div class="info-row"><span class="lbl">Total sistema</span><span class="val cv-green">${{ number_format($snapshot['totales']['total_sistema'], 2) }}</span></div>
-                <div class="info-row"><span class="lbl">Ventas</span><span class="val">{{ $snapshot['ventas_count'] }}</span></div>
-                <div class="info-row"><span class="lbl">Desde</span><span class="val">{{ \Carbon\Carbon::parse($snapshot['sesion']['abierta_at'])->format('d/m H:i') }}</span></div>
+                <div class="info-row">
+                    <span class="lbl">Total sistema</span>
+                    <span class="val cv-green">${{ number_format($snapshot['totales']['total_sistema'], 2) }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="lbl">Ventas</span>
+                    <span class="val">{{ $snapshot['ventas_count'] }}</span>
+                </div>
+                @if(($snapshot['totales']['retiros'] ?? 0) > 0)
+                <div class="info-row">
+                    <span class="lbl">Retiros</span>
+                    <span class="val cv-red">-${{ number_format($snapshot['totales']['retiros'], 2) }}</span>
+                </div>
+                @endif
+                <div class="info-row">
+                    <span class="lbl">Desde</span>
+                    <span class="val">{{ \Carbon\Carbon::parse($snapshot['sesion']['abierta_at'])->format('d/m H:i') }}</span>
+                </div>
             </div>
             @endif
             <form method="POST" action="{{ route('caja.corte.parcial') }}">
@@ -353,18 +407,39 @@ table.hist tr:hover td{background:rgba(255,255,255,.02);}
         </div>
     </div>
 
-    {{-- ════ MODAL: CERRAR SESIÓN ════ --}}
+    {{-- ════════════════════════════════════════
+         MODAL: CERRAR SESIÓN
+    ════════════════════════════════════════ --}}
     <div class="overlay" x-show="modal==='cierre'" x-cloak @click.self="modal=''"
          x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
          x-transition:leave="transition duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
-        <div class="modal" @click.stop>
+        <div class="modal" @click.stop
+             x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100">
             <div class="modal-title" style="color:var(--c-red)">⚠ Cerrar sesión de caja</div>
             <div class="modal-desc">Se generará el corte de cierre. No podrás registrar más movimientos en esta sesión.</div>
+            @if($snapshot)
+            <div class="preview-box">
+                <div class="info-row">
+                    <span class="lbl">Total sistema</span>
+                    <span class="val cv-green">${{ number_format($snapshot['totales']['total_sistema'], 2) }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="lbl">Ventas</span>
+                    <span class="val">{{ $snapshot['ventas_count'] }}</span>
+                </div>
+                @if(($snapshot['totales']['retiros'] ?? 0) > 0)
+                <div class="info-row">
+                    <span class="lbl">Retiros realizados</span>
+                    <span class="val cv-red">-${{ number_format($snapshot['totales']['retiros'], 2) }}</span>
+                </div>
+                @endif
+            </div>
+            @endif
             <form method="POST" action="{{ route('caja.cerrar') }}">
                 @csrf
                 <div class="field">
                     <label>Monto declarado <span style="color:var(--c-muted);font-weight:400">(opcional)</span></label>
-                    <input type="number" name="monto_declarado" step="0.01" min="0"
+                    <input type="number" name="monto_declarado" step="0.01" min="0" max="9999999.99"
                            placeholder="{{ $snapshot ? number_format($snapshot['totales']['total_sistema'], 2) : '0.00' }}"
                            class="mono-input">
                     <div class="field-hint">Si lo dejas vacío se usa el total del sistema como declarado.</div>

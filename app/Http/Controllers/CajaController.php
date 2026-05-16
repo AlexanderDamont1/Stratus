@@ -10,35 +10,17 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
-/**
- * CajaController (vendedor — rol 2)
- *
- * Operaciones permitidas al vendedor:
- *   - Ver estado actual de su caja
- *   - Abrir sesión (con fondo inicial)
- *   - Corte parcial (libre, sin restricción)
- *   - Cierre de sesión (libre — sin flujo de autorización, solo log)
- *
- * Operaciones vedadas (ver AdminCajaController):
- *   - Retiros
- *   - Ajustes
- *   - Anular / editar movimientos
- */
 class CajaController extends Controller
 {
     public function __construct()
     {
         $this->middleware(function ($request, $next) {
-            if (auth()->user()?->id_rol !== 2) {
-                abort(403);
-            }
+            if (auth()->user()?->id_rol !== 2) abort(403);
             return $next($request);
         });
     }
 
-    /* ----------------------------------------------------------
-     | INDEX — estado actual de la caja
-     ---------------------------------------------------------- */
+    /* ── INDEX ──────────────────────────────────────────────── */
 
     public function index()
     {
@@ -46,14 +28,12 @@ class CajaController extends Controller
         $caja  = CajaService::cajaDeUsuario($user->id_usuario, $user->id_negocio);
 
         if (!$caja) {
-            // El admin aún no ha creado la caja para esta sucursal
             return view('vendedor.caja.sin-caja');
         }
 
-        $sesion    = CajaService::sesionActiva($caja->id_caja);
-        $snapshot  = $sesion ? CajaService::calcularSnapshot($sesion, 'parcial') : null;
+        $sesion   = CajaService::sesionActiva($caja->id_caja);
+        $snapshot = $sesion ? CajaService::calcularSnapshot($sesion, 'parcial') : null;
 
-        // Historial de las últimas 10 sesiones para referencia
         $historial = CajaSesion::where('id_caja', $caja->id_caja)
             ->orderByDesc('abierta_at')
             ->limit(10)
@@ -62,9 +42,7 @@ class CajaController extends Controller
         return view('vendedor.caja.index', compact('caja', 'sesion', 'snapshot', 'historial'));
     }
 
-    /* ----------------------------------------------------------
-     | ABRIR SESIÓN
-     ---------------------------------------------------------- */
+    /* ── ABRIR ──────────────────────────────────────────────── */
 
     public function abrir(Request $request)
     {
@@ -89,13 +67,12 @@ class CajaController extends Controller
             Log::info('Caja abierta por vendedor', [
                 'id_sesion'  => $sesion->id_sesion,
                 'id_usuario' => $user->id_usuario,
-                'id_negocio' => $user->id_negocio,
                 'fondo'      => $request->fondo_inicial,
             ]);
 
             return redirect()
                 ->route('caja.index')
-                ->with('success', 'Caja abierta correctamente con fondo de $' . number_format($request->fondo_inicial, 2) . '.');
+                ->with('success', 'Caja abierta con fondo de $' . number_format($request->fondo_inicial, 2) . '.');
 
         } catch (\Throwable $e) {
             Log::error('Error al abrir caja', [
@@ -106,9 +83,7 @@ class CajaController extends Controller
         }
     }
 
-    /* ----------------------------------------------------------
-     | CORTE PARCIAL — snapshot sin cerrar
-     ---------------------------------------------------------- */
+    /* ── CORTE PARCIAL ──────────────────────────────────────── */
 
     public function corteParcial()
     {
@@ -133,9 +108,7 @@ class CajaController extends Controller
         }
     }
 
-    /* ----------------------------------------------------------
-     | CIERRE DE SESIÓN
-     ---------------------------------------------------------- */
+    /* ── CERRAR ─────────────────────────────────────────────── */
 
     public function cerrar(Request $request)
     {
@@ -154,20 +127,20 @@ class CajaController extends Controller
 
         try {
             $corte = CajaService::cerrarSesion(
-                sesion:          $sesion,
-                idUsuario:       $user->id_usuario,
-                montoDeclarado:  $request->filled('monto_declarado') ? (float) $request->monto_declarado : null,
-                motivo:          'vendedor',
-                notas:           $request->notas,
+                sesion:         $sesion,
+                idUsuario:      $user->id_usuario,
+                montoDeclarado: $request->filled('monto_declarado')
+                                    ? (float) $request->monto_declarado
+                                    : null,
+                motivo:         'vendedor',
+                notas:          $request->notas,
             );
 
             Log::info('Caja cerrada por vendedor', [
-                'id_sesion'   => $sesion->id_sesion,
-                'id_usuario'  => $user->id_usuario,
-                'diferencia'  => $sesion->fresh()->diferencia,
+                'id_sesion'  => $sesion->id_sesion,
+                'id_usuario' => $user->id_usuario,
             ]);
 
-            // Redirige directo al PDF del corte de cierre
             return redirect()
                 ->route('caja.corte.pdf', $corte->id_corte)
                 ->with('success', 'Caja cerrada correctamente.');
@@ -178,9 +151,7 @@ class CajaController extends Controller
         }
     }
 
-    /* ----------------------------------------------------------
-     | PDF — corte (parcial o cierre)
-     ---------------------------------------------------------- */
+    /* ── PDF ────────────────────────────────────────────────── */
 
     public function cortePdf(string $idCorte)
     {
@@ -190,22 +161,59 @@ class CajaController extends Controller
             ->where('id_negocio', $user->id_negocio)
             ->findOrFail($idCorte);
 
-        // Verificar que el corte pertenece a la sucursal del vendedor
         if ($corte->sesion->caja->id_usuario !== $user->id_usuario) {
             abort(403);
         }
 
         $pdf = Pdf::loadView('vendedor.caja.corte-pdf', [
-            'corte'   => $corte,
-            'sesion'  => $corte->sesion,
-            'negocio' => $corte->sesion->caja->negocio ?? null,
-            'snapshot'=> $corte->snapshot,
-            'fecha'   => now()->format('d/m/Y H:i'),
-        ])->setPaper([0, 0, 226.77, 800], 'portrait'); // ~80mm ticket
+            'corte'    => $corte,
+            'sesion'   => $corte->sesion,
+            'snapshot' => $corte->snapshot,
+            'fecha'    => now()->format('d/m/Y H:i'),
+        ])->setPaper([0, 0, 226.77, 800], 'portrait');
 
         return response()->make($pdf->output(), 200, [
             'Content-Type'        => 'application/pdf',
             'Content-Disposition' => 'inline; filename="corte-' . $idCorte . '.pdf"',
         ]);
+    }
+
+    public function ingreso(Request $request)
+    {
+        $request->validate([
+            'monto'      => 'required|numeric|min:0.01|max:999999.99',
+            'metodo'     => 'required|string|max:50',
+            'concepto'   => 'required|string|max:200',
+            'referencia' => 'nullable|string|max:120',
+        ]);
+
+        $user   = auth()->user();
+        $caja   = CajaService::cajaDeUsuario($user->id_usuario, $user->id_negocio);
+        $sesion = $caja ? CajaService::sesionActiva($caja->id_caja) : null;
+
+        if (!$sesion) {
+            return back()->with('error', 'No hay sesión de caja abierta.');
+        }
+
+        $metodosEfectivo = ['efectivo'];
+        $metodo = $request->metodo;
+        $esEfectivo = in_array($metodo, $metodosEfectivo);
+
+        try {
+            CajaService::registrarIngreso(
+                sesion:       $sesion,
+                idUsuario:    $user->id_usuario,
+                monto:        (float) $request->monto,
+                metodo:       $metodo,
+                metodoLabel:  ucfirst($metodo),
+                esEfectivo:   $esEfectivo,
+                concepto:     $request->concepto,
+                referencia:   $request->referencia,
+            );
+
+            return back()->with('success', 'Ingreso registrado correctamente.');
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Error al registrar ingreso: ' . $e->getMessage());
+        }
     }
 }

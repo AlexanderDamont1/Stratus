@@ -239,25 +239,17 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
         });
 
         //Caja
-        Route::prefix('admin/cajas')->name('admin.cajas.')->group(function () {
 
-            // Vista consolidada de todas las sucursales
-            Route::get('/', [AdminCajaController::class, 'index'])->name('index');
-
-            // Crear caja para una sucursal
-            Route::post('/', [AdminCajaController::class, 'store'])->name('store');
-
-            // Detalle + historial de una sucursal específica
-            Route::get('/{idUsuario}', [AdminCajaController::class, 'show'])->name('show');
-
-            // Operaciones sobre la sesión activa de una sucursal
-            Route::post('/{idUsuario}/retiro', [AdminCajaController::class, 'retiro'])->name('retiro');
-            Route::post('/{idUsuario}/ingreso', [AdminCajaController::class, 'ingreso'])->name('ingreso');
-            Route::post('/{idUsuario}/ajuste', [AdminCajaController::class, 'ajuste'])->name('ajuste');
+        Route::prefix('admin/cajas')->name('admin.cajas.')->middleware('auth')->group(function () {
+            Route::get('/',                          [AdminCajaController::class, 'index'])->name('index');
+            Route::get('/{idUsuario}',               [AdminCajaController::class, 'show'])->name('show');
+            Route::post('/store',                    [AdminCajaController::class, 'store'])->name('store');
+            Route::post('/{idUsuario}/ingreso',      [AdminCajaController::class, 'ingreso'])->name('ingreso');
+            Route::post('/{idUsuario}/retiro',       [AdminCajaController::class, 'retiro'])->name('retiro');
+            Route::post('/{idUsuario}/ajuste',       [AdminCajaController::class, 'ajuste'])->name('ajuste');
             Route::post('/{idUsuario}/cerrar-forzado', [AdminCajaController::class, 'cerrarForzado'])->name('cerrar.forzado');
+            Route::get('/corte/{id}',                [AdminCajaController::class, 'cortePdf'])->name('corte.pdf');
 
-            // PDF de cualquier corte del negocio
-            Route::get('/corte/{id}/pdf', [AdminCajaController::class, 'cortePdf'])->name('corte.pdf');
         });
 
 
@@ -304,15 +296,6 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
             Route::post('/', [PersonalController::class, 'store'])->name('store');
             Route::put('/{id}', [PersonalController::class, 'update'])->name('update');
             Route::delete('/{id}', [PersonalController::class, 'destroy'])->name('destroy');
-        });
-
-        // Métodos de pago
-        Route::prefix('admin/metodos-pago')->name('admin.metodos_pago.')->group(function () {
-            Route::get('/', [MetodoPagoController::class, 'index'])->name('index');
-            Route::post('/', [MetodoPagoController::class, 'store'])->name('store');
-            Route::put('/{id}', [MetodoPagoController::class, 'update'])->name('update');
-            Route::post('/reordenar', [MetodoPagoController::class, 'reordenar'])->name('reordenar');
-            Route::delete('/{id}', [MetodoPagoController::class, 'destroy'])->name('destroy');
         });
 
         // Catálogo
@@ -526,15 +509,12 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
         });
 
         Route::prefix('sucursal/caja')->name('caja.')->group(function () {
-
-            Route::get('/', [CajaController::class, 'index'])->name('index');
-            Route::post('/abrir', [CajaController::class, 'abrir'])->name('abrir');
-            Route::post('/cerrar', [CajaController::class, 'cerrar'])->name('cerrar');
+            Route::get('/',               [CajaController::class, 'index'])->name('index');
+            Route::post('/abrir',         [CajaController::class, 'abrir'])->name('abrir');
+            Route::post('/cerrar',        [CajaController::class, 'cerrar'])->name('cerrar');
             Route::post('/corte-parcial', [CajaController::class, 'corteParcial'])->name('corte.parcial');
-            Route::get('/corte/{id}/pdf', [CajaController::class, 'cortePdf'])->name('corte.pdf');
-
-            // Ingreso manual — el vendedor puede registrarlo (queda en log con origen_rol=2)
-            Route::post('/ingreso', [AdminCajaController::class, 'ingresoVendedor'])->name('ingreso.vendedor');
+            Route::get('/corte/{id}',     [CajaController::class, 'cortePdf'])->name('corte.pdf');
+            Route::post('/ingreso',       [CajaController::class, 'ingreso'])->name('ingreso'); // ← nueva
         });
 
         Route::get('/sucursal/personal', [PersonalController::class, 'porSucursal'])->name('personal.por-sucursal');

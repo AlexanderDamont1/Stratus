@@ -333,39 +333,29 @@
                 @endmodulo
 
                 <div class="nav-divider"></div>
-                <p class="nav-group-label">Finanzas</p>
 
-                <a href="{{ route('admin.metodos_pago.index') }}"
-                   class="nav-item {{ request()->routeIs('admin.metodos_pago.*') ? 'nav-item-active' : 'nav-item-inactive' }}"
-                   @click="open = false">
-                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                    </svg>
-                    <span class="flex-1 truncate">Métodos de pago</span>
-                </a>
-
+                
                 <div class="nav-group-label">Finanzas</div>
  
-<a href="{{ route('admin.cajas.index') }}"
-   class="nav-item flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors
-          {{ request()->routeIs('admin.cajas.*') ? 'bg-white/8 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5' }}">
-    <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75"
-              d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
-    </svg>
-    <span>Cajas</span>
-    {{-- Indicador si hay sesiones abiertas --}}
-    @php
-        $cajasAbiertas = \App\Models\CajaSesion::whereHas('caja', fn($q) => $q->where('id_negocio', auth()->user()->id_negocio))
-            ->where('estado', 'abierta')->count();
-    @endphp
-    @if($cajasAbiertas > 0)
-        <span class="ml-auto text-xs bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-full">
-            {{ $cajasAbiertas }}
-        </span>
-    @endif
-</a>
+                <a href="{{ route('admin.cajas.index') }}"
+                class="nav-item flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors
+                        {{ request()->routeIs('admin.cajas.*') ? 'bg-white/8 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5' }}">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                    <span>Cajas</span>
+                    {{-- Indicador si hay sesiones abiertas --}}
+                    @php
+                        $cajasAbiertas = \App\Models\CajaSesion::whereHas('caja', fn($q) => $q->where('id_negocio', auth()->user()->id_negocio))
+                            ->where('estado', 'abierta')->count();
+                    @endphp
+                    @if($cajasAbiertas > 0)
+                        <span class="ml-auto text-xs bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-full">
+                            {{ $cajasAbiertas }}
+                        </span>
+                    @endif
+                </a>
 
                 <a href="{{ route('admin.cupones.index') }}"
                    class="nav-item {{ request()->routeIs('admin.cupones.*') ? 'nav-item-active' : 'nav-item-inactive' }}"
