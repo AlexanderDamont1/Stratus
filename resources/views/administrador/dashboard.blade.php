@@ -43,7 +43,27 @@
     }"
     class="space-y-6"
 >
-    {{-- ===== MENSAJE FLASH ===== --}}
+   
+
+    {{-- ===== ENCABEZADO ===== --}}
+    <div class="flex justify-between items-center">
+        <div>
+            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Inicio</h2>
+            <p class="text-xs text-gray-400 mt-0.5">Bienvenido, {{ auth()->user()->nombre_usuario }}</p>
+        </div>
+        {{-- Botón solo visible si no hay enlace Y no fue cancelado por el gestor --}}
+        <button
+            x-show="!enlaceEstado && !enlaceCancelado"
+            x-cloak
+            @click="tokenModal = true"
+            class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-md text-sm hover:opacity-90 transition"
+        >
+            + Generar token de enlace
+        </button>
+    </div>
+
+
+     {{-- ===== MENSAJE FLASH ===== --}}
     @if(session('success'))
     <div class="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 animate-fade-in"
          x-data="{ show: true }"
@@ -70,24 +90,7 @@
         </div>
     </div>
     @endif
-
-    {{-- ===== ENCABEZADO ===== --}}
-    <div class="flex justify-between items-center">
-        <div>
-            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Inicio</h2>
-            <p class="text-xs text-gray-400 mt-0.5">Bienvenido, {{ auth()->user()->nombre_usuario }}</p>
-        </div>
-        {{-- Botón solo visible si no hay enlace Y no fue cancelado por el gestor --}}
-        <button
-            x-show="!enlaceEstado && !enlaceCancelado"
-            x-cloak
-            @click="tokenModal = true"
-            class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-md text-sm hover:opacity-90 transition"
-        >
-            + Generar token de enlace
-        </button>
-    </div>
-
+    
     {{-- ===== TARJETA DE ENLACE ===== --}}
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
         <div class="px-6 py-4 border-b dark:border-gray-700 flex items-center justify-between">

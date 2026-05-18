@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
 class Voltaje extends Model
 {
-    use HasUuids;
 
     protected $table      = 'voltajes';
     protected $primaryKey = 'id_voltaje';

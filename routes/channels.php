@@ -69,3 +69,10 @@ Broadcast::channel('negocio.{idNegocio}', function ($user, $idNegocio) {
 Broadcast::channel('root', function ($user) {
     return $user->id_rol === 0;
 });
+
+
+
+ 
+Broadcast::channel('audit.root', function ($user) {
+    return (int) $user->id_rol === 0;
+});

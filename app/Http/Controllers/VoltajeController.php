@@ -24,15 +24,11 @@ class VoltajeController extends Controller
         if (!in_array($user->id_rol, [1, 5])) abort(403);
 
         if ($user->id_rol === 5) {
-           
             $voltajes = CatalogService::getAllVoltajes(paginar: true);
-
             return view('gestor.Vehiculos.voltaje.index', compact('voltajes'));
         }
 
-       
         $voltajes = CatalogService::getVoltajesByNegocio($user->id_negocio, paginar: true);
-
         return view('gestor.Vehiculos.voltaje.index', compact('voltajes'));
     }
 
@@ -41,9 +37,7 @@ class VoltajeController extends Controller
     public function create()
     {
         $user = auth()->user();
-
         if (!in_array($user->id_rol, [1, 5])) abort(403);
-
         return view('gestor.Vehiculos.voltaje.create');
     }
 
@@ -73,6 +67,18 @@ class VoltajeController extends Controller
 
         CatalogService::invalidateVoltaje($voltaje->id_voltaje, $idNegocio);
 
+        // ── JSON para fetch (sin recarga) ────────────────────────────────
+        if ($request->wantsJson()) {
+            return response()->json([
+                'ok'      => true,
+                'mensaje' => 'Voltaje creado correctamente.',
+                'voltaje' => [
+                    'id_voltaje' => $voltaje->id_voltaje,
+                    'voltaje'    => $voltaje->voltaje,
+                ],
+            ]);
+        }
+
         return redirect()
             ->route($this->routeByRol('voltajes'))
             ->with('success', 'Voltaje creado correctamente.');
@@ -85,9 +91,7 @@ class VoltajeController extends Controller
         $user = auth()->user();
 
         if (!in_array($user->id_rol, [1, 5])) abort(403);
-
         if ($user->id_rol === 1 && $voltaje->id_negocio !== $user->id_negocio) abort(403);
-
         if ($user->id_rol === 5 && !is_null($voltaje->id_negocio)) abort(403);
 
         return view('gestor.Vehiculos.voltaje.edit', compact('voltaje'));
@@ -101,9 +105,7 @@ class VoltajeController extends Controller
         $idNegocio = $voltaje->id_negocio;
 
         if (!in_array($user->id_rol, [1, 5])) abort(403);
-
         if ($user->id_rol === 1 && $voltaje->id_negocio !== $user->id_negocio) abort(403);
-
         if ($user->id_rol === 5 && !is_null($voltaje->id_negocio)) abort(403);
 
         $request->validate([
@@ -118,8 +120,14 @@ class VoltajeController extends Controller
         $voltaje->update(['voltaje' => $request->voltaje]);
 
         CatalogoActualizado::dispatch($user->id_negocio, 'voltaje', 'actualizado', '');
-
         CatalogService::invalidateVoltaje($voltaje->id_voltaje, $idNegocio);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'ok'      => true,
+                'mensaje' => 'Voltaje actualizado correctamente.',
+            ]);
+        }
 
         return redirect()
             ->route($this->routeByRol('voltajes'))
@@ -128,14 +136,12 @@ class VoltajeController extends Controller
 
     // ─── DESTROY ─────────────────────────────────────────────────────────────
 
-    public function destroy(Voltaje $voltaje)
+    public function destroy(Request $request, Voltaje $voltaje)
     {
         $user = auth()->user();
 
         if (!in_array($user->id_rol, [1, 5])) abort(403);
-
         if ($user->id_rol === 1 && $voltaje->id_negocio !== $user->id_negocio) abort(403);
-
         if ($user->id_rol === 5 && !is_null($voltaje->id_negocio)) abort(403);
 
         $tieneBicicletas = ModeloVoltaje::where('id_voltaje', $voltaje->id_voltaje)
@@ -143,6 +149,12 @@ class VoltajeController extends Controller
             ->exists();
 
         if ($tieneBicicletas) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'ok'      => false,
+                    'mensaje' => 'No se puede eliminar: tiene bicicletas asociadas.',
+                ], 422);
+            }
             return back()->with('error', 'No se puede eliminar: tiene bicicletas asociadas.');
         }
 
@@ -153,6 +165,14 @@ class VoltajeController extends Controller
         $voltaje->delete();
 
         CatalogService::invalidateVoltaje($idVoltaje, $idNegocio);
+
+        // ── JSON para fetch (sin recarga) ────────────────────────────────
+        if ($request->wantsJson()) {
+            return response()->json([
+                'ok'      => true,
+                'mensaje' => 'Voltaje eliminado correctamente.',
+            ]);
+        }
 
         return redirect()
             ->route($this->routeByRol('voltajes'))
