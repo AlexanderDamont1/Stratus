@@ -1,597 +1,565 @@
-{{-- resources/views/administrador/cajas/show.blade.php --}}
 <x-app-layout>
-<style>
-:root{
-    --c-bg:#0d1117;--c-surface:#161b22;--c-border:#21262d;--c-border2:#30363d;
-    --c-text:#e6edf3;--c-muted:#8b949e;
-    --c-green:#3fb950;--c-green-d:rgba(63,185,80,.12);
-    --c-red:#f85149;--c-red-d:rgba(248,81,73,.12);
-    --c-blue:#58a6ff;--c-blue-d:rgba(88,166,255,.1);
-    --c-yellow:#d29922;--c-yellow-d:rgba(210,153,34,.12);
-    --c-accent:#f0b429;
-    --mono:'JetBrains Mono','Fira Code','Courier New',monospace;
-}
-*{box-sizing:border-box;}
-body{background:var(--c-bg);color:var(--c-text);font-family:'Inter',system-ui,sans-serif;}
 
-.page{max-width:960px;margin:0 auto;padding:1.75rem 1.25rem 4rem;}
+    <div class="space-y-6" x-data="{ modal: '', ajusteDir: 1 }">
 
-/* Breadcrumb */
-.breadcrumb{display:flex;align-items:center;gap:.5rem;font-size:.75rem;color:var(--c-muted);margin-bottom:1.25rem;}
-.breadcrumb a{color:var(--c-muted);text-decoration:none;}
-.breadcrumb a:hover{color:var(--c-text);}
-.breadcrumb-sep{color:var(--c-border2);}
-
-/* Header */
-.page-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1.75rem;flex-wrap:wrap;}
-.page-hd h1{font-size:1.3rem;font-weight:700;letter-spacing:-.02em;margin:0 0 .2rem;}
-.page-hd p{font-size:.78rem;color:var(--c-muted);margin:0;font-family:var(--mono);}
-
-/* Alerts */
-.alert{display:flex;align-items:flex-start;gap:.6rem;padding:.85rem 1rem;border-radius:8px;font-size:.82rem;margin-bottom:1.25rem;line-height:1.45;}
-.alert-ok{background:var(--c-green-d);color:var(--c-green);border:1px solid rgba(63,185,80,.25);}
-.alert-err{background:var(--c-red-d);color:var(--c-red);border:1px solid rgba(248,81,73,.25);}
-.alert svg{flex-shrink:0;margin-top:.1rem;}
-
-/* Pills */
-.pill{display:inline-flex;align-items:center;gap:.35rem;padding:.24rem .7rem;border-radius:99px;font-size:.68rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;}
-.pill-open{background:var(--c-green-d);color:var(--c-green);border:1px solid rgba(63,185,80,.3);}
-.pill-closed{background:rgba(139,148,158,.1);color:var(--c-muted);border:1px solid var(--c-border2);}
-.pill-dot{width:5px;height:5px;border-radius:50%;background:currentColor;animation:blink 2s ease infinite;}
-@keyframes blink{0%,100%{opacity:1}60%{opacity:.25}}
-
-/* Cards */
-.card{background:var(--c-surface);border:1px solid var(--c-border);border-radius:10px;padding:1.35rem;}
-.mt1{margin-top:1rem;}.mt15{margin-top:1.5rem;}
-.card-lbl{font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--c-muted);margin-bottom:.85rem;}
-
-/* Stats */
-.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.65rem;margin-bottom:1.1rem;}
-.stat{background:#0d1117;border:1px solid var(--c-border);border-radius:8px;padding:.9rem 1rem;}
-.stat-lbl{font-size:.62rem;color:var(--c-muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:.3rem;}
-.stat-val{font-size:1.35rem;font-weight:700;font-family:var(--mono);line-height:1;}
-.green{color:var(--c-green);}.yellow{color:var(--c-accent);}.red{color:var(--c-red);}.blue{color:var(--c-blue);}
-
-/* Métodos */
-.metodo-row{display:flex;align-items:center;justify-content:space-between;padding:.55rem 0;border-bottom:1px dashed var(--c-border);font-size:.82rem;}
-.metodo-row:last-child{border-bottom:none;}
-.metodo-name{display:flex;align-items:center;gap:.5rem;}
-.metodo-icon{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.78rem;background:var(--c-blue-d);}
-.metodo-val{font-family:var(--mono);font-weight:600;color:var(--c-green);}
-
-/* Info row */
-.info-row{display:flex;justify-content:space-between;align-items:center;font-size:.79rem;padding:.28rem 0;}
-.info-row .lbl{color:var(--c-muted);}
-.info-row .val{font-family:var(--mono);font-weight:600;font-size:.77rem;}
-hr.sep{border:none;border-top:1px solid var(--c-border);margin:.85rem 0;}
-
-/* Actions bar */
-.actions{display:flex;flex-wrap:wrap;gap:.6rem;}
-
-/* Buttons */
-.btn{display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1rem;border-radius:7px;font-weight:600;font-size:.78rem;cursor:pointer;border:none;transition:.15s;letter-spacing:.01em;text-decoration:none;font-family:inherit;}
-.btn-primary{background:var(--c-accent);color:#0d1117;}
-.btn-primary:hover{background:#d4961e;}
-.btn-ghost{background:transparent;color:var(--c-muted);border:1px solid var(--c-border2);}
-.btn-ghost:hover{color:var(--c-text);border-color:var(--c-muted);}
-.btn-danger{background:var(--c-red-d);color:var(--c-red);border:1px solid rgba(248,81,73,.3);}
-.btn-danger:hover{background:rgba(248,81,73,.2);}
-.btn-blue{background:var(--c-blue-d);color:var(--c-blue);border:1px solid rgba(88,166,255,.3);}
-.btn-blue:hover{background:rgba(88,166,255,.18);}
-.btn-yellow{background:var(--c-yellow-d);color:var(--c-yellow);border:1px solid rgba(210,153,34,.3);}
-.btn-yellow:hover{background:rgba(210,153,34,.2);}
-.btn-sm{padding:.35rem .72rem;font-size:.71rem;}
-
-/* No-sesión state */
-.no-sesion{text-align:center;padding:2rem 1rem;}
-.no-sesion-icon{font-size:2.2rem;margin-bottom:.75rem;}
-.no-sesion-txt{font-size:.82rem;color:var(--c-muted);line-height:1.5;}
-
-/* No-caja state */
-.no-caja-box{text-align:center;padding:2.5rem 1.5rem;}
-.no-caja-icon{font-size:2.5rem;margin-bottom:.85rem;}
-.no-caja-title{font-size:1rem;font-weight:700;margin-bottom:.4rem;}
-.no-caja-desc{font-size:.82rem;color:var(--c-muted);line-height:1.5;margin-bottom:1.5rem;}
-
-/* Historial table */
-.tbl-wrap{overflow-x:auto;}
-table.hist{width:100%;border-collapse:collapse;font-size:.79rem;}
-table.hist th{text-align:left;font-size:.61rem;text-transform:uppercase;letter-spacing:.07em;color:var(--c-muted);padding:.5rem .65rem;border-bottom:1px solid var(--c-border);font-weight:700;white-space:nowrap;}
-table.hist td{padding:.62rem .65rem;border-bottom:1px solid #0d1117;vertical-align:middle;}
-table.hist tr:last-child td{border-bottom:none;}
-table.hist tr:hover td{background:rgba(255,255,255,.02);}
-.mono{font-family:var(--mono);}
-
-/* Chips */
-.chip{display:inline-block;padding:.16rem .48rem;border-radius:4px;font-size:.62rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;}
-.chip-open{background:var(--c-green-d);color:var(--c-green);}
-.chip-closed{background:var(--c-red-d);color:var(--c-red);}
-.chip-auto{background:rgba(139,148,158,.12);color:var(--c-muted);}
-.chip-vendedor{background:var(--c-blue-d);color:var(--c-blue);}
-.chip-admin{background:var(--c-yellow-d);color:var(--c-yellow);}
-
-/* Pagination */
-.pagination{display:flex;gap:.4rem;justify-content:center;margin-top:1.25rem;flex-wrap:wrap;}
-.pagination a,.pagination span{display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:32px;padding:0 .5rem;border-radius:6px;font-size:.75rem;font-weight:600;text-decoration:none;border:1px solid var(--c-border);color:var(--c-muted);transition:.15s;}
-.pagination a:hover{border-color:var(--c-border2);color:var(--c-text);}
-.pagination .active span{background:var(--c-accent);color:#0d1117;border-color:var(--c-accent);}
-.pagination .disabled span{opacity:.35;cursor:default;}
-
-/* Modals */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(3px);z-index:900;display:flex;align-items:center;justify-content:center;padding:1rem;}
-.modal{background:var(--c-surface);border:1px solid var(--c-border2);border-radius:12px;padding:1.75rem;width:100%;max-width:430px;box-shadow:0 20px 50px rgba(0,0,0,.6);}
-.modal-title{font-size:1.05rem;font-weight:700;margin-bottom:.3rem;}
-.modal-desc{font-size:.8rem;color:var(--c-muted);margin-bottom:1.4rem;line-height:1.5;}
-.modal-footer{display:flex;justify-content:flex-end;gap:.6rem;margin-top:1.4rem;}
-
-/* Fields */
-.field{margin-bottom:.9rem;}
-.field label{display:block;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--c-muted);margin-bottom:.38rem;}
-.field input,.field textarea,.field select{width:100%;background:#0d1117;border:1px solid var(--c-border2);border-radius:6px;padding:.58rem .78rem;color:var(--c-text);font-size:.88rem;font-family:inherit;outline:none;transition:border-color .15s;}
-.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--c-blue);}
-.field .mono-input{font-family:var(--mono);font-size:1rem;}
-.field-hint{font-size:.67rem;color:var(--c-muted);margin-top:.3rem;}
-
-/* Toggle dirs (ajuste) */
-.dir-toggle{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.9rem;}
-.dir-opt{padding:.6rem;border:1px solid var(--c-border2);border-radius:6px;text-align:center;cursor:pointer;font-size:.78rem;font-weight:600;transition:.15s;user-select:none;}
-.dir-opt:hover{border-color:var(--c-border2);opacity:.85;}
-.dir-entrada{border-color:rgba(63,185,80,.4)!important;background:var(--c-green-d)!important;color:var(--c-green)!important;}
-.dir-salida{border-color:rgba(248,81,73,.4)!important;background:var(--c-red-d)!important;color:var(--c-red)!important;}
-
-@media(max-width:580px){
-    .stat-grid{grid-template-columns:1fr 1fr;}
-    .stat-val{font-size:1.1rem;}
-    table.hist{font-size:.72rem;}
-    table.hist th,table.hist td{padding:.45rem .38rem;}
-}
-</style>
-
-<div class="page" x-data="showCaja()" x-init="init()">
-
-    {{-- Breadcrumb --}}
-    <div class="breadcrumb">
-        <a href="{{ route('admin.cajas.index') }}">← Cajas</a>
-        <span class="breadcrumb-sep">/</span>
-        <span>{{ $sucursal->nombre_usuario }}</span>
-    </div>
-
-    {{-- Alertas --}}
-    @if(session('success'))
-    <div class="alert alert-ok">
-        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 11 4 11"/></svg>
-        {{ session('success') }}
-    </div>
-    @endif
-    @if(session('error'))
-    <div class="alert alert-err">
-        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        {{ session('error') }}
-    </div>
-    @endif
-
-    {{-- Header --}}
-    <div class="page-hd">
-        <div>
-            <h1>🏧 {{ $sucursal->nombre_usuario }}</h1>
-            <p>
-                {{ $caja->nombre ?? 'Sin caja' }}
-                @if($caja) &nbsp;·&nbsp; {{ $caja->id_caja }} @endif
-            </p>
+        {{-- ===== ALERTAS ===== --}}
+        @if(session('success'))
+        <div class="flex items-center gap-2 px-4 py-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-700 dark:text-green-400">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" stroke-width="2.5"/></svg>
+            {{ session('success') }}
         </div>
-        @if($sesion)
-            <span class="pill pill-open"><span class="pill-dot"></span>Sesión abierta</span>
-        @elseif($caja)
-            <span class="pill pill-closed">Sesión cerrada</span>
         @endif
-    </div>
-
-    {{-- ════════ SIN CAJA ════════ --}}
-    @if(!$caja)
-    <div class="card">
-        <div class="no-caja-box">
-            <div class="no-caja-icon">📭</div>
-            <div class="no-caja-title">Esta sucursal no tiene caja asignada</div>
-            <div class="no-caja-desc">Crea una caja para que el vendedor pueda abrir sesiones y registrar movimientos.</div>
-            <button type="button" class="btn btn-primary" @click="modal='crear'">
-                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                Crear caja para esta sucursal
-            </button>
+        @if(session('error'))
+        <div class="flex items-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-400">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><line x1="12" y1="8" x2="12" y2="12" stroke-width="2"/><line x1="12" y1="16" x2="12.01" y2="16" stroke-width="2"/></svg>
+            {{ session('error') }}
         </div>
-    </div>
+        @endif
 
-    @else
-
-    {{-- ════════ CON CAJA — SESIÓN ACTIVA ════════ --}}
-    @if($sesion && $snapshot)
-    <div class="card">
-        <div class="card-lbl">Sesión activa — resumen</div>
-        <div class="stat-grid">
-            <div class="stat">
-                <div class="stat-lbl">Total sistema</div>
-                <div class="stat-val green">${{ number_format($snapshot['totales']['total_sistema'], 2) }}</div>
-            </div>
-            <div class="stat">
-                <div class="stat-lbl">Fondo inicial</div>
-                <div class="stat-val">${{ number_format($snapshot['sesion']['fondo_inicial'], 2) }}</div>
-            </div>
-            <div class="stat">
-                <div class="stat-lbl">Ventas</div>
-                <div class="stat-val yellow">${{ number_format($snapshot['totales']['ingresos_ventas'], 2) }}</div>
-            </div>
-            <div class="stat">
-                <div class="stat-lbl"># Ventas</div>
-                <div class="stat-val">{{ $snapshot['ventas_count'] }}</div>
-            </div>
-            @if($snapshot['totales']['ingresos_manuales'] > 0)
-            <div class="stat">
-                <div class="stat-lbl">Ing. manuales</div>
-                <div class="stat-val blue">${{ number_format($snapshot['totales']['ingresos_manuales'], 2) }}</div>
-            </div>
-            @endif
-            @if($snapshot['totales']['retiros'] > 0)
-            <div class="stat">
-                <div class="stat-lbl">Retiros</div>
-                <div class="stat-val red">${{ number_format($snapshot['totales']['retiros'], 2) }}</div>
-            </div>
-            @endif
-            @if($snapshot['totales']['ajustes_neto'] != 0)
-            <div class="stat">
-                <div class="stat-lbl">Ajustes neto</div>
-                <div class="stat-val {{ $snapshot['totales']['ajustes_neto'] >= 0 ? 'green' : 'red' }}">
-                    {{ $snapshot['totales']['ajustes_neto'] >= 0 ? '+' : '' }}${{ number_format($snapshot['totales']['ajustes_neto'], 2) }}
+        {{-- ===== ENCABEZADO ===== --}}
+        <div class="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+                <div class="flex items-center gap-2 text-xs text-gray-400 mb-1">
+                    <a href="{{ route('admin.cajas.index') }}" class="hover:text-gray-600 dark:hover:text-gray-200 transition">← Cajas</a>
+                    <span>/</span>
+                    <span>{{ $sucursal->nombre_usuario }}</span>
                 </div>
+                <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">{{ $sucursal->nombre_usuario }}</h2>
+                <p class="text-xs text-gray-400 mt-0.5 font-mono">
+                    {{ $caja->nombre ?? 'Sin caja asignada' }}
+                    @if($caja) &nbsp;·&nbsp; {{ $caja->id_caja }} @endif
+                </p>
             </div>
+            @if($sesion)
+                <span class="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-400">
+                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>Sesión abierta
+                </span>
+            @elseif($caja)
+                <span class="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">Sesión cerrada</span>
             @endif
         </div>
 
-        @if(!empty($snapshot['por_metodo']))
-        <div class="card-lbl">Por método de pago</div>
-        @foreach($snapshot['por_metodo'] as $m)
-        <div class="metodo-row">
-            <div class="metodo-name">
-                <div class="metodo-icon">{{ $m['es_efectivo'] ? '💵' : '💳' }}</div>
-                <span>{{ $m['nombre'] }}</span>
-            </div>
-            <span class="metodo-val">${{ number_format($m['total'], 2) }}</span>
-        </div>
-        @endforeach
-        @endif
-
-        <hr class="sep">
-        <div class="info-row">
-            <span class="lbl">Abierta por</span>
-            <span class="val">{{ $snapshot['usuario']['nombre_usuario'] }}</span>
-        </div>
-        <div class="info-row">
-            <span class="lbl">Desde</span>
-            <span class="val">{{ \Carbon\Carbon::parse($snapshot['sesion']['abierta_at'])->format('d/m/Y H:i') }}</span>
-        </div>
-        <div class="info-row">
-            <span class="lbl">ID sesión</span>
-            <span class="val" style="font-size:.66rem">{{ $sesion->id_sesion }}</span>
-        </div>
-    </div>
-
-    {{-- Operaciones admin sobre la sesión activa --}}
-    <div class="card mt1">
-        <div class="card-lbl">Operaciones de administrador</div>
-        <div class="actions">
-            <button type="button" class="btn btn-blue" @click="modal='ingreso'">
-                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                Registrar ingreso
-            </button>
-            <button type="button" class="btn btn-ghost" @click="modal='retiro'">
-                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                Registrar retiro
-            </button>
-            <button type="button" class="btn btn-yellow" @click="modal='ajuste'">
-                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
-                Ajuste contable
-            </button>
-            <button type="button" class="btn btn-danger" @click="modal='cierre'">
-                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                Forzar cierre
-            </button>
-        </div>
-    </div>
-
-    @else
-    {{-- Sesión cerrada --}}
-    <div class="card">
-        <div class="no-sesion">
-            <div class="no-sesion-icon">🔒</div>
-            <div class="no-sesion-txt">
-                No hay sesión activa en esta caja.<br>
-                El vendedor debe abrir la sesión desde su panel.
+        {{-- ══════════════════════════════════════════════
+             SIN CAJA
+        ══════════════════════════════════════════════ --}}
+        @if(!$caja)
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+            <div class="text-center py-16 px-6">
+                <div class="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                        <path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                    </svg>
+                </div>
+                <h3 class="text-base font-semibold text-gray-900 dark:text-white mb-1">Esta sucursal no tiene caja asignada</h3>
+                <p class="text-sm text-gray-400 mb-6 max-w-xs mx-auto">Crea una caja para que el vendedor pueda abrir sesiones y registrar movimientos.</p>
+                <button type="button" @click="modal = 'crear'"
+                    class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition inline-flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Crear caja para esta sucursal
+                </button>
             </div>
         </div>
-    </div>
-    @endif
 
-    {{-- ════════ HISTORIAL DE SESIONES ════════ --}}
-    <div class="card mt15">
-        <div class="card-lbl">Historial de sesiones</div>
-
-        @if($historial instanceof \Illuminate\Pagination\LengthAwarePaginator ? $historial->isEmpty() : $historial->isEmpty())
-        <div style="text-align:center;padding:1.5rem;font-size:.82rem;color:var(--c-muted);">
-            No hay sesiones registradas aún.
-        </div>
         @else
-        <div class="tbl-wrap">
-            <table class="hist">
-                <thead>
-                    <tr>
-                        <th>Apertura</th>
-                        <th>Cierre</th>
-                        <th>Duración</th>
-                        <th>Fondo</th>
-                        <th>Sistema</th>
-                        <th>Declarado</th>
-                        <th>Diferencia</th>
-                        <th>Motivo</th>
-                        <th>Estado</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                @foreach($historial as $ses)
-                @php $corteRec = $ses->cortes()->orderByDesc('created_at')->first(); @endphp
-                <tr>
-                    <td style="white-space:nowrap">{{ $ses->abierta_at?->format('d/m/Y H:i') }}</td>
-                    <td style="white-space:nowrap">{{ $ses->cerrada_at?->format('d/m/Y H:i') ?? '—' }}</td>
-                    <td>{{ $ses->duracion }}</td>
-                    <td class="mono">${{ number_format($ses->fondo_inicial, 2) }}</td>
-                    <td class="mono">${{ number_format($ses->monto_cierre_sistema ?? 0, 2) }}</td>
-                    <td class="mono">
-                        @if($ses->monto_cierre_declarado !== null)
-                            ${{ number_format($ses->monto_cierre_declarado, 2) }}
-                        @else —
-                        @endif
-                    </td>
-                    <td class="mono" style="color:{{ ($ses->diferencia ?? 0) < 0 ? 'var(--c-red)' : 'var(--c-green)' }}">
-                        @if($ses->diferencia !== null)
-                            {{ $ses->diferencia >= 0 ? '+' : '' }}${{ number_format($ses->diferencia, 2) }}
-                        @else —
-                        @endif
-                    </td>
-                    <td>
-                        @if($ses->motivo_cierre === 'admin')
-                            <span class="chip chip-admin">Admin</span>
-                        @elseif($ses->motivo_cierre === 'vendedor')
-                            <span class="chip chip-vendedor">Vendedor</span>
-                        @elseif($ses->motivo_cierre === 'sistema')
-                            <span class="chip chip-auto">Sistema</span>
-                        @else
-                            <span style="color:var(--c-muted);font-size:.75rem">—</span>
-                        @endif
-                    </td>
-                    <td>
-                        @if($ses->estado === 'abierta')         <span class="chip chip-open">Abierta</span>
-                        @elseif($ses->estado === 'auto_cerrada') <span class="chip chip-auto">Auto</span>
-                        @else                                    <span class="chip chip-closed">Cerrada</span>
-                        @endif
-                    </td>
-                    <td>
-                        @if($corteRec)
-                        <a href="{{ route('admin.cajas.corte.pdf', $corteRec->id_corte) }}" target="_blank" class="btn btn-ghost btn-sm">PDF</a>
-                        @endif
-                    </td>
-                </tr>
-                @endforeach
-                </tbody>
-            </table>
-        </div>
 
-        {{-- Paginación --}}
-        @if($historial instanceof \Illuminate\Pagination\LengthAwarePaginator && $historial->hasPages())
-        <div class="pagination">
-            {{-- Anterior --}}
-            @if($historial->onFirstPage())
-                <span class="disabled"><span>‹</span></span>
-            @else
-                <a href="{{ $historial->previousPageUrl() }}">‹</a>
-            @endif
+        {{-- ══════════════════════════════════════════════
+             CON CAJA — SESIÓN ACTIVA
+        ══════════════════════════════════════════════ --}}
+        @if($sesion && $snapshot)
 
-            @foreach($historial->getUrlRange(1, $historial->lastPage()) as $page => $url)
-                @if($page == $historial->currentPage())
-                    <span class="active"><span>{{ $page }}</span></span>
-                @else
-                    <a href="{{ $url }}">{{ $page }}</a>
-                @endif
-            @endforeach
+        {{-- Card principal --}}
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden flex flex-col">
 
-            {{-- Siguiente --}}
-            @if($historial->hasMorePages())
-                <a href="{{ $historial->nextPageUrl() }}">›</a>
-            @else
-                <span class="disabled"><span>›</span></span>
-            @endif
-        </div>
-        @endif
-        @endif
-    </div>
+            {{-- Cabecera --}}
+            <div class="px-5 py-4 border-b dark:border-gray-700 flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ $sucursal->nombre_usuario }}</p>
+                    <p class="text-xs text-gray-400 font-mono mt-0.5 truncate">{{ $caja->nombre ?? 'Caja principal' }}</p>
+                </div>
+                <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-400 shrink-0 flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>Abierta
+                </span>
+            </div>
 
-    @endif {{-- fin @if(!$caja) --}}
+            {{-- Stats grid --}}
+            <div class="px-5 py-4 flex-1">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+                    <div class="bg-gray-50 dark:bg-gray-900 rounded-lg px-3 py-2.5">
+                        <p class="text-xs text-gray-400 uppercase tracking-wider mb-0.5">Total sistema</p>
+                        <p class="text-lg font-semibold text-green-600 dark:text-green-400 font-mono">${{ number_format($snapshot['totales']['total_sistema'], 2) }}</p>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-900 rounded-lg px-3 py-2.5">
+                        <p class="text-xs text-gray-400 uppercase tracking-wider mb-0.5">Ventas</p>
+                        <p class="text-lg font-semibold text-yellow-600 dark:text-yellow-400 font-mono">${{ number_format($snapshot['totales']['ingresos_ventas'], 2) }}</p>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-900 rounded-lg px-3 py-2.5">
+                        <p class="text-xs text-gray-400 uppercase tracking-wider mb-0.5"># Ventas</p>
+                        <p class="text-lg font-semibold text-gray-900 dark:text-white font-mono">{{ $snapshot['ventas_count'] }}</p>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-900 rounded-lg px-3 py-2.5">
+                        <p class="text-xs text-gray-400 uppercase tracking-wider mb-0.5">Fondo inicial</p>
+                        <p class="text-lg font-semibold text-gray-900 dark:text-white font-mono">${{ number_format($snapshot['sesion']['fondo_inicial'], 2) }}</p>
+                    </div>
+                </div>
 
-    {{-- ═══════════ MODAL: CREAR CAJA ═══════════ --}}
-    <div class="overlay" x-show="modal==='crear'" x-cloak @click.self="modal=''"
-         x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-         x-transition:leave="transition duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
-        <div class="modal" @click.stop>
-            <div class="modal-title">Crear caja — {{ $sucursal->nombre_usuario }}</div>
-            <div class="modal-desc">Se asignará una caja a esta sucursal. Solo se puede tener una caja por sucursal.</div>
-            <form method="POST" action="{{ route('admin.cajas.store') }}">
-                @csrf
-                <input type="hidden" name="id_usuario" value="{{ $sucursal->id_usuario }}">
-                <div class="field">
-                    <label>Nombre de la caja <span style="color:var(--c-muted);font-weight:400">(opcional)</span></label>
-                    <input type="text" name="nombre" maxlength="80" placeholder="Caja principal">
-                    <div class="field-hint">Si lo dejas vacío se usará "Caja principal".</div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-ghost" @click="modal=''">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Crear caja</button>
-                </div>
-            </form>
-        </div>
-    </div>
+                {{-- Rows de detalle --}}
+                <div class="border-t dark:border-gray-700 pt-2 space-y-1">
+                    @if(($snapshot['totales']['ingresos_manuales'] ?? 0) > 0)
+                    <div class="flex items-center justify-between text-xs py-1">
+                        <span class="text-gray-400">Ing. manuales</span>
+                        <span class="font-mono font-medium text-blue-600 dark:text-blue-400">+${{ number_format($snapshot['totales']['ingresos_manuales'], 2) }}</span>
+                    </div>
+                    @endif
+                    @if(($snapshot['totales']['retiros'] ?? 0) > 0)
+                    <div class="flex items-center justify-between text-xs py-1">
+                        <span class="text-gray-400">Retiros</span>
+                        <span class="font-mono font-medium text-red-600 dark:text-red-400">-${{ number_format($snapshot['totales']['retiros'], 2) }}</span>
+                    </div>
+                    @endif
+                    @if(($snapshot['totales']['ajustes_neto'] ?? 0) != 0)
+                    @php $aj = $snapshot['totales']['ajustes_neto']; @endphp
+                    <div class="flex items-center justify-between text-xs py-1">
+                        <span class="text-gray-400">Ajustes neto</span>
+                        <span class="font-mono font-medium {{ $aj >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
+                            {{ $aj >= 0 ? '+' : '' }}${{ number_format($aj, 2) }}
+                        </span>
+                    </div>
+                    @endif
 
-    {{-- ═══════════ MODAL: INGRESO ═══════════ --}}
-    <div class="overlay" x-show="modal==='ingreso'" x-cloak @click.self="modal=''"
-         x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-         x-transition:leave="transition duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
-        <div class="modal" @click.stop>
-            <div class="modal-title">Registrar ingreso</div>
-            <div class="modal-desc">Entrada de dinero en la sesión activa de <strong>{{ $sucursal->nombre_usuario }}</strong>.</div>
-            <form method="POST" action="{{ route('admin.cajas.ingreso', $sucursal->id_usuario) }}">
-                @csrf
-                <div class="field">
-                    <label>Monto</label>
-                    <input type="number" name="monto" step="0.01" min="0.01" max="999999.99"
-                           placeholder="0.00" class="mono-input" required
-                           x-init="$watch('modal', v => v==='ingreso' && $nextTick(() => $el.focus()))">
-                </div>
-                <div class="field">
-                    <label>Concepto</label>
-                    <input type="text" name="concepto" maxlength="200" required
-                           placeholder="Ej. Transferencia de fondo de reserva...">
-                </div>
-                <div class="field">
-                    <label>Referencia <span style="color:var(--c-muted);font-weight:400">(opcional)</span></label>
-                    <input type="text" name="referencia" maxlength="120" placeholder="Folio, número...">
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-ghost" @click="modal=''">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Registrar ingreso</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    {{-- ═══════════ MODAL: RETIRO ═══════════ --}}
-    <div class="overlay" x-show="modal==='retiro'" x-cloak @click.self="modal=''"
-         x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-         x-transition:leave="transition duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
-        <div class="modal" @click.stop>
-            <div class="modal-title">Registrar retiro</div>
-            <div class="modal-desc">Salida de efectivo de la sesión activa de <strong>{{ $sucursal->nombre_usuario }}</strong>.</div>
-            <form method="POST" action="{{ route('admin.cajas.retiro', $sucursal->id_usuario) }}">
-                @csrf
-                <div class="field">
-                    <label>Monto a retirar</label>
-                    <input type="number" name="monto" step="0.01" min="0.01" max="999999.99"
-                           placeholder="0.00" class="mono-input" required
-                           x-init="$watch('modal', v => v==='retiro' && $nextTick(() => $el.focus()))">
-                </div>
-                <div class="field">
-                    <label>Concepto</label>
-                    <input type="text" name="concepto" maxlength="200" required
-                           placeholder="Ej. Depósito a banco, gastos operativos...">
-                </div>
-                <div class="field">
-                    <label>Referencia <span style="color:var(--c-muted);font-weight:400">(opcional)</span></label>
-                    <input type="text" name="referencia" maxlength="120" placeholder="Folio, número...">
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-ghost" @click="modal=''">Cancelar</button>
-                    <button type="submit" class="btn btn-danger">Registrar retiro</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    {{-- ═══════════ MODAL: AJUSTE ═══════════ --}}
-    <div class="overlay" x-show="modal==='ajuste'" x-cloak @click.self="modal=''"
-         x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-         x-transition:leave="transition duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
-        <div class="modal" @click.stop x-data="{ dir: 1 }">
-            <div class="modal-title">Ajuste contable</div>
-            <div class="modal-desc">Corrección de saldo con justificación. Queda registrado en el log como ajuste de administrador.</div>
-            <form method="POST" action="{{ route('admin.cajas.ajuste', $sucursal->id_usuario) }}">
-                @csrf
-                {{-- Dirección --}}
-                <div style="margin-bottom:.9rem;">
-                    <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--c-muted);margin-bottom:.38rem;">Dirección del ajuste</div>
-                    <div class="dir-toggle">
-                        <div class="dir-opt" :class="dir===1 ? 'dir-entrada' : ''" @click="dir=1">
-                            ↑ Entrada (suma)
+                    {{-- Por método de pago --}}
+                    @if(!empty($snapshot['por_metodo']))
+                    <div class="pt-2 border-t dark:border-gray-700">
+                        <p class="text-xs text-gray-400 uppercase tracking-wider mb-1.5">Por método de pago</p>
+                        @foreach($snapshot['por_metodo'] as $m)
+                        <div class="flex items-center justify-between py-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm">{{ ($m['es_efectivo'] ?? false) ? '💵' : '💳' }}</span>
+                                <span class="text-xs text-gray-600 dark:text-gray-300">{{ $m['nombre'] ?? $m['label'] }}</span>
+                            </div>
+                            <span class="text-xs font-mono font-semibold text-green-600 dark:text-green-400">${{ number_format($m['total'], 2) }}</span>
                         </div>
-                        <div class="dir-opt" :class="dir===0 ? 'dir-salida' : ''" @click="dir=0">
-                            ↓ Salida (resta)
+                        @endforeach
+                    </div>
+                    @endif
+
+                    <div class="border-t dark:border-gray-700 pt-2 space-y-1">
+                        <div class="flex items-center justify-between text-xs py-1">
+                            <span class="text-gray-400">Abierta por</span>
+                            <span class="font-medium text-gray-700 dark:text-gray-300">{{ $snapshot['usuario']['nombre_usuario'] ?? '—' }}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-xs py-1">
+                            <span class="text-gray-400">Desde</span>
+                            <span class="font-mono text-gray-600 dark:text-gray-300">{{ \Carbon\Carbon::parse($snapshot['sesion']['abierta_at'])->format('d/m/Y H:i') }}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-xs py-1">
+                            <span class="text-gray-400">ID sesión</span>
+                            <span class="font-mono text-gray-400 text-[10px]">{{ $sesion->id_sesion }}</span>
                         </div>
                     </div>
-                    <input type="hidden" name="es_entrada" :value="dir">
-                </div>
-                <div class="field">
-                    <label>Monto</label>
-                    <input type="number" name="monto" step="0.01" min="0.01" max="999999.99"
-                           placeholder="0.00" class="mono-input" required>
-                </div>
-                <div class="field">
-                    <label>Concepto / justificación</label>
-                    <input type="text" name="concepto" maxlength="200" required
-                           placeholder="Ej. Corrección por error de captura del {{ now()->format('d/m/Y') }}...">
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-ghost" @click="modal=''">Cancelar</button>
-                    <button type="submit" class="btn btn-yellow">Aplicar ajuste</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    {{-- ═══════════ MODAL: CIERRE FORZADO ═══════════ --}}
-    <div class="overlay" x-show="modal==='cierre'" x-cloak @click.self="modal=''"
-         x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-         x-transition:leave="transition duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
-        <div class="modal" @click.stop>
-            <div class="modal-title" style="color:var(--c-red)">⚠ Forzar cierre de sesión</div>
-            <div class="modal-desc">
-                Se cerrará la sesión activa de <strong>{{ $sucursal->nombre_usuario }}</strong>.
-                Se generará un corte de cierre con motivo <em>«admin»</em> y se te redirigirá al PDF.
-            </div>
-            @if($snapshot)
-            <div style="background:#0d1117;border:1px solid var(--c-border);border-radius:7px;padding:.85rem 1rem;margin-bottom:1rem;">
-                <div class="info-row">
-                    <span class="lbl">Total sistema al cierre</span>
-                    <span class="val green">${{ number_format($snapshot['totales']['total_sistema'], 2) }}</span>
-                </div>
-                <div class="info-row">
-                    <span class="lbl">Ventas registradas</span>
-                    <span class="val">{{ $snapshot['ventas_count'] }}</span>
                 </div>
             </div>
-            @endif
-            <form method="POST" action="{{ route('admin.cajas.cerrar.forzado', $sucursal->id_usuario) }}">
-                @csrf
-                <div class="field">
-                    <label>Notas <span style="color:var(--c-muted);font-weight:400">(opcional)</span></label>
-                    <textarea name="notas" rows="2" maxlength="500"
-                              placeholder="Razón del cierre forzado..."></textarea>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-ghost" @click="modal=''">Cancelar</button>
-                    <button type="submit" class="btn btn-danger">Forzar cierre y generar PDF</button>
-                </div>
-            </form>
+
+            {{-- Footer acciones --}}
+            <div class="px-5 py-3 border-t dark:border-gray-700 flex flex-wrap gap-2">
+                <button type="button" @click="modal = 'ingreso'"
+                    class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                    + Ingreso
+                </button>
+                <button type="button" @click="modal = 'retiro'"
+                    class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                    − Retiro
+                </button>
+                <button type="button" @click="modal = 'ajuste'"
+                    class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-yellow-300 dark:border-yellow-700/50 bg-yellow-50 dark:bg-yellow-900/10 text-yellow-700 dark:text-yellow-400 hover:opacity-80 transition">
+                    Ajuste contable
+                </button>
+                <button type="button" @click="modal = 'cierre'"
+                    class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:opacity-80 transition">
+                    Forzar cierre
+                </button>
+            </div>
         </div>
+
+        @else
+        {{-- Sesión cerrada --}}
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+            <div class="text-center py-12 px-6">
+                <div class="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mx-auto mb-3">
+                    <svg class="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                        <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
+                </div>
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-1">Sin sesión activa</h3>
+                <p class="text-xs text-gray-400">No hay sesión activa en esta caja.<br>El vendedor debe abrir la sesión desde su panel.</p>
+            </div>
+        </div>
+        @endif
+
+        {{-- ══════════════════════════════════════════════
+             HISTORIAL DE SESIONES
+        ══════════════════════════════════════════════ --}}
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+            <div class="px-6 py-4 border-b dark:border-gray-700 flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Historial de sesiones</h3>
+                @if($historial instanceof \Illuminate\Pagination\LengthAwarePaginator)
+                <span class="text-xs text-gray-400">{{ $historial->total() }} registros</span>
+                @endif
+            </div>
+
+            @if(($historial instanceof \Illuminate\Pagination\LengthAwarePaginator ? $historial->isEmpty() : $historial->isEmpty()))
+            <div class="px-6 py-10 text-center text-sm text-gray-400">No hay sesiones registradas aún.</div>
+            @else
+
+            {{-- Vista PC --}}
+            <div class="hidden md:block overflow-x-auto">
+                <table class="min-w-full text-sm border border-gray-200 dark:border-gray-700">
+                    <thead class="bg-gray-100 dark:bg-gray-800">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase whitespace-nowrap">Apertura</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase whitespace-nowrap">Cierre</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Duración</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Fondo</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Sistema</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Declarado</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Diferencia</th>
+                            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Motivo</th>
+                            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Estado</th>
+                            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">PDF</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900">
+                        @foreach($historial as $ses)
+                        @php $corteRec = $ses->cortes()->orderByDesc('created_at')->first(); @endphp
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                            <td class="px-4 py-3 text-xs font-mono text-gray-900 dark:text-white whitespace-nowrap">{{ $ses->abierta_at?->format('d/m/Y H:i') }}</td>
+                            <td class="px-4 py-3 text-xs font-mono text-gray-400 whitespace-nowrap">{{ $ses->cerrada_at?->format('d/m/Y H:i') ?? '—' }}</td>
+                            <td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">{{ $ses->duracion }}</td>
+                            <td class="px-4 py-3 text-xs font-mono text-gray-900 dark:text-white">${{ number_format($ses->fondo_inicial, 2) }}</td>
+                            <td class="px-4 py-3 text-xs font-mono text-gray-900 dark:text-white">${{ number_format($ses->monto_cierre_sistema ?? 0, 2) }}</td>
+                            <td class="px-4 py-3 text-xs font-mono text-gray-500 dark:text-gray-400">
+                                @if($ses->monto_cierre_declarado !== null) ${{ number_format($ses->monto_cierre_declarado, 2) }}
+                                @else <span class="text-gray-400">—</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 text-xs font-mono font-semibold {{ (($ses->diferencia ?? 0) < 0) ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400' }}">
+                                @if($ses->diferencia !== null) {{ $ses->diferencia >= 0 ? '+' : '' }}${{ number_format($ses->diferencia, 2) }}
+                                @else <span class="text-gray-400">—</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                @if($ses->motivo_cierre === 'admin')
+                                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-800/30 dark:text-yellow-400">Admin</span>
+                                @elseif($ses->motivo_cierre === 'vendedor')
+                                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-700 dark:bg-blue-800/30 dark:text-blue-400">Vendedor</span>
+                                @elseif($ses->motivo_cierre === 'sistema')
+                                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">Sistema</span>
+                                @else
+                                    <span class="text-gray-400 text-xs">—</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                @if($ses->estado === 'abierta')
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-400">Abierta</span>
+                                @elseif($ses->estado === 'auto_cerrada')
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">Auto</span>
+                                @else
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-700 dark:bg-red-800/30 dark:text-red-400">Cerrada</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                @if($corteRec)
+                                <a href="{{ route('admin.cajas.corte.pdf', $corteRec->id_corte) }}" target="_blank"
+                                    class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                    PDF
+                                </a>
+                                @else
+                                <span class="text-xs text-gray-400">—</span>
+                                @endif
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+
+            {{-- Vista móvil --}}
+            <div class="block md:hidden divide-y divide-gray-200 dark:divide-gray-700">
+                @foreach($historial as $ses)
+                @php $corteRec = $ses->cortes()->orderByDesc('created_at')->first(); @endphp
+                <div class="px-4 py-3">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-mono text-gray-900 dark:text-white">{{ $ses->abierta_at?->format('d/m/Y H:i') }}</span>
+                        @if($ses->estado === 'abierta')
+                            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-400">Abierta</span>
+                        @elseif($ses->estado === 'auto_cerrada')
+                            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">Auto</span>
+                        @else
+                            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-700 dark:bg-red-800/30 dark:text-red-400">Cerrada</span>
+                        @endif
+                    </div>
+                    <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                        <span>Sistema: <span class="font-mono font-semibold text-gray-900 dark:text-white">${{ number_format($ses->monto_cierre_sistema ?? 0, 2) }}</span></span>
+                        <span class="font-mono font-semibold {{ (($ses->diferencia ?? 0) < 0) ? 'text-red-500' : 'text-green-500' }}">
+                            @if($ses->diferencia !== null){{ $ses->diferencia >= 0 ? '+' : '' }}${{ number_format($ses->diferencia, 2) }}@endif
+                        </span>
+                        @if($corteRec)
+                        <a href="{{ route('admin.cajas.corte.pdf', $corteRec->id_corte) }}" target="_blank"
+                            class="text-red-500 dark:text-red-400 font-semibold">PDF</a>
+                        @endif
+                    </div>
+                </div>
+                @endforeach
+            </div>
+
+            {{-- Paginación --}}
+            @if($historial instanceof \Illuminate\Pagination\LengthAwarePaginator && $historial->hasPages())
+            <div class="px-6 py-4 border-t dark:border-gray-700">
+                {{ $historial->links() }}
+            </div>
+            @endif
+
+            @endif
+        </div>
+
+        @endif {{-- fin @if(!$caja) --}}
+
+        {{-- ════════════════════════════════
+             MODAL: CREAR CAJA
+        ════════════════════════════════ --}}
+        <div x-show="modal === 'crear'" x-cloak
+             x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+             x-transition:leave="transition duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+             class="fixed inset-0 bg-black/50 backdrop-blur-[1px] flex items-center justify-center z-50 px-4"
+             @click.self="modal = ''">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm p-6" @click.stop
+                 x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition duration-100" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95">
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-1">Crear caja — {{ $sucursal->nombre_usuario }}</h3>
+                <p class="text-xs text-gray-400 mb-5">Solo se puede tener una caja por sucursal.</p>
+                <form method="POST" action="{{ route('admin.cajas.store') }}">
+                    @csrf
+                    <input type="hidden" name="id_usuario" value="{{ $sucursal->id_usuario }}">
+                    <div class="mb-4">
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
+                            Nombre de la caja <span class="normal-case font-normal">(opcional)</span>
+                        </label>
+                        <input type="text" name="nombre" maxlength="80" placeholder="Caja principal"
+                            class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
+                        <p class="text-xs text-gray-400 mt-1">Si lo dejas vacío se usará "Caja principal".</p>
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" @click="modal = ''"
+                            class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">Cancelar</button>
+                        <button type="submit"
+                            class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition">Crear caja</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {{-- ════════════════════════════════
+             MODAL: INGRESO
+        ════════════════════════════════ --}}
+        <div x-show="modal === 'ingreso'" x-cloak
+             x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+             x-transition:leave="transition duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+             class="fixed inset-0 bg-black/50 backdrop-blur-[1px] flex items-center justify-center z-50 px-4"
+             @click.self="modal = ''">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm p-6" @click.stop
+                 x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition duration-100" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95">
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-1">Registrar ingreso</h3>
+                <p class="text-xs text-gray-400 mb-5">Entrada de dinero en la sesión activa de <strong class="text-gray-700 dark:text-gray-300">{{ $sucursal->nombre_usuario }}</strong>.</p>
+                <form method="POST" action="{{ route('admin.cajas.ingreso', $sucursal->id_usuario) }}">
+                    @csrf
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Monto</label>
+                            <input type="number" name="monto" step="0.01" min="0.01" max="999999.99" placeholder="0.00" required
+                                   x-init="$watch('modal', v => v === 'ingreso' && $nextTick(() => $el.focus()))"
+                                   class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Concepto</label>
+                            <input type="text" name="concepto" maxlength="200" required placeholder="Ej. Transferencia de fondo de reserva..."
+                                class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
+                                Referencia <span class="normal-case font-normal">(opcional)</span>
+                            </label>
+                            <input type="text" name="referencia" maxlength="120" placeholder="Folio, número..."
+                                class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-2 mt-6">
+                        <button type="button" @click="modal = ''"
+                            class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">Cancelar</button>
+                        <button type="submit"
+                            class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition">Registrar ingreso</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {{-- ════════════════════════════════
+             MODAL: RETIRO
+        ════════════════════════════════ --}}
+        <div x-show="modal === 'retiro'" x-cloak
+             x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+             x-transition:leave="transition duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+             class="fixed inset-0 bg-black/50 backdrop-blur-[1px] flex items-center justify-center z-50 px-4"
+             @click.self="modal = ''">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm p-6" @click.stop
+                 x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition duration-100" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95">
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-1">Registrar retiro</h3>
+                <p class="text-xs text-gray-400 mb-5">Salida de efectivo de la sesión activa de <strong class="text-gray-700 dark:text-gray-300">{{ $sucursal->nombre_usuario }}</strong>.</p>
+                <form method="POST" action="{{ route('admin.cajas.retiro', $sucursal->id_usuario) }}">
+                    @csrf
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Monto a retirar</label>
+                            <input type="number" name="monto" step="0.01" min="0.01" max="999999.99" placeholder="0.00" required
+                                   x-init="$watch('modal', v => v === 'retiro' && $nextTick(() => $el.focus()))"
+                                   class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Concepto</label>
+                            <input type="text" name="concepto" maxlength="200" required placeholder="Ej. Depósito a banco, gastos operativos..."
+                                class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
+                                Referencia <span class="normal-case font-normal">(opcional)</span>
+                            </label>
+                            <input type="text" name="referencia" maxlength="120"
+                                class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-2 mt-6">
+                        <button type="button" @click="modal = ''"
+                            class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">Cancelar</button>
+                        <button type="submit"
+                            class="px-4 py-2 rounded-lg text-sm font-semibold bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:opacity-80 transition">Registrar retiro</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {{-- ════════════════════════════════
+             MODAL: AJUSTE CONTABLE
+        ════════════════════════════════ --}}
+        <div x-show="modal === 'ajuste'" x-cloak
+             x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+             x-transition:leave="transition duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+             class="fixed inset-0 bg-black/50 backdrop-blur-[1px] flex items-center justify-center z-50 px-4"
+             @click.self="modal = ''">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm p-6" @click.stop
+                 x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition duration-100" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95">
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-1">Ajuste contable</h3>
+                <p class="text-xs text-gray-400 mb-5">Corrección de saldo con justificación. Queda registrado como ajuste de administrador.</p>
+                <form method="POST" action="{{ route('admin.cajas.ajuste', $sucursal->id_usuario) }}">
+                    @csrf
+                    {{-- Toggle dirección --}}
+                    <div class="mb-4">
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Dirección del ajuste</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button"
+                                @click="ajusteDir = 1"
+                                :class="ajusteDir === 1
+                                    ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700 text-green-700 dark:text-green-400'
+                                    : 'border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                                class="px-3 py-2 rounded-lg border text-xs font-semibold transition text-center">
+                                ↑ Entrada (suma)
+                            </button>
+                            <button type="button"
+                                @click="ajusteDir = 0"
+                                :class="ajusteDir === 0
+                                    ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700 text-red-700 dark:text-red-400'
+                                    : 'border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'"
+                                class="px-3 py-2 rounded-lg border text-xs font-semibold transition text-center">
+                                ↓ Salida (resta)
+                            </button>
+                        </div>
+                        <input type="hidden" name="es_entrada" :value="ajusteDir">
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Monto</label>
+                            <input type="number" name="monto" step="0.01" min="0.01" max="999999.99" placeholder="0.00" required
+                                class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Concepto / justificación</label>
+                            <input type="text" name="concepto" maxlength="200" required
+                                placeholder="Ej. Corrección por error de captura del {{ now()->format('d/m/Y') }}..."
+                                class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-2 mt-6">
+                        <button type="button" @click="modal = ''"
+                            class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">Cancelar</button>
+                        <button type="submit"
+                            class="px-4 py-2 rounded-lg text-sm font-semibold bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700/50 text-yellow-700 dark:text-yellow-400 hover:opacity-80 transition">Aplicar ajuste</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {{-- ════════════════════════════════
+             MODAL: CIERRE FORZADO
+        ════════════════════════════════ --}}
+        <div x-show="modal === 'cierre'" x-cloak
+             x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+             x-transition:leave="transition duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+             class="fixed inset-0 bg-black/50 backdrop-blur-[1px] flex items-center justify-center z-50 px-4"
+             @click.self="modal = ''">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm p-6" @click.stop
+                 x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition duration-100" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95">
+                <h3 class="text-sm font-semibold text-red-600 dark:text-red-400 mb-1">⚠ Forzar cierre de sesión</h3>
+                <p class="text-xs text-gray-400 mb-4">
+                    Se cerrará la sesión activa de <strong class="text-gray-700 dark:text-gray-300">{{ $sucursal->nombre_usuario }}</strong>.
+                    Se generará un corte con motivo <em>«admin»</em>.
+                </p>
+                @if($snapshot)
+                <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 px-4 py-3 space-y-2 mb-4">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs text-gray-400">Total sistema</span>
+                        <span class="text-xs font-mono font-semibold text-green-600 dark:text-green-400">${{ number_format($snapshot['totales']['total_sistema'], 2) }}</span>
+                    </div>
+                    <div class="flex justify-between items-center border-t dark:border-gray-700 pt-2">
+                        <span class="text-xs text-gray-400">Ventas registradas</span>
+                        <span class="text-xs font-mono text-gray-900 dark:text-white">{{ $snapshot['ventas_count'] }}</span>
+                    </div>
+                </div>
+                @endif
+                <form method="POST" action="{{ route('admin.cajas.cerrar.forzado', $sucursal->id_usuario) }}">
+                    @csrf
+                    <div class="mb-4">
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
+                            Notas <span class="normal-case font-normal">(opcional)</span>
+                        </label>
+                        <textarea name="notas" rows="2" maxlength="500" placeholder="Razón del cierre forzado..."
+                            class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition resize-none"></textarea>
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" @click="modal = ''"
+                            class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">Cancelar</button>
+                        <button type="submit"
+                            class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">Forzar cierre y generar PDF</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
     </div>
 
-</div>
+    @push('scripts')
+    <style>[x-cloak]{display:none!important;}</style>
+    @endpush
 
-
-<script>
-function showCaja() {
-    return {
-        modal: '',
-        init() {
-            // Abrir modal de crear si llegamos sin caja
-            @if(!$caja)
-            // No auto-abrir, el usuario decide
-            @endif
-        },
-    }
-}
-</script>
 </x-app-layout>

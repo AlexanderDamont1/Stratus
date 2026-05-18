@@ -54,7 +54,6 @@ return new class extends Migration
                     ['value' => 'efectivo', 'label' => 'Efectivo', 'descripcion' => 'Pago en billetes y monedas'],
                     ['value' => 'tarjeta', 'label' => 'Tarjeta (Terminal)', 'descripcion' => 'Débito o crédito con terminal bancaria'],
                     ['value' => 'transferencia', 'label' => 'Transferencia / SPEI', 'descripcion' => 'Depósito o transferencia bancaria'],
-                    ['value' => 'codi', 'label' => 'CoDi / QR', 'descripcion' => 'Pago mediante código QR o CoDi'],
                     ['value' => 'credito_interno', 'label' => 'Crédito interno', 'descripcion' => 'El negocio otorga crédito al cliente'],
                 ]),
                 'valor_default' => 'efectivo',
