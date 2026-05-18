@@ -266,7 +266,7 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
             Route::delete('/componentes/{id}', [AdminGarantiaController::class, 'borrarDef'])->name('componentes.borrar');
             Route::patch('/reclamo/{id}/estado', [AdminGarantiaController::class, 'estadoReclamo'])->name('reclamo.estado');
             Route::post('/reclamo/{id}/reemplazo', [AdminGarantiaController::class, 'reemplazo'])->name('reclamo.reemplazo');
-            Route::post('/politica', [AdminGarantiaController::class, 'guardarPolitica'])->name('politica');
+            //Route::post('/politica', [AdminGarantiaController::class, 'guardarPolitica'])->name('politica');
         });
 
         // Productos

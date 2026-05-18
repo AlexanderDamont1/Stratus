@@ -642,7 +642,8 @@
                     }
                     this.guardandoPolitica = true;
                     try {
-                        const res = await fetch('{{ route("admin.garantias.politica", $marca->id_marca) }}', {
+                        const res = await fetch('{{ route("admin.garantias.marcas.politica", $marca->id_marca) }}', {
+
                             method: 'POST',
                             headers: {
                                 'Content-Type':     'application/json',
