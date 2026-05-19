@@ -26,61 +26,62 @@ class BicicletaController extends Controller
             abort(403);
         }
 
-        $user       = auth()->user();
+        $user = auth()->user();
         $id_negocio = $user->id_negocio;
 
         if ($user->id_rol === 1) {
             // Construir el JSON del catálogo en cascada (cacheado por CatalogService)
             $catalogoJson = CatalogService::getCatalogoCompleto($id_negocio)
                 ->map(fn($marca) => [
-                    'id_marca'     => $marca->id_marca,
+                    'id_marca' => $marca->id_marca,
                     'nombre_marca' => $marca->nombre_marca,
-                    'modelos'      => $marca->modelos->map(fn($modelo) => [
-                        'id_modelo'     => $modelo->id_modelo,
+                    'modelos' => $marca->modelos->map(fn($modelo) => [
+                        'id_modelo' => $modelo->id_modelo,
                         'nombre_modelo' => $modelo->nombre_modelo,
-                        'colores'       => $modelo->colores->map(fn($c) => [
+                        'colores' => $modelo->colores->map(fn($c) => [
                             'id_color' => $c->id_color,
-                            'color'    => $c->color,
+                            'color' => $c->color,
                         ])->values(),
-                        'voltajes'      => $modelo->voltajes->map(fn($v) => [
+                        'voltajes' => $modelo->voltajes->map(fn($v) => [
                             'id_voltaje' => $v->id_voltaje,
-                            'voltaje'    => $v->voltaje,
+                            'voltaje' => $v->voltaje,
                         ])->values(),
                     ])->values(),
                 ])->values()->toJson();
 
             return view('gestor.Vehiculos.Bicicleta.index', [
                 'stockPorVendedor' => CatalogService::getStockPorVendedores($id_negocio),
-                'stats'            => CatalogService::getBicicletaStats($id_negocio),
-                'modelos'          => CatalogService::getModelosByNegocio($id_negocio),
-                'negocios'         => CatalogService::getNegocios(),
-                'marcas'           => CatalogService::getMarcasByNegocio($id_negocio),
-                'colores'          => CatalogService::getColoresByNegocio($id_negocio),
-                'voltajes'         => CatalogService::getVoltajesByNegocio($id_negocio),
-                'catalogoJson'     => $catalogoJson, // 👈 único cambio
+                'stats' => CatalogService::getBicicletaStats($id_negocio),
+                'modelos' => CatalogService::getModelosByNegocio($id_negocio),
+                'negocios' => CatalogService::getNegocios(),
+                'marcas' => CatalogService::getMarcasByNegocio($id_negocio),
+                'colores' => CatalogService::getColoresByNegocio($id_negocio),
+                'voltajes' => CatalogService::getVoltajesByNegocio($id_negocio),
+                'catalogoJson' => $catalogoJson, // 👈 único cambio
             ]);
         }
 
         // Rol 5 — no necesita catalogoJson (no tiene modal de creación)
         return view('gestor.Vehiculos.Bicicleta.index', [
             'bicicletas' => CatalogService::getBicicletasPaginadas($id_negocio),
-            'stats'      => CatalogService::getBicicletaStats($id_negocio),
-            'modelos'    => CatalogService::getModelos(),
-            'negocios'   => CatalogService::getNegocios(),
+            'stats' => CatalogService::getBicicletaStats($id_negocio),
+            'modelos' => CatalogService::getModelos(),
+            'negocios' => CatalogService::getNegocios(),
         ]);
     }
 
 
 
 
-   public function stockSeccion(Request $request)
+    public function stockSeccion(Request $request)
     {
         $user = auth()->user();
-        if ($user->id_rol !== 1) abort(404);
+        if ($user->id_rol !== 1)
+            abort(404);
 
         $idNegocio = $user->id_negocio;
         $idUsuario = $request->get('id_usuario') ?: null;
-        $page      = (int) $request->get('page', 1);
+        $page = (int) $request->get('page', 1);
 
         $data = CatalogService::getBicicletasSeccion($idNegocio, $idUsuario, $page);
 
@@ -107,24 +108,25 @@ class BicicletaController extends Controller
     {
         $user = auth()->user();
 
-        if ($user->id_rol !== 1) abort(403);
+        if ($user->id_rol !== 1)
+            abort(403);
 
         $id_negocio = $user->id_negocio;
 
         $catalogoJson = CatalogService::getCatalogoCompleto($id_negocio)
             ->map(fn($marca) => [
-                'id_marca'     => $marca->id_marca,
+                'id_marca' => $marca->id_marca,
                 'nombre_marca' => $marca->nombre_marca,
-                'modelos'      => $marca->modelos->map(fn($modelo) => [
-                    'id_modelo'     => $modelo->id_modelo,
+                'modelos' => $marca->modelos->map(fn($modelo) => [
+                    'id_modelo' => $modelo->id_modelo,
                     'nombre_modelo' => $modelo->nombre_modelo,
-                    'colores'       => $modelo->colores->map(fn($c) => [
+                    'colores' => $modelo->colores->map(fn($c) => [
                         'id_color' => $c->id_color,
-                        'color'    => $c->color,
+                        'color' => $c->color,
                     ])->values(),
-                    'voltajes'      => $modelo->voltajes->map(fn($v) => [
+                    'voltajes' => $modelo->voltajes->map(fn($v) => [
                         'id_voltaje' => $v->id_voltaje,
-                        'voltaje'    => $v->voltaje,
+                        'voltaje' => $v->voltaje,
                     ])->values(),
                 ])->values(),
             ])->values()->toJson();
@@ -136,47 +138,50 @@ class BicicletaController extends Controller
 
 
     public function storeMasivo(Request $request)
-    {
-        if (auth()->user()->id_rol !== 1) abort(403);
+{
+    $user = auth()->user();
 
+    if (!in_array($user->id_rol, [1, 2])) abort(403);
+
+    $request->validate([
+        'bicicletas'             => 'required|array|min:1',
+        'bicicletas.*.num_serie' => 'required|string|size:17|distinct',
+    ], [
+        'bicicletas.*.num_serie.size'     => 'El N° de serie debe tener exactamente 17 caracteres.',
+        'bicicletas.*.num_serie.distinct' => 'Hay números de serie repetidos en el listado.',
+    ]);
+
+    $id_negocio = $user->id_negocio;
+
+    // ── ROL 1: crear bicicletas nuevas (flujo original) ──────────────────
+    if ($user->id_rol === 1) {
         $request->validate([
-            'bicicletas'                => 'required|array|min:1',
-            'bicicletas.*.num_serie'    => 'required|string|size:17|distinct|unique:bicicletas,num_serie',
-            'bicicletas.*.id_modelo'    => 'required|exists:modelos,id_modelo',
-            'bicicletas.*.id_color'     => 'required|exists:colores,id_color',
-            'bicicletas.*.id_voltaje'   => 'required|exists:voltajes,id_voltaje',
+            'bicicletas.*.num_serie'  => 'unique:bicicletas,num_serie',
+            'bicicletas.*.id_modelo'  => 'required|exists:modelos,id_modelo',
+            'bicicletas.*.id_color'   => 'required|exists:colores,id_color',
+            'bicicletas.*.id_voltaje' => 'required|exists:voltajes,id_voltaje',
         ], [
-            'bicicletas.*.num_serie.size'     => 'El N° de serie debe tener exactamente 17 caracteres.',
-            'bicicletas.*.num_serie.distinct' => 'Hay números de serie repetidos en el listado.',
-            'bicicletas.*.num_serie.unique'   => 'El N° de serie ya existe en el sistema.',
+            'bicicletas.*.num_serie.unique' => 'El N° de serie ya existe en el sistema.',
         ]);
 
-        $user       = auth()->user();
-        $id_negocio = $user->id_negocio;
-        $ahora      = now();
+        $ahora   = now();
+        $inserts = collect($request->bicicletas)->map(fn($b) => [
+            'num_serie'  => strtoupper(trim($b['num_serie'])),
+            'id_modelo'  => $b['id_modelo'],
+            'id_color'   => $b['id_color'],
+            'id_voltaje' => $b['id_voltaje'],
+            'id_negocio' => $id_negocio,
+            'id_usuario' => null,
+            'status'     => 1,
+            'created_at' => $ahora,
+            'updated_at' => $ahora,
+        ])->toArray();
 
-        $inserts = collect($request->bicicletas)->map(function($b) use ($id_negocio, $ahora) {
-            
-           
-            return [
-                'num_serie'          => strtoupper(trim($b['num_serie'])),
-                'id_modelo'          => $b['id_modelo'],
-                'id_color'           => $b['id_color'],
-                'id_voltaje'         => $b['id_voltaje'],
-                'id_negocio'         => $id_negocio,
-                
-                'status'             => 1,
-                'created_at'         => $ahora,
-                'updated_at'         => $ahora,
-            ];
-        })->toArray();
-
-        \App\Models\Bicicleta::insert($inserts);
+        Bicicleta::insert($inserts);
 
         $movimientoService = new BicicletaMovimientoService();
 
         foreach ($request->bicicletas as $b) {
-            // 1. Evento de creación (actualiza inventario)
             event(new \App\Events\BicicletaCreada(
                 idModelo:  $b['id_modelo'],
                 idVoltaje: $b['id_voltaje'],
@@ -184,24 +189,18 @@ class BicicletaController extends Controller
                 idUsuario: null,
             ));
 
-            // 2. Registrar movimiento de entrada stock (sin id_pedido)
             $movimientoService->entradaStockGeneral(
                 num_serie: strtoupper(trim($b['num_serie'])),
                 id_pedido: null
             );
         }
 
-
-        // ✅ Invalidar caché
         CatalogService::invalidateBicicleta('masivo', $id_negocio);
         CatalogService::invalidateStockVendedores($id_negocio);
         CatalogService::invalidateSeccion(null, $id_negocio);
         CatalogService::invalidateInventario($id_negocio, $user->id_usuario);
 
-
-        // ✅ Broadcast por cada bicicleta insertada
         $series = collect($inserts)->pluck('num_serie');
-
         Bicicleta::with(['modelo', 'voltaje', 'color'])
             ->whereIn('num_serie', $series)
             ->get()
@@ -222,17 +221,153 @@ class BicicletaController extends Controller
             ->with('success', count($inserts) . ' bicicleta(s) registradas correctamente.');
     }
 
+    // ── ROL 2: asignar bicicletas existentes a esta sucursal ─────────────
+    $series    = collect($request->bicicletas)->pluck('num_serie')->map(fn($s) => strtoupper(trim($s)));
+    $errores   = [];
+    $asignadas = 0;
+
+    $movimientoService = new BicicletaMovimientoService();
+    $modelosCache      = [];
+
+    foreach ($series as $numSerie) {
+        $bici = Bicicleta::where('num_serie', $numSerie)
+            ->with(['modelo', 'voltaje', 'color'])
+            ->first();
+
+        if (!$bici) {
+            $errores[] = "{$numSerie}: no encontrada.";
+            continue;
+        }
+        if ($bici->id_negocio != $id_negocio) {
+            $errores[] = "{$numSerie}: no pertenece a tu negocio.";
+            continue;
+        }
+        if ($bici->id_usuario) {
+            $errores[] = "{$numSerie}: ya está asignada.";
+            continue;
+        }
+
+        $idUsuarioAnterior = null; // siempre viene de stock general (sin usuario)
+        $bici->id_usuario  = $user->id_usuario;
+        $bici->save();
+        $bici->touch();
+
+        // Movimiento
+        $movimientoService->registrar($bici->num_serie, 'transferencia_sucursal', [
+            'origen'     => 'Stock general',
+            'destino'    => $user->nombre_usuario,
+            'notas'      => "Transferido a sucursal: {$user->nombre_usuario}",
+            'id_negocio' => $id_negocio,
+        ]);
+
+        // ProductoModelo de la sucursal — crear si no existe
+        $pmSucursal = \App\Models\ProductoModelo::where('id_modelo',  $bici->id_modelo)
+            ->where('id_voltaje', $bici->id_voltaje)
+            ->where('id_negocio', $id_negocio)
+            ->where('id_usuario', $user->id_usuario)
+            ->first();
+
+        if (!$pmSucursal) {
+            $idProductoNuevo = 'PDT' . str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+            $idPmNuevo       = 'PM'  . str_pad(rand(0, 9999999), 7, '0', STR_PAD_LEFT);
+
+            $nombreModelo = $modelosCache[$bici->id_modelo]
+                ??= $bici->modelo->nombre_modelo ?? 'Bicicleta';
+
+            \App\Models\Producto::create([
+                'id_producto'     => $idProductoNuevo,
+                'id_negocio'      => $id_negocio,
+                'id_usuario'      => $user->id_usuario,
+                'nombre_producto' => $nombreModelo,
+                'precio'          => 0,
+                'tipo'            => '2',
+            ]);
+
+            $pmSucursal = \App\Models\ProductoModelo::create([
+                'id_producto_modelo' => $idPmNuevo,
+                'id_producto'        => $idProductoNuevo,
+                'id_negocio'         => $id_negocio,
+                'id_usuario'         => $user->id_usuario,
+                'id_modelo'          => $bici->id_modelo,
+                'id_voltaje'         => $bici->id_voltaje,
+                'activo'             => true,
+            ]);
+
+            CatalogService::invalidateProducto($idProductoNuevo, $id_negocio);
+            CatalogService::invalidateProductosConRelaciones($id_negocio, $user->id_usuario);
+            CatalogService::invalidateSucursales($id_negocio);
+        }
+
+        // Decrementar stock general
+        $pmOrigen = \App\Models\ProductoModelo::where('id_modelo',  $bici->id_modelo)
+            ->where('id_voltaje', $bici->id_voltaje)
+            ->where('id_negocio', $id_negocio)
+            ->whereNull('id_usuario')
+            ->first();
+
+        if ($pmOrigen) {
+            \App\Models\Inventario::where('id_producto_modelo', $pmOrigen->id_producto_modelo)
+                ->where('id_negocio', $id_negocio)
+                ->where('cantidad', '>', 0)
+                ->decrement('cantidad');
+        }
+
+        // Incrementar stock sucursal
+        $invSucursal = \App\Models\Inventario::firstOrCreate(
+            [
+                'id_producto_modelo' => $pmSucursal->id_producto_modelo,
+                'id_negocio'         => $id_negocio,
+                'id_usuario'         => $user->id_usuario,
+            ],
+            [
+                'id_inventario' => 'INV' . strtoupper(substr(md5(uniqid()), 0, 12)),
+                'cantidad'      => 0,
+                'stock_minimo'  => 3,
+            ]
+        );
+        $invSucursal->increment('cantidad');
+
+        // Broadcast
+        event(new BicicletaActualizada(
+            numSerie:       $bici->num_serie,
+            idNegocio:      $id_negocio,
+            idUsuario:      $user->id_usuario,
+            nombreVendedor: $user->nombre_usuario,
+            modelo:         $bici->modelo->nombre_modelo ?? '—',
+            voltaje:        $bici->voltaje->voltaje       ?? '—',
+            color:          $bici->color->color           ?? '—',
+            status:         $bici->status,
+        ));
+
+        $asignadas++;
+    }
+
+    // Invalidar caché una sola vez al final
+    CatalogService::invalidateInventario($id_negocio, $user->id_usuario);
+    CatalogService::invalidateBicicletasPorUsuario($user->id_usuario, $id_negocio);
+    CatalogService::invalidateStockVendedores($id_negocio);
+    CatalogService::invalidateSeccion($user->id_usuario, $id_negocio);
+    CatalogService::invalidateSeccion(null, $id_negocio);
+
+    $mensaje = "{$asignadas} bicicleta(s) asignadas correctamente.";
+    if (!empty($errores)) {
+        $mensaje .= ' Errores: ' . implode(' | ', $errores);
+    }
+
+    return redirect()->route('stock.index')->with('success', $mensaje);
+}
+
     /* =====================================================
      | STORE
      ===================================================== */
     public function store(Request $request)
     {
-        $user      = auth()->user();
+        $user = auth()->user();
         $idNegocio = $user->id_negocio;
 
         $validator = Validator::make($request->all(), [
-            'num_serie'  => 'required|string|size:17|unique:bicicletas,num_serie',
-            'id_modelo'  => [
+            'num_serie' => 'required|string|size:17|unique:bicicletas,num_serie',
+            'id_modelo' => [
                 'required',
                 Rule::exists('modelos', 'id_modelo')->where(
                     'id_negocio',
@@ -246,20 +381,20 @@ class BicicletaController extends Controller
                     $user->id_rol === 1 ? $idNegocio : null
                 ),
             ],
-            'id_color'   => [
+            'id_color' => [
                 'required',
                 Rule::exists('colores', 'id_color')->where(
                     'id_negocio',
                     $user->id_rol === 1 ? $idNegocio : null
                 ),
             ],
-            'id_pedido'  => 'nullable|exists:pedidos,id_pedido',
+            'id_pedido' => 'nullable|exists:pedidos,id_pedido',
         ]);
 
         if ($validator->fails()) {
             if ($request->expectsJson()) {
                 return response()->json([
-                    'ok'      => false,
+                    'ok' => false,
                     'mensaje' => $validator->errors()->first(),
                 ], 422);
             }
@@ -284,24 +419,24 @@ class BicicletaController extends Controller
 
             $item = $pedido->items->first(
                 fn($i) =>
-                $i->id_modelo  == $request->id_modelo &&
+                $i->id_modelo == $request->id_modelo &&
                 $i->id_voltaje == $request->id_voltaje &&
-                $i->id_color   == $request->id_color
+                $i->id_color == $request->id_color
             );
 
             if (!$item) {
                 return response()->json(['ok' => false, 'mensaje' => 'Esta combinación no está en el pedido.'], 422);
             }
 
-            $yaEscaneadas = Bicicleta::where('id_pedido',  $request->id_pedido)
-                ->where('id_modelo',  $request->id_modelo)
+            $yaEscaneadas = Bicicleta::where('id_pedido', $request->id_pedido)
+                ->where('id_modelo', $request->id_modelo)
                 ->where('id_voltaje', $request->id_voltaje)
-                ->where('id_color',   $request->id_color)
+                ->where('id_color', $request->id_color)
                 ->count();
 
             if ($yaEscaneadas >= $item->cantidad) {
                 return response()->json([
-                    'ok'      => false,
+                    'ok' => false,
                     'mensaje' => "Ya se completaron las {$item->cantidad} unidades requeridas para esta combinación.",
                 ], 422);
             }
@@ -309,27 +444,27 @@ class BicicletaController extends Controller
 
 
         $bicicleta = Bicicleta::create([
-            'num_serie'          => strtoupper($request->num_serie),
-            'id_negocio'         => $idNegocio,
-            'id_modelo'          => $request->id_modelo,
-            'id_voltaje'         => $request->id_voltaje,
-            'id_color'           => $request->id_color,
-            'id_pedido'          => $request->id_pedido ?? null,
-           
+            'num_serie' => strtoupper($request->num_serie),
+            'id_negocio' => $idNegocio,
+            'id_modelo' => $request->id_modelo,
+            'id_voltaje' => $request->id_voltaje,
+            'id_color' => $request->id_color,
+            'id_pedido' => $request->id_pedido ?? null,
+
         ]);
 
         if ($request->id_pedido) {
             app(BicicletaMovimientoService::class)
                 ->registrar($bicicleta->num_serie, 'entrada_stock', [
-                    'origen'    => 'Fabricante',
-                    'destino'   => 'Pedido Realizado',
-                    'notas'     => "Bicicleta escaneada e ingresada al pedido #{$request->id_pedido}",
+                    'origen' => 'Fabricante',
+                    'destino' => 'Pedido Realizado',
+                    'notas' => "Bicicleta escaneada e ingresada al pedido #{$request->id_pedido}",
                     'id_pedido' => $request->id_pedido,
                 ]);
         }
 
         event(new \App\Events\BicicletaCreada(
-            idModelo:  $request->id_modelo,
+            idModelo: $request->id_modelo,
             idVoltaje: $request->id_voltaje,
             idNegocio: $idNegocio,
             idUsuario: null,
@@ -352,8 +487,11 @@ class BicicletaController extends Controller
                 Cache::forget("pedidos:index:{$pedidoActual->id_usuario}:all:all:page:1");
 
                 $pedidoFresh = \App\Models\Pedido::with([
-                    'negocio', 'usuario',
-                    'items.modelo', 'items.voltaje', 'items.color'
+                    'negocio',
+                    'usuario',
+                    'items.modelo',
+                    'items.voltaje',
+                    'items.color'
                 ])->find($pedidoActual->id_pedido);
 
                 event(new \App\Events\PedidoUpdated($pedidoFresh, 'updated'));
@@ -363,10 +501,10 @@ class BicicletaController extends Controller
             if ($pedidoFull) {
                 $completo = $pedidoFull->items->every(
                     fn($item) =>
-                    Bicicleta::where('id_pedido',  $pedidoFull->id_pedido)
-                        ->where('id_modelo',  $item->id_modelo)
+                    Bicicleta::where('id_pedido', $pedidoFull->id_pedido)
+                        ->where('id_modelo', $item->id_modelo)
                         ->where('id_voltaje', $item->id_voltaje)
-                        ->where('id_color',   $item->id_color)
+                        ->where('id_color', $item->id_color)
                         ->count() >= $item->cantidad
                 );
 
@@ -377,17 +515,20 @@ class BicicletaController extends Controller
 
                     \App\Models\PedidoToken::where('id_pedido', $pedidoFull->id_pedido)->delete();
                     \App\Models\PedidoToken::create([
-                        'id_token'    => self::generarIdToken(),
-                        'id_pedido'   => $pedidoFull->id_pedido,
+                        'id_token' => self::generarIdToken(),
+                        'id_pedido' => $pedidoFull->id_pedido,
                         'id_usuario1' => $pedidoFull->id_usuario,
                         'id_usuario2' => $user->id_usuario,
-                        'token'       => self::generarToken(),
-                        'estado'      => 0,
+                        'token' => self::generarToken(),
+                        'estado' => 0,
                     ]);
 
                     $pedidoFullFresh = \App\Models\Pedido::with([
-                        'negocio', 'usuario',
-                        'items.modelo', 'items.voltaje', 'items.color'
+                        'negocio',
+                        'usuario',
+                        'items.modelo',
+                        'items.voltaje',
+                        'items.color'
                     ])->find($pedidoFull->id_pedido);
 
                     event(new \App\Events\PedidoUpdated($pedidoFullFresh, 'updated'));
@@ -397,7 +538,7 @@ class BicicletaController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
-                'ok'              => true,
+                'ok' => true,
                 'pedido_completo' => $completo,
             ]);
         }
@@ -412,13 +553,13 @@ class BicicletaController extends Controller
      ===================================================== */
     public function update(Request $request, string $num_serie)
     {
-        $user      = auth()->user();
+        $user = auth()->user();
         $bicicleta = Bicicleta::where('num_serie', $num_serie)->firstOrFail();
         $idNegocio = $bicicleta->id_negocio;
 
         // ✅ Validar que los atributos pertenezcan al negocio correcto
         $validator = Validator::make($request->all(), [
-            'id_modelo'  => [
+            'id_modelo' => [
                 'required',
                 Rule::exists('modelos', 'id_modelo')->where(
                     'id_negocio',
@@ -432,7 +573,7 @@ class BicicletaController extends Controller
                     $user->id_rol === 1 ? $idNegocio : null
                 ),
             ],
-            'id_color'   => [
+            'id_color' => [
                 'required',
                 Rule::exists('colores', 'id_color')->where(
                     'id_negocio',
@@ -446,9 +587,9 @@ class BicicletaController extends Controller
         }
 
         $bicicleta->update([
-            'id_modelo'  => $request->id_modelo,
+            'id_modelo' => $request->id_modelo,
             'id_voltaje' => $request->id_voltaje,
-            'id_color'   => $request->id_color,
+            'id_color' => $request->id_color,
         ]);
 
         CatalogService::invalidateBicicleta($bicicleta->num_serie, $idNegocio);
@@ -472,14 +613,14 @@ class BicicletaController extends Controller
 
         if ($bicicleta->mantenimientos()->count() > 0) {
             return response()->json([
-                'ok'      => false,
+                'ok' => false,
                 'mensaje' => 'No se puede eliminar: tiene mantenimientos.',
             ], 422);
         }
 
         $id_pedido = $bicicleta->id_pedido;
         $idNegocio = $bicicleta->id_negocio;
-        $numSerie  = $bicicleta->num_serie;
+        $numSerie = $bicicleta->num_serie;
         $idUsuario = $bicicleta->id_usuario; // ✅ guardar antes de eliminar
 
         $bicicleta->delete();
@@ -501,8 +642,8 @@ class BicicletaController extends Controller
         }
 
         return response()->json([
-            'ok'        => true,
-            'mensaje'   => 'Bicicleta eliminada.',
+            'ok' => true,
+            'mensaje' => 'Bicicleta eliminada.',
             'id_pedido' => $id_pedido,
         ]);
     }
@@ -532,7 +673,7 @@ class BicicletaController extends Controller
 
         return response()->json([
             'success' => true,
-            'status'  => $bicicleta->status,
+            'status' => $bicicleta->status,
         ]);
     }
 
@@ -568,15 +709,15 @@ class BicicletaController extends Controller
 
         return response()->json([
             'encontrada' => true,
-            'num_serie'  => $bicicleta->num_serie,
-            'id_modelo'  => $bicicleta->id_modelo,
+            'num_serie' => $bicicleta->num_serie,
+            'id_modelo' => $bicicleta->id_modelo,
             'id_voltaje' => $bicicleta->id_voltaje,
-            'id_color'   => $bicicleta->id_color,
-            'modelo'     => optional($bicicleta->modelo)->nombre_modelo ?? 'N/D',
-            'voltaje'    => optional($bicicleta->voltaje)->voltaje       ?? 'N/D', // ✅ era tipo_voltaje, corregido
-            'color'      => optional($bicicleta->color)->color           ?? 'N/D', // ✅ era nombre_color, corregido
-            'id_pedido'  => $bicicleta->id_pedido,
-            'status'     => $bicicleta->status,
+            'id_color' => $bicicleta->id_color,
+            'modelo' => optional($bicicleta->modelo)->nombre_modelo ?? 'N/D',
+            'voltaje' => optional($bicicleta->voltaje)->voltaje ?? 'N/D', // ✅ era tipo_voltaje, corregido
+            'color' => optional($bicicleta->color)->color ?? 'N/D', // ✅ era nombre_color, corregido
+            'id_pedido' => $bicicleta->id_pedido,
+            'status' => $bicicleta->status,
         ]);
     }
 
@@ -584,21 +725,38 @@ class BicicletaController extends Controller
      | VENDEDOR: DASHBOARD
      ===================================================== */
     public function showB(Request $request)
-    {
-        $user = auth()->user();
+{
+    $user = auth()->user();
+    if ($user->id_rol != 2) abort(403);
 
-        if ($user->id_rol != 2) abort(403);
+    $catalogoJson = CatalogService::getCatalogoCompleto($user->id_negocio)
+        ->map(fn($marca) => [
+            'id_marca'     => $marca->id_marca,
+            'nombre_marca' => $marca->nombre_marca,
+            'modelos'      => $marca->modelos->map(fn($modelo) => [
+                'id_modelo'     => $modelo->id_modelo,
+                'nombre_modelo' => $modelo->nombre_modelo,
+                'colores'       => $modelo->colores->map(fn($c) => [
+                    'id_color' => $c->id_color,
+                    'color'    => $c->color,
+                ])->values(),
+                'voltajes'      => $modelo->voltajes->map(fn($v) => [
+                    'id_voltaje' => $v->id_voltaje,
+                    'voltaje'    => $v->voltaje,
+                ])->values(),
+            ])->values(),
+        ])->values()->toJson();
 
-        return view('vendedor.dashboard', [
-            'bicicletas' => CatalogService::getBicicletasPorUsuarioPaginadas(
-                $user->id_negocio,
-                $user->id_usuario,
-                $request->get('page', 1),
-                $request->get('search')
-            ),
-        ]);
-    }
-
+    return view('vendedor.dashboard', [
+        'bicicletas'   => CatalogService::getBicicletasPorUsuarioPaginadas(
+            $user->id_negocio,
+            $user->id_usuario,
+            $request->get('page', 1),
+            $request->get('search')
+        ),
+        'catalogoJson' => $catalogoJson,
+    ]);
+}
     /* =====================================================
      | VENDEDOR: ASIGNAR USUARIO
      ===================================================== */
@@ -606,7 +764,8 @@ class BicicletaController extends Controller
     {
         $user = auth()->user();
 
-        if ($user->id_rol != 2) abort(403);
+        if ($user->id_rol != 2)
+            abort(403);
 
         try {
             $bici = Bicicleta::where('num_serie', $request->num_serie)
@@ -625,10 +784,10 @@ class BicicletaController extends Controller
                 return response()->json(['ok' => false, 'message' => 'No tienes acceso a esta bicicleta'], 403);
             }
 
-            $idNegocio         = $bici->id_negocio;
+            $idNegocio = $bici->id_negocio;
             $idUsuarioAnterior = $bici->id_usuario; // ← guardar ANTES de cambiar
-            $bici->id_usuario  = $user->id_usuario;
-            $guardado          = $bici->save();
+            $bici->id_usuario = $user->id_usuario;
+            $guardado = $bici->save();
             $bici->touch();
 
             if (!$guardado) {
@@ -637,15 +796,15 @@ class BicicletaController extends Controller
             }
 
             if ($guardado) {
-            app(BicicletaMovimientoService::class)
-                ->registrar($bici->num_serie, 'transferencia_sucursal', [
-                    'origen'    => 'Stock general',
-                    'destino'   => $user->nombre_usuario,
-                    'notas'     => "Transferido a sucursal: {$user->nombre_usuario}",
-                    'id_negocio' => $idNegocio, // ← forzar el negocio correcto
-                ]);
-                
-                $pmSucursal = \App\Models\ProductoModelo::where('id_modelo',  $bici->id_modelo)
+                app(BicicletaMovimientoService::class)
+                    ->registrar($bici->num_serie, 'transferencia_sucursal', [
+                        'origen' => 'Stock general',
+                        'destino' => $user->nombre_usuario,
+                        'notas' => "Transferido a sucursal: {$user->nombre_usuario}",
+                        'id_negocio' => $idNegocio, // ← forzar el negocio correcto
+                    ]);
+
+                $pmSucursal = \App\Models\ProductoModelo::where('id_modelo', $bici->id_modelo)
                     ->where('id_voltaje', $bici->id_voltaje)
                     ->where('id_negocio', $idNegocio)
                     ->where('id_usuario', $user->id_usuario)
@@ -653,25 +812,25 @@ class BicicletaController extends Controller
 
                 if (!$pmSucursal) {
                     $idProductoNuevo = 'PDT' . str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
-                    $idPmNuevo       = 'PM'  . str_pad(rand(0, 9999999), 7, '0', STR_PAD_LEFT);
+                    $idPmNuevo = 'PM' . str_pad(rand(0, 9999999), 7, '0', STR_PAD_LEFT);
 
                     \App\Models\Producto::create([
-                        'id_producto'     => $idProductoNuevo,
-                        'id_negocio'      => $idNegocio,
-                        'id_usuario'      => $user->id_usuario,
+                        'id_producto' => $idProductoNuevo,
+                        'id_negocio' => $idNegocio,
+                        'id_usuario' => $user->id_usuario,
                         'nombre_producto' => $bici->modelo->nombre_modelo ?? 'Bicicleta',
-                        'precio'          => 0,
-                        'tipo'            => '2',
+                        'precio' => 0,
+                        'tipo' => '2',
                     ]);
 
                     $pmSucursal = \App\Models\ProductoModelo::create([
                         'id_producto_modelo' => $idPmNuevo,
-                        'id_producto'        => $idProductoNuevo,
-                        'id_negocio'         => $idNegocio,
-                        'id_usuario'         => $user->id_usuario,
-                        'id_modelo'          => $bici->id_modelo,
-                        'id_voltaje'         => $bici->id_voltaje,
-                        'activo'             => true,
+                        'id_producto' => $idProductoNuevo,
+                        'id_negocio' => $idNegocio,
+                        'id_usuario' => $user->id_usuario,
+                        'id_modelo' => $bici->id_modelo,
+                        'id_voltaje' => $bici->id_voltaje,
+                        'activo' => true,
                     ]);
 
                     CatalogService::invalidateProducto($idProductoNuevo, $idNegocio);
@@ -680,7 +839,7 @@ class BicicletaController extends Controller
                 }
 
                 // ── Decrementar stock de donde venía la bici ──
-                $pmOrigen = \App\Models\ProductoModelo::where('id_modelo',  $bici->id_modelo)
+                $pmOrigen = \App\Models\ProductoModelo::where('id_modelo', $bici->id_modelo)
                     ->where('id_voltaje', $bici->id_voltaje)
                     ->where('id_negocio', $idNegocio)
                     ->when(
@@ -701,13 +860,13 @@ class BicicletaController extends Controller
                 $invSucursal = \App\Models\Inventario::firstOrCreate(
                     [
                         'id_producto_modelo' => $pmSucursal->id_producto_modelo,
-                        'id_negocio'         => $idNegocio,
-                        'id_usuario'         => $user->id_usuario,
+                        'id_negocio' => $idNegocio,
+                        'id_usuario' => $user->id_usuario,
                     ],
                     [
                         'id_inventario' => 'INV' . strtoupper(substr(md5(uniqid()), 0, 12)),
-                        'cantidad'      => 0,
-                        'stock_minimo'  => 3,
+                        'cantidad' => 0,
+                        'stock_minimo' => 3,
                     ]
                 );
                 $invSucursal->increment('cantidad');
@@ -723,14 +882,14 @@ class BicicletaController extends Controller
 
                 // ── Broadcast al admin ──
                 event(new BicicletaActualizada(
-                    numSerie:       $bici->num_serie,
-                    idNegocio:      $idNegocio,
-                    idUsuario:      $user->id_usuario,
+                    numSerie: $bici->num_serie,
+                    idNegocio: $idNegocio,
+                    idUsuario: $user->id_usuario,
                     nombreVendedor: $user->nombre_usuario,
-                    modelo:         $bici->modelo->nombre_modelo ?? '—',
-                    voltaje:        $bici->voltaje->voltaje       ?? '—',
-                    color:          $bici->color->color           ?? '—',
-                    status:         $bici->status,
+                    modelo: $bici->modelo->nombre_modelo ?? '—',
+                    voltaje: $bici->voltaje->voltaje ?? '—',
+                    color: $bici->color->color ?? '—',
+                    status: $bici->status,
                 ));
             }
 
@@ -739,11 +898,11 @@ class BicicletaController extends Controller
         } catch (\Exception $e) {
             Log::error('Error al asignar usuario a bicicleta', [
                 'num_serie' => $request->num_serie,
-                'error'     => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
-                'ok'      => false,
+                'ok' => false,
                 'message' => 'Error interno: ' . $e->getMessage(),
             ], 500);
         }
@@ -754,54 +913,58 @@ class BicicletaController extends Controller
      | VENDEDOR: BUSCAR POR QR
      ===================================================== */
     public function buscarPorSerieQr($num_serie)
-    {
-        $user = auth()->user();
+{
+    $user = auth()->user();
 
-        if ($user->id_rol != 2) abort(403);
+    if ($user->id_rol != 2) abort(403);
 
-        // ✅ Usar caché en lugar de query directa
-     $bici = CatalogService::getBicicletaBySerie($num_serie, $user->id_negocio);
+    $bici = CatalogService::getBicicletaBySerie($num_serie, $user->id_negocio);
 
-
-        if (!$bici) {
-            return response()->json(['ok' => false, 'message' => 'Bicicleta no encontrada'], 404);
-        }
-
-        if ($bici->id_negocio != $user->id_negocio) {
-            return response()->json(['ok' => false, 'message' => 'No tienes acceso a esta bicicleta'], 403);
-        }
-
-        if ($bici->id_usuario) {
-            return response()->json(['ok' => false, 'message' => 'La bicicleta ya está asignada'], 400);
-        }
-
-        return response()->json([
-            'ok'        => true,
-            'bicicleta' => [
-                'num_serie' => $bici->num_serie,
-                'modelo'    => $bici->modelo->nombre_modelo ?? '—',
-                'voltaje'   => $bici->voltaje->voltaje       ?? '—',
-                'color'     => $bici->color->color           ?? '—',
-            ],
-        ]);
+    if (!$bici) {
+        return response()->json(['ok' => false, 'message' => 'Bicicleta no encontrada'], 404);
     }
+
+    if ($bici->id_negocio != $user->id_negocio) {
+        return response()->json(['ok' => false, 'message' => 'No tienes acceso a esta bicicleta'], 403);
+    }
+
+    if ($bici->id_usuario) {
+        return response()->json(['ok' => false, 'message' => 'La bicicleta ya está asignada'], 400);
+    }
+
+    return response()->json([
+        'ok'        => true,
+        'bicicleta' => [
+            'num_serie'  => $bici->num_serie,
+            'id_modelo'  => $bici->id_modelo,   // ← faltaba
+            'id_color'   => $bici->id_color,    // ← faltaba
+            'id_voltaje' => $bici->id_voltaje,  // ← faltaba
+            'modelo'     => $bici->modelo->nombre_modelo ?? '—',
+            'voltaje'    => $bici->voltaje->voltaje       ?? '—',
+            'color'      => $bici->color->color           ?? '—',
+        ],
+    ]);
+}
 
     /* =====================================================
      | MÉTODOS PRIVADOS
      ===================================================== */
     private static function generarToken(): string
     {
-        $letras  = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        $letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
         $numeros = '0123456789';
 
         $parte1 = '';
-        for ($i = 0; $i < 4; $i++) $parte1 .= $letras[random_int(0, 25)];
+        for ($i = 0; $i < 4; $i++)
+            $parte1 .= $letras[random_int(0, 25)];
 
         $parte2 = '';
-        for ($i = 0; $i < 4; $i++) $parte2 .= $numeros[random_int(0, 9)];
+        for ($i = 0; $i < 4; $i++)
+            $parte2 .= $numeros[random_int(0, 9)];
 
         $parte3 = '';
-        for ($i = 0; $i < 2; $i++) $parte3 .= $letras[random_int(0, 25)];
+        for ($i = 0; $i < 2; $i++)
+            $parte3 .= $letras[random_int(0, 25)];
 
         return $parte1 . $parte2 . $parte3;
     }
