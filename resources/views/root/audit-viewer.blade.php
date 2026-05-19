@@ -113,14 +113,14 @@
                 {{-- Cabecera --}}
                 <div class="grid border-b border-gray-100 dark:border-gray-700
                             text-[10px] font-medium text-gray-400 uppercase tracking-wider
-                            bg-gray-50 dark:bg-gray-800/60"
+                            bg-gray-50 dark:bg-gray-800/60 "
                      style="grid-template-columns: 148px 80px 82px 76px 116px 1fr">
                     <div class="px-4 py-2">Timestamp</div>
                     <div class="px-3 py-2">Nivel</div>
                     <div class="px-3 py-2">Categoría</div>
-                    <div class="px-3 py-2">Negocio</div>
-                    <div class="px-3 py-2">Usuario</div>
-                    <div class="px-3 py-2">Detalle</div>
+                    <div class="px-3 py-2 whitespace-nowrap">Negocio</div>
+                    <div class="px-3 py-2  whitespace-nowrap">Usuario</div>
+                    <div class="px-3 py-2 whitespace-nowrap">Detalle</div>
                 </div>
 
                 {{-- Filas --}}
@@ -150,11 +150,11 @@
                                     <span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium"
                                           :class="catClass(row.cat)" x-text="row.cat || '—'"></span>
                                 </div>
-                                <div class="px-3 py-2.5 text-[11px] text-gray-500 dark:text-gray-400 flex items-center"
+                                <div class="px-3 py-2.5 text-[11px] text-gray-500 dark:text-gray-400 flex items-center  whitespace-nowrap"
                                      x-text="row.neg"></div>
-                                <div class="px-3 py-2.5 text-[11px] font-mono text-gray-600 dark:text-gray-300 truncate flex items-center"
+                                <div class="px-3 py-2.5 text-[11px] font-mono text-gray-600 dark:text-gray-300 truncate flex items-center  whitespace-nowrap"
                                      x-text="row.usr"></div>
-                                <div class="px-3 py-2.5 text-xs text-gray-700 dark:text-gray-200 truncate flex items-center"
+                                <div class="px-3 py-2.5 text-xs text-gray-700 dark:text-gray-200 truncate flex items-center  whitespace-nowrap"
                                      x-text="row.detail"></div>
                             </div>
 
