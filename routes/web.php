@@ -241,14 +241,14 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
         //Caja
 
         Route::prefix('admin/cajas')->name('admin.cajas.')->middleware('auth')->group(function () {
-            Route::get('/',                          [AdminCajaController::class, 'index'])->name('index');
-            Route::get('/{idUsuario}',               [AdminCajaController::class, 'show'])->name('show');
-            Route::post('/store',                    [AdminCajaController::class, 'store'])->name('store');
-            Route::post('/{idUsuario}/ingreso',      [AdminCajaController::class, 'ingreso'])->name('ingreso');
-            Route::post('/{idUsuario}/retiro',       [AdminCajaController::class, 'retiro'])->name('retiro');
-            Route::post('/{idUsuario}/ajuste',       [AdminCajaController::class, 'ajuste'])->name('ajuste');
+            Route::get('/', [AdminCajaController::class, 'index'])->name('index');
+            Route::get('/{idUsuario}', [AdminCajaController::class, 'show'])->name('show');
+            Route::post('/store', [AdminCajaController::class, 'store'])->name('store');
+            Route::post('/{idUsuario}/ingreso', [AdminCajaController::class, 'ingreso'])->name('ingreso');
+            Route::post('/{idUsuario}/retiro', [AdminCajaController::class, 'retiro'])->name('retiro');
+            Route::post('/{idUsuario}/ajuste', [AdminCajaController::class, 'ajuste'])->name('ajuste');
             Route::post('/{idUsuario}/cerrar-forzado', [AdminCajaController::class, 'cerrarForzado'])->name('cerrar.forzado');
-            Route::get('/corte/{id}',                [AdminCajaController::class, 'cortePdf'])->name('corte.pdf');
+            Route::get('/corte/{id}', [AdminCajaController::class, 'cortePdf'])->name('corte.pdf');
 
         });
 
@@ -469,6 +469,8 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
         Route::get('/vendedor/dashboard', [BicicletaController::class, 'showB'])->name('stock.index');
         Route::get('/bicicletas/qrv/{num_serie}', [BicicletaController::class, 'buscarPorSerieQr'])->name('bicicletas.qr');
         Route::post('/bicicletas/asignar-usuario', [BicicletaController::class, 'asignarUsuario'])->name('bicicletas.asignarUsuario');
+        Route::post('/sucursal/bicicletas/masivo', [BicicletaController::class, 'storeMasivo'])
+            ->name('sucursal.bicicletas.storeMasivo');
 
         Route::prefix('sucursal/productos')->name('sucursal.productos.')->group(function () {
             Route::get('/', [ProductoController::class, 'index'])->name('index');
@@ -509,12 +511,12 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
         });
 
         Route::prefix('sucursal/caja')->name('caja.')->group(function () {
-            Route::get('/',               [CajaController::class, 'index'])->name('index');
-            Route::post('/abrir',         [CajaController::class, 'abrir'])->name('abrir');
-            Route::post('/cerrar',        [CajaController::class, 'cerrar'])->name('cerrar');
+            Route::get('/', [CajaController::class, 'index'])->name('index');
+            Route::post('/abrir', [CajaController::class, 'abrir'])->name('abrir');
+            Route::post('/cerrar', [CajaController::class, 'cerrar'])->name('cerrar');
             Route::post('/corte-parcial', [CajaController::class, 'corteParcial'])->name('corte.parcial');
-            Route::get('/corte/{id}',     [CajaController::class, 'cortePdf'])->name('corte.pdf');
-            Route::post('/ingreso',       [CajaController::class, 'ingreso'])->name('ingreso'); // ← nueva
+            Route::get('/corte/{id}', [CajaController::class, 'cortePdf'])->name('corte.pdf');
+            Route::post('/ingreso', [CajaController::class, 'ingreso'])->name('ingreso'); // ← nueva
         });
 
         Route::get('/sucursal/personal', [PersonalController::class, 'porSucursal'])->name('personal.por-sucursal');

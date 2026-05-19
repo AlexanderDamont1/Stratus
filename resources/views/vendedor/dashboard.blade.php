@@ -1,454 +1,693 @@
 <x-app-layout>
-    @php
-    // Función auxiliar para parsear el formato "Nombre|hex1/hex2"
-    function parsearColor($colorStr) {
-    if (!$colorStr) return ['nombre' => '—', 'hexes' => ['#cccccc']];
-    $parts = explode('|', $colorStr, 2);
-    $nombre = trim($parts[0] ?? $colorStr);
-    $hexPart = $parts[1] ?? '';
-    $hexes = $hexPart ? explode('/', $hexPart) : ['#cccccc'];
-    return ['nombre' => $nombre, 'hexes' => $hexes];
-    }
-    @endphp
 
-    <div
-        x-data="{
-        ingresarModal: false,
-        scanner: null,
-        scanData: null,
-        scanError: '',
-        scannerActivo: false,
-        manualSerie: '',
-        cargando: false,
-        mensajeExito: '',
+<script id="catalogo-data" type="application/json">{!! $catalogoJson !!}</script>
 
-        openIngresar() {
-            this.ingresarModal = true;
-            this.scanData = null;
-            this.scanError = '';
-            this.mensajeExito = '';
-        },
+<div x-data="vendedorDashboard()" x-init="init()" class="space-y-6">
 
-        async closeIngresar() {
-            this.ingresarModal = false;
-            this.scanData = null;
-            this.scanError = '';
-            this.mensajeExito = '';
-            await this.detenerScanner();
-        },
+    <x-flash-messages />
 
-        async iniciarScanner() {
-            if (!this.ingresarModal || this.scannerActivo) return;
-            await this.$nextTick();
-            if (typeof Html5Qrcode === 'undefined') {
-                this.scanError = 'No se cargó el lector QR. Recarga la página.';
-                return;
-            }
-            const contenedor = document.getElementById('qr-reader');
-            if (!contenedor) {
-                this.scanError = 'Error interno: contenedor no encontrado.';
-                return;
-            }
-            this.scanner = new Html5Qrcode('qr-reader');
-            this.scannerActivo = true;
-            try {
-                await this.scanner.start(
-                    { facingMode: 'environment' },
-                    { fps: 10, qrbox: { width: 250, height: 250 } },
-                    async (decodedText) => {
-                        await this.buscarBicicleta(decodedText);
-                    }
-                );
-            } catch (error) {
-                console.error('Error al iniciar cámara:', error);
-                this.scanError = 'No se pudo activar la cámara. Asegúrate de dar permisos.';
-                this.scannerActivo = false;
-            }
-        },
+    {{-- ═══════ ENCABEZADO ═══════ --}}
+    <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Mi inventario</h2>
+            <p class="text-xs text-gray-400 mt-0.5">Bicicletas asignadas a tu sucursal</p>
+        </div>
+        <button
+            @click="abrirModal()"
+            class="inline-flex items-center gap-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900
+                   px-4 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 active:scale-95
+                   transition-all duration-150 shadow-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Ingresar bicicletas
+        </button>
+    </div>
 
-        async detenerScanner() {
-            if (this.scanner && this.scannerActivo) {
-                try {
-                    await this.scanner.stop();
-                    await this.scanner.clear();
-                } catch (e) {
-                    console.warn('Error al detener escáner:', e);
-                }
-            }
-            this.scanner = null;
-            this.scannerActivo = false;
-        },
+    {{-- ═══════ TABLA ═══════ --}}
+    <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800
+                overflow-hidden shadow-sm">
 
-        async buscarBicicleta(numSerie) {
-            if (!numSerie || this.cargando) return;
-            this.cargando = true;
-            this.scanError = '';
-            this.scanData = null;
-            this.mensajeExito = '';
-            await this.detenerScanner();
-            try {
-                const url = `{{ url('/bicicletas/qrv') }}/${encodeURIComponent(numSerie)}`;
-                const res = await fetch(url);
-                if (!res.ok) {
-                    const errorData = await res.json().catch(() => ({}));
-                    throw new Error(errorData.message || 'Error al consultar la bicicleta');
-                }
-                const data = await res.json();
-                if (!data.ok) {
-                    throw new Error(data.message || 'No se encontró la bicicleta');
-                }
-                this.scanData = data.bicicleta;
-                if (this.$refs.numSerieInput) {
-                    this.$refs.numSerieInput.value = data.bicicleta.num_serie;
-                }
-            } catch (error) {
-                console.error('Error en búsqueda:', error);
-                this.scanError = error.message;
-            } finally {
-                this.cargando = false;
-            }
-        },
-
-        async asignarBici() {
-            if (!this.scanData || this.cargando) return;
-            this.cargando = true;
-            this.scanError = '';
-            this.mensajeExito = '';
-            try {
-                const res = await fetch('{{ route('bicicletas.asignarUsuario') }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    body: JSON.stringify({ num_serie: this.scanData.num_serie })
-                });
-                let data;
-                try {
-                    data = await res.json();
-                } catch (e) {
-                    throw new Error(`Error ${res.status}: ${res.statusText}`);
-                }
-                if (!res.ok || !data.ok) {
-                    throw new Error(data.message || 'Error al asignar bicicleta');
-                }
-                this.mensajeExito = 'Bicicleta asignada correctamente';
-                setTimeout(() => {
-                    this.closeIngresar();
-                    location.reload();
-                }, 1500);
-            } catch (error) {
-                console.error('Error en asignación:', error);
-                this.scanError = error.message;
-            } finally {
-                this.cargando = false;
-            }
-        },
-
-        // Extrae solo el nombre del color para el modal
-        nombreColor(colorStr) {
-            if (!colorStr) return '—';
-            const partes = colorStr.split('|', 2);
-            return partes[0] || colorStr;
-        }
-    }"
-        x-init="
-        $watch('ingresarModal', value => {
-            if (value) {
-                this.iniciarScanner();
-            } else {
-                this.detenerScanner();
-            }
-        });
-    "
-        class="space-y-6">
-
-        {{-- ===== ENCABEZADO (responsivo, como catálogo) ===== --}}
-        <div class="flex flex-wrap items-start justify-between gap-4">
-            <div>
-                <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Bicicletas</h2>
-                <p class="text-xs text-gray-400 mt-0.5">Gestiona el inventario</p>
-            </div>
-            <div class="flex flex-col items-end gap-2 sm:flex-row-reverse sm:items-center">
-                <button @click="openIngresar()"
-                    class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-md text-sm hover:opacity-90 transition whitespace-nowrap hover:scale-105 transform duration-200 flex items-center gap-1.5">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                    Ingresar bicis
-                </button>
-            </div>
+        <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Bicicletas registradas</h3>
+            <span class="text-xs text-gray-400 tabular-nums">{{ $bicicletas->total() }} total</span>
         </div>
 
-        {{-- ===== TABLA DE BICICLETAS ===== --}}
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-            <div class="px-6 py-4 border-b dark:border-gray-700 flex items-center justify-between">
-                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Bicicletas registradas</h3>
-                <span class="text-xs text-gray-400">{{ $bicicletas->total() }} total</span>
-            </div>
+        @php
+        function parsearColorBlade($c) {
+            if (!$c) return ['nombre' => '—', 'hexes' => ['#cccccc']];
+            $p = explode('|', $c, 2);
+            $hexes = isset($p[1]) ? explode('/', $p[1]) : ['#cccccc'];
+            return ['nombre' => trim($p[0] ?? $c), 'hexes' => $hexes];
+        }
+        $estados = [
+            '1' => ['texto' => 'En Stock',   'color' => 'green'],
+            '2' => ['texto' => 'Vendido',     'color' => 'purple'],
+            '3' => ['texto' => 'Reparación',  'color' => 'yellow'],
+        ];
+        @endphp
 
-            @php
-            $estados = [
-            '1' => ['texto' => 'En Stock', 'color' => 'green'],
-            '2' => ['texto' => 'Vendido', 'color' => 'purple'],
-            '3' => ['texto' => 'Reparación', 'color' => 'yellow'],
-            ];
-            @endphp
-
-            {{-- Vista escritorio --}}
-            <div class="hidden md:block overflow-x-auto">
-                <table class="min-w-full text-sm border border-gray-200 dark:border-gray-700">
-                    <thead class="bg-gray-100 dark:bg-gray-800">
-                        <tr>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">N° Serie</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Modelo</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Voltaje</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Color</th>
-                            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900">
-                        @forelse($bicicletas as $bicicleta)
+        {{-- Desktop --}}
+        <div class="hidden md:block overflow-x-auto">
+            <table class="min-w-full text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-800/60">
+                    <tr>
+                        @foreach(['N° Serie','Modelo','Voltaje','Color','Estado','Fecha'] as $col)
+                        <th class="px-5 py-3 text-left text-[10px] font-bold text-gray-400 uppercase
+                                   tracking-wider {{ $col==='Estado' ? 'text-center' : '' }}">
+                            {{ $col }}
+                        </th>
+                        @endforeach
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-50 dark:divide-gray-800/80">
+                    @forelse($bicicletas as $bici)
                         @php
-                        $statusKey = $bicicleta->status;
-                        $estado = $estados[$statusKey] ?? ['texto' => ucfirst(str_replace('_', ' ', $statusKey)), 'color' => 'red'];
-                        $color = $estado['color'];
-                        $colorInfo = parsearColor($bicicleta->color->color ?? '');
+                            $estado    = $estados[$bici->status] ?? ['texto' => $bici->status, 'color' => 'red'];
+                            $colorInfo = parsearColorBlade($bici->color->color ?? '');
+                            $c         = $estado['color'];
                         @endphp
-                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
-                            <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">{{ $bicicleta->num_serie }}</td>
-                            <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ $bicicleta->modelo->nombre_modelo ?? '—' }}</td>
-                            <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ $bicicleta->voltaje->voltaje ?? '—' }}</td>
-                            <td class="px-4 py-3">
-                                <div class="flex items-center gap-1.5">
+                        <tr class="hover:bg-gray-50/70 dark:hover:bg-gray-800/30 transition-colors duration-100">
+                            <td class="px-5 py-3.5 font-mono text-xs font-medium text-gray-900 dark:text-white">
+                                {{ $bici->num_serie }}
+                            </td>
+                            <td class="px-5 py-3.5 text-gray-500 dark:text-gray-400">
+                                {{ $bici->modelo->nombre_modelo ?? '—' }}
+                            </td>
+                            <td class="px-5 py-3.5 text-gray-500 dark:text-gray-400">
+                                {{ $bici->voltaje->voltaje ?? '—' }}
+                            </td>
+                            <td class="px-5 py-3.5">
+                                <div class="flex items-center gap-2">
                                     @if(count($colorInfo['hexes']) >= 2)
-                                    <span class="w-4 h-4 rounded-sm border border-black/10 dark:border-white/10 overflow-hidden relative inline-flex shrink-0">
-                                        <span class="absolute left-0 top-0 w-1/2 h-full" style="background: {{ $colorInfo['hexes'][0] }}"></span>
-                                        <span class="absolute right-0 top-0 w-1/2 h-full" style="background: {{ $colorInfo['hexes'][1] }}"></span>
-                                    </span>
+                                        <span class="w-4 h-4 rounded-sm border border-black/10 dark:border-white/10
+                                                     overflow-hidden relative inline-flex shrink-0">
+                                            <span class="absolute left-0 top-0 w-1/2 h-full"
+                                                  style="background:{{ $colorInfo['hexes'][0] }}"></span>
+                                            <span class="absolute right-0 top-0 w-1/2 h-full"
+                                                  style="background:{{ $colorInfo['hexes'][1] }}"></span>
+                                        </span>
                                     @else
-                                    <span class="w-4 h-4 rounded-sm border border-black/10 dark:border-white/10 shrink-0 inline-block" style="background: {{ $colorInfo['hexes'][0] }}"></span>
+                                        <span class="w-4 h-4 rounded-sm border border-black/10 dark:border-white/10
+                                                     shrink-0 inline-block"
+                                              style="background:{{ $colorInfo['hexes'][0] }}"></span>
                                     @endif
-                                    <span class="text-gray-700 dark:text-gray-300 text-sm">{{ $colorInfo['nombre'] }}</span>
+                                    <span class="text-gray-700 dark:text-gray-300">{{ $colorInfo['nombre'] }}</span>
                                 </div>
                             </td>
-                            <td class="px-4 py-3 text-center">
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full
-                                @switch($color)
-                                    @case('green') bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-400 @break
-                                    @case('yellow') bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-400 @break
-                                    @case('purple') bg-purple-100 text-purple-800 dark:bg-purple-800/30 dark:text-purple-400 @break
-                                    @default bg-red-100 text-red-800 dark:bg-red-800/30 dark:text-red-400
-                                @endswitch
-                            ">
+                            <td class="px-5 py-3.5 text-center">
+                                <span class="px-2.5 py-1 text-[11px] font-semibold rounded-full
+                                    @if($c==='green')  bg-green-100  text-green-800  dark:bg-green-900/30  dark:text-green-400
+                                    @elseif($c==='yellow') bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400
+                                    @elseif($c==='purple') bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400
+                                    @else bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 @endif">
                                     {{ $estado['texto'] }}
                                 </span>
                             </td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="5" class="px-6 py-10 text-center text-gray-500 dark:text-gray-400">
-                                No se encontraron bicicletas.
+                            <td class="px-5 py-3.5 text-gray-400 text-xs tabular-nums">
+                                {{ $bici->updated_at->format('d/m/Y') }}
                             </td>
                         </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-
-            {{-- Vista móvil --}}
-            <div class="block md:hidden overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="bg-gray-50 dark:bg-gray-700/50">
+                    @empty
                         <tr>
-                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">N° Serie</th>
-                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Voltaje</th>
-                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Color</th>
-                            <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                            <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                        @forelse($bicicletas as $bicicleta)
-                        @php
-                        $statusKey = $bicicleta->status;
-                        $estado = $estados[$statusKey] ?? ['texto' => ucfirst(str_replace('_', ' ', $statusKey)), 'color' => 'red'];
-                        $color = $estado['color'];
-                        $colorInfo = parsearColor($bicicleta->color->color ?? '');
-                        @endphp
-                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                            <td class="px-3 py-3">
-                                <div class="text-xs font-medium text-gray-900 dark:text-white">{{ $bicicleta->num_serie }}</div>
-                                <div class="text-xs text-gray-400">{{ $bicicleta->modelo->nombre_modelo ?? '—' }}</div>
-                            </td>
-                            <td class="px-3 py-3 text-xs text-gray-500">{{ $bicicleta->voltaje->voltaje ?? '—' }}</td>
-                            <td class="px-3 py-3">
-                                <div class="flex items-center gap-1.5">
-                                    @if(count($colorInfo['hexes']) >= 2)
-                                    <span class="w-3.5 h-3.5 rounded-sm border border-black/10 dark:border-white/10 overflow-hidden relative inline-flex shrink-0">
-                                        <span class="absolute left-0 top-0 w-1/2 h-full" style="background: {{ $colorInfo['hexes'][0] }}"></span>
-                                        <span class="absolute right-0 top-0 w-1/2 h-full" style="background: {{ $colorInfo['hexes'][1] }}"></span>
-                                    </span>
-                                    @else
-                                    <span class="w-3.5 h-3.5 rounded-sm border border-black/10 dark:border-white/10 shrink-0 inline-block" style="background: {{ $colorInfo['hexes'][0] }}"></span>
-                                    @endif
-                                    <span class="text-xs text-gray-700 dark:text-gray-300">{{ $colorInfo['nombre'] }}</span>
+                            <td colspan="6" class="px-6 py-16 text-center">
+                                <div class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center
+                                            justify-center mx-auto mb-3">
+                                    <svg class="w-5 h-5 text-gray-300 dark:text-gray-600" fill="none"
+                                         stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                              d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                    </svg>
                                 </div>
+                                <p class="text-sm text-gray-400">No hay bicicletas asignadas aún</p>
                             </td>
-                            <td class="px-3 py-3 text-center">
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full whitespace-nowrap
-                                @switch($color)
-                                    @case('green') bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-400 @break
-                                    @case('yellow') bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-400 @break
-                                    @case('purple') bg-purple-100 text-purple-800 dark:bg-purple-800/30 dark:text-purple-400 @break
-                                    @default bg-red-100 text-red-800 dark:bg-red-800/30 dark:text-red-400
-                                @endswitch
-                            ">
-                                    {{ $estado['texto'] }}
-                                </span>
-                            </td>
-                            <td class="px-4 py-3 text-gray-400 text-xs">{{ $bicicleta->updated_at->format('d/m/Y') }}</td>
                         </tr>
-                        @empty
-                        <tr>
-                            <td colspan="5" class="px-3 py-8 text-center text-gray-500 text-xs">No hay bicicletas</td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
 
-            @if($bicicletas->hasPages())
-            <div class="px-6 py-4 border-t dark:border-gray-700">
+        {{-- Móvil --}}
+        <div class="block md:hidden divide-y divide-gray-50 dark:divide-gray-800">
+            @forelse($bicicletas as $bici)
+                @php
+                    $estado    = $estados[$bici->status] ?? ['texto' => $bici->status, 'color' => 'red'];
+                    $colorInfo = parsearColorBlade($bici->color->color ?? '');
+                    $c         = $estado['color'];
+                @endphp
+                <div class="px-4 py-3.5 flex items-center justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="font-mono text-xs font-medium text-gray-900 dark:text-white truncate">
+                            {{ $bici->num_serie }}
+                        </p>
+                        <p class="text-xs text-gray-400 mt-0.5">{{ $bici->modelo->nombre_modelo ?? '—' }}</p>
+                        <div class="flex items-center gap-2 mt-1.5">
+                            @if(count($colorInfo['hexes']) >= 2)
+                                <span class="w-3 h-3 rounded-sm border border-black/10 overflow-hidden
+                                             relative inline-flex shrink-0">
+                                    <span class="absolute left-0 top-0 w-1/2 h-full"
+                                          style="background:{{ $colorInfo['hexes'][0] }}"></span>
+                                    <span class="absolute right-0 top-0 w-1/2 h-full"
+                                          style="background:{{ $colorInfo['hexes'][1] }}"></span>
+                                </span>
+                            @else
+                                <span class="w-3 h-3 rounded-sm border border-black/10 shrink-0 inline-block"
+                                      style="background:{{ $colorInfo['hexes'][0] }}"></span>
+                            @endif
+                            <span class="text-[11px] text-gray-500">{{ $colorInfo['nombre'] }}</span>
+                            <span class="text-[11px] text-gray-300 dark:text-gray-600">·</span>
+                            <span class="text-[11px] text-gray-500">{{ $bici->voltaje->voltaje ?? '—' }}</span>
+                        </div>
+                    </div>
+                    <span class="shrink-0 px-2.5 py-1 text-[11px] font-semibold rounded-full whitespace-nowrap
+                        @if($c==='green')  bg-green-100  text-green-800  dark:bg-green-900/30  dark:text-green-400
+                        @elseif($c==='yellow') bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400
+                        @elseif($c==='purple') bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400
+                        @else bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 @endif">
+                        {{ $estado['texto'] }}
+                    </span>
+                </div>
+            @empty
+                <div class="px-4 py-12 text-center text-sm text-gray-400">Sin bicicletas asignadas</div>
+            @endforelse
+        </div>
+
+        @if($bicicletas->hasPages())
+            <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-800">
                 {{ $bicicletas->withQueryString()->links() }}
             </div>
-            @endif
-        </div>
+        @endif
+    </div>
 
-        {{-- ===== MODAL MINIMALISTA CON COLOR LEGIBLE ===== --}}
+
+    {{-- ═══════════════════════════════════════════════════
+     |  MODAL — Ingresar bicicletas (carga masiva por QR)
+     ═══════════════════════════════════════════════════ --}}
+    <div
+        x-show="modal"
+        x-cloak
+        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100"
+        x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0"
+        class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center
+               justify-center z-50 px-0 sm:px-4"
+        @click.self="cerrarModal()">
+
         <div
-            x-show="ingresarModal"
-            x-cloak
-            x-transition:enter="transition ease-out duration-200"
-            x-transition:enter-start="opacity-0"
-            x-transition:enter-end="opacity-100"
+            x-show="modal"
+            x-transition:enter="transition ease-out duration-250"
+            x-transition:enter-start="opacity-0 translate-y-6 sm:translate-y-0 sm:scale-95"
+            x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
             x-transition:leave="transition ease-in duration-150"
-            x-transition:leave-start="opacity-100"
-            x-transition:leave-end="opacity-0"
-            class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4"
-            @click.self="closeIngresar()">
-            <div
-                x-show="ingresarModal"
-                x-transition:enter="transition ease-out duration-200"
-                x-transition:enter-start="opacity-0 scale-95"
-                x-transition:enter-end="opacity-100 scale-100"
-                x-transition:leave="transition ease-in duration-150"
-                x-transition:leave-start="opacity-100 scale-100"
-                x-transition:leave-end="opacity-0 scale-95"
-                class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-3xl"
-                @click.stop>
-                {{-- Cabecera simple --}}
-                <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-gray-700">
-                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Ingresar bicicleta</h3>
-                    <button @click="closeIngresar()"
-                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition p-1">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
+            x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+            x-transition:leave-end="opacity-0 translate-y-4 sm:scale-95"
+            class="bg-white dark:bg-gray-900 w-full sm:max-w-3xl rounded-t-2xl sm:rounded-2xl
+                   shadow-2xl flex flex-col overflow-hidden"
+            style="max-height: min(92vh, 760px);"
+            @click.stop>
 
-                {{-- Contenido en dos columnas --}}
-                <div class="p-5">
-                    <div class="grid md:grid-cols-2 gap-5">
-                        {{-- Lector QR --}}
+            {{-- ── Cabecera ── --}}
+            <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100
+                        dark:border-gray-800 shrink-0">
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
+                        Ingresar bicicletas
+                    </h3>
+                    <p class="text-xs text-gray-400 mt-0.5">
+                        Escanea o escribe los números de serie — se acumulan hasta guardar
+                    </p>
+                </div>
+                <button @click="cerrarModal()"
+                    class="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400
+                           hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100
+                           dark:hover:bg-gray-800 transition shrink-0 ml-3">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            {{-- ── Cuerpo: 2 columnas en desktop ── --}}
+            <div class="flex-1 min-h-0 grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x
+                        divide-gray-100 dark:divide-gray-800 overflow-hidden">
+
+                {{-- COLUMNA IZQUIERDA — Escáner + input ── --}}
+                <div class="flex flex-col overflow-y-auto">
+                    <div class="p-5 space-y-4">
+
+                        {{-- QR reader --}}
                         <div>
-                            <div id="qr-reader" class="w-full border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 p-1"></div>
-                            <p class="text-center text-xs text-gray-400 mt-2">Apunta al código QR</p>
+                            <div id="qr-reader"
+                                 class="w-full rounded-xl border border-gray-200 dark:border-gray-700
+                                        bg-gray-50 dark:bg-gray-800 overflow-hidden min-h-[190px]">
+                            </div>
+                            <p class="text-center text-xs text-gray-400 mt-2">
+                                Apunta al QR — la bicicleta se agrega automáticamente
+                            </p>
                         </div>
 
-                        {{-- Búsqueda manual y resultado --}}
-                        <div class="space-y-4">
-                            {{-- Campo con límite de 17 caracteres y contador --}}
-                            <div>
-                                <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Número de serie</label>
-                                <div class="flex gap-2">
-                                    <input type="text"
-                                        x-model="manualSerie"
-                                        @input="manualSerie = manualSerie.toUpperCase()"
-                                        @keyup.enter="if (manualSerie.length === 17 && !cargando) buscarBicicleta(manualSerie)"
-                                        maxlength="17"
-                                        class="flex-1 font-mono border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-300"
-                                        placeholder="HE0EA2A00SA963753">
-                                    <button @click="buscarBicicleta(manualSerie)"
-                                        :disabled="cargando || manualSerie.length !== 17"
-                                        class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed">
-                                        <span x-text="cargando ? '...' : 'Buscar'"></span>
-                                    </button>
-                                </div>
-                                <div class="flex justify-between items-center mt-1">
-                                    <p class="text-[11px] text-gray-400">Debe tener 17 caracteres</p>
-                                    <p class="text-[11px]  text-gray-400">
-                                        <span x-text="manualSerie.length"></span>/17
-                                    </p>
-                                </div>
+                        {{-- Input manual ── --}}
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400
+                                          uppercase tracking-wide mb-1.5">
+                                O escribe el número de serie
+                            </label>
+                            <div class="flex gap-2">
+                                <input
+                                    type="text"
+                                    x-model="input"
+                                    x-ref="inputSerie"
+                                    @input="input = input.toUpperCase(); errorGlobal = ''"
+                                    @keyup.enter="agregarSerie(input)"
+                                    maxlength="17"
+                                    placeholder="HE0EA2A00SA963753"
+                                    autocomplete="off"
+                                    class="flex-1 font-mono border border-gray-200 dark:border-gray-700
+                                           rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800
+                                           text-gray-900 dark:text-white placeholder-gray-300
+                                           dark:placeholder-gray-600 focus:outline-none
+                                           focus:ring-2 focus:ring-gray-200 dark:focus:ring-gray-700
+                                           transition">
+                                <button
+                                    @click="agregarSerie(input)"
+                                    :disabled="input.length !== 17 || buscando"
+                                    class="px-4 py-2.5 bg-gray-900 dark:bg-white dark:text-gray-900
+                                           text-white text-sm font-semibold rounded-xl hover:opacity-90
+                                           transition disabled:opacity-30 disabled:cursor-not-allowed
+                                           whitespace-nowrap min-w-[80px] flex items-center
+                                           justify-center gap-1.5">
+                                    <svg x-show="buscando"
+                                         class="animate-spin w-3.5 h-3.5"
+                                         fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10"
+                                                stroke="currentColor" stroke-width="4"/>
+                                        <path class="opacity-75" fill="currentColor"
+                                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                    </svg>
+                                    <span x-text="buscando ? '' : 'Agregar'"></span>
+                                </button>
                             </div>
+                            <div class="flex justify-between mt-1">
+                                <p class="text-[11px] text-gray-400">Exactamente 17 caracteres</p>
+                                <p class="text-[11px] text-gray-400 tabular-nums">
+                                    <span x-text="input.length"></span>/17
+                                </p>
+                            </div>
+                        </div>
 
-                            {{-- Mensajes de error/éxito --}}
-                            <div x-show="scanError" class="text-center text-red-800 dark:text-red-400 text-sm" x-text="scanError"></div>
-                            <div x-show="mensajeExito" class="text-center text-green-800 dark:text-green-400 text-sm" x-text="mensajeExito"></div>
+                        {{-- Feedback ── --}}
+                        <div x-show="errorGlobal"
+                             x-transition:enter="transition ease-out duration-150"
+                             x-transition:enter-start="opacity-0 -translate-y-1"
+                             x-transition:enter-end="opacity-100 translate-y-0"
+                             x-transition:leave="transition ease-in duration-100"
+                             x-transition:leave-end="opacity-0"
+                             class="flex items-start gap-2 px-3.5 py-3 rounded-xl bg-red-50
+                                    dark:bg-red-900/10 border border-red-200 dark:border-red-800/50">
+                            <svg class="w-3.5 h-3.5 text-red-500 shrink-0 mt-0.5" fill="currentColor"
+                                 viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                                      clip-rule="evenodd"/>
+                            </svg>
+                            <p class="text-xs text-red-600 dark:text-red-400" x-text="errorGlobal"></p>
+                        </div>
 
-
-                            {{-- Resultado de la búsqueda --}}
-                            <template x-if="scanData">
-                                <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-2">
-                                    <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
-                                        <span class="text-gray-600 dark:text-gray-400">Serie:</span>
-                                        <span class="font-mono text-gray-900 dark:text-white" x-text="scanData.num_serie"></span>
-
-                                        <span class="text-gray-600 dark:text-gray-400">Modelo:</span>
-                                        <span class="text-gray-900 dark:text-white" x-text="scanData.modelo"></span>
-
-                                        <span class="text-gray-600 dark:text-gray-400">Voltaje:</span>
-                                        <span class="text-gray-900 dark:text-white" x-text="scanData.voltaje"></span>
-
-                                        <span class="text-gray-600 dark:text-gray-400">Color:</span>
-                                        <div class="flex items-center gap-1.5">
-                                            <span class="w-3.5 h-3.5 rounded-sm border border-black/10 dark:border-white/10"
-                                                :style="'background:' + (scanData.color.split('|')[1]?.split('/')[0] || '#cccccc')"></span>
-                                            <span class="text-gray-900 dark:text-white" x-text="nombreColor(scanData.color)"></span>
-                                        </div>
-                                    </div>
-                                    <input type="hidden" x-ref="numSerieInput" :value="scanData.num_serie">
-                                    <button @click="asignarBici()"
-                                        :disabled="cargando"
-                                        class="w-full mt-2 bg-green-600 hover:bg-green-700 text-white py-1.5 rounded-lg text-sm font-medium transition disabled:opacity-50">
-                                        <span x-text="cargando ? 'Asignando...' : 'Asignar bicicleta'"></span>
-                                    </button>
-                                </div>
-                            </template>
-
-                            {{-- Mensaje por defecto --}}
-                            <template x-if="!scanData && !cargando">
-                                <div class="text-center text-gray-400 dark:text-gray-500 text-sm py-4">
-                                    Escanea un código QR<br>o escribe el número de serie
-                                </div>
-                            </template>
+                        <div x-show="exitoMsg"
+                             x-transition:enter="transition ease-out duration-150"
+                             x-transition:enter-start="opacity-0 -translate-y-1"
+                             x-transition:enter-end="opacity-100 translate-y-0"
+                             x-transition:leave="transition ease-in duration-100"
+                             x-transition:leave-end="opacity-0"
+                             class="flex items-center gap-2 px-3.5 py-3 rounded-xl bg-emerald-50
+                                    dark:bg-emerald-900/10 border border-emerald-200
+                                    dark:border-emerald-800/50">
+                            <svg class="w-3.5 h-3.5 text-emerald-500 shrink-0" fill="none"
+                                 stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                      d="M5 13l4 4L19 7"/>
+                            </svg>
+                            <p class="text-xs text-emerald-700 dark:text-emerald-400"
+                               x-text="exitoMsg"></p>
                         </div>
                     </div>
                 </div>
 
-                {{-- Pie simplificado --}}
-                <div class="px-5 py-3 border-t border-gray-100 dark:border-gray-700 flex justify-end">
-                    <button @click="closeIngresar()"
-                        class="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition">
-                        Cancelar
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+                {{-- COLUMNA DERECHA — Lista acumulada ── --}}
+                <div class="flex flex-col min-h-0">
 
-    <script src="https://unpkg.com/html5-qrcode" defer></script>
+                    {{-- Header lista --}}
+                    <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-800 shrink-0
+                                flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                                Cola de ingreso
+                            </span>
+                            <span x-show="lista.length > 0"
+                                  x-transition:enter="transition ease-out duration-150"
+                                  x-transition:enter-start="opacity-0 scale-50"
+                                  x-transition:enter-end="opacity-100 scale-100"
+                                  class="text-[10px] font-black bg-gray-900 dark:bg-white text-white
+                                         dark:text-gray-900 px-1.5 py-0.5 rounded-full tabular-nums"
+                                  x-text="lista.length">
+                            </span>
+                        </div>
+                        <button x-show="lista.length > 0"
+                                @click="lista = []"
+                                class="text-[11px] text-gray-400 hover:text-red-500
+                                       dark:hover:text-red-400 transition font-medium">
+                            Limpiar todo
+                        </button>
+                    </div>
+
+                    {{-- Estado vacío --}}
+                    <div x-show="lista.length === 0"
+                         class="flex-1 flex flex-col items-center justify-center px-6 py-10 text-center">
+                        <div class="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center
+                                    justify-center mb-3">
+                            <svg class="w-6 h-6 text-gray-300 dark:text-gray-600" fill="none"
+                                 stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0
+                                         00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2
+                                         2 0 012 2"/>
+                            </svg>
+                        </div>
+                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                            Sin bicicletas en cola
+                        </p>
+                        <p class="text-xs text-gray-300 dark:text-gray-600 mt-1">
+                            Escanea o escribe series para acumularlas aquí
+                        </p>
+                    </div>
+
+                    {{-- Lista --}}
+                    <div x-show="lista.length > 0"
+                         class="flex-1 overflow-y-auto divide-y divide-gray-50 dark:divide-gray-800/80">
+                        <template x-for="(item, idx) in lista" :key="item.num_serie">
+                            <div
+                                x-transition:enter="transition ease-out duration-200"
+                                x-transition:enter-start="opacity-0 translate-x-3"
+                                x-transition:enter-end="opacity-100 translate-x-0"
+                                class="px-4 py-3 flex items-center gap-3 group">
+
+                                <span class="text-[10px] text-gray-300 dark:text-gray-600 w-4
+                                             text-right shrink-0 tabular-nums"
+                                      x-text="idx + 1"></span>
+
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-mono text-xs font-semibold text-gray-900
+                                               dark:text-white"
+                                       x-text="item.num_serie"></p>
+                                    <div class="flex flex-wrap items-center gap-1 mt-1">
+                                        <span class="text-[10px] bg-blue-50 dark:bg-blue-900/20
+                                                     text-blue-600 dark:text-blue-400 border
+                                                     border-blue-100 dark:border-blue-800/50
+                                                     px-1.5 py-0.5 rounded font-medium"
+                                              x-text="item.marca"></span>
+                                        <span class="text-[10px] bg-gray-50 dark:bg-gray-800
+                                                     text-gray-500 dark:text-gray-400 border
+                                                     border-gray-100 dark:border-gray-700
+                                                     px-1.5 py-0.5 rounded"
+                                              x-text="item.modelo"></span>
+                                        <span class="inline-flex items-center gap-1 text-[10px]
+                                                     bg-gray-50 dark:bg-gray-800 text-gray-500
+                                                     dark:text-gray-400 border border-gray-100
+                                                     dark:border-gray-700 px-1.5 py-0.5 rounded">
+                                            <span class="w-2.5 h-2.5 rounded-sm border border-black/10
+                                                         dark:border-white/10 shrink-0 inline-block"
+                                                  :style="'background:' + item.colorHex"></span>
+                                            <span x-text="item.colorNombre"></span>
+                                        </span>
+                                        <span class="text-[10px] bg-gray-50 dark:bg-gray-800
+                                                     text-gray-400 dark:text-gray-500 border
+                                                     border-gray-100 dark:border-gray-700
+                                                     px-1.5 py-0.5 rounded"
+                                              x-text="item.voltaje"></span>
+                                    </div>
+                                </div>
+
+                                <button type="button"
+                                        @click="lista.splice(idx, 1)"
+                                        class="w-6 h-6 rounded-lg flex items-center justify-center
+                                               text-gray-300 dark:text-gray-600 hover:text-red-500
+                                               hover:bg-red-50 dark:hover:bg-red-900/20 transition
+                                               shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
+                                         viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                              stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </template>
+                    </div>
+
+                    {{-- Footer: guardar ── --}}
+                    <div class="px-5 py-4 border-t border-gray-100 dark:border-gray-800 shrink-0 space-y-3">
+
+                        <div x-show="lista.length > 0"
+                             class="flex items-center gap-2"
+                             x-transition:enter="transition ease-out duration-200"
+                             x-transition:enter-start="opacity-0"
+                             x-transition:enter-end="opacity-100">
+                            <svg class="w-3.5 h-3.5 text-emerald-500 shrink-0" fill="none"
+                                 stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <p class="text-xs text-emerald-700 dark:text-emerald-400">
+                                <strong x-text="lista.length"></strong>
+                                <span x-text="lista.length === 1 ? ' bicicleta lista' : ' bicicletas listas'"></span>
+                                para ingresar al stock
+                            </p>
+                        </div>
+
+                        <form method="POST"
+                              action="{{ route('sucursal.bicicletas.storeMasivo') }}"
+                              @submit.prevent="enviar($el)">
+                            @csrf
+                            <template x-for="(item, idx) in lista" :key="item.num_serie">
+                                <span>
+                                    <input type="hidden"
+                                           :name="`bicicletas[${idx}][num_serie]`"
+                                           :value="item.num_serie">
+                                    <input type="hidden"
+                                           :name="`bicicletas[${idx}][id_modelo]`"
+                                           :value="item.id_modelo">
+                                    <input type="hidden"
+                                           :name="`bicicletas[${idx}][id_color]`"
+                                           :value="item.id_color">
+                                    <input type="hidden"
+                                           :name="`bicicletas[${idx}][id_voltaje]`"
+                                           :value="item.id_voltaje">
+                                </span>
+                            </template>
+
+                            <button type="submit"
+                                    :disabled="enviando || lista.length === 0"
+                                    class="w-full bg-gray-900 dark:bg-white dark:text-gray-900 text-white
+                                           py-3 rounded-xl text-sm font-semibold hover:opacity-90
+                                           active:scale-[.99] transition-all disabled:opacity-30
+                                           disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                                <template x-if="enviando">
+                                    <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10"
+                                                stroke="currentColor" stroke-width="4"/>
+                                        <path class="opacity-75" fill="currentColor"
+                                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                    </svg>
+                                </template>
+                                <template x-if="!enviando">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                         viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                              stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                </template>
+                                <span x-text="enviando
+                                    ? 'Guardando…'
+                                    : lista.length === 0
+                                        ? 'Agrega bicicletas primero'
+                                        : `Guardar ${lista.length} bicicleta${lista.length !== 1 ? 's' : ''}`">
+                                </span>
+                            </button>
+                        </form>
+                    </div>
+                </div>{{-- /col derecha --}}
+            </div>{{-- /grid --}}
+        </div>{{-- /modal inner --}}
+    </div>{{-- /modal overlay --}}
+
+</div>{{-- /x-data --}}
+
+<script src="https://unpkg.com/html5-qrcode" defer></script>
+
+<script>
+function vendedorDashboard() {
+    return {
+        /* ─── estado ─────────────────────── */
+        catalogo:    [],
+        modal:       false,
+        input:       '',
+        buscando:    false,
+        errorGlobal: '',
+        exitoMsg:    '',
+        lista:       [],
+        /* cada item: { num_serie, id_modelo, id_color, id_voltaje,
+                        marca, modelo, colorNombre, colorHex, voltaje } */
+        enviando:        false,
+        _scanner:        null,
+        _scannerActivo:  false,
+        _scannerPausado: false, /* pausa temporal mientras procesa un QR */
+
+        /* ─── init ──────────────────────── */
+        init() {
+            const tag     = document.getElementById('catalogo-data');
+            this.catalogo = tag ? JSON.parse(tag.text) : [];
+        },
+
+        /* ─── modal ─────────────────────── */
+        abrirModal() {
+            this.modal       = true;
+            this.input       = '';
+            this.errorGlobal = '';
+            this.exitoMsg    = '';
+            this.$nextTick(() => this._iniciarScanner());
+        },
+        async cerrarModal() {
+            this.modal       = false;
+            this.input       = '';
+            this.errorGlobal = '';
+            this.exitoMsg    = '';
+            this.lista       = [];
+            this.enviando    = false;
+            await this._detenerScanner();
+        },
+
+        /* ─── scanner ───────────────────── */
+        async _iniciarScanner() {
+            if (this._scannerActivo) return;
+            if (typeof Html5Qrcode === 'undefined') return;
+            const el = document.getElementById('qr-reader');
+            if (!el) return;
+            this._scanner      = new Html5Qrcode('qr-reader');
+            this._scannerActivo = true;
+            try {
+                await this._scanner.start(
+                    { facingMode: 'environment' },
+                    { fps: 10, qrbox: { width: 200, height: 200 } },
+                    async (decoded) => {
+                        if (this._scannerPausado) return;
+                        /* El QR puede ser solo la serie o una URL; tomamos el último segmento */
+                        const serie = decoded.trim().split('/').pop().toUpperCase();
+                        if (serie.length === 17) {
+                            this._scannerPausado = true;
+                            await this.agregarSerie(serie);
+                            /* Reanudar el escáner tras 1.5 s para evitar dobles lecturas */
+                            setTimeout(() => { this._scannerPausado = false; }, 1500);
+                        }
+                    }
+                );
+            } catch (e) {
+                console.warn('Cámara no disponible:', e);
+                this._scannerActivo = false;
+            }
+        },
+        async _detenerScanner() {
+            if (this._scanner && this._scannerActivo) {
+                try {
+                    await this._scanner.stop();
+                    await this._scanner.clear();
+                } catch (_) {}
+            }
+            this._scanner        = null;
+            this._scannerActivo  = false;
+            this._scannerPausado = false;
+        },
+
+        /* ─── agregar serie ─────────────── */
+        async agregarSerie(serie) {
+            serie = (serie || '').trim().toUpperCase();
+            if (serie.length !== 17) return;
+            if (this.buscando)       return;
+
+            this.errorGlobal = '';
+            this.exitoMsg    = '';
+
+            /* Duplicado en lista actual */
+            if (this.lista.some(i => i.num_serie === serie)) {
+                this.errorGlobal = `${serie} ya está en la cola.`;
+                return;
+            }
+
+            this.buscando = true;
+            try {
+                const url  = `{{ url('/bicicletas/qrv') }}/${encodeURIComponent(serie)}`;
+                const res  = await fetch(url);
+                const json = await res.json().catch(() => ({}));
+
+                if (!res.ok || !json.ok) {
+                    this.errorGlobal = json.message || 'Bicicleta no encontrada.';
+                    return;
+                }
+
+                const bici = json.bicicleta;
+
+                /* Parsear color "Nombre|#hex1/#hex2" */
+                const colorParts  = (bici.color || '').split('|');
+                const colorNombre = colorParts[0]?.trim() || '—';
+                const colorHex    = colorParts[1]?.split('/')[0] || '#cccccc';
+
+                /* Buscar marca en catálogo local */
+                let marcaNombre = '—';
+                for (const m of this.catalogo) {
+                    if (m.modelos.some(mo => String(mo.id_modelo) === String(bici.id_modelo ?? ''))) {
+                        marcaNombre = m.nombre_marca;
+                        break;
+                    }
+                }
+
+                this.lista.push({
+                    num_serie:   bici.num_serie,
+                    id_modelo:   bici.id_modelo  ?? '',
+                    id_color:    bici.id_color    ?? '',
+                    id_voltaje:  bici.id_voltaje  ?? '',
+                    marca:       marcaNombre,
+                    modelo:      bici.modelo      || '—',
+                    colorNombre,
+                    colorHex,
+                    voltaje:     bici.voltaje     || '—',
+                });
+
+                this.exitoMsg = `${bici.num_serie} agregada ✓`;
+                setTimeout(() => { this.exitoMsg = ''; }, 2000);
+
+                /* Limpiar input y devolver foco */
+                this.input = '';
+                this.$nextTick(() => {
+                    if (this.$refs.inputSerie) this.$refs.inputSerie.focus();
+                });
+
+            } catch (e) {
+                this.errorGlobal = e.message || 'Error de conexión.';
+            } finally {
+                this.buscando = false;
+            }
+        },
+
+        /* ─── enviar ─────────────────────── */
+        enviar(form) {
+            if (this.lista.length === 0 || this.enviando) return;
+            this.enviando = true;
+            form.submit();
+        },
+    };
+}
+</script>
 
 </x-app-layout>
