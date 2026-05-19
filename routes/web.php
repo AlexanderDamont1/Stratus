@@ -31,13 +31,13 @@ use App\Http\Controllers\ReporteRoboController;
 use App\Http\Controllers\Admin\CuponController;
 use App\Http\Controllers\CuponValidarController;
 use App\Http\Controllers\Admin\PersonalController;
-use App\Http\Controllers\Admin\MetodoPagoController;
 use App\Http\Controllers\Root\RootNegocioController;
 use App\Http\Controllers\Root\RootConfigController;
 use App\Http\Controllers\UbicacionController;
 use App\Http\Controllers\SucursalesPublicasController;
 use App\Http\Controllers\CajaController;
 use App\Http\Controllers\Admin\AdminCajaController;
+use App\Http\Controllers\Root\AuditController;
 
 /*
 |--------------------------------------------------------------------------
@@ -553,7 +553,13 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
             Route::patch('/{id}/toggle', [RootConfigController::class, 'toggle'])->name('toggle');
             Route::delete('/{id}', [RootConfigController::class, 'destroy'])->name('destroy');
         });
+
     });
+
+        Route::middleware(['es.root', 'audit.access'])->prefix('root')->name('root.')->group(function () {
+            Route::get('/audit',     [AuditController::class, 'index'])->name('audit.index');
+            Route::get('/audit-log', [AuditController::class, 'lines'])->name('audit.lines');
+        });
 });
 
 require __DIR__ . '/auth.php';

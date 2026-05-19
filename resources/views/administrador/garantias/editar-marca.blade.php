@@ -52,12 +52,12 @@
              class="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
             <div class="flex items-center gap-3 rounded-xl px-4 py-3 shadow-xl min-w-[280px] pointer-events-auto"
                  :class="flashTipo === 'error'
-                     ? 'bg-red-50 dark:bg-red-950 ring-1 ring-red-200 dark:ring-red-800'
+                     ? 'bg-red-100 dark:bg-red-800/30 ring-1 ring-red-200 dark:ring-red-700'
                      : 'bg-white dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700'">
-                <svg x-show="flashTipo==='success'" class="h-4 w-4 text-green-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <svg x-show="flashTipo==='success'" class="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                 </svg>
-                <svg x-show="flashTipo==='error'" class="h-4 w-4 text-red-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <svg x-show="flashTipo==='error'" class="h-4 w-4 text-red-800 dark:text-red-400 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
                 </svg>
                 <p class="text-sm font-medium text-gray-900 dark:text-white" x-text="flashMsg"></p>
@@ -65,7 +65,7 @@
         </div>
 
         {{-- ── Grid 2 columnas en desktop ── --}}
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
             {{-- Columna izquierda: PDF + Política --}}
             <div class="space-y-6 lg:col-span-1">
@@ -79,13 +79,13 @@
 
                     @php $tienePdf = $config?->tienePdf(); @endphp
                     @if($tienePdf)
-                    <div class="mx-5 mb-4 flex items-center gap-2.5 bg-blue-50 dark:bg-blue-950/40
-                                border border-blue-100 dark:border-blue-900/50 rounded-lg px-3 py-2.5">
-                        <svg class="w-4 h-4 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="mx-5 mb-4 flex items-center gap-2.5 bg-blue-100 dark:bg-blue-800/30
+                                border border-blue-200 dark:border-blue-700 rounded-lg px-3 py-2.5">
+                        <svg class="w-4 h-4 text-blue-800 dark:text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                   d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                         </svg>
-                        <span class="text-xs text-blue-700 dark:text-blue-300 font-medium truncate">
+                        <span class="text-xs text-blue-800 dark:text-blue-400 font-medium truncate">
                             {{ $config->pdf_nombre_original }}
                         </span>
                     </div>
@@ -129,8 +129,8 @@
                         {{-- Estado procesamiento --}}
                         <div x-show="estado !== 'sin_pdf'" x-cloak class="mt-3 space-y-1.5">
                             <div x-show="estado === 'pendiente' || estado === 'procesando'"
-                                 class="flex items-center gap-2 text-xs text-yellow-600 dark:text-yellow-400
-                                        bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-100 dark:border-yellow-900/40
+                                 class="flex items-center gap-2 text-xs text-amber-800 dark:text-amber-400
+                                        bg-amber-100 dark:bg-amber-800/30 border border-amber-200 dark:border-amber-700
                                         rounded-lg px-3 py-2">
                                 <svg class="animate-spin w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
@@ -140,8 +140,8 @@
                                 <button @click="verificarEstado()" class="ml-auto underline text-[10px] shrink-0">Verificar</button>
                             </div>
                             <div x-show="estado === 'error'"
-                                 class="flex items-center gap-2 text-xs text-red-600 dark:text-red-400
-                                        bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/40
+                                 class="flex items-center gap-2 text-xs text-red-800 dark:text-red-400
+                                        bg-red-100 dark:bg-red-800/30 border border-red-200 dark:border-red-700
                                         rounded-lg px-3 py-2">
                                 <svg class="w-3.5 h-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
@@ -149,8 +149,8 @@
                                 Error al procesar. Intenta subirlo de nuevo.
                             </div>
                             <div x-show="estado === 'completado'"
-                                 class="flex items-center gap-2 text-xs text-green-600 dark:text-green-400
-                                        bg-green-50 dark:bg-green-950/30 border border-green-100 dark:border-green-900/40
+                                 class="flex items-center gap-2 text-xs text-green-800 dark:text-green-400
+                                        bg-green-100 dark:bg-green-800/30 border border-green-200 dark:border-green-700
                                         rounded-lg px-3 py-2">
                                 <svg class="w-3.5 h-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
@@ -172,23 +172,23 @@
 
                         {{-- Opciones visuales --}}
                         <template x-for="op in politicaOpciones" :key="op.key">
-                            <button type="button" @click="politicaSeleccionada = op.key"
+                            <button type="button" @click="seleccionarPolitica(op.key)"
                                     :class="politicaSeleccionada === op.key
-                                        ? 'border-gray-900 dark:border-white ring-1 ring-gray-900 dark:ring-white bg-gray-50 dark:bg-gray-750'
-                                        : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'"
+                                        ? 'border-gray-900 dark:border-gray-300 ring-1 ring-gray-900 dark:ring-gray-300 bg-gray-50 dark:bg-gray-700'
+                                        : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-white dark:bg-gray-800'"
                                     class="w-full text-left border rounded-xl px-3.5 py-3 transition-all duration-150 relative">
 
                                 <div class="flex items-start gap-3">
                                     {{-- Radio visual --}}
-                                    <div class="mt-0.5 w-4 h-4 rounded-full border-2 shrink-0 transition-all"
+                                    <div class="mt-0.5 w-4 h-4 rounded-full border-2 shrink-0 transition-all flex items-center justify-center"
                                          :class="politicaSeleccionada === op.key
-                                             ? 'border-gray-900 dark:border-white bg-gray-900 dark:bg-white'
-                                             : 'border-gray-300 dark:border-gray-600'">
+                                             ? 'border-gray-900 dark:border-gray-200 bg-gray-900 dark:bg-gray-200'
+                                             : 'border-gray-300 dark:border-gray-600 bg-transparent'">
                                         <div x-show="politicaSeleccionada === op.key"
-                                             class="w-1.5 h-1.5 rounded-full bg-white dark:bg-gray-900 mx-auto mt-[3px]"></div>
+                                             class="w-1.5 h-1.5 rounded-full bg-white dark:bg-gray-800"></div>
                                     </div>
                                     <div class="min-w-0">
-                                        <p class="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                                        <p class="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-1.5 flex-wrap">
                                             <span x-text="op.label"></span>
                                             <span class="text-[10px] font-medium px-1.5 py-0.5 rounded-md"
                                                   :class="op.badgeClass" x-text="op.badge"></span>
@@ -211,6 +211,7 @@
                             </label>
                             <div class="flex items-center gap-3">
                                 <input type="number" x-model.number="miniDias" min="1" max="90"
+                                       @input="politicaDirty = true"
                                        class="w-24 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2
                                               text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                                               focus:outline-none focus:ring-1 focus:ring-gray-400 text-center font-semibold">
@@ -220,7 +221,8 @@
 
                         {{-- Guardar política --}}
                         <div class="pt-1">
-                            <button @click="guardarPolitica()" :disabled="guardandoPolitica"
+                            <button @click="guardarPolitica()"
+                                    :disabled="guardandoPolitica || !politicaDirty"
                                     class="w-full bg-gray-900 dark:bg-white dark:text-gray-900 text-white
                                            px-4 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition
                                            disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]
@@ -229,7 +231,7 @@
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                                 </svg>
-                                <span x-text="guardandoPolitica ? 'Guardando...' : 'Guardar política'"></span>
+                                <span x-text="guardandoPolitica ? 'Guardando...' : (politicaDirty ? 'Guardar política' : 'Sin cambios')"></span>
                             </button>
                         </div>
                     </div>
@@ -238,8 +240,8 @@
             </div>
 
             {{-- Columna derecha: Componentes --}}
-            <div class="lg:col-span-2">
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden h-full">
+            <div class="lg:col-span-2 flex flex-col">
+                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden flex flex-col flex-1">
                     <div class="flex items-start justify-between gap-4 px-5 pt-5 pb-4 border-b border-gray-100 dark:border-gray-700">
                         <div>
                             <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Componentes con garantía</p>
@@ -258,9 +260,9 @@
                         </button>
                     </div>
 
-                    <div class="p-5 space-y-3 max-h-[72vh] overflow-y-auto">
+                    {{-- Lista editable: flex-1 para que empuje el footer hacia abajo --}}
+                    <div class="flex-1 p-5 space-y-3 overflow-y-auto" style="max-height: calc(100vh); min-height: 120px;">
 
-                        {{-- Lista editable --}}
                         <template x-for="(comp, idx) in componentes" :key="idx">
                             <div class="border rounded-xl transition-all duration-150"
                                  :class="comp.excluido
@@ -276,12 +278,12 @@
                                     <div class="flex items-center gap-2 shrink-0">
                                         <span x-show="comp.serializable"
                                               class="text-[9px] px-1.5 py-0.5 rounded-md font-medium
-                                                     bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400">
+                                                     bg-purple-100 dark:bg-purple-800/30 text-purple-800 dark:text-purple-400">
                                             Serial
                                         </span>
                                         <span x-show="comp.excluido"
                                               class="text-[9px] px-1.5 py-0.5 rounded-md font-medium
-                                                     bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">
+                                                     bg-red-100 dark:bg-red-800/30 text-red-800 dark:text-red-400">
                                             Excluido
                                         </span>
                                         <button @click="eliminarComponente(idx)"
@@ -300,6 +302,7 @@
                                         <div class="col-span-1">
                                             <label class="block text-[10px] text-gray-400 mb-1 font-medium">Clave</label>
                                             <input type="text" x-model="comp.clave" placeholder="motor"
+                                                   @input="componentesDirty = true"
                                                    class="w-full border border-gray-200 dark:border-gray-600 rounded-lg
                                                           px-2.5 py-1.5 text-xs bg-white dark:bg-gray-700
                                                           text-gray-900 dark:text-white focus:outline-none
@@ -308,6 +311,7 @@
                                         <div class="col-span-3">
                                             <label class="block text-[10px] text-gray-400 mb-1 font-medium">Nombre</label>
                                             <input type="text" x-model="comp.nombre" placeholder="Motor eléctrico"
+                                                   @input="componentesDirty = true"
                                                    class="w-full border border-gray-200 dark:border-gray-600 rounded-lg
                                                           px-2.5 py-1.5 text-xs bg-white dark:bg-gray-700
                                                           text-gray-900 dark:text-white focus:outline-none
@@ -316,6 +320,7 @@
                                         <div class="col-span-1">
                                             <label class="block text-[10px] text-gray-400 mb-1 font-medium">Meses</label>
                                             <input type="number" x-model.number="comp.duracion" min="0"
+                                                   @input="componentesDirty = true"
                                                    class="w-full border border-gray-200 dark:border-gray-600 rounded-lg
                                                           px-2.5 py-1.5 text-xs bg-white dark:bg-gray-700
                                                           text-gray-900 dark:text-white focus:outline-none
@@ -327,6 +332,7 @@
                                     <div>
                                         <label class="block text-[10px] text-gray-400 mb-1 font-medium">Cobertura</label>
                                         <input type="text" x-model="comp.cobertura" placeholder="Defecto de fábrica, mal funcionamiento"
+                                               @input="componentesDirty = true"
                                                class="w-full border border-gray-200 dark:border-gray-600 rounded-lg
                                                       px-2.5 py-1.5 text-xs bg-white dark:bg-gray-700
                                                       text-gray-900 dark:text-white focus:outline-none
@@ -341,7 +347,7 @@
                                         </label>
                                         <input type="text"
                                                :value="comp.incluye.join(', ')"
-                                               @input="comp.incluye = $event.target.value.split(',').map(s => s.trim()).filter(Boolean)"
+                                               @input="comp.incluye = $event.target.value.split(',').map(s => s.trim()).filter(Boolean); componentesDirty = true"
                                                placeholder="mando, freno, convertidor de velocidad"
                                                class="w-full border border-gray-200 dark:border-gray-600 rounded-lg
                                                       px-2.5 py-1.5 text-xs bg-white dark:bg-gray-700
@@ -354,8 +360,8 @@
                                         <label class="flex items-center gap-2 cursor-pointer select-none group">
                                             <div class="relative">
                                                 <input type="checkbox" x-model="comp.serializable" class="sr-only">
-                                                <div @click="comp.serializable = !comp.serializable"
-                                                     :class="comp.serializable ? 'bg-violet-500 border-violet-500' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600'"
+                                                <div @click="comp.serializable = !comp.serializable; componentesDirty = true"
+                                                     :class="comp.serializable ? 'bg-purple-500 border-purple-500' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600'"
                                                      class="w-4 h-4 rounded border-2 transition-colors flex items-center justify-center cursor-pointer">
                                                     <svg x-show="comp.serializable" class="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
                                                         <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
@@ -368,7 +374,7 @@
                                         <label class="flex items-center gap-2 cursor-pointer select-none">
                                             <div class="relative">
                                                 <input type="checkbox" x-model="comp.excluido" class="sr-only">
-                                                <div @click="comp.excluido = !comp.excluido"
+                                                <div @click="comp.excluido = !comp.excluido; componentesDirty = true"
                                                      :class="comp.excluido ? 'bg-red-500 border-red-500' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600'"
                                                      class="w-4 h-4 rounded border-2 transition-colors flex items-center justify-center cursor-pointer">
                                                     <svg x-show="comp.excluido" class="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -398,15 +404,14 @@
                         </div>
                     </div>
 
-                    {{-- Footer con guardar --}}
-                    <div x-show="componentes.length > 0"
-                         class="px-5 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+                    <div class="px-5 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
                         <div class="flex items-center justify-between gap-3">
                             <p class="text-xs text-gray-400">
                                 <span x-text="componentes.filter(c => !c.excluido).length"></span> activos ·
                                 <span x-text="componentes.filter(c => c.excluido).length"></span> excluidos
                             </p>
-                            <button @click="guardarComponentes()" :disabled="guardando"
+                            <button @click="guardarComponentes()"
+                                    :disabled="guardando || !componentesDirty"
                                     class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-5 py-2.5
                                            rounded-xl text-sm font-semibold hover:opacity-90 transition
                                            disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]
@@ -419,7 +424,7 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                           d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
                                 </svg>
-                                <span x-text="guardando ? 'Guardando...' : 'Guardar componentes'"></span>
+                                <span x-text="guardando ? 'Guardando...' : (componentesDirty ? 'Guardar componentes' : 'Sin cambios')"></span>
                             </button>
                         </div>
                     </div>
@@ -436,6 +441,10 @@
                 pollingInt: null,
                 flashVisible: false, flashMsg: '', flashTipo: 'success', flashTimer: null,
 
+                // ── Dirty state ──────────────────────────────────────────────
+                componentesDirty: false,
+                politicaDirty: false,
+
                 politicaSeleccionada: '{{ $config?->politica_reemplazo ?? "mini" }}',
                 miniDias: {{ $config?->mini_garantia_dias ?? 7 }},
 
@@ -444,21 +453,21 @@
                         key: 'heredar',
                         label: 'Heredar',
                         badge: 'Tiempo restante',
-                        badgeClass: 'bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400',
+                        badgeClass: 'bg-purple-100 dark:bg-purple-800/30 text-purple-800 dark:text-purple-400',
                         desc: 'El componente nuevo continúa con el tiempo de garantía que le quedaba al original.',
                     },
                     {
                         key: 'nueva',
                         label: 'Nueva completa',
                         badge: 'Duración original',
-                        badgeClass: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400',
+                        badgeClass: 'bg-emerald-100 dark:bg-emerald-800/30 text-emerald-800 dark:text-emerald-400',
                         desc: 'El componente nuevo recibe la duración total de garantía como si fuera compra nueva.',
                     },
                     {
                         key: 'mini',
                         label: 'Mini',
                         badge: 'Configurable',
-                        badgeClass: 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400',
+                        badgeClass: 'bg-amber-100 dark:bg-amber-800/30 text-amber-800 dark:text-amber-400',
                         desc: 'Garantía corta con días configurables. Ideal para reemplazos en garantía.',
                     },
                 ],
@@ -488,6 +497,14 @@
                     @if(in_array($config?->estado_procesamiento, ['pendiente', 'procesando']))
                         this.iniciarPolling();
                     @endif
+                },
+
+                // ── Helpers dirty state ──────────────────────────────────────
+                seleccionarPolitica(key) {
+                    if (this.politicaSeleccionada !== key) {
+                        this.politicaSeleccionada = key;
+                        this.politicaDirty = true;
+                    }
                 },
 
                 cargarDesdeIA(rawJson) {
@@ -521,7 +538,10 @@
                             });
                         }
                     } catch (e) { console.error('Error parseando ia_raw_json:', e); }
-                    if (componentes.length > 0) this.componentes = componentes;
+                    if (componentes.length > 0) {
+                        this.componentes = componentes;
+                        this.componentesDirty = true; // recién cargados de IA → hay que guardar
+                    }
                 },
 
                 agregarComponente() {
@@ -529,10 +549,12 @@
                         clave: '', nombre: '', incluye: [], duracion: 12,
                         cobertura: '', serializable: false, excluido: false,
                     });
+                    this.componentesDirty = true;
                 },
 
                 eliminarComponente(idx) {
                     this.componentes.splice(idx, 1);
+                    this.componentesDirty = true;
                 },
 
                 subirPdfDrop(event) {
@@ -630,6 +652,7 @@
                         });
                         const data = await res.json();
                         if (!data.ok) { this.flash(data.mensaje ?? 'Error.', 'error'); return; }
+                        this.componentesDirty = false; // ← reset dirty tras guardar exitoso
                         this.flash('Componentes guardados correctamente.');
                     } catch { this.flash('Error de conexión.', 'error'); }
                     finally { this.guardando = false; }
@@ -643,7 +666,6 @@
                     this.guardandoPolitica = true;
                     try {
                         const res = await fetch('{{ route("admin.garantias.marcas.politica", $marca->id_marca) }}', {
-
                             method: 'POST',
                             headers: {
                                 'Content-Type':     'application/json',
@@ -658,6 +680,7 @@
                         });
                         const data = await res.json();
                         if (!data.ok) { this.flash(data.mensaje ?? 'Error al guardar la política.', 'error'); return; }
+                        this.politicaDirty = false; // ← reset dirty tras guardar exitoso
                         this.flash('Política de reemplazo guardada.');
                     } catch { this.flash('Error de conexión.', 'error'); }
                     finally { this.guardandoPolitica = false; }

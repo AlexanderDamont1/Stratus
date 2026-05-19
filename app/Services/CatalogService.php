@@ -213,13 +213,22 @@ class CatalogService
 
     // ─── VOLTAJES ───────────────────────────────────────────────────────────
 
-    public static function getVoltajesByNegocio(string $idNegocio, bool $withSelectFormato = false, bool $paginar = false)
+    /**
+     * FIX: paginar ahora usa caché por página en lugar de ir directo a BD.
+     * Se agrega el parámetro $page para construir la clave de caché correctamente.
+     */
+    public static function getVoltajesByNegocio(string $idNegocio, bool $withSelectFormato = false, bool $paginar = false, int $page = 1)
     {
         if ($paginar) {
-            return Voltaje::where('id_negocio', $idNegocio)
-                ->select('id_voltaje', 'voltaje')
-                ->orderBy('voltaje')
-                ->paginate(20);
+            return self::remember(
+                "voltajes:negocio:{$idNegocio}:page:{$page}",
+                self::CACHE_TTL['voltajes'],
+                fn () => Voltaje::where('id_negocio', $idNegocio)
+                    ->select('id_voltaje', 'voltaje')
+                    ->orderBy('voltaje')
+                    ->paginate(20, ['*'], 'page', $page),
+                $idNegocio
+            );
         }
 
         $voltajes = self::remember(
@@ -263,13 +272,21 @@ class CatalogService
         return $withSelectFormato ? $voltajes->pluck('voltaje', 'id_voltaje') : $voltajes;
     }
 
-    public static function getAllVoltajes(bool $withSelectFormato = false, bool $paginar = false)
+    /**
+     * FIX: paginar ahora usa caché por página en lugar de ir directo a BD.
+     * Se agrega el parámetro $page para construir la clave de caché correctamente.
+     */
+    public static function getAllVoltajes(bool $withSelectFormato = false, bool $paginar = false, int $page = 1)
     {
         if ($paginar) {
-            return Voltaje::whereNull('id_negocio')
-                ->select('id_voltaje', 'voltaje')
-                ->orderBy('voltaje')
-                ->paginate(20);
+            return self::remember(
+                "voltajes:publicos:page:{$page}",
+                self::CACHE_TTL['voltajes'],
+                fn () => Voltaje::whereNull('id_negocio')
+                    ->select('id_voltaje', 'voltaje')
+                    ->orderBy('voltaje')
+                    ->paginate(20, ['*'], 'page', $page)
+            );
         }
 
         $voltajes = self::remember('voltajes:publicos', self::CACHE_TTL['voltajes'],
@@ -405,29 +422,32 @@ class CatalogService
         return $withSelectFormato ? $negocios->pluck('nombre_negocio', 'id_negocio') : $negocios;
     }
 
-    /**
-     * FIX: Ahora cachea usando la versión del tenant (idNegocio como cuarto
-     * parámetro), igual que hace invalidateNegocio() al borrar la clave.
-     * Antes cacheaba con versión global y nunca se invalidaba correctamente.
-     */
     public static function getNegocioById(string $idNegocio): ?Negocio
     {
         return self::remember(
             "negocio:{$idNegocio}",
             self::CACHE_TTL['negocios'],
             fn () => Negocio::find($idNegocio),
-            $idNegocio  // ← FIX: antes faltaba este argumento
+            $idNegocio
         );
     }
 
     // ─── BICICLETAS ─────────────────────────────────────────────────────────
 
-    public static function getBicicletasPaginadas(string $idNegocio): LengthAwarePaginator
+    /**
+     * FIX: ahora usa caché por página en lugar de ir directo a BD.
+     */
+    public static function getBicicletasPaginadas(string $idNegocio, int $page = 1): LengthAwarePaginator
     {
-        return Bicicleta::where('id_negocio', $idNegocio)
-            ->with(['modelo', 'voltaje', 'color'])
-            ->orderByDesc('updated_at')
-            ->paginate(10);
+        return self::remember(
+            "bicicletas:negocio:{$idNegocio}:page:{$page}",
+            self::CACHE_TTL['bicicletas'],
+            fn () => Bicicleta::where('id_negocio', $idNegocio)
+                ->with(['modelo', 'voltaje', 'color'])
+                ->orderByDesc('updated_at')
+                ->paginate(10, ['*'], 'page', $page),
+            $idNegocio
+        );
     }
 
     public static function getBicicletaBySerie(string $numSerie, ?string $idNegocio = null): ?Bicicleta
@@ -475,22 +495,33 @@ class CatalogService
         Cache::forget(self::key("bicicleta:serie:{$numSerie}") . ":v{$version}");
         Cache::forget(self::key("stats:bicicletas:{$idNegocio}") . ":v{$version}");
         Cache::forget(self::key("stock:vendedores:negocio:{$idNegocio}") . ":v{$version}");
+        // Borrar páginas comunes de bicicletas paginadas
+        foreach ([1, 2, 3] as $p) {
+            Cache::forget(self::key("bicicletas:negocio:{$idNegocio}:page:{$p}") . ":v{$version}");
+        }
     }
 
+    /**
+     * FIX: búsqueda con texto ya iba a BD — se mantiene ese comportamiento
+     * porque los resultados dependen de input libre. Pero page 1 sin search
+     * y pages adicionales sin search ahora usan caché también.
+     */
     public static function getBicicletasPorUsuarioPaginadas(string $idNegocio, string $idUsuario, int $page = 1, ?string $search = null): LengthAwarePaginator
     {
-        $usarCache = ($page === 1 && empty($search));
-
-        if ($usarCache) {
-            return self::remember(
-                "bicicletas:user:{$idUsuario}:negocio:{$idNegocio}:page:1",
-                self::CACHE_TTL['bicicletas'],
-                fn () => self::queryBicicletasUsuario($idNegocio, $idUsuario, null)->paginate(10, ['*'], 'page', 1),
-                $idNegocio
-            );
+        // Con búsqueda libre: siempre BD directa (resultados demasiado variables para cachear)
+        if (!empty($search)) {
+            return self::queryBicicletasUsuario($idNegocio, $idUsuario, $search)
+                ->paginate(10, ['*'], 'page', $page);
         }
 
-        return self::queryBicicletasUsuario($idNegocio, $idUsuario, $search)->paginate(10, ['*'], 'page', $page);
+        // Sin búsqueda: caché para cualquier página
+        return self::remember(
+            "bicicletas:user:{$idUsuario}:negocio:{$idNegocio}:page:{$page}",
+            self::CACHE_TTL['bicicletas'],
+            fn () => self::queryBicicletasUsuario($idNegocio, $idUsuario, null)
+                ->paginate(10, ['*'], 'page', $page),
+            $idNegocio
+        );
     }
 
     private static function queryBicicletasUsuario(string $idNegocio, string $idUsuario, ?string $search)
@@ -512,7 +543,10 @@ class CatalogService
     public static function invalidateBicicletasPorUsuario(string $idUsuario, string $idNegocio): void
     {
         $version = self::getVersion($idNegocio);
-        Cache::forget(self::key("bicicletas:user:{$idUsuario}:negocio:{$idNegocio}:page:1") . ":v{$version}");
+        // Borrar páginas comunes sin search
+        foreach ([1, 2, 3] as $p) {
+            Cache::forget(self::key("bicicletas:user:{$idUsuario}:negocio:{$idNegocio}:page:{$p}") . ":v{$version}");
+        }
     }
 
     public static function getBicicletasByCliente(string $idCliente, string $idNegocio)
@@ -570,22 +604,22 @@ class CatalogService
         );
     }
 
+    /**
+     * FIX: antes solo cacheaba page 1; las páginas 2+ iban directo a BD.
+     * Ahora cachea todas las páginas con la misma clave versionada.
+     */
     public static function getBicicletasSeccion(string $idNegocio, ?string $idUsuario, int $page): array
     {
         $cacheKey = $idUsuario
             ? "seccion:vendedor:{$idUsuario}:negocio:{$idNegocio}:page:{$page}"
             : "seccion:sin_asignar:negocio:{$idNegocio}:page:{$page}";
 
-        if ($page === 1) {
-            return self::remember(
-                $cacheKey,
-                self::CACHE_TTL['bicicletas'],
-                fn () => self::querySeccion($idNegocio, $idUsuario, 1),
-                $idNegocio
-            );
-        }
-
-        return self::querySeccion($idNegocio, $idUsuario, $page);
+        return self::remember(
+            $cacheKey,
+            self::CACHE_TTL['bicicletas'],
+            fn () => self::querySeccion($idNegocio, $idUsuario, $page),
+            $idNegocio
+        );
     }
 
     private static function querySeccion(string $idNegocio, ?string $idUsuario, int $page): array
@@ -685,13 +719,6 @@ class CatalogService
         );
     }
 
-    /**
-     * FIX: invalidatePedido ya no llama incrementVersion() para evitar
-     * over-invalidation de todo el tenant. En su lugar borra quirúrgicamente
-     * las claves afectadas con la versión actual del tenant.
-     * Las variantes de pedidos:recientes se borran para los límites comunes;
-     * si usas límites distintos, agrégalos aquí o usa incrementVersion().
-     */
     public static function invalidatePedido(string $idPedido, string $idNegocio): void
     {
         $tenantV = self::getVersion($idNegocio);
@@ -701,7 +728,6 @@ class CatalogService
         Cache::forget(self::key("pedido:{$idPedido}") . ":v{$tenantV}");
         Cache::forget(self::key("stats:pedidos:negocio:{$idNegocio}") . ":v{$tenantV}");
 
-        // Borrar variantes conocidas de pedidos:recientes sin invalidar todo el tenant
         foreach ([5, 10, 15, 20] as $limit) {
             Cache::forget(self::key("pedidos:recientes:negocio:{$idNegocio}:limit{$limit}") . ":v{$tenantV}");
         }
@@ -709,64 +735,44 @@ class CatalogService
 
     // ─── USUARIOS ───────────────────────────────────────────────────────────
 
-    /**
-     * FIX: Ahora requiere $idNegocio obligatorio para que remember() use la
-     * versión del tenant, igual que hace invalidateUsuario(). Antes, si se
-     * pasaba $idNegocio, la clave se construía con versión del tenant pero
-     * invalidateUsuario usaba la versión global → nunca se borraba nada.
-     */
     public static function getUserById(string $idUsuario, string $idNegocio): ?Usuario
     {
         return self::remember(
             "usuario:{$idUsuario}",
             self::CACHE_TTL['usuarios'],
             fn () => Usuario::where('id_negocio', $idNegocio)->find($idUsuario),
-            $idNegocio  // ← FIX: siempre versión del tenant
+            $idNegocio
         );
     }
 
-    /**
-     * FIX: Igual que getUserById — versión del tenant obligatoria.
-     */
     public static function getUserWithNegocio(string $idUsuario, string $idNegocio): ?Usuario
     {
         return self::remember(
             "usuario:negocio:{$idUsuario}",
             self::CACHE_TTL['usuarios'],
             fn () => Usuario::with('negocio')->where('id_negocio', $idNegocio)->find($idUsuario),
-            $idNegocio  // ← FIX: siempre versión del tenant
+            $idNegocio
         );
     }
 
-    /**
-     * FIX: Ahora recibe $idNegocio y borra las claves usando la versión del
-     * tenant, que es la misma versión con la que getUserById/getUserWithNegocio
-     * construyeron las claves. Antes usaba versión global y no borraba nada.
-     */
     public static function invalidateUsuario(string $idUsuario, string $idNegocio): void
     {
-        $version = self::getVersion($idNegocio);  // ← FIX: versión del tenant
+        $version = self::getVersion($idNegocio);
         Cache::forget(self::key("usuario:{$idUsuario}") . ":v{$version}");
         Cache::forget(self::key("usuario:negocio:{$idUsuario}") . ":v{$version}");
     }
 
     // ─── NEGOCIOS INVALIDACIÓN ───────────────────────────────────────────────
 
-    /**
-     * FIX: El orden ahora es correcto — primero leemos la versión global
-     * (con la que se construyó la clave en getNegocioById), luego hacemos
-     * el forget con esa versión, y finalmente incrementamos la versión del
-     * tenant para que futuros remember() generen claves nuevas.
-     */
     public static function invalidateNegocio(string $idNegocio): void
     {
-        $globalV = self::getVersion();          // leer ANTES de incrementar
-        $tenantV = self::getVersion($idNegocio); // leer ANTES de incrementar
+        $globalV = self::getVersion();
+        $tenantV = self::getVersion($idNegocio);
 
-        Cache::forget(self::key("negocio:{$idNegocio}") . ":v{$tenantV}");  // ← FIX: versión tenant
+        Cache::forget(self::key("negocio:{$idNegocio}") . ":v{$tenantV}");
         Cache::forget(self::key('negocios') . ":v{$globalV}");
 
-        self::incrementVersion($idNegocio);  // incrementar DESPUÉS del forget
+        self::incrementVersion($idNegocio);
     }
 
     // ─── STATS GLOBALES ─────────────────────────────────────────────────────
@@ -1052,13 +1058,17 @@ class CatalogService
 
     // ─── VENTAS ─────────────────────────────────────────────────────────────
 
-    public static function getVentasByVendedor(string $idNegocio, string $idUsuario): LengthAwarePaginator
+    /**
+     * FIX: antes solo cacheaba page 1 y no tenía parámetro $page.
+     * Ahora cachea cualquier página.
+     */
+    public static function getVentasByVendedor(string $idNegocio, string $idUsuario, int $page = 1): LengthAwarePaginator
     {
         return self::remember(
-            "ventas:vendedor:{$idUsuario}:negocio:{$idNegocio}:page:1",
+            "ventas:vendedor:{$idUsuario}:negocio:{$idNegocio}:page:{$page}",
             300,
             fn () => self::queryVentas($idNegocio, $idUsuario)
-                ->paginate(15, ['*'], 'page', 1),
+                ->paginate(15, ['*'], 'page', $page),
             $idNegocio
         );
     }
@@ -1079,7 +1089,9 @@ class CatalogService
     public static function invalidateVentasByVendedor(string $idNegocio, string $idUsuario): void
     {
         $version = self::getVersion($idNegocio);
-        Cache::forget(self::key("ventas:vendedor:{$idUsuario}:negocio:{$idNegocio}:page:1") . ":v{$version}");
+        foreach ([1, 2, 3] as $p) {
+            Cache::forget(self::key("ventas:vendedor:{$idUsuario}:negocio:{$idNegocio}:page:{$p}") . ":v{$version}");
+        }
     }
 
     // ─── CONFIG NEGOCIO ──────────────────────────────────────────────────────
@@ -1109,21 +1121,27 @@ class CatalogService
             $idNegocio
         );
     }
-    
+
     public static function invalidateConfigNegocio(string $idNegocio): void
     {
         $version = self::getVersion($idNegocio);
         Cache::forget(self::key("config:negocio:{$idNegocio}") . ":v{$version}");
-        self::incrementVersion($idNegocio);  // ← FIX: incrementar DESPUÉS del forget
+        self::incrementVersion($idNegocio);
     }
 
-    
-
-    public static function getAllVoltajesPaginados(): LengthAwarePaginator
+    /**
+     * FIX: getAllVoltajesPaginados ahora usa caché por página en lugar de ir
+     * siempre directo a BD. Se agrega parámetro $page.
+     */
+    public static function getAllVoltajesPaginados(int $page = 1): LengthAwarePaginator
     {
-        return Voltaje::whereNull('id_negocio')
-            ->select('id_voltaje', 'voltaje')
-            ->orderBy('voltaje')
-            ->paginate(20);
+        return self::remember(
+            "voltajes:publicos:page:{$page}",
+            self::CACHE_TTL['voltajes'],
+            fn () => Voltaje::whereNull('id_negocio')
+                ->select('id_voltaje', 'voltaje')
+                ->orderBy('voltaje')
+                ->paginate(20, ['*'], 'page', $page)
+        );
     }
 }
