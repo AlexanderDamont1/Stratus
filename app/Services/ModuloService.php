@@ -79,9 +79,41 @@ class ModuloService
             ['activo' => $activo]
         );
 
+        // ← Hook: sincroniza visibilidad de configs cuando cambia el rol Admin
+        if ($idRol === 1) {
+            self::sincronizarConfigs($idNegocio, $idModulo);
+        }
+
         self::invalidate($idNegocio);
     }
 
+    /**
+     * Activa o desactiva las NegocioConfig del módulo
+     * según si el admin (rol 1) tiene acceso activo.
+     * Solo afecta configs que pertenecen al grupo del módulo.
+     */
+    protected static function sincronizarConfigs(string $idNegocio, string $idModulo): void
+    {
+        // Mapa módulo → clave(s) de negocio_config que controla
+        $configsPorModulo = [
+            'reparaciones' => ['reparaciones.sucursal_puede_reparar'],
+            'garantias'    => ['garantias.sucursal_puede_gestionar'],
+        ];
+
+        if (!isset($configsPorModulo[$idModulo])) {
+            return;
+        }
+
+        $adminTieneAcceso = NegocioModuloRol::where('id_negocio', $idNegocio)
+            ->where('id_modulo', $idModulo)
+            ->where('id_rol', 1)
+            ->where('activo', true)
+            ->exists();
+
+        \App\Models\NegocioConfig::whereIn('clave', $configsPorModulo[$idModulo])
+            ->update(['activo' => $adminTieneAcceso]);
+    }
+    
     /**
      * Activa un plan completo de golpe.
      * Ejemplo: ModuloService::activarPlan($id, ['tracking' => [1, 2]])
@@ -126,9 +158,9 @@ class ModuloService
 
     // ─── ROLES POR MÓDULO ────────────────────────────────────────────────────────
     protected static array $rolesPorModulo = [
-        'tracking' => [1 => 'Admin', 2 => 'Vendedor'],
-        'pedidos'  => [1 => 'Admin'],
-        // futuros módulos aquí
+        'tracking'     => [1 => 'Admin'],
+        'pedidos'      => [1 => 'Admin'],
+        'reparaciones' => [1 => 'Admin', 2 => 'Vendedor'], // ← nuevo
     ];
 
     protected static function getRolesDeModulo(string $idModulo): array

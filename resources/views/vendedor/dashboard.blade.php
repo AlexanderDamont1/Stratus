@@ -4,7 +4,7 @@
 
 <div x-data="vendedorDashboard()" x-init="init()" class="space-y-6">
 
-    <x-flash-messages />
+    
 
     {{-- ═══════ ENCABEZADO ═══════ --}}
     <div class="flex flex-wrap items-center justify-between gap-4">
@@ -23,6 +23,8 @@
             Ingresar bicicletas
         </button>
     </div>
+
+    <x-flash-messages />
 
     {{-- ═══════ TABLA ═══════ --}}
     <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800

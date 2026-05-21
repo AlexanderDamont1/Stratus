@@ -38,6 +38,8 @@ use App\Http\Controllers\SucursalesPublicasController;
 use App\Http\Controllers\CajaController;
 use App\Http\Controllers\Admin\AdminCajaController;
 use App\Http\Controllers\Root\AuditController;
+use App\Http\Controllers\Sucursal\OtController;
+use App\Http\Controllers\Root\NovedadController;
 
 /*
 |--------------------------------------------------------------------------
@@ -350,13 +352,13 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
                     'Authorization' => 'Bearer ' . config('services.groq.key'),
                     'Content-Type' => 'application/json',
                 ])->post('https://api.groq.com/openai/v1/chat/completions', [
-                            'model' => 'llama-3.1-8b-instant',
-                            'max_tokens' => 10,
-                            'messages' => [
-                                ['role' => 'system', 'content' => 'Eres un asistente que SOLO responde con colores hexadecimales en formato #RRGGBB. Sin explicaciones, sin texto extra, solo el hex.'],
-                                ['role' => 'user', 'content' => "¿Qué color hexadecimal representa \"{$request->nombre}\"?"],
-                            ],
-                        ]);
+                    'model' => 'llama-3.1-8b-instant',
+                    'max_tokens' => 10,
+                    'messages' => [
+                        ['role' => 'system', 'content' => 'Eres un asistente que SOLO responde con colores hexadecimales en formato #RRGGBB. Sin explicaciones, sin texto extra, solo el hex.'],
+                        ['role' => 'user', 'content' => "¿Qué color hexadecimal representa \"{$request->nombre}\"?"],
+                    ],
+                ]);
 
                 $hex = trim($response->json('choices.0.message.content') ?? '');
 
@@ -519,6 +521,17 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
             Route::post('/ingreso', [CajaController::class, 'ingreso'])->name('ingreso'); // ← nueva
         });
 
+
+        Route::prefix('sucursal/reparaciones')->name('reparaciones.')->group(function () {
+            Route::get('/',  [OtController::class, 'index'])->name('index');
+            Route::get('/create', [OtController::class, 'create'])->name('create');
+            Route::get('/{idOt}', [OtController::class, 'show'])->name('show');
+            Route::post('/', [OtController::class, 'store'])->name('store');
+            Route::post('/buscar-bicicleta', [OtController::class, 'buscarBicicleta'])->name('buscar-bicicleta');
+            Route::post('/{idOt}/estado', [OtController::class, 'avanzarEstado'])->name('avanzar-estado');
+            Route::post('/{idOt}/piezas',  [OtController::class, 'actualizarPiezas'])->name('piezas');
+        });
+
         Route::get('/sucursal/personal', [PersonalController::class, 'porSucursal'])->name('personal.por-sucursal');
     });
 
@@ -534,6 +547,13 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
 
         Route::post('/root/links', [RootController::class, 'storeLink'])->name('root.links.store');
         Route::delete('/root/links/{link}', [RootController::class, 'destroyLink'])->name('root.links.destroy');
+
+        // ── Novedades del sidebar (agrega esto al final del grupo) ──
+       
+        Route::post  ('/root/novedades',        [NovedadController::class, 'store'])   ->name('root.novedades.store');
+        Route::patch ('/root/novedades/{id}',   [NovedadController::class, 'update'])  ->name('root.novedades.update');
+        Route::delete('/root/novedades/{id}',   [NovedadController::class, 'destroy']) ->name('root.novedades.destroy');
+
 
         Route::post('/root/negocios/{id}/activar', [RootController::class, 'activarSuscripcion'])->name('root.negocios.activar');
         Route::post('/root/negocios/{id}/suspender', [RootController::class, 'suspender'])->name('root.negocios.suspender');

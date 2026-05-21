@@ -50,6 +50,23 @@
     class="space-y-6"
 >
 
+    
+
+    {{-- Header --}}
+    <div class="flex flex-wrap items-start justify-between gap-4 sm:gap-2">
+        <div>
+            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Configuraciones del sistema</h2>
+            <p class="text-xs text-gray-400 mt-0.5">Define las opciones que verán y configurarán todos los negocios.</p>
+        </div>
+        <button @click="createModal = true"
+                class="inline-flex items-center gap-1.5 bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 transition whitespace-nowrap">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Nueva configuración
+        </button>
+    </div>
+
     {{-- Flash --}}
     @if(session('success'))
     <div class="fixed top-6 left-1/2 transform -translate-x-1/2 z-50"
@@ -73,21 +90,6 @@
         </div>
     </div>
     @endif
-
-    {{-- Header --}}
-    <div class="flex flex-wrap items-start justify-between gap-4 sm:gap-2">
-        <div>
-            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Configuraciones del sistema</h2>
-            <p class="text-xs text-gray-400 mt-0.5">Define las opciones que verán y configurarán todos los negocios.</p>
-        </div>
-        <button @click="createModal = true"
-                class="inline-flex items-center gap-1.5 bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 transition whitespace-nowrap">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-            </svg>
-            Nueva configuración
-        </button>
-    </div>
 
     {{-- Stats --}}
     <div class="grid grid-cols-3 sm:grid-cols-4 gap-3">

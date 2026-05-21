@@ -1144,4 +1144,22 @@ class CatalogService
                 ->paginate(20, ['*'], 'page', $page)
         );
     }
+
+    public static function getPiezasByNegocio(string $idNegocio)
+    {
+        return self::remember(
+            "piezas:negocio:{$idNegocio}",
+            self::CACHE_TTL['productos'],
+            fn() => \App\Models\PiezaCatalogo::where('id_negocio', $idNegocio)
+                ->orderBy('nombre')
+                ->get(),
+            $idNegocio
+        );
+    }
+
+    public static function invalidatePiezas(string $idNegocio): void
+    {
+        $version = self::getVersion($idNegocio);
+        Cache::forget(self::key("piezas:negocio:{$idNegocio}") . ":v{$version}");
+    }
 }

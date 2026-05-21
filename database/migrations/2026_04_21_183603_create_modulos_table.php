@@ -33,6 +33,15 @@ return new class extends Migration {
                 'created_at'         => now(),
                 'updated_at'         => now(),
             ],
+
+            [
+                'id_modulo'          => 'reparaciones',
+                'nombre'             => 'Reparaciones',
+                'descripcion'        => 'Órdenes de trabajo, taller y caja de reparaciones.',
+                'activo_por_defecto' => false,
+                'created_at'         => now(),
+                'updated_at'         => now(),
+            ],
         ]);
     }
 

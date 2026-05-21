@@ -1,6 +1,12 @@
 <x-app-layout>
 <div class="space-y-6">
 
+{{-- Header --}}
+    <div>
+        <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Configuración general</h2>
+        <p class="text-xs text-gray-400 mt-0.5">Estos ajustes afectarán a todas las sucursales y centros de venta.</p>
+    </div>
+
     {{-- Flash --}}
     @if(session('success'))
     <div class="fixed top-6 left-1/2 transform -translate-x-1/2 z-50"
@@ -25,11 +31,7 @@
     </div>
     @endif
 
-    {{-- Header --}}
-    <div>
-        <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Configuración general</h2>
-        <p class="text-xs text-gray-400 mt-0.5">Estos ajustes afectarán a todas las sucursales y centros de venta.</p>
-    </div>
+    
 
     {{-- Grupos --}}
     @php $grupos = $definiciones->groupBy('grupo'); @endphp

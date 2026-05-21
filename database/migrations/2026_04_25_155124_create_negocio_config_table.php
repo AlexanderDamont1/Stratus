@@ -63,6 +63,21 @@ return new class extends Migration
                 'created_at'    => now(),
                 'updated_at'    => now(),
             ],
+            [
+                'id_ncf'        => 'NCF230425REP001',
+                'clave'         => 'reparaciones.sucursal_puede_reparar',
+                'nombre'        => 'Sucursal puede realizar reparaciones',
+                'descripcion'   => 'Si está activo, la sucursal realiza las reparaciones en sitio. Si no, la unidad se envía a fábrica.',
+                'icono'         => 'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z',
+                'tipo'          => 'toggle',
+                'opciones'      => null,
+                'valor_default' => 'false',
+                'grupo'         => 'reparaciones',
+                'orden'         => 0,
+                'activo'        => false,   // ← inactivo hasta que Root active el módulo
+                'created_at'    => now(),
+                'updated_at'    => now(),
+            ],
         ]);
     }
 
