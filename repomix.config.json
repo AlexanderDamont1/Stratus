@@ -1,0 +1,29 @@
+{
+  "$schema": "https://repomix.com/schemas/latest/schema.json",
+  "input": {
+    "maxFileSize": 52428800
+  },
+  "output": {
+    "filePath": "repomix-output.txt",
+    "style": "markdown"
+  },
+  "include": [],
+  "ignore": {
+    "customPatterns": [
+      "**/node_modules/**",
+      "**/.git/**",
+      "public/**/*.svg",
+      "public/**/*.png",
+      "public/**/*.jpg",
+      "public/**/*.jpeg",
+      "public/**/*.ico",
+      "storage/**"
+    ]
+  },
+  "security": {
+    "enableSecurityCheck": true
+  },
+  "tokenCount": {
+    "encoding": "o200k_base"
+  }
+}

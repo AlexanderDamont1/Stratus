@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('piezas_catalogo', function (Blueprint $table) {
-            $table->id('id_pieza');
+            $table->string('id_pieza', 20)->primary(); // ej: PC-00001
 
             // Multi-tenancy
             $table->char('id_negocio', 36);
@@ -19,17 +19,13 @@ return new class extends Migration
                   ->cascadeOnDelete();
 
             // Identificación
-            $table->string('clave', 80)
-                  ->comment('Clave interna del negocio, ej: CTR-48V, BAT-36V-10');
-            $table->string('nombre', 150);
-            $table->string('categoria', 80)->nullable()
-                  ->comment('Motor, Batería, Frenos, Electrónica, Transmisión, Chasis...');
+            $table->string('nombre',    120);                    // nombre visible al trabajador
+            $table->string('clave',      40);                    // código interno ej: MOT-350W-36V
+            $table->string('categoria',  60)->nullable();        // referenciada en índice
 
-           
             $table->string('marca_pieza', 80)->nullable()
                   ->comment('Marca del fabricante de la pieza, no del tenant');
 
-            
             $table->json('modelos_compatibles')->nullable()
                   ->comment('JSON array de nombres de modelos compatibles, null = universal');
 
@@ -61,9 +57,9 @@ return new class extends Migration
             $table->unique(['id_negocio', 'clave'], 'uq_pieza_negocio_clave');
 
             // Índices de búsqueda frecuente
-            $table->index(['id_negocio', 'categoria'],       'idx_pieza_negocio_cat');
-            $table->index(['id_negocio', 'stock_actual'],    'idx_pieza_stock');
-            $table->index(['id_negocio', 'activo'],          'idx_pieza_activo');
+            $table->index(['id_negocio', 'categoria'],    'idx_pieza_negocio_cat');
+            $table->index(['id_negocio', 'stock_actual'], 'idx_pieza_stock');
+            $table->index(['id_negocio', 'activo'],       'idx_pieza_activo');
         });
     }
 

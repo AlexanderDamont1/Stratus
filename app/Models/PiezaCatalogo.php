@@ -1,20 +1,23 @@
 <?php
-// app/Models/PiezaCatalogo.php
 
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PiezaCatalogo extends Model
 {
     protected $table      = 'piezas_catalogo';
     protected $primaryKey = 'id_pieza';
+    protected $keyType    = 'string';
+    public    $incrementing = false;
 
     protected $fillable = [
+        'id_pieza',
         'id_negocio',
-        'clave',
         'nombre',
+        'clave',
         'categoria',
         'marca_pieza',
         'modelos_compatibles',
@@ -30,60 +33,56 @@ class PiezaCatalogo extends Model
 
     protected $casts = [
         'modelos_compatibles' => 'array',
-        'precio_costo'        => 'decimal:2',
-        'precio_venta'        => 'decimal:2',
         'serializable'        => 'boolean',
         'activo'              => 'boolean',
+        'precio_costo'        => 'decimal:2',
+        'precio_venta'        => 'decimal:2',
+        'stock_actual'        => 'integer',
+        'stock_minimo'        => 'integer',
     ];
 
-    // ── Scopes ───────────────────────────────────────────────────────────────
+    // ── Relaciones ────────────────────────────────────────────────────────────
 
-    public function scopeActivas(Builder $q): Builder
-    {
-        return $q->where('activo', true);
-    }
-
-    public function scopeStockBajo(Builder $q): Builder
-    {
-        return $q->whereRaw('stock_actual > 0 AND stock_actual <= stock_minimo');
-    }
-
-    public function scopeAgotadas(Builder $q): Builder
-    {
-        return $q->where('stock_actual', 0);
-    }
-
-    public function scopeDeNegocio(Builder $q, string $idNegocio): Builder
-    {
-        return $q->where('id_negocio', $idNegocio);
-    }
-
-    // ── Accessors ────────────────────────────────────────────────────────────
-
-    // 'ok' | 'bajo' | 'agotado'
-    public function getEstadoStockAttribute(): string
-    {
-        if ($this->stock_actual === 0)                             return 'agotado';
-        if ($this->stock_actual <= $this->stock_minimo)           return 'bajo';
-        return 'ok';
-    }
-
-    public function getMargenAttribute(): float
-    {
-        if ($this->precio_costo <= 0) return 0;
-        return round((($this->precio_venta - $this->precio_costo) / $this->precio_costo) * 100, 2);
-    }
-
-    // ── Relaciones ───────────────────────────────────────────────────────────
-
-    public function negocio()
+    public function negocio(): BelongsTo
     {
         return $this->belongsTo(Negocio::class, 'id_negocio', 'id_negocio');
     }
 
-    // Piezas usadas en OTs
-    public function otPiezas()
+    public function reparacionPiezas(): HasMany
     {
-        return $this->hasMany(OtPieza::class, 'id_pieza', 'id_pieza');
+        return $this->hasMany(ReparacionPieza::class, 'id_pieza', 'id_pieza');
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    public function bajoStock(): bool
+    {
+        return $this->stock_actual <= $this->stock_minimo;
+    }
+
+    public function sinStock(): bool
+    {
+        return $this->stock_actual <= 0;
+    }
+
+    // ── AUTO-PK ───────────────────────────────────────────────────────────────
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $model) {
+            if (empty($model->id_pieza)) {
+                // Scoped por negocio para que cada tenant empiece en PC-00001
+                $ultimo = static::where('id_negocio', $model->id_negocio)
+                    ->orderByDesc('id_pieza')
+                    ->lockForUpdate()
+                    ->value('id_pieza');
+
+                $num = $ultimo
+                    ? (int) substr($ultimo, strrpos($ultimo, '-') + 1) + 1
+                    : 1;
+
+                $model->id_pieza = 'PC-' . str_pad($num, 5, '0', STR_PAD_LEFT);
+            }
+        });
     }
 }

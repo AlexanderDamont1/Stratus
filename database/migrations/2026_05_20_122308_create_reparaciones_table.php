@@ -8,99 +8,82 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // ── Órdenes de trabajo ────────────────────────────────────────────────
-        Schema::create('ordenes_trabajo', function (Blueprint $table) {
+        // ── Reparaciones (ex ordenes_trabajo) ───────────────────────────────
+        Schema::create('reparaciones', function (Blueprint $table) {
 
-            $table->string('id_operacion', 20)->primary(); // OT-00001
+            $table->string('id_reparacion', 20)->primary(); // OT-00001
 
-            // Multi-tenancy
             $table->char('id_negocio', 36);
             $table->foreign('id_negocio')
                   ->references('id_negocio')
                   ->on('negocios')
                   ->cascadeOnDelete();
 
-            // Usuario sucursal (id_rol = 2) que ingresó la OT
             $table->char('id_usuario_sucursal', 36);
             $table->foreign('id_usuario_sucursal')
                   ->references('id_usuario')
                   ->on('usuarios');
 
-            // Técnico asignado (nullable al inicio)
             $table->char('id_tecnico', 36)->nullable();
             $table->foreign('id_tecnico')
                   ->references('id_usuario')
                   ->on('usuarios')
                   ->nullOnDelete();
 
-            // Vehículo — FK a bicicletas.num_serie
-            // nullable: talleres externos pueden traer bicis sin registro en el sistema
+            // Sin FK — num_serie se guarda aunque no esté en bicicletas
             $table->string('num_serie', 17)->nullable();
-            $table->foreign('num_serie')
-                  ->references('num_serie')
-                  ->on('bicicletas')
-                  ->nullOnDelete();
 
-            // Descripción manual cuando la bici no está en sistema
-            $table->string('bici_descripcion', 150)->nullable();
+            $table->string('unidad_descripcion', 150)->nullable(); // ex bici_descripcion
 
-            // Cliente registrado (nullable: taller externo sin cliente en CRM)
             $table->char('id_cliente', 36)->nullable();
             $table->foreign('id_cliente')
                   ->references('id_cliente')
                   ->on('clientes')
                   ->nullOnDelete();
 
-            // Datos de cliente cuando no está registrado (para el correo de notificación)
             $table->string('cliente_nombre', 120)->nullable();
             $table->string('cliente_email', 150)->nullable();
 
-            // El cliente presentó identificación al entregar la unidad
             $table->boolean('id_verificada')->default(false);
 
-            // Tipo de OT
             $table->enum('tipo', [
-                'reparacion',
-                'garantia',
                 'mantenimiento',
+                'garantia',
+                'reparacion',
             ])->default('reparacion');
 
-            // Referencia a garantía aprobada (solo cuando tipo = garantia)
-            // Reemplaza la línea nullable string sin FK:
-            $table->string('id_garantia_aprobada', 30)->nullable();
-            $table->foreign('id_garantia_aprobada')
-                ->references('id_reclamo')
-                ->on('garantia_reclamo')
-                ->nullOnDelete();
-
-            // Descripción del problema
             $table->text('problema_reportado');
             $table->text('diagnostico')->nullable();
 
-            // Estado del flujo
             $table->enum('estado', [
                 'recibida',
                 'diagnostico',
-                'esperando_aprobacion',
+                'cotizacion_enviada',   // reemplaza esperando_aprobacion
                 'en_proceso',
-                'mandado_fabrica',
                 'lista',
                 'entregada',
                 'cancelada',
+                // eliminados: mandado_fabrica, esperando_aprobacion
             ])->default('recibida');
 
-            // Costos
-            $table->decimal('costo_mano_obra', 10, 2)->default(0);
-            $table->decimal('costo_piezas', 10, 2)->default(0);
-            $table->decimal('costo_total', 10, 2)->default(0);
-            // Costo real aunque el cliente pague $0 por garantía
-            $table->decimal('costo_real_garantia', 10, 2)->default(0);
+            $table->decimal('costo_mano_obra',     10, 2)->default(0);
+            $table->decimal('costo_piezas',        10, 2)->default(0);
+            $table->decimal('costo_total',         10, 2)->default(0);
 
-            // Notificación de "lista para recoger"
+            // Solo aplica a tipo=reparacion. No viene de catálogo —
+            // es un acuerdo interno que ingresa el trabajador al crear.
+            $table->decimal('costo_reparacion', 10, 2)->default(0)
+                  ->comment('Solo aplica a tipo=reparacion. No viene de catálogo.');
+
+            // Array de id_pieza confirmados al cerrar la OT
+            $table->json('piezas_usadas')->nullable()
+                  ->comment('Array de id_pieza confirmados al cerrar la OT.');
+
+            // eliminados: costo_real_garantia, id_garantia_aprobada
+
             $table->boolean('notificacion_enviada')->default(false);
             $table->timestamp('notificacion_enviada_at')->nullable();
 
-            // Timestamps de estados clave para métricas
             $table->timestamp('recibida_at')->nullable();
             $table->timestamp('en_proceso_at')->nullable();
             $table->timestamp('lista_at')->nullable();
@@ -110,24 +93,22 @@ return new class extends Migration
 
             $table->timestamps();
 
-            // Índices
             $table->index(['id_negocio', 'estado']);
             $table->index('num_serie');
             $table->index('id_cliente');
         });
 
-        // ── Piezas usadas en cada OT ──────────────────────────────────────────
-        Schema::create('ot_piezas', function (Blueprint $table) {
-            $table->id();
+        // ── Piezas usadas en cada reparación ───────────────────────────────
+        // Tabla desacoplada intencionalmente: no tiene FK a reparaciones.
+        // La integridad la maneja el servicio al sincronizar piezas.
+        Schema::create('reparacion_piezas', function (Blueprint $table) {
+              $table->string('id_reparacion_pieza', 20)->primary();
 
-            $table->string('id_operacion', 20);
-            $table->foreign('id_operacion')
-                  ->references('id_operacion')
-                  ->on('ordenes_trabajo')
-                  ->cascadeOnDelete();
+            // Sin FK a reparaciones — desacoplado intencionalmente
+            $table->string('id_reparacion', 20);
+            $table->index('id_reparacion', 'idx_rep_piezas_rep');
 
-            // Nullable: pieza externa sin catálogo
-            $table->unsignedBigInteger('id_pieza')->nullable();
+            $table->string('id_pieza', 20)->nullable();
             $table->foreign('id_pieza')
                   ->references('id_pieza')
                   ->on('piezas_catalogo')
@@ -135,11 +116,8 @@ return new class extends Migration
 
             $table->string('descripcion', 150)->nullable();
             $table->unsignedSmallInteger('cantidad')->default(1);
-
-            // Precio congelado al momento de crear la OT
             $table->decimal('precio_unitario', 10, 2)->default(0);
-            $table->decimal('subtotal', 10, 2)->default(0);
-
+            $table->decimal('subtotal',        10, 2)->default(0);
             $table->boolean('es_garantia')->default(false);
             $table->boolean('stock_descontado')->default(false);
 
@@ -147,17 +125,17 @@ return new class extends Migration
         });
 
         // ── Historial de cambios de estado ────────────────────────────────────
-        Schema::create('ot_historial', function (Blueprint $table) {
-            $table->id();
+        Schema::create('reparacion_historial', function (Blueprint $table) {
+              $table->string('id_reparacion_historial', 20)->primary();
 
-            $table->string('id_operacion', 20);
-            $table->foreign('id_operacion')
-                  ->references('id_operacion')
-                  ->on('ordenes_trabajo')
+            $table->string('id_reparacion', 20);
+            $table->foreign('id_reparacion')
+                  ->references('id_reparacion')
+                  ->on('reparaciones')
                   ->cascadeOnDelete();
 
             $table->string('estado_anterior', 40)->nullable();
-            $table->string('estado_nuevo', 40);
+            $table->string('estado_nuevo',    40);
 
             $table->char('id_usuario', 36);
             $table->foreign('id_usuario')
@@ -172,8 +150,8 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('ot_historial');
-        Schema::dropIfExists('ot_piezas');
-        Schema::dropIfExists('ordenes_trabajo');
+        Schema::dropIfExists('reparacion_historial');
+        Schema::dropIfExists('reparacion_piezas');
+        Schema::dropIfExists('reparaciones');
     }
 };

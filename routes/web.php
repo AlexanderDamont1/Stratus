@@ -38,8 +38,9 @@ use App\Http\Controllers\SucursalesPublicasController;
 use App\Http\Controllers\CajaController;
 use App\Http\Controllers\Admin\AdminCajaController;
 use App\Http\Controllers\Root\AuditController;
-use App\Http\Controllers\Sucursal\OtController;
 use App\Http\Controllers\Root\NovedadController;
+use App\Http\Controllers\Sucursal\ReparacionController;
+use App\Http\Controllers\CotizacionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -62,6 +63,12 @@ Route::post('/registro/{token}', [RegistroController::class, 'store'])->name('re
 
 Route::get('/verificar-email/{token}', [EmailVerificationController::class, 'verify'])->name('verificar.email');
 Route::post('/verificar-email/{token}', [EmailVerificationController::class, 'confirmar'])->name('verificar.email.confirmar');
+
+Route::prefix('cotizacion')->name('cotizacion.')->group(function () {
+    Route::get('/{token}',           [CotizacionController::class, 'show'])->name('show');
+    Route::get('/{token}/responder', function ($token) {return redirect()->route('cotizacion.show', $token);});
+    Route::post('/{token}/responder', [CotizacionController::class, 'responder'])->name('responder');
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -521,16 +528,20 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
             Route::post('/ingreso', [CajaController::class, 'ingreso'])->name('ingreso'); // ← nueva
         });
 
-
         Route::prefix('sucursal/reparaciones')->name('reparaciones.')->group(function () {
-            Route::get('/',  [OtController::class, 'index'])->name('index');
-            Route::get('/create', [OtController::class, 'create'])->name('create');
-            Route::get('/{idOt}', [OtController::class, 'show'])->name('show');
-            Route::post('/', [OtController::class, 'store'])->name('store');
-            Route::post('/buscar-bicicleta', [OtController::class, 'buscarBicicleta'])->name('buscar-bicicleta');
-            Route::post('/{idOt}/estado', [OtController::class, 'avanzarEstado'])->name('avanzar-estado');
-            Route::post('/{idOt}/piezas',  [OtController::class, 'actualizarPiezas'])->name('piezas');
+ 
+            Route::get('/',        [ReparacionController::class, 'index'])  ->name('index');
+            Route::get('/crear',   [ReparacionController::class, 'create']) ->name('create');
+            Route::post('/',       [ReparacionController::class, 'store'])  ->name('store');
+            Route::post('/buscar-bicicleta', [ReparacionController::class, 'buscarBicicleta'])->name('buscar-bicicleta');
+            Route::get( '/{id}',   [ReparacionController::class, 'show'])   ->name('show');
+            Route::post('/{id}/diagnostico',   [ReparacionController::class, 'guardarDiagnostico'])->name('diagnostico');
+            Route::post('/{id}/cotizacion',    [ReparacionController::class, 'enviarCotizacion'])->name('cotizacion');
+            Route::post('/{id}/resolver',      [ReparacionController::class, 'resolverCotizacion'])->name('resolver');
+            Route::post('/{id}/estado',        [ReparacionController::class, 'avanzarEstado'])->name('estado');
         });
+
+
 
         Route::get('/sucursal/personal', [PersonalController::class, 'porSucursal'])->name('personal.por-sucursal');
     });

@@ -578,7 +578,7 @@
 
         </nav>
 
-     
+      <x-sidebar-novedades />
 
         {{-- Footer: usuario + logout --}}
         <div class="border-t border-gray-200 dark:border-gray-700 p-3">

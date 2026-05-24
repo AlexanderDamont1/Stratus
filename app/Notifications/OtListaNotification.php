@@ -1,19 +1,20 @@
 <?php
-// app/Notifications/OtListaNotification.php
 
 namespace App\Notifications;
 
+use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\MailMessage;
 
 class OtListaNotification extends Notification
 {
+    use Queueable;
+
     public function __construct(
-        public readonly string $idOt,
+        public readonly string $idReparacion,
         public readonly string $numSerie,
         public readonly string $nombreCliente,
         public readonly string $nombreNegocio,
-        public readonly string $nombreSucursal,
     ) {}
 
     public function via(object $notifiable): array
@@ -24,13 +25,12 @@ class OtListaNotification extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject("Tu bicicleta está lista para recoger — {$this->idOt}")
+            ->subject("¡Tu vehículo está listo! — {$this->nombreNegocio}")
             ->view('emails.ot-lista', [
-                'idOt'          => $this->idOt,
+                'idReparacion'  => $this->idReparacion,
                 'numSerie'      => $this->numSerie,
                 'nombreCliente' => $this->nombreCliente,
                 'nombreNegocio' => $this->nombreNegocio,
-                'nombreSucursal'=> $this->nombreSucursal,
             ]);
     }
 }
