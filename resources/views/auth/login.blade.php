@@ -10,18 +10,19 @@
     @endif
 
     <div class="w-full max-w-sm mx-auto px-2 sm:px-0">
-        <div class="text-center mb-10">
-            <div class="mb-6">
-                <img src="{{ asset('favicon.svg') }}" alt="CloudLabs"
-                     class="mx-auto object-contain w-40 h-20 sm:w-48 sm:h-24" />
-                <span class="mt-2 text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
-                    CloudLabs
-                </span>
+        <div class="text-center mb-6">
+            <div class="mb-3 sm:mb-1">
+                <img src="{{ asset('arrowk/favicon-arrowk.svg') }}" alt="CloudLabs"
+                    class="mx-auto object-contain w-44 h-22 sm:w-52 sm:h-28"/>
             </div>
             <h2 class="font-medium text-gray-900 dark:text-white opacity-0 animate-fade-in text-lg sm:text-xl"
                 style="animation-delay: 0.1s">
                 Acceso al sistema
             </h2>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400 opacity-0 animate-fade-in"
+            style="animation-delay: 0.18s">
+                Ingresa tus credenciales para continuar
+            </p>
         </div>
 
         <form method="POST" action="{{ route('login') }}" id="loginForm" class="space-y-6">

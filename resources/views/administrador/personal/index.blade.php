@@ -2,10 +2,27 @@
 <div
     x-data="personalManager()"
     x-init="init()"
-    class="space-y-6 max-w-4xl mx-auto"
+    class="space-y-6 max-w-5xl mx-auto"
 >
 
-    {{-- ══ NOTIFICATION CARD ══ --}}
+    {{-- ══ HEADER ══ --}}
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Personal</h2>
+            <p class="text-xs text-gray-400 mt-0.5">Gestiona los vendedores de tus sucursales.</p>
+        </div>
+        <button @click="abrirCrear()"
+                class="flex items-center gap-2 bg-gray-900 dark:bg-white dark:text-gray-900
+                       text-white px-4 py-2 rounded-xl text-sm font-medium hover:opacity-90
+                       active:scale-95 transition-all duration-150 shadow-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+            </svg>
+            Nuevo vendedor
+        </button>
+    </div>
+
+    {{-- ══ NOTIFICATION ══ --}}
     <div
         x-show="notif.msg"
         x-cloak
@@ -15,67 +32,59 @@
         x-transition:leave="transition ease-in duration-150"
         x-transition:leave-end="opacity-0 -translate-y-1 scale-95"
         class="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none"
-        style="min-width:300px;max-width:400px;"
-    >
+        style="min-width:300px;max-width:400px;">
         <div class="flex items-start gap-3 rounded-xl px-4 py-3 border shadow-sm"
              :class="{
                  'bg-green-50  dark:bg-green-950/40  border-green-100  dark:border-green-900/50':  notif.tipo === 'ok',
                  'bg-yellow-50 dark:bg-yellow-950/40 border-yellow-100 dark:border-yellow-900/50': notif.tipo === 'warning',
                  'bg-red-50    dark:bg-red-950/40    border-red-100    dark:border-red-900/50':    notif.tipo === 'error',
-                 'bg-blue-50   dark:bg-blue-950/40   border-blue-100   dark:border-blue-900/50':   notif.tipo === 'info',
              }">
             <template x-if="notif.tipo === 'ok'">
-                <svg class="w-4 h-4 shrink-0 mt-0.5 text-green-500 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                <svg class="w-4 h-4 shrink-0 mt-0.5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                 </svg>
             </template>
             <template x-if="notif.tipo === 'warning'">
-                <svg class="w-4 h-4 shrink-0 mt-0.5 text-yellow-500 dark:text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                <svg class="w-4 h-4 shrink-0 mt-0.5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
                 </svg>
             </template>
             <template x-if="notif.tipo === 'error'">
-                <svg class="w-4 h-4 shrink-0 mt-0.5 text-red-500 dark:text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                <svg class="w-4 h-4 shrink-0 mt-0.5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
                 </svg>
             </template>
-            <template x-if="notif.tipo === 'info'">
-                <svg class="w-4 h-4 shrink-0 mt-0.5 text-blue-500 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
-                </svg>
-            </template>
-
             <div class="flex-1 min-w-0">
                 <p class="text-xs font-semibold leading-snug"
                    :class="{
                        'text-green-800  dark:text-green-300':  notif.tipo === 'ok',
                        'text-yellow-800 dark:text-yellow-300': notif.tipo === 'warning',
                        'text-red-800    dark:text-red-300':    notif.tipo === 'error',
-                       'text-blue-800   dark:text-blue-300':   notif.tipo === 'info',
                    }"
                    x-text="notif.msg"></p>
                 <p x-show="notif.sub"
-                   class="text-xs font-normal opacity-75 mt-0.5 leading-snug"
+                   class="text-xs font-normal opacity-75 mt-0.5"
                    :class="{
                        'text-green-700  dark:text-green-400':  notif.tipo === 'ok',
                        'text-yellow-700 dark:text-yellow-400': notif.tipo === 'warning',
                        'text-red-700    dark:text-red-400':    notif.tipo === 'error',
-                       'text-blue-700   dark:text-blue-400':   notif.tipo === 'info',
                    }"
                    x-text="notif.sub"></p>
             </div>
         </div>
     </div>
 
-    {{-- ══ MODAL FORMULARIO (crear / editar) ══ --}}
+    {{-- ══ MODALES (teleport para cobertura 100%) ══ --}}
+
+    {{-- Modal formulario --}}
     <template x-teleport="body">
         <div x-show="modal.open" x-cloak
-             class="fixed inset-0 z-50 flex items-center justify-center p-4"
              x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="opacity-0"
              x-transition:enter-end="opacity-100"
              x-transition:leave="transition ease-in duration-150"
-             x-transition:leave-end="opacity-0">
+             x-transition:leave-end="opacity-0"
+             class="fixed inset-0 z-50 flex items-center justify-center p-4">
 
             <div class="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm"
                  @click="cerrarModal()"></div>
@@ -109,7 +118,6 @@
                 </div>
 
                 <div class="px-6 py-5 space-y-5">
-                    {{-- Nombre --}}
                     <div>
                         <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
                             Nombre completo <span class="text-red-400">*</span>
@@ -128,7 +136,6 @@
                         </template>
                     </div>
 
-                    {{-- Sucursales --}}
                     <div>
                         <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
                             Sucursales asignadas <span class="text-red-400">*</span>
@@ -171,7 +178,6 @@
                         </template>
                     </div>
 
-                    {{-- Activo (solo edición) --}}
                     <template x-if="modal.modo === 'editar'">
                         <label class="flex items-center gap-3 cursor-pointer">
                             <div class="relative w-9 h-5 shrink-0">
@@ -214,15 +220,15 @@
         </div>
     </template>
 
-    {{-- ══ MODAL DE CONFIRMACIÓN (toggle activo/inactivo) ══ --}}
+    {{-- Modal confirmación toggle --}}
     <template x-teleport="body">
         <div x-show="confirm.open" x-cloak
-             class="fixed inset-0 z-50 flex items-center justify-center p-4"
              x-transition:enter="transition ease-out duration-200"
              x-transition:enter-start="opacity-0"
              x-transition:enter-end="opacity-100"
              x-transition:leave="transition ease-in duration-150"
-             x-transition:leave-end="opacity-0">
+             x-transition:leave-end="opacity-0"
+             class="fixed inset-0 z-50 flex items-center justify-center p-4">
 
             <div class="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm"
                  @click="cerrarConfirm()"></div>
@@ -237,7 +243,6 @@
                  @click.stop>
 
                 <div class="flex flex-col items-center px-6 pt-8 pb-5 text-center">
-                    {{-- Icono dinámico según acción --}}
                     <div class="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
                          :class="confirm.accion === 'desactivar'
                              ? 'bg-yellow-50 dark:bg-yellow-900/30'
@@ -255,7 +260,6 @@
                             </svg>
                         </template>
                     </div>
-
                     <h3 class="text-base font-semibold text-gray-900 dark:text-white" x-text="confirm.titulo"></h3>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed" x-text="confirm.cuerpo"></p>
                 </div>
@@ -280,143 +284,164 @@
         </div>
     </template>
 
-    {{-- ══ HEADER ══ --}}
-    <div class="flex items-center justify-between">
-        <div>
-            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Personal</h2>
-            <p class="text-xs text-gray-400 mt-0.5">Gestiona los vendedores de tus sucursales.</p>
-        </div>
-        <button @click="abrirCrear()"
-                class="flex items-center gap-2 bg-gray-900 dark:bg-white dark:text-gray-900
-                       text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
-            </svg>
-            Nuevo vendedor
-        </button>
-    </div>
+    {{-- ══ GRID DE SUCURSALES ══ --}}
+    @if($sucursales->count() > 0)
 
-    {{-- ══ FILTRO POR SUCURSAL ══ --}}
-    @if($sucursales->count() > 1)
-    <div class="flex items-center gap-2 flex-wrap">
-        <button @click="filtroSucursal = ''"
-                class="px-3 py-1.5 rounded-lg text-xs font-medium transition"
-                :class="filtroSucursal === ''
-                    ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'">
-            Todas las sucursales
-        </button>
-        @foreach($sucursales as $s)
-        <button @click="filtroSucursal = '{{ $s->id_usuario }}'"
-                class="px-3 py-1.5 rounded-lg text-xs font-medium transition"
-                :class="filtroSucursal === '{{ $s->id_usuario }}'
-                    ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'">
-            {{ $s->nombre_usuario }}
-        </button>
-        @endforeach
-    </div>
-    @endif
-
-    {{-- ══ TABLA DE PERSONAL ══ --}}
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-
-        <div class="px-6 py-4 border-b dark:border-gray-700 flex items-center justify-between">
-            <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Vendedores registrados</h3>
-            <span class="text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full"
-                  x-text="personalFiltrado.length + ' resultado(s)'"></span>
-        </div>
-
-        {{-- Empty state --}}
-        <template x-if="personalFiltrado.length === 0">
-            <div class="px-6 py-16 text-center">
-                <div class="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center mx-auto mb-3">
+        {{-- Empty state global --}}
+        <template x-if="personal.length === 0">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700
+                        px-6 py-16 text-center shadow-sm">
+                <div class="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center
+                            justify-center mx-auto mb-3">
                     <svg class="w-6 h-6 text-gray-300 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                               d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
                     </svg>
                 </div>
-                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">No hay vendedores</p>
-                <p class="text-xs text-gray-400 mt-1">
-                    <template x-if="filtroSucursal !== ''">
-                        <span>No hay personal en esta sucursal.</span>
-                    </template>
-                    <template x-if="filtroSucursal === ''">
-                        <span>Crea el primer vendedor con el botón de arriba.</span>
-                    </template>
-                </p>
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">No hay vendedores aún</p>
+                <p class="text-xs text-gray-400 mt-1">Crea el primer vendedor con el botón de arriba.</p>
             </div>
         </template>
 
-        <div class="divide-y divide-gray-100 dark:divide-gray-700/50">
-            <template x-for="p in personalFiltrado" :key="p.id_personal">
-                <div class="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition group">
+        {{-- Grid de columnas por sucursal --}}
+        <template x-if="personal.length > 0">
+            <div class="{{ $sucursales->count() === 1 ? 'max-w-sm' : ($sucursales->count() === 2 ? 'grid grid-cols-1 sm:grid-cols-2 gap-5' : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5') }}">
+                @foreach($sucursales as $s)
+                <div class="flex flex-col bg-white dark:bg-gray-800 rounded-2xl border border-gray-100
+                            dark:border-gray-700 overflow-hidden shadow-sm">
 
-                    <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 font-bold text-sm"
-                         :class="p.activo
-                             ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
-                             : 'bg-gray-200 dark:bg-gray-700 text-gray-400'">
-                        <span x-text="p.nombre.charAt(0).toUpperCase()"></span>
+                    {{-- Cabecera sucursal --}}
+                    <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                                {{ $s->nombre_usuario }}
+                            </h3>
+                            <p class="text-[11px] text-gray-400 mt-0.5" x-text="
+                                personal.filter(p => p.sucursales.some(su => su.id_usuario === '{{ $s->id_usuario }}')).length
+                                + ' vendedor(es)'
+                            "></p>
+                        </div>
+                        {{-- Dot indicador --}}
+                        <div class="w-2 h-2 rounded-full bg-green-400"></div>
                     </div>
 
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <p class="text-sm font-semibold text-gray-800 dark:text-white truncate"
-                               x-text="p.nombre"
-                               :class="!p.activo && 'line-through text-gray-400'"></p>
-                            <template x-if="!p.activo">
-                                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full
-                                             bg-gray-100 dark:bg-gray-700 text-gray-400 uppercase tracking-wide">
-                                    Inactivo
-                                </span>
-                            </template>
-                        </div>
-                        <div class="flex items-center gap-1.5 mt-1 flex-wrap">
-                            <template x-for="suc in p.sucursales" :key="suc.id_usuario">
-                                <span class="text-[10px] font-medium px-2 py-0.5 rounded-full
-                                             bg-blue-50 dark:bg-blue-900/20
-                                             text-blue-600 dark:text-blue-400
-                                             border border-blue-200 dark:border-blue-800"
-                                      x-text="suc.nombre_usuario"></span>
-                            </template>
-                        </div>
+                    {{-- Lista de vendedores de esta sucursal --}}
+                    <div class="flex-1 divide-y divide-gray-50 dark:divide-gray-700/50">
+
+                        {{-- Empty state por sucursal --}}
+                        <template x-if="personal.filter(p => p.sucursales.some(su => su.id_usuario === '{{ $s->id_usuario }}')).length === 0">
+                            <div class="px-5 py-10 text-center">
+                                <p class="text-xs text-gray-400">Sin vendedores asignados</p>
+                            </div>
+                        </template>
+
+                        <template x-for="p in personal.filter(p => p.sucursales.some(su => su.id_usuario === '{{ $s->id_usuario }}'))"
+                                  :key="p.id_personal + '-{{ $s->id_usuario }}'">
+                            <div class="flex items-center gap-3 px-4 py-3 group hover:bg-gray-50/70
+                                        dark:hover:bg-gray-700/20 transition-colors duration-100"
+                                 :class="!p.activo && 'opacity-50'">
+
+                                {{-- Avatar --}}
+                                <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0
+                                            text-[13px] font-semibold transition-all"
+                                     :class="p.activo
+                                         ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
+                                         : 'bg-gray-200 dark:bg-gray-700 text-gray-400'">
+                                    <span x-text="p.nombre.charAt(0).toUpperCase()"></span>
+                                </div>
+
+                                {{-- Info --}}
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                        <p class="text-sm font-medium text-gray-800 dark:text-white truncate"
+                                           x-text="p.nombre"
+                                           :class="!p.activo && 'line-through text-gray-400'"></p>
+                                        <template x-if="!p.activo">
+                                            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full
+                                                         bg-gray-100 dark:bg-gray-700 text-gray-400
+                                                         uppercase tracking-wide">
+                                                Inactivo
+                                            </span>
+                                        </template>
+                                    </div>
+                                    {{-- Otras sucursales donde está asignado --}}
+                                    <template x-if="p.sucursales.length > 1">
+                                        <p class="text-[10px] text-gray-400 mt-0.5 truncate"
+                                           x-text="'También en: ' + p.sucursales
+                                               .filter(su => su.id_usuario !== '{{ $s->id_usuario }}')
+                                               .map(su => su.nombre_usuario)
+                                               .join(', ')">
+                                        </p>
+                                    </template>
+                                </div>
+
+                                {{-- Acciones --}}
+                                <div class="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100
+                                            focus-within:opacity-100 transition-opacity">
+                                    <button @click="abrirEditar(p)"
+                                            class="w-7 h-7 flex items-center justify-center rounded-lg
+                                                   text-gray-300 dark:text-gray-600
+                                                   hover:text-gray-700 dark:hover:text-gray-200
+                                                   hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                                            title="Editar">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                        </svg>
+                                    </button>
+                                    <button @click="pedirConfirmToggle(p)"
+                                            class="w-7 h-7 flex items-center justify-center rounded-lg transition"
+                                            :class="p.activo
+                                                ? 'text-gray-300 dark:text-gray-600 hover:text-yellow-500 dark:hover:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'
+                                                : 'text-gray-300 dark:text-gray-600 hover:text-green-500 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20'"
+                                            :title="p.activo ? 'Desactivar' : 'Activar'">
+                                        <template x-if="p.activo">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                                            </svg>
+                                        </template>
+                                        <template x-if="!p.activo">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                        </template>
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
                     </div>
 
-                    <div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition">
-                        <button @click="abrirEditar(p)"
-                                class="w-8 h-8 flex items-center justify-center rounded-lg
-                                       text-gray-400 hover:text-gray-700 dark:hover:text-gray-200
-                                       hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-                                title="Editar">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    {{-- Footer con contador activos --}}
+                    <div class="px-5 py-3 border-t border-gray-100 dark:border-gray-700
+                                bg-gray-50/50 dark:bg-gray-700/20 flex items-center justify-between">
+                        <span class="text-[11px] text-gray-400"
+                              x-text="personal.filter(p =>
+                                  p.activo &&
+                                  p.sucursales.some(su => su.id_usuario === '{{ $s->id_usuario }}')
+                              ).length + ' activos'">
+                        </span>
+                        <button @click="abrirCrearEnSucursal('{{ $s->id_usuario }}')"
+                                class="text-[11px] text-gray-400 hover:text-gray-700 dark:hover:text-gray-200
+                                       flex items-center gap-1 transition font-medium">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
                             </svg>
-                        </button>
-                        <button @click="pedirConfirmToggle(p)"
-                                class="w-8 h-8 flex items-center justify-center rounded-lg transition"
-                                :class="p.activo
-                                    ? 'text-gray-300 hover:text-yellow-500 dark:hover:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'
-                                    : 'text-gray-300 hover:text-green-500 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20'"
-                                :title="p.activo ? 'Desactivar' : 'Activar'">
-                            <template x-if="p.activo">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                          d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
-                                </svg>
-                            </template>
-                            <template x-if="!p.activo">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                            </template>
+                            Agregar
                         </button>
                     </div>
                 </div>
-            </template>
+                @endforeach
+            </div>
+        </template>
+
+    @else
+        <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700
+                    px-6 py-12 text-center shadow-sm">
+            <p class="text-sm text-gray-400">No tienes sucursales configuradas aún.</p>
         </div>
-    </div>
+    @endif
 
 </div>
 
@@ -425,25 +450,19 @@ function personalManager() {
     return {
         personal:              @json($personal),
         sucursalesDisponibles: @json($sucursalesJs),
+        guardando: false,
+        notif: { msg: '', sub: '', tipo: 'ok', _t: null },
 
-        filtroSucursal: '',
-        guardando:      false,
-
-        notif:   { msg: '', sub: '', tipo: 'ok', _t: null },
-
-        // Modal formulario
         modal: {
             open: false, modo: 'crear', id: null,
             nombre: '', sucursales: [], activo: true, errores: {},
         },
 
-        // Modal confirmación toggle
         confirm: {
             open: false, accion: 'desactivar',
             titulo: '', cuerpo: '', _p: null,
         },
 
-        // ── Computed ──────────────────────────────────────────────────
         get conteoPersonalPorSucursal() {
             const conteo = {};
             this.personal.forEach(p => {
@@ -455,22 +474,23 @@ function personalManager() {
             return conteo;
         },
 
-        get personalFiltrado() {
-            if (!this.filtroSucursal) return this.personal;
-            return this.personal.filter(p =>
-                p.sucursales.some(s => s.id_usuario === this.filtroSucursal)
-            );
-        },
-
         init() {},
 
-        // ── Modal formulario ──────────────────────────────────────────
         abrirCrear() {
             this.modal = {
                 open: true, modo: 'crear', id: null,
                 nombre: '', sucursales: [], activo: true, errores: {},
             };
         },
+
+        /* Abre el modal con la sucursal pre-seleccionada */
+        abrirCrearEnSucursal(idSucursal) {
+            this.modal = {
+                open: true, modo: 'crear', id: null,
+                nombre: '', sucursales: [idSucursal], activo: true, errores: {},
+            };
+        },
+
         abrirEditar(p) {
             this.modal = {
                 open:       true,
@@ -482,14 +502,15 @@ function personalManager() {
                 errores:    {},
             };
         },
+
         cerrarModal() { this.modal.open = false; },
+
         toggleSucursal(id) {
             const idx = this.modal.sucursales.indexOf(id);
             if (idx >= 0) this.modal.sucursales.splice(idx, 1);
             else          this.modal.sucursales.push(id);
         },
 
-        // ── Modal confirmación ────────────────────────────────────────
         pedirConfirmToggle(p) {
             const desactivar = p.activo;
             this.confirm = {
@@ -508,7 +529,6 @@ function personalManager() {
             this.cerrarConfirm();
         },
 
-        // ── CRUD ──────────────────────────────────────────────────────
         async guardar() {
             this.modal.errores = {};
             if (!this.modal.nombre.trim()) {
@@ -590,9 +610,7 @@ function personalManager() {
                 if (item) item.activo = !item.activo;
 
                 this.mostrarNotif(
-                    estabaActivo
-                        ? `${p.nombre} fue desactivado.`
-                        : `${p.nombre} fue reactivado.`,
+                    estabaActivo ? `${p.nombre} fue desactivado.` : `${p.nombre} fue reactivado.`,
                     estabaActivo ? 'warning' : 'ok',
                     estabaActivo
                         ? 'No aparecerá disponible en nuevas ventas.'
@@ -604,7 +622,6 @@ function personalManager() {
             }
         },
 
-        // ── Notificación ──────────────────────────────────────────────
         mostrarNotif(msg, tipo = 'ok', sub = '') {
             if (this.notif._t) clearTimeout(this.notif._t);
             this.notif.msg  = msg;

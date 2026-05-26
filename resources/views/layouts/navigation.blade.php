@@ -400,39 +400,64 @@
             ============================================================ --}}
             @if(Auth::user()->id_rol === 2)
 
-                <div class="nav-divider"></div>
-                <p class="nav-group-label">Mis operaciones</p>
+                <div class="nav-divider">
 
-                <a href="{{ route('stock.index') }}"
-                   class="nav-item {{ request()->routeIs('stock.index') ? 'nav-item-active' : 'nav-item-inactive' }}"
-                   @click="open = false">
-                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 0 0 3.75-.615A2.993 2.993 0 0 0 9.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 0 0 2.25 1.016c.896 0 1.7-.393 2.25-1.015a3.001 3.001 0 0 0 3.75.614m-16.5 0a3.004 3.004 0 0 1-.621-4.72l1.189-1.19A1.5 1.5 0 0 1 5.378 3h13.243a1.5 1.5 0 0 1 1.06.44l1.19 1.189a3 3 0 0 1-.621 4.72M6.75 18h3.75a.75.75 0 0 0 .75-.75V13.5a.75.75 0 0 0-.75-.75H6.75a.75.75 0 0 0-.75.75v3.75c0 .414.336.75.75.75Z" />
+                </div>
+                    <p class="nav-group-label">Operaciones</p>
+
+                    <a href="{{ route('stock.index') }}"
+                    class="nav-item {{ request()->routeIs('stock.index') ? 'nav-item-active' : 'nav-item-inactive' }}"
+                    @click="open = false">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 0 0 3.75-.615A2.993 2.993 0 0 0 9.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 0 0 2.25 1.016c.896 0 1.7-.393 2.25-1.015a3.001 3.001 0 0 0 3.75.614m-16.5 0a3.004 3.004 0 0 1-.621-4.72l1.189-1.19A1.5 1.5 0 0 1 5.378 3h13.243a1.5 1.5 0 0 1 1.06.44l1.19 1.189a3 3 0 0 1-.621 4.72M6.75 18h3.75a.75.75 0 0 0 .75-.75V13.5a.75.75 0 0 0-.75-.75H6.75a.75.75 0 0 0-.75.75v3.75c0 .414.336.75.75.75Z" />
+                        </svg>
+                        <span class="flex-1 truncate">Stock disponible</span>
+                    </a>
+
+                    <a href="{{ route('reparaciones.index') }}"
+                        class="nav-item {{ request()->routeIs('reparaciones.index') ? 'nav-item-active' : 'nav-item-inactive' }}"
+                        @click="open = false">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" class="bi bi-tools" viewBox="0 0 16 16">
+                            <path d="M1 0 0 1l2.2 3.081a1 1 0 0 0 .815.419h.07a1 1 0 0 1 .708.293l2.675 2.675-2.617 2.654A3.003 3.003 0 0 0 0 13a3 3 0 1 0 5.878-.851l2.654-2.617.968.968-.305.914a1 1 0 0 0 .242 1.023l3.27 3.27a.997.997 0 0 0 1.414 0l1.586-1.586a.997.997 0 0 0 0-1.414l-3.27-3.27a1 1 0 0 0-1.023-.242L10.5 9.5l-.96-.96 2.68-2.643A3.005 3.005 0 0 0 16 3c0-.269-.035-.53-.102-.777l-2.14 2.141L12 4l-.364-1.757L13.777.102a3 3 0 0 0-3.675 3.68L7.462 6.46 4.793 3.793a1 1 0 0 1-.293-.707v-.071a1 1 0 0 0-.419-.814L1 0Zm9.646 10.646a.5.5 0 0 1 .708 0l2.914 2.915a.5.5 0 0 1-.707.707l-2.915-2.914a.5.5 0 0 1 0-.708ZM3 11l.471.242.529.026.287.445.445.287.026.529L5 13l-.242.471-.026.529-.445.287-.287.445-.529.026L3 15l-.471-.242L2 14.732l-.287-.445L1.268 14l-.026-.529L1 13l.242-.471.026-.529.445-.287.287-.445.529-.026L3 11Z"/>
+                        </svg>
+                        
+                        <span class="flex-1 truncate">Reparaciones</span>
+                    </a>
+
+                    <a href="{{ route('robo.index') }}"
+                        class="nav-item {{ request()->routeIs('robo.index') ? 'nav-item-active' : 'nav-item-inactive' }} flex items-center gap-2"
+                        @click="open = false">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" class="bi bi-exclamation-triangle text-red-500" viewBox="0 0 16 16">
+                            <path d="M7.938 2.016A.13.13 0 0 1 8.002 2a.13.13 0 0 1 .063.016.15.15 0 0 1 .054.057l6.857 11.667c.036.06.035.124.002.183a.2.2 0 0 1-.054.06.1.1 0 0 1-.066.017H1.146a.1.1 0 0 1-.066-.017.2.2 0 0 1-.054-.06.18.18 0 0 1 .002-.183L7.884 2.073a.15.15 0 0 1 .054-.057m1.044-.45a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767z"/>
+                            <path d="M7.002 12a1 1 0 1 1 2 0 1 1 0 0 1-2 0M7.1 5.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0z"/>
+                        </svg>
+                        
+                        <span class="flex-1 truncate">Reporte Robo</span>
+                    </a>
+
+              
+                <div class="nav-group-label">Mi turno
+                    
+                </div>
+                
+                <a href="{{ route('caja.index') }}"
+                class="nav-item flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors
+                        {{ request()->routeIs('caja.*') ? 'bg-white/8 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5' }}">
+                    <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75"
+                            d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
                     </svg>
-                    <span class="flex-1 truncate">Stock disponible</span>
+                    <span>Mi caja</span>
+                    {{-- Badge de estado en tiempo real --}}
+                    @php
+                        $cajaVendedor = \App\Models\Caja::where('id_usuario', auth()->id())->where('id_negocio', auth()->user()->id_negocio)->first();
+                        $sesionVendedor = $cajaVendedor ? \App\Models\CajaSesion::where('id_caja', $cajaVendedor->id_caja)->where('estado', 'abierta')->first() : null;
+                    @endphp
+                    @if($sesionVendedor)
+                        <span class="ml-auto w-2 h-2 rounded-full bg-emerald-400"></span>
+                    @endif
                 </a>
-
-                {{-- Grupo: Mi turno --}}
-<div class="nav-group-label">Mi turno</div>
- 
-<a href="{{ route('caja.index') }}"
-   class="nav-item flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors
-          {{ request()->routeIs('caja.*') ? 'bg-white/8 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5' }}">
-    <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75"
-              d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
-    </svg>
-    <span>Mi caja</span>
-    {{-- Badge de estado en tiempo real --}}
-    @php
-        $cajaVendedor = \App\Models\Caja::where('id_usuario', auth()->id())->where('id_negocio', auth()->user()->id_negocio)->first();
-        $sesionVendedor = $cajaVendedor ? \App\Models\CajaSesion::where('id_caja', $cajaVendedor->id_caja)->where('estado', 'abierta')->first() : null;
-    @endphp
-    @if($sesionVendedor)
-        <span class="ml-auto w-2 h-2 rounded-full bg-emerald-400"></span>
-    @endif
-</a>
 
                 <a href="{{ route('ventas.index') }}"
                    class="nav-item {{ request()->routeIs('ventas.*') ? 'nav-item-active' : 'nav-item-inactive' }}"
