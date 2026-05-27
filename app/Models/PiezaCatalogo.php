@@ -33,12 +33,12 @@ class PiezaCatalogo extends Model
 
     protected $casts = [
         'modelos_compatibles' => 'array',
-        'serializable'        => 'boolean',
-        'activo'              => 'boolean',
         'precio_costo'        => 'decimal:2',
         'precio_venta'        => 'decimal:2',
         'stock_actual'        => 'integer',
         'stock_minimo'        => 'integer',
+        'serializable'        => 'boolean',
+        'activo'              => 'boolean',
     ];
 
     // ── Relaciones ────────────────────────────────────────────────────────────
@@ -48,30 +48,31 @@ class PiezaCatalogo extends Model
         return $this->belongsTo(Negocio::class, 'id_negocio', 'id_negocio');
     }
 
-    public function reparacionPiezas(): HasMany
+    public function movimientos(): HasMany
     {
-        return $this->hasMany(ReparacionPieza::class, 'id_pieza', 'id_pieza');
+        return $this->hasMany(PiezaMovimiento::class, 'id_pieza', 'id_pieza')
+                    ->orderByDesc('created_at');
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    public function bajoStock(): bool
+    public function stockBajo(): bool
     {
         return $this->stock_actual <= $this->stock_minimo;
     }
 
-    public function sinStock(): bool
+    public function esCompatibleCon(string $idModelo): bool
     {
-        return $this->stock_actual <= 0;
+        if (empty($this->modelos_compatibles)) return true; // universal
+        return in_array($idModelo, $this->modelos_compatibles);
     }
 
-    // ── AUTO-PK ───────────────────────────────────────────────────────────────
+    // ── Auto-PK ───────────────────────────────────────────────────────────────
 
     protected static function booted(): void
     {
         static::creating(function (self $model) {
             if (empty($model->id_pieza)) {
-                // Scoped por negocio para que cada tenant empiece en PC-00001
                 $ultimo = static::where('id_negocio', $model->id_negocio)
                     ->orderByDesc('id_pieza')
                     ->lockForUpdate()

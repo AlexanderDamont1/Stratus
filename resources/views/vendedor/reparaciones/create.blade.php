@@ -229,12 +229,11 @@
                 <div>
                     <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1.5 font-medium">
                         Teléfono
-                        <span class="font-normal text-gray-400">(referencia — no se guarda en la orden)</span>
                     </label>
                     <input type="tel" x-model="clienteTelefonoDisplay"
-                           placeholder="55 1234 5678"
-                           readonly
-                           :class="clienteTelefonoDisplay ? '' : 'opacity-50'"
+                        placeholder="5512345678"
+                        :readonly="clienteAutocompletado"
+                        :class="clienteTelefonoDisplay ? '' : 'opacity-50'"
                            class="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3.5 py-2.5
                                   text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                                   focus:outline-none focus:ring-1 focus:ring-gray-400 font-mono">
@@ -346,8 +345,8 @@
                  x-transition:enter="transition ease-out duration-200"
                  x-transition:enter-start="opacity-0 -translate-y-1">
                 <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1.5 font-medium">
-                    Costo base de la reparación
-                    <span class="font-normal text-gray-400">(opcional — acuerdo interno)</span>
+                    <span x-text="tipo === 'mantenimiento' ? 'Costo base del mantenimiento' : 'Costo base de la reparación'"></span>
+                    <span class="font-normal text-gray-400">(acuerdo interno)</span>
                 </label>
                 <div class="relative">
                     <span class="absolute left-3.5 top-2.5 text-sm text-gray-400">$</span>
@@ -530,13 +529,11 @@ function repCreate() {
                         unidad_descripcion:  !this.biciEncontrada ? (this.unidadDescripcion.trim() || null) : null,
                         id_cliente:          this.idCliente,
                         cliente_nombre:      this.clienteNombre.trim() || null,
-                        // cliente_telefono no existe en tabla reparaciones — no se envía
+                        cliente_telefono: this.clienteTelefonoDisplay.trim() || null,
                         cliente_email:       this.clienteEmail.trim() || null,
                         id_verificada:       this.idVerificada,
                         tipo:                this.tipo,
-                        // costo_reparacion solo aplica a tipo=reparacion y se persiste en BD
-                        // para mantenimiento el costo base es acuerdo interno, no se guarda
-                        costo_reparacion:    this.tipo === 'reparacion'
+                        costo_reparacion: ['reparacion', 'mantenimiento'].includes(this.tipo)
                                                 ? (parseFloat(this.costoReparacion) || 0)
                                                 : 0,
                         problema_reportado:  this.problemaReportado.trim(),

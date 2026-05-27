@@ -41,6 +41,7 @@ use App\Http\Controllers\Root\AuditController;
 use App\Http\Controllers\Root\NovedadController;
 use App\Http\Controllers\Sucursal\ReparacionController;
 use App\Http\Controllers\CotizacionController;
+use App\Http\Controllers\Sucursal\StockController;
 
 /*
 |--------------------------------------------------------------------------
@@ -539,6 +540,16 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
             Route::post('/{id}/cotizacion',    [ReparacionController::class, 'enviarCotizacion'])->name('cotizacion');
             Route::post('/{id}/resolver',      [ReparacionController::class, 'resolverCotizacion'])->name('resolver');
             Route::post('/{id}/estado',        [ReparacionController::class, 'avanzarEstado'])->name('estado');
+        });
+
+        Route::prefix('sucursal/stock/piezas')->name('stock.')->group(function () {
+            Route::get('/',                    [StockController::class, 'index'])->name('index');
+            Route::post('/',                   [StockController::class, 'store'])->name('store');
+            Route::put('/{id}',                [StockController::class, 'update'])->name('update');
+            Route::post('/{id}/entrada',       [StockController::class, 'entrada'])->name('entrada');
+            Route::get('/{id}/historial',      [StockController::class, 'historial'])->name('historial');
+            Route::get('/buscar-diagnostico',  [StockController::class, 'buscarParaDiagnostico'])->name('buscar-diagnostico');
+            Route::get('/modelos',             [StockController::class, 'modelos'])->name('modelos');
         });
 
 

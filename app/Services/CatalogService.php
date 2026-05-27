@@ -15,6 +15,8 @@ use App\Models\Venta;
 use App\Models\Producto;
 use App\Models\Inventario;
 use App\Models\BicicletaMovimiento;
+use App\Models\PiezaCatalogo;
+use App\Models\PiezaMovimiento;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -32,6 +34,7 @@ class CatalogService
         'stats'      => 300,
         'search'     => 3600,
         'productos'  => 3600,
+        'piezas'     => 300,
     ];
 
     const CACHE_PREFIX = 'catalog:';
@@ -62,7 +65,11 @@ class CatalogService
         return self::CACHE_PREFIX . $key;
     }
 
-    protected static function remember(string $key, int $ttl, callable $callback, ?string $idNegocio = null)
+    /**
+     * Ahora es public para que StockService y ReparacionService
+     * puedan usarlo directamente sin duplicar el helper.
+     */
+    public static function remember(string $key, int $ttl, callable $callback, ?string $idNegocio = null)
     {
         $version = self::getVersion($idNegocio);
         return Cache::remember(self::key($key) . ":v{$version}", $ttl, $callback);
@@ -75,7 +82,7 @@ class CatalogService
         $marcas = self::remember(
             "marcas:negocio:{$idNegocio}",
             self::CACHE_TTL['marcas'],
-            fn () => Marca::where('id_negocio', $idNegocio)
+            fn() => Marca::where('id_negocio', $idNegocio)
                 ->select('id_marca', 'nombre_marca')
                 ->orderBy('nombre_marca')
                 ->get(),
@@ -87,7 +94,10 @@ class CatalogService
 
     public static function getMarcasPublicas(bool $withSelectFormato = false)
     {
-        $marcas = self::remember('marcas:publicas', self::CACHE_TTL['marcas'], fn () =>
+        $marcas = self::remember(
+            'marcas:publicas',
+            self::CACHE_TTL['marcas'],
+            fn() =>
             Marca::whereNull('id_negocio')
                 ->select('id_marca', 'nombre_marca')
                 ->orderBy('nombre_marca')
@@ -136,7 +146,7 @@ class CatalogService
         $modelos = self::remember(
             "modelos:negocio:{$idNegocio}",
             self::CACHE_TTL['modelos'],
-            fn () => Modelo::where('id_negocio', $idNegocio)
+            fn() => Modelo::where('id_negocio', $idNegocio)
                 ->with('marca')
                 ->select('id_modelo', 'id_marca', 'id_negocio', 'nombre_modelo')
                 ->orderBy('nombre_modelo')
@@ -152,7 +162,7 @@ class CatalogService
         $modelos = self::remember(
             "modelos:marca:{$idMarca}:negocio:{$idNegocio}",
             self::CACHE_TTL['modelos'],
-            fn () => Modelo::where('id_marca', $idMarca)
+            fn() => Modelo::where('id_marca', $idMarca)
                 ->where('id_negocio', $idNegocio)
                 ->select('id_modelo', 'id_marca', 'nombre_modelo')
                 ->orderBy('nombre_modelo')
@@ -165,8 +175,10 @@ class CatalogService
 
     public static function getModelos(bool $withSelectFormato = false)
     {
-        $modelos = self::remember('modelos:publicos', self::CACHE_TTL['modelos'],
-            fn () => Modelo::whereNull('id_negocio')
+        $modelos = self::remember(
+            'modelos:publicos',
+            self::CACHE_TTL['modelos'],
+            fn() => Modelo::whereNull('id_negocio')
                 ->select('id_modelo', 'nombre_modelo')
                 ->orderBy('nombre_modelo')
                 ->get()
@@ -213,17 +225,13 @@ class CatalogService
 
     // ─── VOLTAJES ───────────────────────────────────────────────────────────
 
-    /**
-     * FIX: paginar ahora usa caché por página en lugar de ir directo a BD.
-     * Se agrega el parámetro $page para construir la clave de caché correctamente.
-     */
     public static function getVoltajesByNegocio(string $idNegocio, bool $withSelectFormato = false, bool $paginar = false, int $page = 1)
     {
         if ($paginar) {
             return self::remember(
                 "voltajes:negocio:{$idNegocio}:page:{$page}",
                 self::CACHE_TTL['voltajes'],
-                fn () => Voltaje::where('id_negocio', $idNegocio)
+                fn() => Voltaje::where('id_negocio', $idNegocio)
                     ->select('id_voltaje', 'voltaje')
                     ->orderBy('voltaje')
                     ->paginate(20, ['*'], 'page', $page),
@@ -234,7 +242,7 @@ class CatalogService
         $voltajes = self::remember(
             "voltajes:negocio:{$idNegocio}",
             self::CACHE_TTL['voltajes'],
-            fn () => Voltaje::where('id_negocio', $idNegocio)
+            fn() => Voltaje::where('id_negocio', $idNegocio)
                 ->select('id_voltaje', 'voltaje')
                 ->orderBy('voltaje')
                 ->get(),
@@ -272,31 +280,41 @@ class CatalogService
         return $withSelectFormato ? $voltajes->pluck('voltaje', 'id_voltaje') : $voltajes;
     }
 
-    /**
-     * FIX: paginar ahora usa caché por página en lugar de ir directo a BD.
-     * Se agrega el parámetro $page para construir la clave de caché correctamente.
-     */
     public static function getAllVoltajes(bool $withSelectFormato = false, bool $paginar = false, int $page = 1)
     {
         if ($paginar) {
             return self::remember(
                 "voltajes:publicos:page:{$page}",
                 self::CACHE_TTL['voltajes'],
-                fn () => Voltaje::whereNull('id_negocio')
+                fn() => Voltaje::whereNull('id_negocio')
                     ->select('id_voltaje', 'voltaje')
                     ->orderBy('voltaje')
                     ->paginate(20, ['*'], 'page', $page)
             );
         }
 
-        $voltajes = self::remember('voltajes:publicos', self::CACHE_TTL['voltajes'],
-            fn () => Voltaje::whereNull('id_negocio')
+        $voltajes = self::remember(
+            'voltajes:publicos',
+            self::CACHE_TTL['voltajes'],
+            fn() => Voltaje::whereNull('id_negocio')
                 ->select('id_voltaje', 'voltaje')
                 ->orderBy('voltaje')
                 ->get()
         );
 
         return $withSelectFormato ? $voltajes->pluck('voltaje', 'id_voltaje') : $voltajes;
+    }
+
+    public static function getAllVoltajesPaginados(int $page = 1): LengthAwarePaginator
+    {
+        return self::remember(
+            "voltajes:publicos:page:{$page}",
+            self::CACHE_TTL['voltajes'],
+            fn() => Voltaje::whereNull('id_negocio')
+                ->select('id_voltaje', 'voltaje')
+                ->orderBy('voltaje')
+                ->paginate(20, ['*'], 'page', $page)
+        );
     }
 
     public static function getVoltajeById(string $id, ?string $idNegocio = null): ?Voltaje
@@ -317,11 +335,7 @@ class CatalogService
 
     public static function invalidateVoltaje(string $idVoltaje, ?string $idNegocio = null): void
     {
-        if ($idNegocio) {
-            self::incrementVersion($idNegocio);
-        } else {
-            self::incrementVersion();
-        }
+        self::incrementVersion($idNegocio ?? null);
     }
 
     public static function invalidateVoltajes(): void
@@ -336,7 +350,7 @@ class CatalogService
         $colores = self::remember(
             "colores:negocio:{$idNegocio}",
             self::CACHE_TTL['colores'],
-            fn () => Color::where('id_negocio', $idNegocio)
+            fn() => Color::where('id_negocio', $idNegocio)
                 ->select('id_color', 'id_modelo', 'color')
                 ->orderBy('color')
                 ->get(),
@@ -374,8 +388,10 @@ class CatalogService
 
     public static function getAllColores(bool $withSelectFormato = false)
     {
-        $colores = self::remember('colores:publicos', self::CACHE_TTL['colores'],
-            fn () => Color::whereNull('id_negocio')
+        $colores = self::remember(
+            'colores:publicos',
+            self::CACHE_TTL['colores'],
+            fn() => Color::whereNull('id_negocio')
                 ->select('id_color', 'color')
                 ->orderBy('color')
                 ->get()
@@ -402,19 +418,17 @@ class CatalogService
 
     public static function invalidateColor(string $idColor, string $idModelo, ?string $idNegocio = null): void
     {
-        if ($idNegocio) {
-            self::incrementVersion($idNegocio);
-        } else {
-            self::incrementVersion();
-        }
+        self::incrementVersion($idNegocio ?? null);
     }
 
     // ─── NEGOCIOS ───────────────────────────────────────────────────────────
 
     public static function getNegocios(bool $withSelectFormato = false)
     {
-        $negocios = self::remember('negocios', self::CACHE_TTL['negocios'],
-            fn () => Negocio::select('id_negocio', 'nombre_negocio')
+        $negocios = self::remember(
+            'negocios',
+            self::CACHE_TTL['negocios'],
+            fn() => Negocio::select('id_negocio', 'nombre_negocio')
                 ->orderBy('nombre_negocio')
                 ->get()
         );
@@ -427,22 +441,30 @@ class CatalogService
         return self::remember(
             "negocio:{$idNegocio}",
             self::CACHE_TTL['negocios'],
-            fn () => Negocio::find($idNegocio),
+            fn() => Negocio::find($idNegocio),
             $idNegocio
         );
     }
 
+    public static function invalidateNegocio(string $idNegocio): void
+    {
+        $globalV = self::getVersion();
+        $tenantV = self::getVersion($idNegocio);
+
+        Cache::forget(self::key("negocio:{$idNegocio}") . ":v{$tenantV}");
+        Cache::forget(self::key('negocios') . ":v{$globalV}");
+
+        self::incrementVersion($idNegocio);
+    }
+
     // ─── BICICLETAS ─────────────────────────────────────────────────────────
 
-    /**
-     * FIX: ahora usa caché por página en lugar de ir directo a BD.
-     */
     public static function getBicicletasPaginadas(string $idNegocio, int $page = 1): LengthAwarePaginator
     {
         return self::remember(
             "bicicletas:negocio:{$idNegocio}:page:{$page}",
             self::CACHE_TTL['bicicletas'],
-            fn () => Bicicleta::where('id_negocio', $idNegocio)
+            fn() => Bicicleta::where('id_negocio', $idNegocio)
                 ->with(['modelo', 'voltaje', 'color'])
                 ->orderByDesc('updated_at')
                 ->paginate(10, ['*'], 'page', $page),
@@ -455,7 +477,7 @@ class CatalogService
         return self::remember(
             "bicicleta:serie:{$numSerie}",
             self::CACHE_TTL['bicicletas'],
-            fn () => Bicicleta::with(['modelo.marca', 'voltaje', 'color'])
+            fn() => Bicicleta::with(['modelo.marca', 'voltaje', 'color'])
                 ->where('num_serie', $numSerie)
                 ->when($idNegocio, fn($q) => $q->where('id_negocio', $idNegocio))
                 ->first(),
@@ -495,30 +517,22 @@ class CatalogService
         Cache::forget(self::key("bicicleta:serie:{$numSerie}") . ":v{$version}");
         Cache::forget(self::key("stats:bicicletas:{$idNegocio}") . ":v{$version}");
         Cache::forget(self::key("stock:vendedores:negocio:{$idNegocio}") . ":v{$version}");
-        // Borrar páginas comunes de bicicletas paginadas
         foreach ([1, 2, 3] as $p) {
             Cache::forget(self::key("bicicletas:negocio:{$idNegocio}:page:{$p}") . ":v{$version}");
         }
     }
 
-    /**
-     * FIX: búsqueda con texto ya iba a BD — se mantiene ese comportamiento
-     * porque los resultados dependen de input libre. Pero page 1 sin search
-     * y pages adicionales sin search ahora usan caché también.
-     */
     public static function getBicicletasPorUsuarioPaginadas(string $idNegocio, string $idUsuario, int $page = 1, ?string $search = null): LengthAwarePaginator
     {
-        // Con búsqueda libre: siempre BD directa (resultados demasiado variables para cachear)
         if (!empty($search)) {
             return self::queryBicicletasUsuario($idNegocio, $idUsuario, $search)
                 ->paginate(10, ['*'], 'page', $page);
         }
 
-        // Sin búsqueda: caché para cualquier página
         return self::remember(
             "bicicletas:user:{$idUsuario}:negocio:{$idNegocio}:page:{$page}",
             self::CACHE_TTL['bicicletas'],
-            fn () => self::queryBicicletasUsuario($idNegocio, $idUsuario, null)
+            fn() => self::queryBicicletasUsuario($idNegocio, $idUsuario, null)
                 ->paginate(10, ['*'], 'page', $page),
             $idNegocio
         );
@@ -531,9 +545,10 @@ class CatalogService
             ->with(['modelo', 'voltaje', 'color']);
 
         if ($search) {
-            $query->where(fn ($q) => $q
-                ->where('num_serie', 'like', "%{$search}%")
-                ->orWhere('status', 'like', "%{$search}%")
+            $query->where(
+                fn($q) => $q
+                    ->where('num_serie', 'like', "%{$search}%")
+                    ->orWhere('status', 'like', "%{$search}%")
             );
         }
 
@@ -543,7 +558,6 @@ class CatalogService
     public static function invalidateBicicletasPorUsuario(string $idUsuario, string $idNegocio): void
     {
         $version = self::getVersion($idNegocio);
-        // Borrar páginas comunes sin search
         foreach ([1, 2, 3] as $p) {
             Cache::forget(self::key("bicicletas:user:{$idUsuario}:negocio:{$idNegocio}:page:{$p}") . ":v{$version}");
         }
@@ -554,7 +568,7 @@ class CatalogService
         return self::remember(
             "bicicletas:cliente:{$idCliente}:negocio:{$idNegocio}",
             300,
-            fn () => Bicicleta::with(['modelo', 'color'])
+            fn() => Bicicleta::with(['modelo', 'color'])
                 ->where('id_cliente', $idCliente)
                 ->where('id_negocio', $idNegocio)
                 ->where('status', '!=', 'danada')
@@ -604,10 +618,6 @@ class CatalogService
         );
     }
 
-    /**
-     * FIX: antes solo cacheaba page 1; las páginas 2+ iban directo a BD.
-     * Ahora cachea todas las páginas con la misma clave versionada.
-     */
     public static function getBicicletasSeccion(string $idNegocio, ?string $idUsuario, int $page): array
     {
         $cacheKey = $idUsuario
@@ -617,7 +627,7 @@ class CatalogService
         return self::remember(
             $cacheKey,
             self::CACHE_TTL['bicicletas'],
-            fn () => self::querySeccion($idNegocio, $idUsuario, $page),
+            fn() => self::querySeccion($idNegocio, $idUsuario, $page),
             $idNegocio
         );
     }
@@ -627,7 +637,7 @@ class CatalogService
         $paginador = Bicicleta::with(['modelo', 'voltaje', 'color'])
             ->where('id_negocio', $idNegocio)
             ->where('status', '!=', 2)
-            ->when($idUsuario, fn ($q) => $q->where('id_usuario', $idUsuario), fn ($q) => $q->whereNull('id_usuario'))
+            ->when($idUsuario, fn($q) => $q->where('id_usuario', $idUsuario), fn($q) => $q->whereNull('id_usuario'))
             ->orderByDesc('updated_at')
             ->paginate(5, ['*'], 'page', $page);
 
@@ -677,14 +687,14 @@ class CatalogService
         return self::remember(
             "pedidos:recientes:negocio:{$idNegocio}:limit{$limit}",
             self::CACHE_TTL['pedidos'],
-            fn () => Pedido::with([
-                    'usuario',
-                    'negocio',
-                    'items.modelo',
-                    'items.voltaje',
-                    'items.color',
-                    'bicicletas',
-                ])
+            fn() => Pedido::with([
+                'usuario',
+                'negocio',
+                'items.modelo',
+                'items.voltaje',
+                'items.color',
+                'bicicletas',
+            ])
                 ->where('id_negocio', $idNegocio)
                 ->orderByDesc('created_at')
                 ->limit($limit)
@@ -740,7 +750,7 @@ class CatalogService
         return self::remember(
             "usuario:{$idUsuario}",
             self::CACHE_TTL['usuarios'],
-            fn () => Usuario::where('id_negocio', $idNegocio)->find($idUsuario),
+            fn() => Usuario::where('id_negocio', $idNegocio)->find($idUsuario),
             $idNegocio
         );
     }
@@ -750,7 +760,7 @@ class CatalogService
         return self::remember(
             "usuario:negocio:{$idUsuario}",
             self::CACHE_TTL['usuarios'],
-            fn () => Usuario::with('negocio')->where('id_negocio', $idNegocio)->find($idUsuario),
+            fn() => Usuario::with('negocio')->where('id_negocio', $idNegocio)->find($idUsuario),
             $idNegocio
         );
     }
@@ -762,24 +772,11 @@ class CatalogService
         Cache::forget(self::key("usuario:negocio:{$idUsuario}") . ":v{$version}");
     }
 
-    // ─── NEGOCIOS INVALIDACIÓN ───────────────────────────────────────────────
-
-    public static function invalidateNegocio(string $idNegocio): void
-    {
-        $globalV = self::getVersion();
-        $tenantV = self::getVersion($idNegocio);
-
-        Cache::forget(self::key("negocio:{$idNegocio}") . ":v{$tenantV}");
-        Cache::forget(self::key('negocios') . ":v{$globalV}");
-
-        self::incrementVersion($idNegocio);
-    }
-
     // ─── STATS GLOBALES ─────────────────────────────────────────────────────
 
     public static function getGlobalStats(): array
     {
-        return self::remember('stats:global', self::CACHE_TTL['stats'], fn () => [
+        return self::remember('stats:global', self::CACHE_TTL['stats'], fn() => [
             'total_marcas'        => Marca::count(),
             'total_modelos'       => Modelo::count(),
             'total_negocios'      => Negocio::count(),
@@ -799,7 +796,7 @@ class CatalogService
         return self::remember(
             "search:bicicletas:{$idNegocio}:" . md5($query) . ":limit{$limit}",
             self::CACHE_TTL['search'],
-            fn () => Bicicleta::where('id_negocio', $idNegocio)
+            fn() => Bicicleta::where('id_negocio', $idNegocio)
                 ->where('num_serie', 'like', "%{$query}%")
                 ->limit($limit)
                 ->get(['num_serie', 'status'])
@@ -812,8 +809,10 @@ class CatalogService
 
     public static function getProductos(bool $withSelectFormato = false)
     {
-        $productos = self::remember('productos', self::CACHE_TTL['productos'],
-            fn () => Producto::with('negocio')->orderBy('nombre_producto')->get()
+        $productos = self::remember(
+            'productos',
+            self::CACHE_TTL['productos'],
+            fn() => Producto::with('negocio')->orderBy('nombre_producto')->get()
         );
 
         return $withSelectFormato ? $productos->pluck('nombre_producto', 'id_producto') : $productos;
@@ -840,7 +839,7 @@ class CatalogService
         $productos = self::remember(
             "productos:negocio:{$idNegocio}",
             self::CACHE_TTL['productos'],
-            fn () => Producto::where('id_negocio', $idNegocio)->orderBy('nombre_producto')->get(),
+            fn() => Producto::where('id_negocio', $idNegocio)->orderBy('nombre_producto')->get(),
             $idNegocio
         );
 
@@ -864,15 +863,15 @@ class CatalogService
         return self::remember(
             "catalogo:completo:{$idNegocio}",
             self::CACHE_TTL['marcas'],
-            fn () => Marca::where('id_negocio', $idNegocio)
+            fn() => Marca::where('id_negocio', $idNegocio)
                 ->withCount('modelos')
                 ->with(['modelos' => function ($q) use ($idNegocio) {
                     $q->where('id_negocio', $idNegocio)
-                      ->with([
-                          'colores'  => fn ($q) => $q->where('id_negocio', $idNegocio),
-                          'voltajes' => fn ($q) => $q->wherePivot('id_negocio', $idNegocio)->orderBy('voltaje'),
-                      ])
-                      ->orderBy('updated_at');
+                        ->with([
+                            'colores'  => fn($q) => $q->where('id_negocio', $idNegocio),
+                            'voltajes' => fn($q) => $q->wherePivot('id_negocio', $idNegocio)->orderBy('voltaje'),
+                        ])
+                        ->orderBy('updated_at');
                 }])
                 ->orderBy('updated_at')
                 ->get(),
@@ -897,11 +896,11 @@ class CatalogService
         return self::remember(
             $cacheKey,
             self::CACHE_TTL['productos'],
-            fn () => Producto::where('id_negocio', $idNegocio)
-                ->when($idUsuario, fn ($q) => $q->where('id_usuario', $idUsuario))
+            fn() => Producto::where('id_negocio', $idNegocio)
+                ->when($idUsuario, fn($q) => $q->where('id_usuario', $idUsuario))
                 ->with([
                     'productoModelo.modelo.marca',
-                    'productoModelo.modelo.colores' => fn ($q) => $q->where('id_negocio', $idNegocio),
+                    'productoModelo.modelo.colores' => fn($q) => $q->where('id_negocio', $idNegocio),
                     'productoModelo.voltaje',
                 ])
                 ->get(),
@@ -914,7 +913,7 @@ class CatalogService
         return self::remember(
             "sucursales:negocio:{$idNegocio}",
             self::CACHE_TTL['usuarios'],
-            fn () => Usuario::where('id_negocio', $idNegocio)
+            fn() => Usuario::where('id_negocio', $idNegocio)
                 ->where('id_rol', 2)
                 ->get(['id_usuario', 'nombre_usuario']),
             $idNegocio
@@ -939,6 +938,32 @@ class CatalogService
 
     // ─── INVENTARIO ─────────────────────────────────────────────────────────
 
+    public static function getInventarioByNegocio(string $idNegocio)
+    {
+        return self::remember(
+            "inventario:negocio:{$idNegocio}",
+            self::CACHE_TTL['productos'],
+            fn() => Inventario::with(['productoModelo.producto', 'sucursal'])
+                ->where('id_negocio', $idNegocio)
+                ->orderBy('id_usuario')
+                ->get(),
+            $idNegocio
+        );
+    }
+
+    public static function getInventarioBySucursal(string $idNegocio, string $idUsuario)
+    {
+        return self::remember(
+            "inventario:sucursal:{$idNegocio}:{$idUsuario}",
+            self::CACHE_TTL['productos'],
+            fn() => Inventario::with(['productoModelo.producto'])
+                ->where('id_negocio', $idNegocio)
+                ->where('id_usuario', $idUsuario)
+                ->get(),
+            $idNegocio
+        );
+    }
+
     public static function invalidateInventario(string $idNegocio, ?string $idUsuario = null): void
     {
         $version = self::getVersion($idNegocio);
@@ -952,32 +977,6 @@ class CatalogService
         self::incrementVersion($idNegocio);
     }
 
-    public static function getInventarioByNegocio(string $idNegocio)
-    {
-        return self::remember(
-            "inventario:negocio:{$idNegocio}",
-            self::CACHE_TTL['productos'],
-            fn () => Inventario::with(['productoModelo.producto', 'sucursal'])
-                ->where('id_negocio', $idNegocio)
-                ->orderBy('id_usuario')
-                ->get(),
-            $idNegocio
-        );
-    }
-
-    public static function getInventarioBySucursal(string $idNegocio, string $idUsuario)
-    {
-        return self::remember(
-            "inventario:sucursal:{$idNegocio}:{$idUsuario}",
-            self::CACHE_TTL['productos'],
-            fn () => Inventario::with(['productoModelo.producto'])
-                ->where('id_negocio', $idNegocio)
-                ->where('id_usuario', $idUsuario)
-                ->get(),
-            $idNegocio
-        );
-    }
-
     // ─── COLORES EN STOCK POR MODELO ────────────────────────────────────────
 
     public static function getColoresEnStockPorModelos(array $idModelos, string $idNegocio, ?string $idUsuario = null): \Illuminate\Support\Collection
@@ -989,10 +988,10 @@ class CatalogService
         return self::remember(
             $cacheKey,
             self::CACHE_TTL['colores'],
-            fn () => Bicicleta::whereIn('id_modelo', $idModelos)
+            fn() => Bicicleta::whereIn('id_modelo', $idModelos)
                 ->where('id_negocio', $idNegocio)
                 ->where('status', 1)
-                ->when($idUsuario, fn ($q) => $q->where('id_usuario', $idUsuario))
+                ->when($idUsuario, fn($q) => $q->where('id_usuario', $idUsuario))
                 ->select('id_modelo', 'id_color')
                 ->distinct()
                 ->with('color')
@@ -1025,7 +1024,7 @@ class CatalogService
         return self::remember(
             "movimientos:serie:{$numSerie}",
             600,
-            fn () => BicicletaMovimiento::with('usuario')
+            fn() => BicicletaMovimiento::with('usuario')
                 ->where('num_serie', $numSerie)
                 ->where('id_negocio', $idNegocio)
                 ->orderBy('fecha_movimiento', 'asc')
@@ -1039,7 +1038,7 @@ class CatalogService
         return self::remember(
             "movimientos:recientes:negocio:{$idNegocio}:limit{$limit}",
             300,
-            fn () => BicicletaMovimiento::with('usuario')
+            fn() => BicicletaMovimiento::with('usuario')
                 ->where('id_negocio', $idNegocio)
                 ->orderByDesc('fecha_movimiento')
                 ->limit($limit)
@@ -1058,32 +1057,23 @@ class CatalogService
 
     // ─── VENTAS ─────────────────────────────────────────────────────────────
 
-    /**
-     * FIX: antes solo cacheaba page 1 y no tenía parámetro $page.
-     * Ahora cachea cualquier página.
-     */
     public static function getVentasByVendedor(string $idNegocio, string $idUsuario, int $page = 1): LengthAwarePaginator
     {
         return self::remember(
             "ventas:vendedor:{$idUsuario}:negocio:{$idNegocio}:page:{$page}",
             300,
-            fn () => self::queryVentas($idNegocio, $idUsuario)
-                ->paginate(15, ['*'], 'page', $page),
-            $idNegocio
-        );
-    }
-
-    private static function queryVentas(string $idNegocio, string $idUsuario)
-    {
-        return Venta::with([
+            fn() => Venta::with([
                 'cliente',
                 'detalles.producto',
                 'detalles.bicicleta.modelo',
                 'detalles.bicicleta.color',
             ])
-            ->where('id_negocio', $idNegocio)
-            ->whereHas('detalles.producto', fn($q) => $q->where('id_usuario', $idUsuario))
-            ->latest();
+                ->where('id_negocio', $idNegocio)
+                ->whereHas('detalles.producto', fn($q) => $q->where('id_usuario', $idUsuario))
+                ->latest()
+                ->paginate(15, ['*'], 'page', $page),
+            $idNegocio
+        );
     }
 
     public static function invalidateVentasByVendedor(string $idNegocio, string $idUsuario): void
@@ -1129,19 +1119,65 @@ class CatalogService
         self::incrementVersion($idNegocio);
     }
 
+    // ─── PIEZAS (lecturas) ───────────────────────────────────────────────────
+
     /**
-     * FIX: getAllVoltajesPaginados ahora usa caché por página en lugar de ir
-     * siempre directo a BD. Se agrega parámetro $page.
+     * Lista paginada de piezas con filtros.
+     * Las búsquedas libres van directo a BD (resultados demasiado variables).
      */
-    public static function getAllVoltajesPaginados(int $page = 1): LengthAwarePaginator
+    public static function getPiezasPaginadas(
+        string  $idNegocio,
+        int     $page = 1,
+        ?string $busqueda = null,
+        ?string $categoria = null,
+        bool    $soloStockBajo = false
+    ): LengthAwarePaginator {
+        if ($busqueda) {
+            return self::queryPiezas($idNegocio, $busqueda, $categoria, $soloStockBajo)
+                ->paginate(20, ['*'], 'page', $page);
+        }
+
+        $key = "piezas:lista:{$idNegocio}:cat:" . ($categoria ?? 'todas')
+            . ":bajo:" . ($soloStockBajo ? '1' : '0')
+            . ":p{$page}";
+
+        return self::remember(
+            $key,
+            self::CACHE_TTL['piezas'],
+            fn() =>
+            self::queryPiezas($idNegocio, null, $categoria, $soloStockBajo)
+                ->paginate(20, ['*'], 'page', $page),
+            $idNegocio
+        );
+    }
+
+    private static function queryPiezas(
+        string  $idNegocio,
+        ?string $busqueda,
+        ?string $categoria,
+        bool    $soloStockBajo
+    ) {
+        return PiezaCatalogo::where('id_negocio', $idNegocio)
+            ->where('activo', true)
+            ->when($busqueda, fn($q) => $q->where(
+                fn($q2) =>
+                $q2->where('nombre', 'like', "%{$busqueda}%")
+                    ->orWhere('clave', 'like', "%{$busqueda}%")
+            ))
+            ->when($categoria, fn($q) => $q->where('categoria', $categoria))
+            ->when($soloStockBajo, fn($q) => $q->whereColumn('stock_actual', '<=', 'stock_minimo'))
+            ->orderBy('nombre');
+    }
+
+    public static function getPiezaById(string $idPieza, string $idNegocio): ?PiezaCatalogo
     {
         return self::remember(
-            "voltajes:publicos:page:{$page}",
-            self::CACHE_TTL['voltajes'],
-            fn () => Voltaje::whereNull('id_negocio')
-                ->select('id_voltaje', 'voltaje')
-                ->orderBy('voltaje')
-                ->paginate(20, ['*'], 'page', $page)
+            "pieza:{$idPieza}",
+            self::CACHE_TTL['piezas'],
+            fn() => PiezaCatalogo::where('id_negocio', $idNegocio)
+                ->with('movimientos.usuario')
+                ->find($idPieza),
+            $idNegocio
         );
     }
 
@@ -1149,17 +1185,88 @@ class CatalogService
     {
         return self::remember(
             "piezas:negocio:{$idNegocio}",
-            self::CACHE_TTL['productos'],
-            fn() => \App\Models\PiezaCatalogo::where('id_negocio', $idNegocio)
+            self::CACHE_TTL['piezas'],
+            fn() => PiezaCatalogo::where('id_negocio', $idNegocio)
                 ->orderBy('nombre')
                 ->get(),
             $idNegocio
         );
     }
 
+    public static function getCategoriasPiezas(string $idNegocio): array
+    {
+        return self::remember(
+            "piezas:categorias:{$idNegocio}",
+            self::CACHE_TTL['piezas'],
+            fn() => PiezaCatalogo::where('id_negocio', $idNegocio)
+                ->whereNotNull('categoria')
+                ->distinct()
+                ->orderBy('categoria')
+                ->pluck('categoria')
+                ->toArray(),
+            $idNegocio
+        );
+    }
+
+
+    public static function buscarPiezasParaDiagnostico(
+        string  $idNegocio,
+        string  $busqueda,
+        ?string $idModelo = null
+    ): array {
+        $piezas = PiezaCatalogo::where('id_negocio', $idNegocio)
+            ->where('activo', true)
+            ->where(
+                fn($q) =>
+                $q->where('nombre', 'like', "%{$busqueda}%")
+                    ->orWhere('clave', 'like', "%{$busqueda}%")
+            )
+            ->orderBy('nombre')
+            ->limit(15)
+            ->get();
+
+        return $piezas->map(function ($p) use ($idModelo) {
+            $compatible = $idModelo ? $p->esCompatibleCon($idModelo) : true;
+            return [
+                'id_pieza'     => $p->id_pieza,
+                'nombre'       => $p->nombre,
+                'clave'        => $p->clave,
+                'categoria'    => $p->categoria,
+                'precio_venta' => (float) $p->precio_venta,
+                'stock_actual' => $p->stock_actual,
+                'stock_bajo'   => $p->stockBajo(),
+                'compatible'   => $compatible,
+            ];
+        })
+            ->sortByDesc('compatible')
+            ->values()
+            ->toArray();
+    }
+
+
+    public static function getModelosParaSelectorPiezas(string $idNegocio): array
+    {
+        return self::getModelosByNegocio($idNegocio)
+            ->map(fn($m) => [
+                'id_modelo'     => $m->id_modelo,
+                'nombre_modelo' => $m->nombre_modelo,
+            ])
+            ->toArray();
+    }
+
+
+    public static function getHistorialPieza(
+        string $idPieza,
+        int    $page = 1
+    ): LengthAwarePaginator {
+        return PiezaMovimiento::with('usuario')
+            ->where('id_pieza', $idPieza)
+            ->orderByDesc('created_at')
+            ->paginate(20, ['*'], 'page', $page);
+    }
+
     public static function invalidatePiezas(string $idNegocio): void
     {
-        $version = self::getVersion($idNegocio);
-        Cache::forget(self::key("piezas:negocio:{$idNegocio}") . ":v{$version}");
+        self::incrementVersion($idNegocio);
     }
 }

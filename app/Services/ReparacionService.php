@@ -7,6 +7,7 @@ use App\Models\ReparacionPieza;
 use App\Models\ReparacionHistorial;
 use App\Models\Cotizacion;
 use App\Models\PiezaCatalogo;
+use App\Services\StockService;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -87,17 +88,15 @@ class ReparacionService
                 'id_cliente'          => $datos['id_cliente'] ?? null,
                 'cliente_nombre'      => $datos['cliente_nombre'] ?? null,
                 'cliente_email'       => $datos['cliente_email'] ?? null,
-                // cliente_telefono no existe en la tabla reparaciones
+                'cliente_telefono' => $datos['cliente_telefono'] ?? 'sin teléfono',
                 'id_verificada'       => $datos['id_verificada'] ?? false,
                 'tipo'                => $datos['tipo'],
                 'problema_reportado'  => $datos['problema_reportado'],
                 'notas_internas'      => $datos['notas_internas'] ?? null,
                 'estado'              => 'recibida',
-                // costo_reparacion solo se guarda para tipo=reparacion
-                // para mantenimiento no hay campo base en BD (acuerdo interno)
-                'costo_reparacion'    => $datos['tipo'] === 'reparacion'
-                    ? ($datos['costo_reparacion'] ?? 0)
-                    : 0,
+                'costo_reparacion' => in_array($datos['tipo'], ['reparacion', 'mantenimiento'])
+                ? ($datos['costo_reparacion'] ?? 0)
+                : 0,
             ]);
 
             ReparacionHistorial::create([
@@ -119,7 +118,7 @@ class ReparacionService
     public static function buscarBicicleta(string $numSerie, string $idNegocio): ?array
     {
         $bici = CatalogService::getBicicletaBySerie($numSerie, $idNegocio);
-        if (!$bici) return null;
+        if (!$bici || $bici->status != 2) return null; // solo bicis vendidas
 
         $cliente = null;
         if ($bici->id_cliente) {
@@ -212,9 +211,10 @@ class ReparacionService
 
         $manoObra = $costoManoObra ?? (float) $rep->costo_mano_obra;
 
-        // costo_reparacion solo existe en BD para tipo=reparacion
-        // para mantenimiento el costo base no se persiste
-        $costoBase  = $rep->tipo === 'reparacion' ? (float) $rep->costo_reparacion : 0;
+    
+       $costoBase = in_array($rep->tipo, ['reparacion', 'mantenimiento'])
+        ? (float) $rep->costo_reparacion
+        : 0;
         $costoTotal = $costoBase + $manoObra + $totalPiezas;
 
         $rep->update([
@@ -252,8 +252,7 @@ class ReparacionService
                 'costo_mano_obra'         => $rep->costo_mano_obra,
                 'costo_piezas'            => $rep->costo_piezas,
                 'costo_total'             => $rep->costo_total,
-                // nombre correcto según migración: costo_reparaciones_base (plural, con s)
-                'costo_reparaciones_base' => $rep->costo_reparacion,
+                'costo_reparacion' => 'required_if:tipo,reparacion|nullable|numeric|min:0',
                 'descripcion_trabajo'     => $descripcionTrabajo,
                 'piezas_detalle'          => $piezasDetalle,
                 'enviado_at'              => $ahora,
@@ -368,13 +367,12 @@ class ReparacionService
                 ])->toArray(), (float) $rep->costo_mano_obra);
             }
 
-            if ($decision === 'solo_mantenimiento') {
+           if ($decision === 'solo_mantenimiento') {
                 ReparacionPieza::where('id_reparacion', $rep->id_reparacion)->delete();
                 $rep->update([
                     'costo_piezas'    => 0,
                     'costo_mano_obra' => 0,
-                    // mantenimiento base no se guarda en BD → costo_total queda en 0
-                    'costo_total'     => 0,
+                    'costo_total'     => (float) $rep->costo_reparacion, // costo base de mantenimiento
                 ]);
             }
 
@@ -428,11 +426,19 @@ class ReparacionService
             ->whereNotNull('id_pieza')
             ->get();
 
-        foreach ($piezasSinDescontar as $p) {
-            PiezaCatalogo::where('id_pieza', $p->id_pieza)
-                ->decrement('stock_actual', $p->cantidad);
+        foreach ($piezasSinDescontar as $rp) {
+            $pieza = PiezaCatalogo::find($rp->id_pieza);
+            if (!$pieza) continue;
 
-            $p->update(['stock_descontado' => true]);
+            StockService::registrarSalidaPorOT(
+                pieza:        $pieza,
+                cantidad:     $rp->cantidad,
+                idReparacion: $rep->id_reparacion,
+                idNegocio:    $idNegocio,
+                idUsuario:    $rep->id_usuario_sucursal,
+            );
+
+            $rp->update(['stock_descontado' => true]);
         }
 
         $ids = ReparacionPieza::where('id_reparacion', $rep->id_reparacion)
@@ -441,9 +447,7 @@ class ReparacionService
             ->toArray();
 
         $rep->update(['piezas_usadas' => $ids]);
-
-        CatalogService::invalidatePiezas($idNegocio);
-    }
+}
 
     // ── Validar transición ────────────────────────────────────────────────────
 

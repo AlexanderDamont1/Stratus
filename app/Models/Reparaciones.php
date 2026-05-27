@@ -25,7 +25,8 @@ class Reparaciones extends Model
         'unidad_descripcion',
         'id_cliente',
         'cliente_nombre',
-        'cliente_email',          // cliente_telefono eliminado: no existe en la migración
+        'cliente_email',  
+        'cliente_telefono',        
         'id_verificada',
         'tipo',
         'problema_reportado',

@@ -43,6 +43,7 @@ return new class extends Migration
 
             $table->string('cliente_nombre', 120)->nullable();
             $table->string('cliente_email', 150)->nullable();
+            $table->string('cliente_telefono', 20)->nullable();
 
             $table->boolean('id_verificada')->default(false);
 
