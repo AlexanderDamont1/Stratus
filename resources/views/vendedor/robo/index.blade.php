@@ -12,6 +12,59 @@
     {{-- ===== FLASH ===== --}}
     <x-flash-messages />
 
+    {{-- ===== VEHÍCULOS EN CUSTODIA ===== --}}
+    <div x-data="custodiaSection()" x-init="cargar()">
+        <template x-if="vehiculos.length > 0">
+            <div class="mb-2">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                    <p class="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+                        Vehículos en custodia — esperando recolección del dueño
+                    </p>
+                </div>
+                <div class="space-y-3">
+                    <template x-for="v in vehiculos" :key="v.id_reporte">
+                        <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200
+                                    dark:border-amber-800 rounded-xl p-4">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="space-y-1">
+                                    <p class="text-xs font-mono font-semibold text-gray-900 dark:text-white"
+                                    x-text="v.bicicleta?.num_serie ?? '—'"></p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400"
+                                    x-text="[v.bicicleta?.modelo?.marca?.nombre_marca, v.bicicleta?.modelo?.nombre_modelo].filter(Boolean).join(' ')"></p>
+                                    <p class="text-xs text-gray-400">
+                                        Cliente:
+                                        <span class="font-medium text-gray-700 dark:text-gray-300"
+                                            x-text="[v.cliente?.nombre_cliente, v.cliente?.apellido1].filter(Boolean).join(' ')"></span>
+                                        · <span x-text="v.cliente?.telefono ?? '—'"></span>
+                                    </p>
+                                    <p class="text-xs text-gray-400">
+                                        Reportado por:
+                                        <span x-text="v.negocio_reporta?.nombre_negocio ?? '—'"></span>
+                                    </p>
+                                    <p class="text-xs text-gray-400">
+                                        En custodia desde:
+                                        <span x-text="v.encontrado_at
+                                            ? new Date(v.encontrado_at).toLocaleDateString('es-MX')
+                                            : '—'"></span>
+                                    </p>
+                                </div>
+                                <button @click="entregar(v.id_reporte)"
+                                        :disabled="entregando === v.id_reporte"
+                                        class="shrink-0 bg-amber-600 hover:bg-amber-700 text-white
+                                            px-3 py-1.5 rounded-lg text-xs font-semibold transition
+                                            disabled:opacity-40 active:scale-95 whitespace-nowrap">
+                                    <span x-show="entregando !== v.id_reporte">✓ Marcar entregado</span>
+                                    <span x-show="entregando === v.id_reporte">Guardando...</span>
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </template>
+    </div>
+
 
     {{-- ===== PASO 1: BUSCAR SERIE ===== --}}
     <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 max-w-lg">
@@ -243,6 +296,44 @@
 
     {{-- ===== ALPINE JS ===== --}}
     <script>
+
+    function custodiaSection() {
+        return {
+            vehiculos:  [],
+            entregando: null,
+
+            async cargar() {
+                try {
+                    const res  = await fetch('{{ route("robo.custodia") }}', {
+                        headers: { 'Accept': 'application/json' },
+                    });
+                    const data = await res.json();
+                    if (data.ok) this.vehiculos = data.data;
+                } catch {}
+            },
+
+            async entregar(idReporte) {
+                this.entregando = idReporte;
+                try {
+                    const res  = await fetch(`{{ url('sucursal/reporte/robo/entregar') }}/${idReporte}`, {
+                        method:  'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            'Accept':       'application/json',
+                        },
+                    });
+                    const data = await res.json();
+                    if (data.ok) {
+                        this.vehiculos = this.vehiculos.filter(v => v.id_reporte !== idReporte);
+                    }
+                } catch {
+                } finally {
+                    this.entregando = null;
+                }
+            },
+        }
+    }
+    
     function reporteRoboPage() {
         return {
             serie:        '',

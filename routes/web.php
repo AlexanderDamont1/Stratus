@@ -514,10 +514,12 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
         Route::post('/sucursal/cupones/validar', [CuponValidarController::class, 'validar'])->name('cupones.validar');
 
         Route::prefix('sucursal/reporte/robo')->name('robo.')->group(function () {
-            Route::get('/', [ReporteRoboController::class, 'index'])->name('index');
-            Route::get('/buscar', [ReporteRoboController::class, 'buscar'])->name('buscar');
-            Route::post('/reportar', [ReporteRoboController::class, 'reportar'])->name('reportar');
+            Route::get('/',                  [ReporteRoboController::class, 'index'])    ->name('index');
+            Route::get('/buscar',            [ReporteRoboController::class, 'buscar'])   ->name('buscar');
+            Route::post('/reportar',         [ReporteRoboController::class, 'reportar']) ->name('reportar');
             Route::get('/verificar/{serie}', [ReporteRoboController::class, 'verificar'])->name('verificar');
+            Route::get('/custodia',          [ReporteRoboController::class, 'custodia']) ->name('custodia');   // ← nuevo
+            Route::post('/entregar/{id}',    [ReporteRoboController::class, 'entregar']) ->name('entregar');   // ← nuevo
         });
 
         Route::prefix('sucursal/caja')->name('caja.')->group(function () {
@@ -542,14 +544,15 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
             Route::post('/{id}/estado',        [ReparacionController::class, 'avanzarEstado'])->name('estado');
         });
 
-        Route::prefix('sucursal/stock/piezas')->name('stock.')->group(function () {
+        Route::prefix('sucursal/stock/piezas')->name('stock_piezas.')->group(function () {
             Route::get('/',                    [StockController::class, 'index'])->name('index');
             Route::post('/',                   [StockController::class, 'store'])->name('store');
+            Route::get('/buscar-diagnostico',  [StockController::class, 'buscarParaDiagnostico'])->name('buscar-diagnostico');
+            Route::get('/modelos',             [StockController::class, 'modelos'])->name('modelos');
             Route::put('/{id}',                [StockController::class, 'update'])->name('update');
             Route::post('/{id}/entrada',       [StockController::class, 'entrada'])->name('entrada');
             Route::get('/{id}/historial',      [StockController::class, 'historial'])->name('historial');
-            Route::get('/buscar-diagnostico',  [StockController::class, 'buscarParaDiagnostico'])->name('buscar-diagnostico');
-            Route::get('/modelos',             [StockController::class, 'modelos'])->name('modelos');
+           
         });
 
 

@@ -144,8 +144,6 @@ class ReporteRoboController extends Controller
         ]);
     }
 
-    // ── GET /robo/verificar/{numSerie} — AJAX al escanear una bici ──────
-    // Usado en BicicletaController antes de procesar cualquier acción
     public function verificar(string $numSerie)
     {
         $user = auth()->user();
@@ -172,6 +170,36 @@ class ReporteRoboController extends Controller
             'cliente'   => $reporte?->cliente?->nombre_cliente . ' ' . $reporte?->cliente?->apellido1,
             'desde'     => $reporte?->created_at->format('d/m/Y'),
             'serie'     => $numSerie,
+        ]);
+    }
+
+    public function custodia()
+    {
+        $user = auth()->user();
+        if (!in_array($user->id_rol, [1, 2])) abort(403);
+
+        $vehiculos = RoboService::getEnCustodia($user->id_negocio);
+
+        return response()->json(['ok' => true, 'data' => $vehiculos]);
+    }
+
+    public function entregar(string $id)
+    {
+        $user = auth()->user();
+        if (!in_array($user->id_rol, [1, 2])) abort(403);
+
+        $reporte = RoboService::cerrarReporte($id, $user->id_negocio);
+
+        if (!$reporte) {
+            return response()->json([
+                'ok'      => false,
+                'mensaje' => 'Reporte no encontrado o no corresponde a esta sucursal.',
+            ], 404);
+        }
+
+        return response()->json([
+            'ok'      => true,
+            'mensaje' => 'Vehículo entregado al dueño. Reporte cerrado.',
         ]);
     }
 }

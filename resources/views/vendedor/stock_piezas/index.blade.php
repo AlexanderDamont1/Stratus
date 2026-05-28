@@ -561,24 +561,28 @@ function stockIndex() {
                 if (this.categoriaFiltro) p.set('categoria', this.categoriaFiltro);
                 if (this.soloStockBajo)   p.set('stock_bajo', '1');
 
-                const res  = await fetch(`{{ route('stock.index') }}?${p}`, {
+                const res = await fetch(`{{ route('stock_piezas.index') }}?${p}`, {
                     headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                 });
                 const data = await res.json();
                 if (!data.ok) return;
 
-                this.items      = data.data.data ?? [];
-                this.lastPage   = data.data.last_page ?? 1;
-                this.categorias = data.categorias ?? [];
+                this.items            = data.data.data ?? [];
+                this.lastPage         = data.data.last_page ?? 1;
+                this.categorias       = data.categorias ?? [];
                 this.stats.total      = data.data.total ?? 0;
                 this.stats.bajo_stock = this.items.filter(p => p.stock_actual <= p.stock_minimo).length;
-            } catch { this.flash('Error cargando piezas', 'error'); }
-            finally  { this.cargando = false; }
+            } catch (e) {
+                console.error('fetch error:', e);
+                this.flash('Error cargando piezas', 'error');
+            } finally {
+                this.cargando = false;
+            }
         },
 
         async cargarModelos() {
             try {
-                const res  = await fetch('{{ route('stock.modelos') }}', {
+                const res  = await fetch(`{{ route('stock_piezas.modelos') }}`, {
                     headers: { 'Accept': 'application/json' },
                 });
                 const data = await res.json();
@@ -634,9 +638,9 @@ function stockIndex() {
             if (!this.form.nombre.trim() || !this.form.clave.trim()) return;
             this.guardando = true;
             try {
-                const url    = this.modoEditar
-                    ? `{{ url('sucursal/stock_piezas') }}/${this.piezaSeleccionada.id_pieza}`
-                    : '{{ route('stock.store') }}';
+                const url = this.modoEditar
+                    ? `{{ url('sucursal/stock/piezas') }}/${this.piezaSeleccionada.id_pieza}`
+                    : `{{ route('stock_piezas.store') }}`;
                 const method = this.modoEditar ? 'PUT' : 'POST';
 
                 const res  = await fetch(url, {
@@ -678,7 +682,7 @@ function stockIndex() {
             if (!(this.formEntrada.cantidad > 0)) return;
             this.registrandoEntrada = true;
             try {
-                const res  = await fetch(`{{ url('sucursal/stock_piezas') }}/${this.piezaSeleccionada.id_pieza}/entrada`, {
+                const res  = await fetch(`{{ url('sucursal/stock/piezas') }}/${this.piezaSeleccionada.id_pieza}/entrada`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -713,10 +717,9 @@ function stockIndex() {
         async cargarHistorial() {
             this.cargandoHistorial = true;
             try {
-                const res  = await fetch(
-                    `{{ url('sucursal/stock_piezas') }}/${this.piezaSeleccionada.id_pieza}/historial?page=${this.historialPagina}`,
-                    { headers: { 'Accept': 'application/json' } }
-                );
+                const res  = await fetch(`{{ url('sucursal/stock/piezas') }}/${this.piezaSeleccionada.id_pieza}/historial?page=${this.historialPagina}`, {
+                    headers: { 'Accept': 'application/json' }
+                });
                 const data = await res.json();
                 if (data.ok) {
                     this.historial         = data.data.data ?? [];

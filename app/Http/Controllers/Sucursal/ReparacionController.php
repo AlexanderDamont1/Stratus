@@ -84,6 +84,14 @@ class ReparacionController extends Controller
         $user = Auth::user();
         $data = ReparacionService::buscarBicicleta($request->num_serie, $user->id_negocio);
 
+        // AÑADIR: unidad existe pero no está vendida
+        if (is_array($data) && isset($data['error'])) {
+            return response()->json([
+                'ok'    => false,
+                'error' => $data['error'],   // 'no_vendida'
+            ], 422);
+        }
+
         return response()->json([
             'ok'   => (bool) $data,
             'data' => $data,
@@ -96,12 +104,12 @@ class ReparacionController extends Controller
     {
         $validated = $request->validate([
             'diagnostico'              => 'required|string|max:2000',
-            'costo_mano_obra'          => 'required|numeric|min:0',
+            'costo_mano_obra'          => 'nullable|numeric|min:0',
             'piezas'                   => 'present|array',
-            'piezas.*.id_pieza'        => 'nullable|integer',
+            'piezas.*.id_pieza' => 'nullable|string|max:36',
             'piezas.*.descripcion'     => 'nullable|string|max:150',
             'piezas.*.cantidad'        => 'required|integer|min:1',
-            'piezas.*.precio_unitario' => 'required|numeric|min:0',
+            'piezas.*.precio_unitario' => 'nullable|numeric|min:0',
         ]);
 
         $user = Auth::user();

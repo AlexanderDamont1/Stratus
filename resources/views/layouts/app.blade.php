@@ -30,7 +30,7 @@
     <body class="font-sans antialiased">
 
         {{-- ── Contenido principal con zoom ─────────────────────── --}}
-        <div class="min-h-screen bg-gray-100 dark:bg-gray-900" style="zoom: 0.9;">
+        <div class="min-h-screen bg-gray-100 dark:bg-gray-900" style="zoom: 0.87;">
             @include('layouts.navigation')
 
             <main>

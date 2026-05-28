@@ -14,6 +14,12 @@ class ReporteRobo extends Model
     public $incrementing  = false;
     protected $keyType    = 'string';
 
+    // ── Constantes de estado ──────────────────────────────
+    const PENDIENTE   = 0;
+    const CONFIRMADO  = 1;
+    const EN_CUSTODIA = 2;
+    const CERRADO     = 3;
+
     protected $fillable = [
         'id_reporte',
         'num_serie',
@@ -25,24 +31,42 @@ class ReporteRobo extends Model
         'token_expires_at',
         'confirmado_at',
         'encontrado_at',
+        'entregado_at',
         'id_negocio_encontrado',
         'notas',
     ];
 
     protected $casts = [
+        'estado'           => 'integer',
         'token_expires_at' => 'datetime',
         'confirmado_at'    => 'datetime',
         'encontrado_at'    => 'datetime',
+        'entregado_at'     => 'datetime',
     ];
 
     protected function idPrefix(): string { return 'ROB'; }
 
-    // ── Estados ───────────────────────────────────────────
-    public function esPendiente(): bool   { return $this->estado === 'pendiente'; }
-    public function esConfirmado(): bool  { return $this->estado === 'confirmado'; }
-    public function esEncontrado(): bool  { return $this->estado === 'encontrado'; }
-    public function esCerrado(): bool     { return $this->estado === 'cerrado'; }
-    public function estaActivo(): bool    { return in_array($this->estado, ['pendiente', 'confirmado']); }
+    // ── Helpers de estado ─────────────────────────────────
+    public function esPendiente(): bool   { return $this->estado === self::PENDIENTE; }
+    public function esConfirmado(): bool  { return $this->estado === self::CONFIRMADO; }
+    public function enCustodia(): bool    { return $this->estado === self::EN_CUSTODIA; }
+    public function esCerrado(): bool     { return $this->estado === self::CERRADO; }
+
+    public function estaActivo(): bool
+    {
+        return in_array($this->estado, [self::PENDIENTE, self::CONFIRMADO, self::EN_CUSTODIA]);
+    }
+
+    public function etiquetaEstado(): string
+    {
+        return match($this->estado) {
+            self::PENDIENTE   => 'Pendiente confirmación',
+            self::CONFIRMADO  => 'Confirmado — en búsqueda',
+            self::EN_CUSTODIA => 'En custodia',
+            self::CERRADO     => 'Cerrado',
+            default           => 'Desconocido',
+        };
+    }
 
     public function tokenValido(): bool
     {
@@ -75,4 +99,4 @@ class ReporteRobo extends Model
     {
         return $this->belongsTo(Negocio::class, 'id_negocio_encontrado', 'id_negocio');
     }
-}
+}   

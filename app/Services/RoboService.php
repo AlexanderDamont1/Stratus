@@ -1,5 +1,4 @@
 <?php
-// app/Services/RoboService.php
 
 namespace App\Services;
 
@@ -16,9 +15,7 @@ class RoboService
     const TTL_SET     = 300;
     const KEY_SET     = 'robos:activos';
 
-    // ────────────────────────────────────────────────────────────────────────
-    // CONSULTA CROSS-TENANT — O(1) en Redis
-    // ────────────────────────────────────────────────────────────────────────
+    // ── Consultas ────────────────────────────────────────────────────────────
 
     public static function estaReportada(string $numSerie): bool
     {
@@ -26,7 +23,11 @@ class RoboService
         if (in_array($numSerie, $set, true)) return true;
 
         $existe = ReporteRobo::where('num_serie', $numSerie)
-            ->whereIn('estado', ['pendiente', 'confirmado'])
+            ->whereIn('estado', [
+                ReporteRobo::PENDIENTE,
+                ReporteRobo::CONFIRMADO,
+                ReporteRobo::EN_CUSTODIA,
+            ])
             ->exists();
 
         if ($existe) self::recargarSetGlobal();
@@ -39,7 +40,7 @@ class RoboService
         return Cache::remember(
             "robos:serie:{$numSerie}",
             self::TTL_REPORTE,
-            fn () => ReporteRobo::with([
+            fn() => ReporteRobo::with([
                 'cliente',
                 'bicicleta.modelo.marca',
                 'bicicleta.voltaje',
@@ -49,24 +50,42 @@ class RoboService
                 'negocioEncontrado',
             ])
             ->where('num_serie', $numSerie)
-            ->whereIn('estado', ['pendiente', 'confirmado'])
+            ->whereIn('estado', [
+                ReporteRobo::PENDIENTE,
+                ReporteRobo::CONFIRMADO,
+                ReporteRobo::EN_CUSTODIA,
+            ])
             ->latest()
             ->first()
         );
     }
 
-    // ────────────────────────────────────────────────────────────────────────
-    // LEVANTAR REPORTE
-    // ────────────────────────────────────────────────────────────────────────
+    public static function getEnCustodia(string $idNegocio): \Illuminate\Support\Collection
+    {
+        return Cache::remember(
+            "robos:custodia:{$idNegocio}",
+            self::TTL_REPORTE,
+            fn() => ReporteRobo::with([
+                'cliente',
+                'bicicleta.modelo.marca',
+                'negocioReporta',
+            ])
+            ->where('id_negocio_encontrado', $idNegocio)
+            ->where('estado', ReporteRobo::EN_CUSTODIA)
+            ->latest('encontrado_at')
+            ->get()
+        );
+    }
+
+    // ── Acciones ─────────────────────────────────────────────────────────────
 
     public static function levantarReporte(
-        string $numSerie,
-        string $idNegocioOrigen,
-        string $idNegocioReporta,
-        string $idCliente,
+        string  $numSerie,
+        string  $idNegocioOrigen,
+        string  $idNegocioReporta,
+        string  $idCliente,
         ?string $notas = null,
     ): ReporteRobo {
-        // Si ya hay uno activo, devolver el existente
         if (self::estaReportada($numSerie)) {
             return self::getReporteActivo($numSerie);
         }
@@ -76,84 +95,88 @@ class RoboService
             'id_negocio_origen'  => $idNegocioOrigen,
             'id_negocio_reporta' => $idNegocioReporta,
             'id_cliente'         => $idCliente,
-            'estado'             => 'pendiente',
+            'estado'             => ReporteRobo::PENDIENTE,
             'token_confirmacion' => Str::random(64),
             'token_expires_at'   => now()->addHours(48),
             'notas'              => $notas,
         ]);
 
         self::invalidarSerie($numSerie);
-
-        // Job — manda correo al cliente para confirmar
         dispatch(new EnviarConfirmacionRoboJob($reporte->id_reporte));
 
         return $reporte;
     }
 
-    // ────────────────────────────────────────────────────────────────────────
-    // CONFIRMAR ROBO (cliente hace click en el link)
-    // ────────────────────────────────────────────────────────────────────────
-
     public static function confirmarReporte(string $token): ?ReporteRobo
     {
         $reporte = ReporteRobo::where('token_confirmacion', $token)
-            ->where('estado', 'pendiente')
+            ->where('estado', ReporteRobo::PENDIENTE)
             ->where('token_expires_at', '>', now())
             ->first();
 
         if (!$reporte) return null;
 
         $reporte->update([
-            'estado'             => 'confirmado',
+            'estado'             => ReporteRobo::CONFIRMADO,
             'confirmado_at'      => now(),
             'token_confirmacion' => null,
             'token_expires_at'   => null,
         ]);
 
-        // Agregar al set global — cualquier sucursal lo detecta ahora
         self::agregarAlSetGlobal($reporte->num_serie);
         self::invalidarSerie($reporte->num_serie);
-
-        // Job — correo de confirmación al cliente
         dispatch(new EnviarRoboConfirmadoJob($reporte->id_reporte));
 
         return $reporte;
     }
-
-    // ────────────────────────────────────────────────────────────────────────
-    // MARCAR ENCONTRADO (sucursal detecta la bici al escanearla)
-    // ────────────────────────────────────────────────────────────────────────
 
     public static function marcarEncontrado(
         string $numSerie,
         string $idNegocioEncontrado,
     ): ?ReporteRobo {
         $reporte = ReporteRobo::where('num_serie', $numSerie)
-            ->where('estado', 'confirmado')
+            ->where('estado', ReporteRobo::CONFIRMADO)
             ->latest()
             ->first();
 
         if (!$reporte) return null;
 
         $reporte->update([
-            'estado'                => 'encontrado',
+            'estado'                => ReporteRobo::EN_CUSTODIA,
             'encontrado_at'         => now(),
             'id_negocio_encontrado' => $idNegocioEncontrado,
         ]);
 
-        // Quitar del set global
-        self::quitarDelSetGlobal($numSerie);
+        // Se queda en el set global — sigue bloqueado hasta entrega física
         self::invalidarSerie($numSerie);
-
-        // Job — correo al cliente avisando que su bici fue encontrada
+        Cache::forget("robos:custodia:{$idNegocioEncontrado}");
         dispatch(new EnviarVehiculoEncontradoJob($reporte->id_reporte));
 
         return $reporte;
     }
 
-    // ────────────────────────────────────────────────────────────────────────
-    // HELPERS DE CACHÉ GLOBAL
-    // ────────────────────────────────────────────────────────────────────────
+    public static function cerrarReporte(string $idReporte, string $idNegocio): ?ReporteRobo
+    {
+        $reporte = ReporteRobo::where('id_reporte', $idReporte)
+            ->where('id_negocio_encontrado', $idNegocio)
+            ->where('estado', ReporteRobo::EN_CUSTODIA)
+            ->first();
+
+        if (!$reporte) return null;
+
+        $reporte->update([
+            'estado'       => ReporteRobo::CERRADO,
+            'entregado_at' => now(),
+        ]);
+
+        self::quitarDelSetGlobal($reporte->num_serie);
+        self::invalidarSerie($reporte->num_serie);
+        Cache::forget("robos:custodia:{$idNegocio}");
+
+        return $reporte;
+    }
+
+    // ── Cache helpers ────────────────────────────────────────────────────────
 
     private static function agregarAlSetGlobal(string $numSerie): void
     {
@@ -179,9 +202,13 @@ class RoboService
 
     private static function recargarSetGlobal(): void
     {
-        $series = ReporteRobo::whereIn('estado', ['pendiente', 'confirmado'])
-            ->pluck('num_serie')
-            ->toArray();
+        $series = ReporteRobo::whereIn('estado', [
+            ReporteRobo::PENDIENTE,
+            ReporteRobo::CONFIRMADO,
+            ReporteRobo::EN_CUSTODIA,
+        ])
+        ->pluck('num_serie')
+        ->toArray();
 
         Cache::put(self::KEY_SET, $series, self::TTL_SET);
     }

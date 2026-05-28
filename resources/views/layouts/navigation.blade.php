@@ -94,7 +94,7 @@
 </style>
 
 <div x-data="{ open: false }" class="flex overflow-hidden bg-gray-50 dark:bg-gray-950"
-    style="height: calc(100vh / 0.9);">
+    style="height: calc(100vh / 0.87);">
 
     {{-- Overlay móvil --}}
     <div x-show="open" x-cloak @click="open = false"

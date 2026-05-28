@@ -78,6 +78,18 @@ class ReparacionService
 
     public static function crear(array $datos, string $idNegocio, string $idUsuario): Reparaciones
     {
+        if (!empty($datos['num_serie'])) {
+            $bici = CatalogService::getBicicletaBySerie($datos['num_serie']);
+
+            if (!$bici) {
+                abort(422, 'El número de serie no está registrado en el sistema.');
+            }
+
+            if ($bici->status != 2) {
+                abort(422, 'Solo se pueden abrir órdenes de trabajo para unidades vendidas.');
+            }
+        }
+
         return DB::transaction(function () use ($datos, $idNegocio, $idUsuario) {
 
             $rep = Reparaciones::create([
@@ -88,15 +100,15 @@ class ReparacionService
                 'id_cliente'          => $datos['id_cliente'] ?? null,
                 'cliente_nombre'      => $datos['cliente_nombre'] ?? null,
                 'cliente_email'       => $datos['cliente_email'] ?? null,
-                'cliente_telefono' => $datos['cliente_telefono'] ?? 'sin teléfono',
+                'cliente_telefono'    => $datos['cliente_telefono'] ?? 'sin teléfono',
                 'id_verificada'       => $datos['id_verificada'] ?? false,
                 'tipo'                => $datos['tipo'],
                 'problema_reportado'  => $datos['problema_reportado'],
                 'notas_internas'      => $datos['notas_internas'] ?? null,
                 'estado'              => 'recibida',
-                'costo_reparacion' => in_array($datos['tipo'], ['reparacion', 'mantenimiento'])
-                ? ($datos['costo_reparacion'] ?? 0)
-                : 0,
+                'costo_reparacion'    => in_array($datos['tipo'], ['reparacion', 'mantenimiento'])
+                                            ? ($datos['costo_reparacion'] ?? 0)
+                                            : 0,
             ]);
 
             ReparacionHistorial::create([
@@ -117,8 +129,14 @@ class ReparacionService
 
     public static function buscarBicicleta(string $numSerie, string $idNegocio): ?array
     {
-        $bici = CatalogService::getBicicletaBySerie($numSerie, $idNegocio);
-        if (!$bici || $bici->status != 2) return null; // solo bicis vendidas
+        // Cross-tenant: sin filtro de negocio
+        $bici = CatalogService::getBicicletaBySerie($numSerie);
+
+        if (!$bici) return null;
+
+        if ($bici->status != 2) {
+            return ['error' => 'no_vendida', 'status' => $bici->status];
+        }
 
         $cliente = null;
         if ($bici->id_cliente) {
@@ -127,12 +145,11 @@ class ReparacionService
             );
         }
 
-        $garantias = self::remember("garantias:{$numSerie}", $idNegocio,
-            fn() => \App\Models\GarantiaComponenteDef::where('num_serie', $numSerie)
-                ->where('activa', true)
-                ->where('expira_at', '>', now())
-                ->get(['clave_componente', 'nombre_componente', 'expira_at'])
-        );
+        $garantias = \App\Models\BicicletaGarantia::with('garantiaDef')
+            ->where('num_serie', $numSerie)
+            ->whereIn('estado', ['vigente', 'por_vencer'])
+            ->whereNull('id_reemplazada_por')
+            ->get();
 
         return [
             'bicicleta' => [
@@ -149,13 +166,13 @@ class ReparacionService
                 'nombre_cliente' => $cliente->nombre_cliente,
                 'apellido1'      => $cliente->apellido1,
                 'apellido2'      => $cliente->apellido2,
-                'telefono'       => $cliente->telefono, // viene de tabla clientes, no reparaciones
+                'telefono'       => $cliente->telefono,
                 'correo'         => $cliente->correo,
             ] : null,
             'garantias_activas' => $garantias->map(fn($g) => [
                 'clave'     => $g->clave_componente,
-                'nombre'    => $g->nombre_componente,
-                'expira_at' => $g->expira_at?->toDateString(),
+                'nombre'    => $g->garantiaDef?->nombre_componente ?? $g->clave_componente,
+                'expira_at' => $g->fecha_expiracion?->format('d/m/Y'),
             ])->values()->toArray(),
         ];
     }
@@ -252,7 +269,7 @@ class ReparacionService
                 'costo_mano_obra'         => $rep->costo_mano_obra,
                 'costo_piezas'            => $rep->costo_piezas,
                 'costo_total'             => $rep->costo_total,
-                'costo_reparacion' => 'required_if:tipo,reparacion|nullable|numeric|min:0',
+                'costo_reparacion' => $rep->costo_reparacion,
                 'descripcion_trabajo'     => $descripcionTrabajo,
                 'piezas_detalle'          => $piezasDetalle,
                 'enviado_at'              => $ahora,

@@ -125,7 +125,7 @@ class Reparaciones extends Model
      * Avanza el estado y registra en historial.
      * El servicio llama este método — nunca el controlador directamente.
      */
-    public function avanzarEstado(string $nuevoEstado, string $idUsuario, ?string $nota = null): void
+   public function avanzarEstado(string $nuevoEstado, string $idUsuario, ?string $nota = null): void
     {
         $estadoAnterior = $this->estado;
 
@@ -144,12 +144,15 @@ class Reparaciones extends Model
         $this->update($updates);
 
         ReparacionHistorial::create([
-            'id_reparacion'  => $this->id_reparacion,
+            'id_reparacion'   => $this->id_reparacion,
             'estado_anterior' => $estadoAnterior,
             'estado_nuevo'    => $nuevoEstado,
             'id_usuario'      => $idUsuario,
             'nota'            => $nota,
         ]);
+
+        // ← NUEVO: invalida el cache para que get() no devuelva estado viejo
+        \App\Services\CatalogService::incrementVersion($this->id_negocio);
     }
 
     // ── Auto-generar ID ───────────────────────────────────────────────────────

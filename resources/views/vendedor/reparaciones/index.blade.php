@@ -879,7 +879,7 @@ function mantIndex() {
                 const idModelo = this.detalle?.bicicleta?.id_modelo;
                 if (idModelo) p.set('id_modelo', idModelo);
 
-                const res  = await fetch(`{{ route('stock.buscar-diagnostico') }}?${p}`, {
+                const res  = await fetch(`{{ route('stock_piezas.buscar-diagnostico') }}?${p}`, {
                     headers: { 'Accept': 'application/json' },
                 });
                 const data = await res.json();
@@ -914,14 +914,14 @@ function mantIndex() {
                     },
                     body: JSON.stringify({
                         diagnostico:     this.formDiag.diagnostico,
-                        costo_mano_obra: parseFloat(this.formDiag.costoManoObra) || 0,
+                        costo_mano_obra: parseFloat(this.formDiag.costoManoObra) || 0,  // ✓ ya está
                         piezas: this.formDiag.piezas
                             .filter(p => p.descripcion.trim())
                             .map(p => ({
                                 id_pieza:        p.id_pieza ?? null,
                                 descripcion:     p.descripcion.trim(),
                                 cantidad:        parseInt(p.cantidad) || 1,
-                                precio_unitario: parseFloat(p.precio_unitario) || 0,
+                                precio_unitario: parseFloat(p.precio_unitario) || 0,  // ✓ ya está
                             })),
                     }),
                 });

@@ -24,38 +24,12 @@ class GarantiaController extends Controller
     {
         $user      = auth()->user();
         $idNegocio = $user->id_negocio;
-
         if ($user->id_rol != 2) abort(403);
 
-       
-        $bicicletas = Bicicleta::with(['modelo', 'marca', 'color', 'voltaje'])
-            ->where('bicicletas.id_negocio', $idNegocio)
-            ->where('bicicletas.status', 2)
-            ->addSelect([
-                'status_garantia' => BicicletaGarantia::select('estado')
-                    ->whereColumn('num_serie', 'bicicletas.num_serie')
-                    ->where('id_negocio', $idNegocio)
-                    ->whereNull('id_reemplazada_por')
-                    ->orderByRaw("FIELD(estado, 'vigente', 'por_vencer', 'expirada')")
-                    ->limit(1),
-            ])
-            ->latest()
-            ->paginate(15);
+        $page = request()->get('page', 1);
 
-      
-        $ultimaGarantia = BicicletaGarantia::with('bicicleta.modelo')
-            ->where('id_negocio', $idNegocio)
-            ->latest()
-            ->first();
-
-        $stats = [
-            'activas'    => BicicletaGarantia::where('id_negocio', $idNegocio)
-                                ->where('estado', 'vigente')->count(),
-            'consultas'  => BicicletaGarantia::where('id_negocio', $idNegocio)->count(),
-            'reclamos'   => GarantiaReclamo::where('id_negocio', $idNegocio)->count(),
-            'reemplazos' => BicicletaGarantia::where('id_negocio', $idNegocio)
-                                ->whereNotNull('id_reemplazada_por')->count(),
-        ];
+        ['bicicletas' => $bicicletas, 'ultimaGarantia' => $ultimaGarantia, 'stats' => $stats]
+            = CatalogService::getGarantiasIndex($idNegocio, $page);
 
         return view('vendedor.garantias.index', compact('bicicletas', 'ultimaGarantia', 'stats'));
     }
@@ -73,7 +47,6 @@ class GarantiaController extends Controller
             return response()->json(['ok' => false, 'mensaje' => 'Indica un número de serie.'], 422);
         }
 
-        // getBicicletaBySerie cachea con versión del tenant (TTL 1h).
         $bici = CatalogService::getBicicletaBySerie($numSerie, $user->id_negocio);
 
         if (!$bici || $bici->id_negocio !== $user->id_negocio) {
@@ -100,14 +73,12 @@ class GarantiaController extends Controller
         $user = auth()->user();
         if ($user->id_rol != 2) abort(403);
 
-        // getBicicletaBySerie cachea con versión del tenant.
         $bici = CatalogService::getBicicletaBySerie($numSerie, $user->id_negocio);
 
         if (!$bici || $bici->id_negocio !== $user->id_negocio || $bici->status != 2) {
             abort(404);
         }
 
-      
         $garantias = BicicletaGarantia::with('garantiaDef')
             ->where('num_serie', $numSerie)
             ->where('id_negocio', $user->id_negocio)
@@ -145,9 +116,9 @@ class GarantiaController extends Controller
         if ($user->id_rol != 2) abort(403);
 
         $request->validate([
-            'num_serie'              => 'required|string',
-            'id_bicicleta_garantia'  => 'required|string',
-            'motivo_reclamo'         => 'required|string|max:1000',
+            'num_serie'             => 'required|string',
+            'id_bicicleta_garantia' => 'required|string',
+            'motivo_reclamo'        => 'required|string|max:1000',
         ]);
 
         $garantia = BicicletaGarantia::where('id_bicicleta_garantia', $request->id_bicicleta_garantia)
@@ -188,16 +159,18 @@ class GarantiaController extends Controller
             $mantenimiento->save();
 
             GarantiaReclamo::create([
-                'id_negocio'             => $user->id_negocio,
-                'id_mantenimiento'       => $mantenimiento->id_mantenimiento,
-                'id_bicicleta_garantia'  => $garantia->id_bicicleta_garantia,
-                'num_serie'              => $request->num_serie,
-                'clave_componente'       => $garantia->clave_componente,
-                'estado'                 => 'pendiente',
-                'motivo_reclamo'         => $request->motivo_reclamo,
+                'id_negocio'            => $user->id_negocio,
+                'id_mantenimiento'      => $mantenimiento->id_mantenimiento,
+                'id_bicicleta_garantia' => $garantia->id_bicicleta_garantia,
+                'num_serie'             => $request->num_serie,
+                'clave_componente'      => $garantia->clave_componente,
+                'estado'                => 'pendiente',
+                'motivo_reclamo'        => $request->motivo_reclamo,
             ]);
 
             DB::commit();
+
+            CatalogService::invalidateGarantiasIndex($user->id_negocio);
 
             return response()->json([
                 'ok'      => true,
@@ -237,6 +210,8 @@ class GarantiaController extends Controller
             ->firstOrFail();
 
         $reclamo->update(['estado' => $request->estado]);
+
+        CatalogService::invalidateGarantiasIndex($user->id_negocio);
 
         return response()->json(['ok' => true, 'mensaje' => 'Estado actualizado.']);
     }

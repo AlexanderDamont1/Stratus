@@ -19,6 +19,8 @@ use App\Models\PiezaCatalogo;
 use App\Models\PiezaMovimiento;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Pagination\LengthAwarePaginator;
+use App\Models\BicicletaGarantia;
+use App\Models\GarantiaReclamo;
 
 class CatalogService
 {
@@ -1268,5 +1270,59 @@ class CatalogService
     public static function invalidatePiezas(string $idNegocio): void
     {
         self::incrementVersion($idNegocio);
+    }
+
+
+    // ─── GARANTÍAS INDEX ────────────────────────────────────────────────────
+
+    public static function getGarantiasIndex(string $idNegocio, int $page = 1): array
+    {
+        return self::remember(
+            "garantias:index:negocio:{$idNegocio}:page:{$page}",
+            300,
+            function () use ($idNegocio, $page) {
+                $garantiaSub = BicicletaGarantia::selectRaw("
+                        num_serie,
+                        SUBSTRING_INDEX(
+                            GROUP_CONCAT(estado ORDER BY FIELD(estado, 'vigente', 'por_vencer', 'expirada')),
+                            ',', 1
+                        ) AS status_garantia
+                    ")
+                    ->where('id_negocio', $idNegocio)
+                    ->whereNull('id_reemplazada_por')
+                    ->groupBy('num_serie');
+
+                $bicicletas = Bicicleta::with(['modelo', 'marca', 'color', 'voltaje'])
+                    ->where('bicicletas.id_negocio', $idNegocio)
+                    ->where('bicicletas.status', 2)
+                    ->leftJoinSub($garantiaSub, 'g', 'g.num_serie', '=', 'bicicletas.num_serie')
+                    ->addSelect('bicicletas.*', 'g.status_garantia')
+                    ->latest('bicicletas.created_at')
+                    ->paginate(15, ['*'], 'page', $page);
+
+                $ultimaGarantia = BicicletaGarantia::with('bicicleta.modelo')
+                    ->where('id_negocio', $idNegocio)
+                    ->latest()
+                    ->first();
+
+                $stats = [
+                    'activas'    => BicicletaGarantia::where('id_negocio', $idNegocio)->where('estado', 'vigente')->count(),
+                    'consultas'  => BicicletaGarantia::where('id_negocio', $idNegocio)->count(),
+                    'reclamos'   => GarantiaReclamo::where('id_negocio', $idNegocio)->count(),
+                    'reemplazos' => BicicletaGarantia::where('id_negocio', $idNegocio)->whereNotNull('id_reemplazada_por')->count(),
+                ];
+
+                return compact('bicicletas', 'ultimaGarantia', 'stats');
+            },
+            $idNegocio
+        );
+    }
+
+    public static function invalidateGarantiasIndex(string $idNegocio): void
+    {
+        $version = self::getVersion($idNegocio);
+        foreach (range(1, 5) as $p) {
+            Cache::forget(self::key("garantias:index:negocio:{$idNegocio}:page:{$p}") . ":v{$version}");
+        }
     }
 }

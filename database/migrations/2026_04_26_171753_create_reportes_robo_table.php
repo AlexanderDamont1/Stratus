@@ -12,14 +12,17 @@ return new class extends Migration
             $table->char('id_reporte', 36)->primary();
             $table->string('num_serie', 17);
             $table->char('id_negocio_origen', 36);
-            $table->char('id_negocio_reporta', 36); // sucursal que levanta el reporte
+            $table->char('id_negocio_reporta', 36);
             $table->char('id_cliente', 36);
-            $table->enum('estado', ['pendiente', 'confirmado', 'encontrado', 'cerrado'])
-                  ->default('pendiente');
+
+            // 0=pendiente 1=confirmado 2=en_custodia 3=cerrado
+            $table->tinyInteger('estado')->default(0);
+
             $table->char('token_confirmacion', 64)->nullable();
             $table->dateTime('token_expires_at')->nullable();
             $table->dateTime('confirmado_at')->nullable();
             $table->dateTime('encontrado_at')->nullable();
+            $table->dateTime('entregado_at')->nullable();
             $table->char('id_negocio_encontrado', 36)->nullable();
             $table->text('notas')->nullable();
             $table->timestamps();
