@@ -61,7 +61,7 @@
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
                         @forelse($ventas as $venta)
                             @php
-                                $total = $venta->detalles->sum(fn($d) => $d->precio_unitario * $d->cantidad);
+                                 $total = $venta->total;
                             @endphp
                             <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
                                 <td class="px-4 py-3 font-mono text-xs text-gray-400 dark:text-gray-500">
@@ -155,7 +155,7 @@
             <div class="block md:hidden divide-y divide-gray-100 dark:divide-gray-700">
                 @forelse($ventas as $venta)
                     @php
-                        $total = $venta->detalles->sum(fn($d) => $d->precio_unitario * $d->cantidad);
+                         $total = $venta->total;
                     @endphp
                     <div class="px-4 py-4 flex items-center justify-between gap-3">
                         <div class="min-w-0 flex-1">

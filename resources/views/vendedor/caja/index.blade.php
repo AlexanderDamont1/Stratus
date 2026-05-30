@@ -6,8 +6,6 @@
             if (p.get('abrir') === '1') modal = 'abrir';
         ">
 
-        
-
         {{-- ===== ENCABEZADO ===== --}}
         <div class="flex items-center justify-between">
             <div>
@@ -70,7 +68,7 @@
             <div class="px-5 py-4 border-b dark:border-gray-700 flex items-start justify-between gap-2">
                 <div class="min-w-0">
                     <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ auth()->user()->nombre_usuario }}</p>
-                    <p class="text-xs text-gray-400 font-mono mt-0.5 truncate">{{ $caja->nombre ?? 'Caja principal' }}</p>
+                    <p class="text-xs text-gray-400 font-medium mt-0.5 truncate">{{ $caja->nombre ?? 'Caja principal' }}</p>
                 </div>
                 <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-400 shrink-0 flex items-center gap-1">
                     <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>Abierta
@@ -82,19 +80,30 @@
                 <div class="grid grid-cols-2 gap-3 mb-3">
                     <div class="bg-gray-50 dark:bg-gray-900 rounded-lg px-3 py-2.5">
                         <p class="text-xs text-gray-400 uppercase tracking-wider mb-0.5">Total sistema</p>
-                        <p class="text-lg font-semibold text-green-600 dark:text-green-400 font-mono">${{ number_format($snapshot['totales']['total_sistema'], 2) }}</p>
+                        <p id="ws-total-sistema"
+                           class="text-lg font-semibold text-green-600 dark:text-green-400 font-medium transition-all duration-300">
+                            ${{ number_format($snapshot['totales']['total_sistema'], 2) }}
+                        </p>
                     </div>
                     <div class="bg-gray-50 dark:bg-gray-900 rounded-lg px-3 py-2.5">
                         <p class="text-xs text-gray-400 uppercase tracking-wider mb-0.5">Ventas cobradas</p>
-                        <p class="text-lg font-semibold text-yellow-600 dark:text-yellow-400 font-mono">${{ number_format($snapshot['totales']['ingresos_ventas'], 2) }}</p>
+                        <p id="ws-ingresos-ventas"
+                           class="text-lg font-semibold text-yellow-600 dark:text-yellow-400 font-medium transition-all duration-300">
+                            ${{ number_format($snapshot['totales']['ingresos_ventas'], 2) }}
+                        </p>
                     </div>
                     <div class="bg-gray-50 dark:bg-gray-900 rounded-lg px-3 py-2.5">
                         <p class="text-xs text-gray-400 uppercase tracking-wider mb-0.5"># Ventas</p>
-                        <p class="text-lg font-semibold text-gray-900 dark:text-white font-mono">{{ $snapshot['ventas_count'] }}</p>
+                        <p id="ws-ventas-count"
+                           class="text-lg font-semibold text-gray-900 dark:text-white font-medium transition-all duration-300">
+                            {{ $snapshot['ventas_count'] }}
+                        </p>
                     </div>
                     <div class="bg-gray-50 dark:bg-gray-900 rounded-lg px-3 py-2.5">
                         <p class="text-xs text-gray-400 uppercase tracking-wider mb-0.5">Fondo inicial</p>
-                        <p class="text-lg font-semibold text-gray-900 dark:text-white font-mono">${{ number_format($snapshot['sesion']['fondo_inicial'], 2) }}</p>
+                        <p class="text-lg font-semibold text-gray-900 dark:text-white font-medium">
+                            ${{ number_format($snapshot['sesion']['fondo_inicial'], 2) }}
+                        </p>
                     </div>
                 </div>
 
@@ -102,31 +111,32 @@
                 <div class="border-t dark:border-gray-700 pt-2 space-y-1">
                     <div class="flex items-center justify-between text-xs py-1">
                         <span class="text-gray-400">Abierta desde</span>
-                        <span class="font-mono font-medium text-gray-600 dark:text-gray-300">
+                        <span class="font-medium font-medium text-gray-600 dark:text-gray-300">
                             {{ \Carbon\Carbon::parse($snapshot['sesion']['abierta_at'])->format('d/m/Y H:i') }}
                         </span>
                     </div>
                     @if(($snapshot['totales']['ingresos_manuales'] ?? 0) > 0)
                     <div class="flex items-center justify-between text-xs py-1">
                         <span class="text-gray-400">Ing. manuales</span>
-                        <span class="font-mono font-medium text-blue-600 dark:text-blue-400">+${{ number_format($snapshot['totales']['ingresos_manuales'], 2) }}</span>
+                        <span class="font-medium font-medium text-blue-600 dark:text-blue-400">+${{ number_format($snapshot['totales']['ingresos_manuales'], 2) }}</span>
                     </div>
                     @endif
                     @if(($snapshot['totales']['retiros'] ?? 0) > 0)
                     <div class="flex items-center justify-between text-xs py-1">
                         <span class="text-gray-400">Retiros</span>
-                        <span class="font-mono font-medium text-red-600 dark:text-red-400">-${{ number_format($snapshot['totales']['retiros'], 2) }}</span>
+                        <span class="font-medium font-medium text-red-600 dark:text-red-400">-${{ number_format($snapshot['totales']['retiros'], 2) }}</span>
                     </div>
                     @endif
                     @if(($snapshot['totales']['ajustes_neto'] ?? 0) != 0)
                     @php $aj = $snapshot['totales']['ajustes_neto']; @endphp
                     <div class="flex items-center justify-between text-xs py-1">
                         <span class="text-gray-400">Ajustes</span>
-                        <span class="font-mono font-medium {{ $aj >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
+                        <span class="font-medium font-medium {{ $aj >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
                             {{ $aj >= 0 ? '+' : '' }}${{ number_format($aj, 2) }}
                         </span>
                     </div>
                     @endif
+
                     {{-- Por método de pago --}}
                     @if(!empty($snapshot['por_metodo']))
                     <div class="pt-2 border-t dark:border-gray-700">
@@ -137,7 +147,7 @@
                                 <span class="text-sm">{{ ($m['es_efectivo'] ?? false) ? '💵' : '💳' }}</span>
                                 <span class="text-xs text-gray-600 dark:text-gray-300">{{ $m['label'] }}</span>
                             </div>
-                            <span class="text-xs font-mono font-semibold text-green-600 dark:text-green-400">${{ number_format($m['total'], 2) }}</span>
+                            <span class="text-xs font-medium text-green-600 dark:text-green-400">${{ number_format($m['total'], 2) }}</span>
                         </div>
                         @endforeach
                     </div>
@@ -192,11 +202,11 @@
                         @foreach($historial as $ses)
                         @php $corteRec = $ses->cortes()->orderByDesc('created_at')->first(); @endphp
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
-                            <td class="px-4 py-3 text-xs font-mono text-gray-900 dark:text-white">{{ $ses->abierta_at?->format('d/m/Y H:i') }}</td>
-                            <td class="px-4 py-3 text-xs font-mono text-gray-400">{{ $ses->cerrada_at?->format('d/m/Y H:i') ?? '—' }}</td>
-                            <td class="px-4 py-3 text-xs font-mono text-gray-900 dark:text-white">${{ number_format($ses->fondo_inicial, 2) }}</td>
-                            <td class="px-4 py-3 text-xs font-mono text-gray-900 dark:text-white">${{ number_format($ses->monto_cierre_sistema ?? 0, 2) }}</td>
-                            <td class="px-4 py-3 text-xs font-mono font-semibold {{ (($ses->diferencia ?? 0) < 0) ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400' }}">
+                            <td class="px-4 py-3 text-xs font-medium text-gray-900 dark:text-white">{{ $ses->abierta_at?->format('d/m/Y H:i') }}</td>
+                            <td class="px-4 py-3 text-xs font-medium text-gray-400">{{ $ses->cerrada_at?->format('d/m/Y H:i') ?? '—' }}</td>
+                            <td class="px-4 py-3 text-xs font-medium text-gray-900 dark:text-white">${{ number_format($ses->fondo_inicial, 2) }}</td>
+                            <td class="px-4 py-3 text-xs font-medium text-gray-900 dark:text-white">${{ number_format($ses->monto_cierre_sistema ?? 0, 2) }}</td>
+                            <td class="px-4 py-3 text-xs font-medium {{ (($ses->diferencia ?? 0) < 0) ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400' }}">
                                 @if($ses->diferencia !== null)
                                     {{ $ses->diferencia >= 0 ? '+' : '' }}${{ number_format($ses->diferencia, 2) }}
                                 @else
@@ -235,7 +245,7 @@
                 @php $corteRec = $ses->cortes()->orderByDesc('created_at')->first(); @endphp
                 <div class="px-4 py-3">
                     <div class="flex items-center justify-between mb-1">
-                        <span class="text-xs font-mono text-gray-900 dark:text-white">{{ $ses->abierta_at?->format('d/m/Y H:i') }}</span>
+                        <span class="text-xs font-medium text-gray-900 dark:text-white">{{ $ses->abierta_at?->format('d/m/Y H:i') }}</span>
                         @if($ses->estado === 'abierta')
                             <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-400">Abierta</span>
                         @elseif($ses->estado === 'auto_cerrada')
@@ -245,8 +255,8 @@
                         @endif
                     </div>
                     <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                        <span>Sistema: <span class="font-mono font-semibold text-gray-900 dark:text-white">${{ number_format($ses->monto_cierre_sistema ?? 0, 2) }}</span></span>
-                        <span class="font-mono font-semibold {{ (($ses->diferencia ?? 0) < 0) ? 'text-red-500' : 'text-green-500' }}">
+                        <span>Sistema: <span class="font-medium text-gray-900 dark:text-white">${{ number_format($ses->monto_cierre_sistema ?? 0, 2) }}</span></span>
+                        <span class="font-medium {{ (($ses->diferencia ?? 0) < 0) ? 'text-red-500' : 'text-green-500' }}">
                             @if($ses->diferencia !== null){{ $ses->diferencia >= 0 ? '+' : '' }}${{ number_format($ses->diferencia, 2) }}@endif
                         </span>
                         @if($corteRec)
@@ -280,7 +290,7 @@
                         <input type="number" name="fondo_inicial" step="0.01" min="0" max="999999.99"
                                placeholder="0.00" required
                                x-init="$watch('modal', v => v === 'abrir' && $nextTick(() => $el.focus()))"
-                               class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
+                               class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
                     </div>
                     <div class="flex justify-end gap-2">
                         <button type="button" @click="modal = ''"
@@ -316,7 +326,7 @@
                             <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Monto</label>
                             <input type="number" name="monto" step="0.01" min="0.01" max="999999.99" placeholder="0.00" required
                                    x-init="$watch('modal', v => v === 'ingreso' && $nextTick(() => $el.focus()))"
-                                   class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
+                                   class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Método de pago</label>
@@ -374,21 +384,21 @@
                     <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 px-4 py-3 space-y-2 mb-4">
                         <div class="flex justify-between items-center">
                             <span class="text-xs text-gray-400">Total sistema</span>
-                            <span class="text-xs font-mono font-semibold text-green-600 dark:text-green-400">${{ number_format($snapshot['totales']['total_sistema'], 2) }}</span>
+                            <span class="text-xs font-medium text-green-600 dark:text-green-400">${{ number_format($snapshot['totales']['total_sistema'], 2) }}</span>
                         </div>
                         <div class="flex justify-between items-center border-t dark:border-gray-700 pt-2">
                             <span class="text-xs text-gray-400">Ventas</span>
-                            <span class="text-xs font-mono text-gray-900 dark:text-white">{{ $snapshot['ventas_count'] }}</span>
+                            <span class="text-xs font-medium text-gray-900 dark:text-white">{{ $snapshot['ventas_count'] }}</span>
                         </div>
                         @if(($snapshot['totales']['retiros'] ?? 0) > 0)
                         <div class="flex justify-between items-center">
                             <span class="text-xs text-gray-400">Retiros</span>
-                            <span class="text-xs font-mono text-red-600 dark:text-red-400">-${{ number_format($snapshot['totales']['retiros'], 2) }}</span>
+                            <span class="text-xs font-medium text-red-600 dark:text-red-400">-${{ number_format($snapshot['totales']['retiros'], 2) }}</span>
                         </div>
                         @endif
                         <div class="flex justify-between items-center border-t dark:border-gray-700 pt-2">
                             <span class="text-xs text-gray-400">Abierta desde</span>
-                            <span class="text-xs font-mono text-gray-900 dark:text-white">{{ \Carbon\Carbon::parse($snapshot['sesion']['abierta_at'])->format('d/m H:i') }}</span>
+                            <span class="text-xs font-medium text-gray-900 dark:text-white">{{ \Carbon\Carbon::parse($snapshot['sesion']['abierta_at'])->format('d/m H:i') }}</span>
                         </div>
                     </div>
                     @endif
@@ -426,16 +436,16 @@
                     <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 px-4 py-3 space-y-2 mb-4">
                         <div class="flex justify-between items-center">
                             <span class="text-xs text-gray-400">Total sistema</span>
-                            <span class="text-xs font-mono font-semibold text-green-600 dark:text-green-400">${{ number_format($snapshot['totales']['total_sistema'], 2) }}</span>
+                            <span class="text-xs font-medium text-green-600 dark:text-green-400">${{ number_format($snapshot['totales']['total_sistema'], 2) }}</span>
                         </div>
                         <div class="flex justify-between items-center border-t dark:border-gray-700 pt-2">
                             <span class="text-xs text-gray-400">Ventas</span>
-                            <span class="text-xs font-mono text-gray-900 dark:text-white">{{ $snapshot['ventas_count'] }}</span>
+                            <span class="text-xs font-medium text-gray-900 dark:text-white">{{ $snapshot['ventas_count'] }}</span>
                         </div>
                         @if(($snapshot['totales']['retiros'] ?? 0) > 0)
                         <div class="flex justify-between items-center">
                             <span class="text-xs text-gray-400">Retiros</span>
-                            <span class="text-xs font-mono text-red-600 dark:text-red-400">-${{ number_format($snapshot['totales']['retiros'], 2) }}</span>
+                            <span class="text-xs font-medium text-red-600 dark:text-red-400">-${{ number_format($snapshot['totales']['retiros'], 2) }}</span>
                         </div>
                         @endif
                     </div>
@@ -447,7 +457,7 @@
                             </label>
                             <input type="number" name="monto_declarado" step="0.01" min="0" max="9999999.99"
                                    placeholder="{{ $snapshot ? number_format($snapshot['totales']['total_sistema'], 2) : '0.00' }}"
-                                   class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
+                                   class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
                             <p class="text-xs text-gray-400 mt-1">Si lo dejas vacío se usa el total del sistema.</p>
                         </div>
                         <div>
@@ -472,10 +482,71 @@
             </div>
         </div>
 
+        {{-- ════════════════════════════════
+             TOAST WEBSOCKET
+        ════════════════════════════════ --}}
+        <div id="ws-toast"
+             class="fixed bottom-5 right-5 z-50 opacity-0 pointer-events-none transition-opacity duration-300">
+            <div class="flex items-center gap-3 bg-white dark:bg-gray-800 border border-gray-200
+                        dark:border-gray-700 rounded-xl shadow-xl px-4 py-3 min-w-[260px]">
+                <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse shrink-0"></span>
+                <div>
+                    <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5">Nueva venta</p>
+                    <p class="text-sm font-medium text-gray-900 dark:text-white" id="ws-toast-msg"></p>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     @push('scripts')
     <style>[x-cloak]{display:none!important;}</style>
+
+    @if($sesion)
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const elTotalSistema   = document.getElementById('ws-total-sistema');
+        const elVentasCount    = document.getElementById('ws-ventas-count');
+        const elIngresosVentas = document.getElementById('ws-ingresos-ventas');
+        const elToast          = document.getElementById('ws-toast');
+        const elToastMsg       = document.getElementById('ws-toast-msg');
+
+        const miIdUsuario = '{{ auth()->user()->id_usuario }}';
+
+        function fmt(n) {
+            return '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function pulsar(el) {
+            if (!el) return;
+            el.classList.add('scale-105');
+            setTimeout(() => el.classList.remove('scale-105'), 300);
+        }
+
+        function mostrarToast(msg) {
+            elToastMsg.textContent = msg;
+            elToast.classList.remove('opacity-0', 'pointer-events-none');
+            elToast.classList.add('opacity-100');
+            clearTimeout(window._toastTimer);
+            window._toastTimer = setTimeout(() => {
+                elToast.classList.remove('opacity-100');
+                elToast.classList.add('opacity-0', 'pointer-events-none');
+            }, 4000);
+        }
+
+        window.Echo.private(`negocio.{{ auth()->user()->id_negocio }}`)
+        .listen('.venta.registrada', (e) => {
+            if (e.id_usuario !== miIdUsuario) return;
+
+            if (elTotalSistema)   { elTotalSistema.textContent   = fmt(e.total_sistema);    pulsar(elTotalSistema); }
+            if (elVentasCount)    { elVentasCount.textContent    = e.ventas_count;          pulsar(elVentasCount); }
+            if (elIngresosVentas) { elIngresosVentas.textContent = fmt(e.total_sistema);    pulsar(elIngresosVentas); } // ← usa total_sistema directo
+
+            mostrarToast(`${fmt(e.total)} · ${e.hora}`);
+        });
+    });
+    </script>
+    @endif
     @endpush
 
 </x-app-layout>

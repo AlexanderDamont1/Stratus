@@ -433,11 +433,11 @@
                             </button>
 
                             <template x-if="idCliente">
-                                <a href="{{ url('sucursal/garantias') }}"
-                                   class="border rounded-xl px-3 py-3 text-center transition-all duration-150
-                                          border-purple-200 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20
-                                          hover:border-purple-400 dark:hover:border-purple-500 cursor-pointer
-                                          flex flex-col items-center justify-center gap-0.5">
+                                <a :href="`/sucursal/garantias/bici/${numSerie}`"
+                                class="border rounded-xl px-3 py-3 text-center transition-all duration-150
+                                        border-purple-200 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20
+                                        hover:border-purple-400 dark:hover:border-purple-500 cursor-pointer
+                                        flex flex-col items-center justify-center gap-0.5">
                                     <p class="text-xs font-semibold text-purple-800 dark:text-purple-300">Garantía</p>
                                     <p class="text-[10px] text-purple-500 dark:text-purple-400">Ver en garantías →</p>
                                 </a>

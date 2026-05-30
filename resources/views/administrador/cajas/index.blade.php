@@ -1,7 +1,7 @@
 {{-- resources/views/administrador/cajas/index.blade.php --}}
 <x-app-layout>
 
-<div class="space-y-6" x-data="adminCajas()">
+<div class="space-y-6" x-data="adminCajas()" x-init="init()">
 
     {{-- ── Alertas ── --}}
     @if(session('success'))
@@ -35,16 +35,22 @@
         $totalSistema  = $snapshots->sum(fn($s) => $s['totales']['total_sistema'] ?? 0);
         $totalVentas   = $snapshots->sum(fn($s) => $s['totales']['ingresos_ventas'] ?? 0);
         $cajasAbiertas = $snapshots->count();
-        $sucSinCaja    = $sucSinCaja ?? 0;  
+        $sucSinCaja    = $sucSinCaja ?? 0;
     @endphp
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-5 py-4">
             <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Total en cajas</p>
-            <p class="text-2xl font-semibold text-green-600 dark:text-green-400">${{ number_format($totalSistema, 2) }}</p>
+            <p id="ws-idx-total-global"
+               class="text-2xl font-semibold text-green-600 dark:text-green-400 transition-all duration-300">
+                ${{ number_format($totalSistema, 2) }}
+            </p>
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-5 py-4">
             <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Ventas del día</p>
-            <p class="text-2xl font-semibold text-yellow-600 dark:text-yellow-400">${{ number_format($totalVentas, 2) }}</p>
+            <p id="ws-idx-ventas-global"
+               class="text-2xl font-semibold text-yellow-600 dark:text-yellow-400 transition-all duration-300">
+                ${{ number_format($totalVentas, 2) }}
+            </p>
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-5 py-4">
             <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Sesiones abiertas</p>
@@ -111,19 +117,29 @@
                 <div class="grid grid-cols-2 gap-3 mb-3">
                     <div class="bg-gray-50 dark:bg-gray-900 rounded-lg px-3 py-2.5">
                         <p class="text-xs text-gray-400 uppercase tracking-wider mb-0.5">Total sistema</p>
-                        <p class="text-lg font-semibold text-green-600 dark:text-green-400">${{ number_format($snap['totales']['total_sistema'] ?? 0, 2) }}</p>
+                        <p id="snap-total-{{ $suc->id_usuario }}"
+                           class="text-lg font-semibold text-green-600 dark:text-green-400 transition-all duration-300">
+                            ${{ number_format($snap['totales']['total_sistema'] ?? 0, 2) }}
+                        </p>
                     </div>
                     <div class="bg-gray-50 dark:bg-gray-900 rounded-lg px-3 py-2.5">
                         <p class="text-xs text-gray-400 uppercase tracking-wider mb-0.5">Ventas</p>
-                        <p class="text-lg font-semibold text-yellow-600 dark:text-yellow-400">${{ number_format($snap['totales']['ingresos_ventas'] ?? 0, 2) }}</p>
+                        <p class="text-lg font-semibold text-yellow-600 dark:text-yellow-400">
+                            ${{ number_format($snap['totales']['ingresos_ventas'] ?? 0, 2) }}
+                        </p>
                     </div>
                     <div class="bg-gray-50 dark:bg-gray-900 rounded-lg px-3 py-2.5">
                         <p class="text-xs text-gray-400 uppercase tracking-wider mb-0.5"># Ventas</p>
-                        <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ $snap['ventas_count'] ?? 0 }}</p>
+                        <p id="snap-count-{{ $suc->id_usuario }}"
+                           class="text-lg font-semibold text-gray-900 dark:text-white transition-all duration-300">
+                            {{ $snap['ventas_count'] ?? 0 }}
+                        </p>
                     </div>
                     <div class="bg-gray-50 dark:bg-gray-900 rounded-lg px-3 py-2.5">
                         <p class="text-xs text-gray-400 uppercase tracking-wider mb-0.5">Fondo inicial</p>
-                        <p class="text-lg font-semibold text-gray-900 dark:text-white">${{ number_format($snap['sesion']['fondo_inicial'] ?? 0, 2) }}</p>
+                        <p class="text-lg font-semibold text-gray-900 dark:text-white">
+                            ${{ number_format($snap['sesion']['fondo_inicial'] ?? 0, 2) }}
+                        </p>
                     </div>
                 </div>
                 <div class="flex items-center justify-between text-xs text-gray-400 py-1 border-t dark:border-gray-700">
@@ -223,7 +239,6 @@
 
     {{-- ══════════════════════════════════════════════
          MODAL: INGRESO
-         Incluye metodo + es_efectivo que requiere CajaService::registrarIngreso()
     ══════════════════════════════════════════════ --}}
     <div x-show="modal === 'ingreso'" x-cloak
          x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
@@ -254,7 +269,6 @@
                             <option value="tarjeta">Tarjeta</option>
                             <option value="otro">Otro</option>
                         </select>
-                        {{-- es_efectivo calculado del método seleccionado --}}
                         <input type="hidden" name="es_efectivo" :value="metodo === 'efectivo' ? '1' : '0'">
                     </div>
                     <div>
@@ -372,6 +386,21 @@
         </div>
     </div>
 
+    {{-- ════════════════════════════════
+         TOAST WEBSOCKET (admin index)
+    ════════════════════════════════ --}}
+    <div id="ws-toast-admin"
+         class="fixed bottom-5 right-5 z-50 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="flex items-center gap-3 bg-white dark:bg-gray-800 border border-gray-200
+                    dark:border-gray-700 rounded-xl shadow-xl px-4 py-3 min-w-[300px]">
+            <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse shrink-0"></span>
+            <div class="min-w-0">
+                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5">Nueva venta</p>
+                <p class="text-sm font-medium text-gray-900 dark:text-white truncate" id="ws-toast-admin-msg"></p>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <script>
@@ -381,6 +410,62 @@ function adminCajas() {
         targetId: '',
         targetName: '',
         modalDesc: '',
+
+        init() {
+            const elToast    = document.getElementById('ws-toast-admin');
+            const elToastMsg = document.getElementById('ws-toast-admin-msg');
+            const elTotalGlobal  = document.getElementById('ws-idx-total-global');
+            const elVentasGlobal = document.getElementById('ws-idx-ventas-global');
+
+            function fmt(n) {
+                return '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+
+            function pulsar(el) {
+                if (!el) return;
+                el.classList.add('scale-105');
+                setTimeout(() => el.classList.remove('scale-105'), 300);
+            }
+
+            function mostrarToast(msg) {
+                elToastMsg.textContent = msg;
+                elToast.classList.remove('opacity-0', 'pointer-events-none');
+                elToast.classList.add('opacity-100');
+                clearTimeout(window._toastAdminTimer);
+                window._toastAdminTimer = setTimeout(() => {
+                    elToast.classList.remove('opacity-100');
+                    elToast.classList.add('opacity-0', 'pointer-events-none');
+                }, 5000);
+            }
+
+            window.Echo.private(`negocio.{{ auth()->user()->id_negocio }}`)
+                .listen('.venta.registrada', (e) => {
+                    // Tarjeta de sucursal — usa valores directos del evento
+                    const elCardTotal = document.getElementById(`snap-total-${e.id_usuario}`);
+                    const elCardCount = document.getElementById(`snap-count-${e.id_usuario}`);
+
+                    if (elCardTotal) { elCardTotal.textContent = fmt(e.total_sistema); pulsar(elCardTotal); }
+                    if (elCardCount) { elCardCount.textContent = e.ventas_count;       pulsar(elCardCount); }
+
+                    // Globales — aquí SÍ acumulas porque es la suma de todas las sucursales
+                    if (elTotalGlobal) {
+                        const actual = parseFloat(elTotalGlobal.dataset.valor || elTotalGlobal.textContent.replace(/[$,]/g, '')) || 0;
+                        const nuevo  = actual + e.total;
+                        elTotalGlobal.dataset.valor  = nuevo;   // ← guarda en dataset para no perder precisión
+                        elTotalGlobal.textContent = fmt(nuevo);
+                        pulsar(elTotalGlobal);
+                    }
+                    if (elVentasGlobal) {
+                        const actual = parseFloat(elVentasGlobal.dataset.valor || elVentasGlobal.textContent.replace(/[$,]/g, '')) || 0;
+                        const nuevo  = actual + e.total;
+                        elVentasGlobal.dataset.valor = nuevo;
+                        elVentasGlobal.textContent = fmt(nuevo);
+                        pulsar(elVentasGlobal);
+                    }
+
+                    mostrarToast(`${e.nombre_vendedor}: ${fmt(e.total)} · ${e.hora}`);
+                });
+        },
 
         abrirModalCrear(id, nombre) {
             this.targetId   = id;
@@ -408,5 +493,9 @@ function adminCajas() {
     }
 }
 </script>
+
+@push('scripts')
+<style>[x-cloak]{display:none!important;}</style>
+@endpush
 
 </x-app-layout>

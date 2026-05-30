@@ -129,8 +129,7 @@ class ReparacionService
 
     public static function buscarBicicleta(string $numSerie, string $idNegocio): ?array
     {
-        // Cross-tenant: sin filtro de negocio
-        $bici = CatalogService::getBicicletaBySerie($numSerie);
+        $bici = CatalogService::getBicicletaBySerie($numSerie, $idNegocio);
 
         if (!$bici) return null;
 
@@ -138,12 +137,7 @@ class ReparacionService
             return ['error' => 'no_vendida', 'status' => $bici->status];
         }
 
-        $cliente = null;
-        if ($bici->id_cliente) {
-            $cliente = self::remember("cliente:{$bici->id_cliente}", $idNegocio,
-                fn() => \App\Models\Cliente::find($bici->id_cliente)
-            );
-        }
+        $cliente = CatalogService::getClienteByNumSerie($numSerie, $idNegocio);
 
         $garantias = \App\Models\BicicletaGarantia::with('garantiaDef')
             ->where('num_serie', $numSerie)
@@ -159,7 +153,7 @@ class ReparacionService
                 'color'      => $bici->color?->color,
                 'voltaje'    => $bici->voltaje?->voltaje,
                 'status'     => $bici->status,
-                'id_cliente' => $bici->id_cliente,
+                'id_cliente' => $cliente?->id_cliente,
             ],
             'cliente' => $cliente ? [
                 'id_cliente'     => $cliente->id_cliente,

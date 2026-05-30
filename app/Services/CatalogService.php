@@ -517,6 +517,7 @@ class CatalogService
     {
         $version = self::getVersion($idNegocio);
         Cache::forget(self::key("bicicleta:serie:{$numSerie}") . ":v{$version}");
+        Cache::forget(self::key("bicicleta:garantia:{$numSerie}") . ":v{$version}"); // ← añadir
         Cache::forget(self::key("stats:bicicletas:{$idNegocio}") . ":v{$version}");
         Cache::forget(self::key("stock:vendedores:negocio:{$idNegocio}") . ":v{$version}");
         foreach ([1, 2, 3] as $p) {
@@ -1071,7 +1072,7 @@ class CatalogService
                 'detalles.bicicleta.color',
             ])
                 ->where('id_negocio', $idNegocio)
-                ->whereHas('detalles.producto', fn($q) => $q->where('id_usuario', $idUsuario))
+                ->where('id_usuario', $idUsuario)   // ← directo, sin whereHas
                 ->latest()
                 ->paginate(15, ['*'], 'page', $page),
             $idNegocio
@@ -1324,5 +1325,38 @@ class CatalogService
         foreach (range(1, 5) as $p) {
             Cache::forget(self::key("garantias:index:negocio:{$idNegocio}:page:{$p}") . ":v{$version}");
         }
+    }
+
+    public static function getBicicletaParaGarantia(string $numSerie, string $idNegocio): ?Bicicleta
+    {
+        return self::remember(
+            "bicicleta:garantia:{$numSerie}",
+            self::CACHE_TTL['bicicletas'],
+            fn() => Bicicleta::with(['modelo.marca', 'voltaje', 'color', 'cliente'])
+                ->where('num_serie', $numSerie)
+                ->first(),
+            $idNegocio
+        );
+    }
+
+    public static function invalidateBicicletaGarantia(string $numSerie, string $idNegocio): void
+    {
+        $version = self::getVersion($idNegocio);
+        Cache::forget(self::key("bicicleta:garantia:{$numSerie}") . ":v{$version}");
+    }
+
+    public static function getClienteByNumSerie(string $numSerie, string $idNegocio): ?\App\Models\Cliente
+    {
+        return self::remember(
+            "cliente:serie:{$numSerie}",
+            300,
+            fn() => \App\Models\Venta::where('id_negocio', $idNegocio)
+                ->whereHas('detalles', fn($q) => $q->where('num_serie', $numSerie))
+                ->with('cliente')
+                ->latest()
+                ->first()
+                ?->cliente,
+            $idNegocio
+        );
     }
 }

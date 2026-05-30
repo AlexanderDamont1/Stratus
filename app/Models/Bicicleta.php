@@ -75,5 +75,10 @@ class Bicicleta extends Model
         return $this->hasOne(BicicletaMovimiento::class, 'num_serie', 'num_serie')
                     ->latestOfMany('fecha_movimiento');
     }
+
+    public function cliente()
+    {
+        return $this->belongsTo(\App\Models\Cliente::class, 'id_cliente', 'id_cliente');
+    }
     
 }

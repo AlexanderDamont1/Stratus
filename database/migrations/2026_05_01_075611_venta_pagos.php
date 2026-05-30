@@ -8,28 +8,25 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('detalle_venta', function (Blueprint $table) {
-            $table->char('id_detalle', 20)->primary();
+        Schema::create('venta_pagos', function (Blueprint $table) {
+            $table->char('id_pago', 20)->primary();
             $table->char('id_venta', 20);
             $table->char('id_negocio', 36);
-            $table->char('id_producto', 20);
-            $table->char('num_serie', 17)->nullable();
-            $table->decimal('precio_unitario', 10, 2);
-            $table->unsignedInteger('cantidad')->default(1);
+            $table->string('metodo', 40);       // 'efectivo', 'tarjeta', 'transferencia', 'credito_interno'
+            $table->decimal('monto', 10, 2);
+            $table->string('referencia', 20)->nullable(); // folio transferencia, últimos 4 dígitos tarjeta, etc.
             $table->timestamps();
 
             $table->foreign('id_venta')->references('id_venta')->on('ventas')->cascadeOnDelete();
             $table->foreign('id_negocio')->references('id_negocio')->on('negocios')->cascadeOnDelete();
-            $table->foreign('id_producto')->references('id_producto')->on('productos')->restrictOnDelete();
 
             $table->index(['id_venta']);
-            $table->index(['id_negocio']);
-            $table->index(['num_serie']);
+            $table->index(['id_negocio', 'created_at']);
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('detalle_venta');
+        Schema::dropIfExists('venta_pagos');
     }
 };

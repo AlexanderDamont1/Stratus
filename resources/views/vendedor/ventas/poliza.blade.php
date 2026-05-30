@@ -331,7 +331,7 @@
         return 'pill pill-blue';
     }
 
-    $sucursalNombre = $vendedor->nombre_usuario ?? ($negocio->nombre_negocio ?? '—');
+    $sucursalNombre = $personal?->nombre ?? ($negocio->nombre_negocio ?? '—');
     $totalMarcas    = $componentesPorMarca->count();
 @endphp
 

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -16,23 +17,17 @@ class VentaPago extends Model
     protected $fillable = [
         'id_pago',
         'id_venta',
-        'metodo',
-        'es_efectivo',
-        'requiere_referencia',
-        'label',
         'id_negocio',
+        'metodo',
         'monto',
         'referencia',
     ];
 
     protected $casts = [
-        'monto'               => 'decimal:2',
-        'es_efectivo'         => 'boolean',
-        'requiere_referencia' => 'boolean',
+        'monto' => 'decimal:2',
     ];
 
     protected function idPrefix(): string { return 'PAG'; }
 
     public function venta() { return $this->belongsTo(Venta::class, 'id_venta', 'id_venta'); }
-    // Relación a MetodoPago eliminada — ahora es string directo
 }

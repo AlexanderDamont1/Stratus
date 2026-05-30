@@ -217,14 +217,14 @@ class CajaService
         Venta $venta,
         string $idUsuario,
         string $idNegocio
-    ): void {
+    ): ?array {
         $caja = self::cajaDeUsuario($idUsuario, $idNegocio);
         if (!$caja) {
             Log::warning('CajaService: venta sin caja configurada', [
                 'id_venta'   => $venta->id_venta,
                 'id_usuario' => $idUsuario,
             ]);
-            return;
+            return null;
         }
 
         $sesion = self::sesionActiva($caja->id_caja);
@@ -233,7 +233,7 @@ class CajaService
                 'id_venta' => $venta->id_venta,
                 'id_caja'  => $caja->id_caja,
             ]);
-            return;
+            return null;
         }
 
         $pagos = VentaPago::where('id_venta', $venta->id_venta)->get();
@@ -251,6 +251,8 @@ class CajaService
                 'referencia'   => $pago->referencia,
             ]);
         }
+
+        return self::calcularSnapshot($sesion, 'parcial');
     }
 
     /* ══════════════════════════════════════════════════════════
