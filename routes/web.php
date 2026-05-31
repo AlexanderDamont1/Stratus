@@ -233,13 +233,15 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
         Route::post('/admin/bicicletas', [BicicletaController::class, 'store'])->name('admin.bicicletas.store');
         Route::post('/admin/bicicletas/masivo', [BicicletaController::class, 'storeMasivo'])->name('admin.bicicletas.storeMasivo');
 
-        // Pedidos
-        Route::get('/pedidos/crear', [PedidoController::class, 'create'])->name('pedidos.create');
-        Route::post('/pedidos', [PedidoController::class, 'store'])->name('pedidos.store');
-        Route::get('/pedidos/{id_pedido}/edit', [PedidoController::class, 'edit'])->name('pedidos.edit');
-        Route::put('/pedidos/{id_pedido}', [PedidoController::class, 'update'])->name('pedidos.update');
-        Route::delete('/pedidos/{id_pedido}', [PedidoController::class, 'destroy'])->name('pedidos.destroy');
-        Route::get('/ver/{id_pedido}/token', [PedidoController::class, 'token'])->name('pedidos.token');
+         Route::prefix('admin/pedidos')->name('admin.pedidos.')->middleware('modulo:pedidos')->group(function () {
+            Route::get('/crear', [PedidoController::class, 'create'])->name('create');
+            Route::post('/', [PedidoController::class, 'store'])->name('store');
+            Route::get('/{id_pedido}/edit', [PedidoController::class, 'edit'])->name('edit');
+            Route::put('/{id_pedido}', [PedidoController::class, 'update'])->name('update');
+            Route::delete('/{id_pedido}', [PedidoController::class, 'destroy'])->name('destroy');
+            Route::get('/ver/{id_pedido}/token', [PedidoController::class, 'token'])->name('token');
+        });
+
 
         // Movimientos
         Route::prefix('admin/movimientos')->name('admin.movimientos.')->middleware('modulo:tracking')->group(function () {
@@ -400,7 +402,7 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
         Route::post('/modelo-voltaje', [ModeloVoltajeController::class, 'store'])->name('modelo-voltaje.store');
         Route::delete('/modelo-voltaje/{id}', [ModeloVoltajeController::class, 'destroy'])->name('modelo-voltaje.destroy');
 
-        Route::get('/pedidos', function () {
+        Route::get('/pedidos/index', function () {
             $user = auth()->user();
             if ($user->id_rol === 1 && !\App\Services\ModuloService::tiene($user->id_negocio, 1, 'pedidos')) {
                 abort(403, 'Tu plan no incluye este módulo.');
@@ -531,7 +533,7 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
             Route::post('/ingreso', [CajaController::class, 'ingreso'])->name('ingreso'); // ← nueva
         });
 
-        Route::prefix('sucursal/reparaciones')->name('reparaciones.')->group(function () {
+        Route::prefix('sucursal/reparaciones')->name('reparaciones.')->middleware('modulo:reparaciones')->group(function () {
  
             Route::get('/',        [ReparacionController::class, 'index'])  ->name('index');
             Route::get('/crear',   [ReparacionController::class, 'create']) ->name('create');

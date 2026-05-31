@@ -14,7 +14,7 @@ return new class extends Migration
             $table->char('id_cliente', 36);
             $table->char('id_usuario', 36);
             $table->char('id_personal', 20)->nullable();
-            $table->char('id_cupon', 20)->nullable();
+            $table->char('id_cupon', 20)->nullable(); // <- La columna se queda
             $table->decimal('descuento_total', 10, 2)->default(0);
             $table->decimal('total', 10, 2);
             $table->timestamps();
@@ -22,8 +22,10 @@ return new class extends Migration
             $table->foreign('id_negocio')->references('id_negocio')->on('negocios')->cascadeOnDelete();
             $table->foreign('id_cliente')->references('id_cliente')->on('clientes')->cascadeOnDelete();
             $table->foreign('id_usuario')->references('id_usuario')->on('usuarios')->restrictOnDelete();
-            $table->foreign('id_cupon')->references('id_cupon')->on('cupones')->nullOnDelete();
             $table->foreign('id_personal')->references('id_personal')->on('personal')->nullOnDelete();
+            
+            // ELIMINADA/COMENTADA LA LLAVE FORÁNEA DE CUPONES AQUÍ
+            // $table->foreign('id_cupon')->references('id_cupon')->on('cupones')->nullOnDelete();
 
             $table->index(['id_negocio', 'created_at']);
             $table->index(['id_cliente']);

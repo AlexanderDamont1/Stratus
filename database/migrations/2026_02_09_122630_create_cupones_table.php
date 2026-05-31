@@ -65,28 +65,23 @@ return new class extends Migration
                 $table->timestamp('created_at')->useCurrent();
 
                 $table->foreign('id_cupon')->references('id_cupon')->on('cupones');
-                $table->foreign('id_venta')->references('id_venta')->on('ventas')->nullOnDelete();
+                // ELIMINADA LA LLAVE FORÁNEA HACIA VENTAS AQUÍ
+                // $table->foreign('id_venta')->references('id_venta')->on('ventas')->nullOnDelete();
+                
                 $table->index('id_cupon');
                 $table->index('id_venta');
                 $table->index('id_negocio');
-                $table->index('id_usuario'); // útil para buscar usos por vendedor
+                $table->index('id_usuario'); 
             });
 
-            Schema::table('ventas', function (Blueprint $table) {
-                $table->char('id_cupon', 20)->nullable()->after('id_cliente');
-                $table->decimal('descuento_total', 10, 2)->default(0)->after('id_cupon');
-                $table->foreign('id_cupon')->references('id_cupon')->on('cupones')->nullOnDelete();
-            });
+            // ELIMINADO EL BLOQUE QUE MODIFICABA LA TABLA VENTAS
         }
     }
 
     public function down(): void
     {
-        Schema::table('ventas', function (Blueprint $table) {
-            $table->dropForeign(['id_cupon']);
-            $table->dropColumn(['id_cupon', 'descuento_total']);
-        });
-
+        // ELIMINADO EL BLOQUE QUE MODIFICABA LA TABLA VENTAS
+        
         Schema::dropIfExists('cupon_usos');
         Schema::dropIfExists('cupon_reglas');
         Schema::dropIfExists('cupones');

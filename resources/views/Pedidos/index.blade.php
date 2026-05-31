@@ -44,7 +44,7 @@
                 <p class="text-xs text-gray-400 mt-0.5">Gestiona los pedidos de bicicletas</p>
             </div>
             @if(auth()->user()->id_rol == 1)
-            <a href="{{ route('pedidos.create') }}"
+            <a href="{{ route('admin.pedidos.create') }}"
                 class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-md text-sm hover:opacity-90 transition">
                 + Nuevo Pedido
             </a>
@@ -162,7 +162,7 @@
                                         {{-- ROL 1: eliminar si está en status 1 --}}
                                         <template x-if="'{{ auth()->user()->id_rol }}' == 1 && pedido.status_num == 1">
                                             <button type="button"
-                                                @click="openDelete(pedido.id_pedido, `{{ route('pedidos.destroy', 'REEMPLAZAR_ID') }}`.replace('REEMPLAZAR_ID', pedido.id_pedido))"
+                                                @click="openDelete(pedido.id_pedido, `{{ route('admin.pedidos.destroy', 'REEMPLAZAR_ID') }}`.replace('REEMPLAZAR_ID', pedido.id_pedido))"
                                                 class="text-red-600 hover:text-red-800 dark:text-red-400 text-xs font-semibold">
                                                 Eliminar
                                             </button>
@@ -254,7 +254,7 @@
                                     {{-- ROL 1: eliminar --}}
                                     <template x-if="'{{ auth()->user()->id_rol }}' == 1 && pedido.status_num == 1">
                                         <button type="button"
-                                            @click="openDelete(pedido.id_pedido, `{{ route('pedidos.destroy', 'REEMPLAZAR_ID') }}`.replace('REEMPLAZAR_ID', pedido.id_pedido))"
+                                            @click="openDelete(pedido.id_pedido, `{{ route('admin.pedidos.destroy', 'REEMPLAZAR_ID') }}`.replace('REEMPLAZAR_ID', pedido.id_pedido))"
                                             class="text-red-600 hover:text-red-800 dark:text-red-400 text-xs font-semibold  whitespace-nowrap">
                                             Eliminar
                                         </button>

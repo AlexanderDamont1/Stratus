@@ -69,13 +69,8 @@ x-init="
         });
     ">
 
-        <div data-modelos class="hidden">
-            @foreach($modelos as $modelo)
-            <span data-id="{{ $modelo->id_modelo }}" data-nombre="{{ $modelo->nombre_modelo }}"></span>
-            @endforeach
-        </div>
-
-        <x-flash-messages />
+        
+        
 
         {{-- ===== ENCABEZADO ===== --}}
         <div class="flex justify-between items-center">
@@ -91,6 +86,15 @@ x-init="
                 Volver
             </a>
         </div>
+
+        <div data-modelos class="hidden">
+            @foreach($modelos as $modelo)
+            <span data-id="{{ $modelo->id_modelo }}" data-nombre="{{ $modelo->nombre_modelo }}"></span>
+            @endforeach
+        </div>
+
+
+        <x-flash-messages />
 
         {{-- ===== ERRORES ===== --}}
         @if($errors->any())
@@ -112,7 +116,7 @@ x-init="
         </div>
         @endif
 
-        <form action="{{ route('pedidos.store') }}" method="POST" @submit="submitting = true">
+        <form action="{{ route('admin.pedidos.store') }}" method="POST" @submit="submitting = true">
             @csrf
 
             {{-- ===== INFO GENERAL ===== --}}
