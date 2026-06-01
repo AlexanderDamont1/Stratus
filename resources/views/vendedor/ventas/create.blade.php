@@ -16,10 +16,9 @@
         x-init="init()"
         class="space-y-6 pb-24 lg:pb-10"
         data-vendedor-id="{{ auth()->user()->id_usuario }}"
+        data-negocio-id="{{ auth()->user()->id_negocio }}"
         data-buscar-url="{{ route('ventas.buscar-serie') }}"
         data-cupon-url="{{ route('cupones.validar') }}">
-
-        
 
         {{-- ===== ENCABEZADO ===== --}}
         <div class="flex justify-between items-center">
@@ -208,10 +207,23 @@
                     <p class="text-xs text-gray-400 uppercase tracking-wider mb-4 font-medium">Accesorios</p>
                     <div class="divide-y divide-gray-100 dark:divide-gray-700">
                         @foreach($accesorios as $a)
-                        <div class="flex items-center gap-3 py-2.5">
+                        <div class="flex items-center gap-3 py-2.5"
+                             x-data="{}"
+                             x-bind:class="stockAccesorios['{{ $a->id_producto }}'] === 0 ? 'opacity-50' : ''">
                             <div class="flex-1 min-w-0">
                                 <p class="text-sm text-gray-900 dark:text-white truncate">{{ $a->nombre_producto }}</p>
-                                <p class="text-xs text-gray-400 tabular-nums">${{ number_format($a->precio, 2) }}</p>
+                                <div class="flex items-center gap-2 mt-0.5">
+                                    <p class="text-xs text-gray-400 tabular-nums">${{ number_format($a->precio, 2) }}</p>
+                                    {{-- Badge de stock reactivo --}}
+                                    <span class="text-[10px] font-medium tabular-nums px-1.5 py-0.5 rounded-full"
+                                        :class="(stockAccesorios['{{ $a->id_producto }}'] ?? {{ $a->stock_disponible }}) > 0
+                                            ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                                            : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'"
+                                        x-text="(stockAccesorios['{{ $a->id_producto }}'] ?? {{ $a->stock_disponible }}) > 0
+                                            ? (stockAccesorios['{{ $a->id_producto }}'] ?? {{ $a->stock_disponible }}) + ' en stock'
+                                            : 'Sin stock'">
+                                    </span>
+                                </div>
                             </div>
                             <button type="button"
                                 @click="agregarAccesorio({
@@ -219,8 +231,10 @@
                                     nombre:      '{{ addslashes($a->nombre_producto) }}',
                                     precio:      {{ $a->precio }}
                                 })"
+                                :disabled="stockDisponibleAccesorio('{{ $a->id_producto }}', {{ $a->stock_disponible }}) <= 0"
                                 class="shrink-0 bg-gray-900 dark:bg-white dark:text-gray-900 text-white
-                                       px-3 py-1.5 rounded-md text-xs font-semibold hover:opacity-90 transition active:scale-95">
+                                       px-3 py-1.5 rounded-md text-xs font-semibold hover:opacity-90 transition active:scale-95
+                                       disabled:opacity-40 disabled:cursor-not-allowed">
                                 + Agregar
                             </button>
                         </div>
@@ -410,7 +424,8 @@
                                             <span class="w-4 text-center text-xs font-medium text-gray-700 dark:text-gray-300 tabular-nums"
                                                 x-text="item.cantidad"></span>
                                             <button type="button" @click="incrementar(idx)"
-                                                class="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center transition text-xs font-bold text-gray-600 dark:text-gray-300">+</button>
+                                                :disabled="stockDisponibleAccesorio(item.id_producto, 0) <= item.cantidad"
+                                                class="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center transition text-xs font-bold text-gray-600 dark:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed">+</button>
                                         </div>
                                     </template>
 
@@ -519,7 +534,7 @@
                     </div>
                 </template>
 
-                {{-- ── MÉTODOS DE PAGO ── (siempre visible) --}}
+                {{-- ── MÉTODOS DE PAGO ── --}}
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
                     <div class="px-6 py-4 border-b dark:border-gray-700 flex items-center justify-between">
                         <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Pago</h3>
@@ -682,6 +697,10 @@
                 idPersonal: '',
                 pagos: [],
 
+                // ── Stock de accesorios reactivo ──────────────────────────────
+                // Mapa { id_producto: stock } — se actualiza via Reverb
+                stockAccesorios: {},
+
                 _nuevoPago(esEfectivo = false) {
                     return {
                         id_metodo: esEfectivo ? 'efectivo' : '',
@@ -693,11 +712,63 @@
                 },
 
                 init() {
-                    this.buscarUrl = document.querySelector('[data-buscar-url]')?.dataset?.buscarUrl ?? '';
-                    this.cuponUrl  = document.querySelector('[data-cupon-url]')?.dataset?.cuponUrl  ?? '';
-                    this.pagos = [this._nuevoPago(true)];
+                    this.buscarUrl  = document.querySelector('[data-buscar-url]')?.dataset?.buscarUrl ?? '';
+                    this.cuponUrl   = document.querySelector('[data-cupon-url]')?.dataset?.cuponUrl   ?? '';
+                    this.pagos      = [this._nuevoPago(true)];
                     this.$nextTick(() => this.$refs.serieInputRef?.focus());
                     window.addEventListener('submit-venta', () => this.submitVenta());
+
+                    // ── Escuchar actualizaciones de stock via Reverb ───────────
+                    const negocioId = document.querySelector('[data-negocio-id]')?.dataset?.negocioId;
+                    const usuarioId = document.querySelector('[data-vendedor-id]')?.dataset?.vendedorId;
+
+                    if (negocioId && window.Echo) {
+                        window.Echo.private(`negocio.${negocioId}`)
+                            .listen('.stock.actualizado', (e) => {
+                                // Solo procesar si es para este usuario
+                                if (e.id_usuario !== usuarioId) return;
+
+                                e.accesorios.forEach(item => {
+                                    // Actualizar el mapa de stock reactivo
+                                    this.stockAccesorios[item.id_producto] = item.stock;
+
+                                    // Si hay ítems en carrito que ahora superan el stock, ajustar
+                                    const enCarrito = this.carrito.find(
+                                        c => c.id_producto === item.id_producto && !c.es_gratis
+                                    );
+                                    if (enCarrito && enCarrito.cantidad > item.stock) {
+                                        if (item.stock <= 0) {
+                                            // Quitar del carrito y avisar
+                                            this.carrito = this.carrito.filter(
+                                                c => !(c.id_producto === item.id_producto && !c.es_gratis)
+                                            );
+                                            this.mostrarFlash(
+                                                `"${enCarrito.nombre}" se agotó y fue removido del carrito.`,
+                                                'warn'
+                                            );
+                                        } else {
+                                            // Reducir cantidad al máximo disponible
+                                            enCarrito.cantidad = item.stock;
+                                            this.mostrarFlash(
+                                                `Stock de "${enCarrito.nombre}" actualizado a ${item.stock} unidad(es).`,
+                                                'warn'
+                                            );
+                                        }
+                                        this._autoCompletarPago();
+                                        if (this.cupon) this.recalcularDescuento();
+                                    }
+                                });
+                            });
+                    }
+                },
+
+                // Devuelve el stock real considerando el mapa reactivo y lo que hay en carrito
+                stockDisponibleAccesorio(idProducto, stockInicial) {
+                    const stockActual = this.stockAccesorios[idProducto] ?? stockInicial;
+                    const enCarrito   = this.carrito
+                        .filter(c => c.id_producto === idProducto && !c.es_gratis)
+                        .reduce((s, c) => s + c.cantidad, 0);
+                    return Math.max(0, stockActual - enCarrito);
                 },
 
                 get clienteIncompleto() {
@@ -722,16 +793,12 @@
                 get sumaPagos() {
                     return this.pagos.reduce((s, p) => s + (parseFloat(p.monto) || 0), 0);
                 },
-            
-                // Separar en dos getters distintos
                 get pagosCubreTotal() {
                     if (this.carrito.length === 0) return true;
-                    if (this.pagos.length === 1) return true; // un pago = siempre OK (efectivo toma el total)
+                    if (this.pagos.length === 1) return true;
                     return round2(this.sumaPagos) >= round2(this.totalConDescuento);
                 },
-
                 get puedeAgregarPago() {
-                    // Solo deshabilitar dividir si no hay carrito
                     return this.carrito.length > 0 && this.totalConDescuento > 0;
                 },
                 get puedeRegistrar() {
@@ -783,9 +850,23 @@
                 },
 
                 agregarAccesorio(acc) {
+                    // Validar stock antes de agregar
+                    const stockActual = this.stockAccesorios[acc.id_producto] ?? null;
+                    const enCarrito   = this.carrito
+                        .filter(c => c.id_producto === acc.id_producto && !c.es_gratis)
+                        .reduce((s, c) => s + c.cantidad, 0);
+
+                    // Si tenemos stock en el mapa reactivo, usarlo; si no, confiar en el servidor
+                    if (stockActual !== null && (enCarrito + 1) > stockActual) {
+                        this.mostrarFlash(`Sin stock disponible para "${acc.nombre}".`, 'error');
+                        return;
+                    }
+
                     const existente = this.carrito.find(i => i.id_producto === acc.id_producto && !i.es_gratis);
-                    if (existente) { existente.cantidad++; this.mostrarFlash('Unidad adicional agregada.', 'ok'); }
-                    else {
+                    if (existente) {
+                        existente.cantidad++;
+                        this.mostrarFlash('Unidad adicional agregada.', 'ok');
+                    } else {
                         this.carrito.push({
                             key: acc.id_producto, tipo: '1', id_producto: acc.id_producto,
                             num_serie: '', nombre: acc.nombre,
@@ -799,16 +880,32 @@
                 },
 
                 incrementar(idx) {
-                    if (!this.carrito[idx].es_gratis) { this.carrito[idx].cantidad++; this._autoCompletarPago(); if (this.cupon) this.recalcularDescuento(); }
+                    const item = this.carrito[idx];
+                    if (item.es_gratis) return;
+                    if (item.tipo === '1') {
+                        // Verificar stock al incrementar accesorio
+                        const disponible = this.stockDisponibleAccesorio(item.id_producto, 0);
+                        if (disponible <= item.cantidad) {
+                            this.mostrarFlash('No hay más unidades en stock.', 'warn');
+                            return;
+                        }
+                    }
+                    item.cantidad++;
+                    this._autoCompletarPago();
+                    if (this.cupon) this.recalcularDescuento();
                 },
                 decrementar(idx) {
                     if (this.carrito[idx].es_gratis) return;
                     if (this.carrito[idx].cantidad <= 1) { this.quitar(idx); return; }
-                    this.carrito[idx].cantidad--; this._autoCompletarPago(); if (this.cupon) this.recalcularDescuento();
+                    this.carrito[idx].cantidad--;
+                    this._autoCompletarPago();
+                    if (this.cupon) this.recalcularDescuento();
                 },
                 quitar(idx) {
                     if (this.carrito[idx].es_gratis && this.carrito[idx].origen_cupon) return;
-                    this.carrito.splice(idx, 1); this._autoCompletarPago(); if (this.cupon) this.recalcularDescuento();
+                    this.carrito.splice(idx, 1);
+                    this._autoCompletarPago();
+                    if (this.cupon) this.recalcularDescuento();
                 },
                 vaciarCarrito() {
                     if (!confirm('¿Vaciar todo el carrito?')) return;
@@ -825,18 +922,18 @@
                 },
                 onMetodoChange(idx) {
                     const selects = document.querySelectorAll('[x-model="pago.id_metodo"]');
-                    const select = selects[idx];
+                    const select  = selects[idx];
                     if (!select) return;
                     const opt = select.options[select.selectedIndex];
                     if (!opt) return;
-                    this.pagos[idx].es_efectivo = opt.dataset.efectivo === '1';
-                    this.pagos[idx].requiere_referencia = opt.dataset.ref === '1';
+                    this.pagos[idx].es_efectivo          = opt.dataset.efectivo === '1';
+                    this.pagos[idx].requiere_referencia  = opt.dataset.ref      === '1';
                     this._autoCompletarPago(idx);
                 },
                 recalcularPagos(idxEditado) {
                     if (this.pagos.length < 2) return;
                     const destino = idxEditado === 0 ? this.pagos.length - 1 : 0;
-                    const ocupado = this.pagos.reduce((s, p, j) => 
+                    const ocupado = this.pagos.reduce((s, p, j) =>
                         (j !== destino) ? s + (parseFloat(p.monto) || 0) : s, 0);
                     const resta = round2(this.totalConDescuento - ocupado);
                     this.pagos[destino].monto = Math.max(0, resta).toFixed(2);
@@ -846,11 +943,11 @@
                         this.pagos[0].monto = this.totalConDescuento.toFixed(2);
                         return;
                     }
-                    const i = idx !== null ? idx : this.pagos.length - 1;
+                    const i    = idx !== null ? idx : this.pagos.length - 1;
                     const pago = this.pagos[i];
                     if (!pago) return;
                     const ocupado = this.pagos.reduce((s, p, j) => j !== i ? s + (parseFloat(p.monto) || 0) : s, 0);
-                    const resta = round2(this.totalConDescuento - ocupado);
+                    const resta   = round2(this.totalConDescuento - ocupado);
                     if (resta > 0) pago.monto = resta.toFixed(2);
                 },
 
@@ -927,7 +1024,9 @@
 
                 submitVenta() {
                     if (!this.puedeRegistrar) {
-                        this.clienteTocado.nombre = true; this.clienteTocado.apellido1 = true; this.clienteTocado.telefono = true;
+                        this.clienteTocado.nombre    = true;
+                        this.clienteTocado.apellido1 = true;
+                        this.clienteTocado.telefono  = true;
                         if (this.clienteIncompleto) this.mostrarFlash('Completa los datos del cliente antes de continuar.', 'error');
                         return;
                     }
@@ -938,27 +1037,27 @@
                         inp.type = 'hidden'; inp.name = name; inp.value = val ?? ''; cont.appendChild(inp);
                     };
                     mk('nombre_cliente', this.cliente.nombre.trim());
-                    mk('apellido1', this.cliente.apellido1.trim());
-                    mk('apellido2', this.cliente.apellido2.trim());
-                    mk('telefono', this.cliente.telefono.trim());
-                    mk('correo', this.cliente.correo.trim());
-                    mk('direccion', this.cliente.direccion.trim());
+                    mk('apellido1',      this.cliente.apellido1.trim());
+                    mk('apellido2',      this.cliente.apellido2.trim());
+                    mk('telefono',       this.cliente.telefono.trim());
+                    mk('correo',         this.cliente.correo.trim());
+                    mk('direccion',      this.cliente.direccion.trim());
                     this.carrito.forEach((item, i) => {
                         mk(`items[${i}][id_producto]`, item.id_producto);
-                        mk(`items[${i}][num_serie]`, item.num_serie);
-                        mk(`items[${i}][cantidad]`, item.cantidad);
-                        mk(`items[${i}][es_gratis]`, item.es_gratis ? '1' : '0');
+                        mk(`items[${i}][num_serie]`,   item.num_serie);
+                        mk(`items[${i}][cantidad]`,    item.cantidad);
+                        mk(`items[${i}][es_gratis]`,   item.es_gratis ? '1' : '0');
                     });
-                    if (this.cupon) mk('codigo_cupon', this.cuponInput.trim().toUpperCase());
-                    if (this.idPersonal) mk('id_personal', this.idPersonal);
+                    if (this.cupon)      mk('codigo_cupon', this.cuponInput.trim().toUpperCase());
+                    if (this.idPersonal) mk('id_personal',  this.idPersonal);
 
                     const pagosEnviar = this.pagos.length === 1
                         ? [{ ...this.pagos[0], monto: this.totalConDescuento.toFixed(2) }]
                         : this.pagos;
 
                     pagosEnviar.forEach((pago, i) => {
-                        mk(`pagos[${i}][metodo]`, pago.id_metodo);
-                        mk(`pagos[${i}][monto]`, parseFloat(pago.monto || 0).toFixed(2));
+                        mk(`pagos[${i}][metodo]`,     pago.id_metodo);
+                        mk(`pagos[${i}][monto]`,      parseFloat(pago.monto || 0).toFixed(2));
                         mk(`pagos[${i}][referencia]`, pago.referencia || '');
                     });
                     this.enviando = true;
@@ -970,8 +1069,9 @@
                 },
                 mostrarFlash(msg, tipo = 'ok') {
                     if (this.flash._t) clearTimeout(this.flash._t);
-                    this.flash.msg = msg; this.flash.tipo = tipo;
-                    this.flash._t = setTimeout(() => { this.flash.msg = ''; }, 3000);
+                    this.flash.msg  = msg;
+                    this.flash.tipo = tipo;
+                    this.flash._t   = setTimeout(() => { this.flash.msg = ''; }, 3000);
                 },
             };
         }

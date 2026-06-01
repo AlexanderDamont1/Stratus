@@ -1,5 +1,8 @@
 <?php
 
+//Stck de piezas para diagnóstico y reparación
+
+
 namespace App\Http\Controllers\Sucursal;
 
 use App\Http\Controllers\Controller;

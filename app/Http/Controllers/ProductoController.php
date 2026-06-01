@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\StockActualizado;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Producto;
@@ -45,7 +46,6 @@ class ProductoController extends Controller
         $marcas  = CatalogService::getMarcasByNegocio($idNegocio);
         $modelos = CatalogService::getModelosByNegocio($idNegocio);
 
-        // ✅ Inventario de bicicletas
         if ($esRol1 && $idSucursalFiltro) {
             $inventario = CatalogService::getInventarioBySucursal($idNegocio, $idSucursalFiltro)
                 ->keyBy('id_producto_modelo');
@@ -57,7 +57,6 @@ class ProductoController extends Controller
                 ->keyBy('id_producto_modelo');
         }
 
-        // ✅ Inventario de accesorios (por id_producto)
         if (!$esRol1) {
             $inventarioAccesorios = CatalogService::getInventarioBySucursal($idNegocio, $user->id_usuario)
                 ->whereNull('id_producto_modelo')
@@ -109,8 +108,6 @@ class ProductoController extends Controller
         ));
     }
 
-
-
     // ── STORE ACCESORIO (tipo 1) ──
     public function storeAccesorio(Request $request)
     {
@@ -141,7 +138,6 @@ class ProductoController extends Controller
             'tipo'            => '1',
         ]);
 
-        // ── Crear inventario para el accesorio ──
         \App\Models\Inventario::create([
             'id_inventario'      => 'INV' . strtoupper(substr(md5(uniqid()), 0, 12)),
             'id_producto_modelo' => null,
@@ -252,7 +248,6 @@ class ProductoController extends Controller
     }
 
     // ── MODELOS POR MARCA ──
-    // GET /productos/modelos-por-marca/{idMarca}
     public function modelosPorMarca($idMarca)
     {
         $idNegocio = Auth::user()->id_negocio;
@@ -262,18 +257,15 @@ class ProductoController extends Controller
         return response()->json($modelos);
     }
 
-    // ── VOLTAJES DISPONIBLES POR MODELO (excluye los ya asignados a precio) ──
+    // ── VOLTAJES DISPONIBLES POR MODELO ──
     public function voltajesPorModelo($idModelo)
     {
         $user      = Auth::user();
         $idNegocio = $user->id_negocio;
         $idUsuario = $user->id_rol === 1 ? null : $user->id_usuario;
 
-        // Voltajes del catálogo para este modelo
         $voltajes = CatalogService::getVoltajesByModelo($idModelo, $idNegocio);
 
-        // IDs de voltajes que ya tienen un producto/precio asignado para este modelo
-        // en este negocio (y sucursal si aplica)
         $usadosQuery = ProductoModelo::where('id_modelo', $idModelo)
             ->where('id_negocio', $idNegocio);
 
@@ -283,7 +275,6 @@ class ProductoController extends Controller
 
         $voltajesUsados = $usadosQuery->pluck('id_voltaje')->toArray();
 
-        // Filtrar los ya usados
         $voltajesDisponibles = $voltajes->reject(
             fn($v) => in_array($v->id_voltaje, $voltajesUsados)
         )->values();
@@ -295,12 +286,12 @@ class ProductoController extends Controller
     {
         $idSucursal = $request->input('sucursal');
 
-        // Guardar en sesión (null limpia el filtro)
         session(['productos.sucursal_filtro' => $idSucursal ?: null]);
 
         return response()->json(['ok' => true]);
     }
 
+    // ── ACTUALIZAR CANTIDAD ACCESORIO ──
     public function updateCantidadAccesorio(Request $request, string $idInventario)
     {
         $user      = Auth::user();
@@ -313,12 +304,22 @@ class ProductoController extends Controller
         $inventario = \App\Models\Inventario::where('id_inventario', $idInventario)
             ->where('id_negocio', $idNegocio)
             ->where('id_usuario', $user->id_usuario)
-            ->whereNull('id_producto_modelo') // solo accesorios
+            ->whereNull('id_producto_modelo')
             ->firstOrFail();
 
         $inventario->update(['cantidad' => $request->cantidad]);
 
         CatalogService::invalidateInventario($idNegocio, $user->id_usuario);
+
+        // ── Notificar stock actualizado al vendedor via Reverb ────────────
+        event(new StockActualizado(
+            idNegocio:  $idNegocio,
+            idUsuario:  $user->id_usuario,
+            accesorios: [[
+                'id_producto' => $inventario->id_producto,
+                'stock'       => (int) $request->cantidad,
+            ]],
+        ));
 
         return response()->json(['ok' => true]);
     }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Events\VentaRealizada;
 use App\Events\VentaRegistrada;
 use App\Events\BicicletaActualizada;
+use App\Events\StockActualizado;
 use App\Models\Bicicleta;
 use App\Models\Cliente;
 use App\Models\DetalleVenta;
@@ -13,6 +14,7 @@ use App\Models\ProductoModelo;
 use App\Models\Venta;
 use App\Models\Inventario;
 use App\Services\CatalogService;
+use App\Services\CajaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -76,10 +78,21 @@ class VentaController extends Controller
     {
         $user = auth()->user();
 
+        // ── Accesorios con stock disponible ──────────────────────────────
         $accesorios = CatalogService::getProductosConRelaciones($user->id_negocio, $user->id_usuario)
             ->where('tipo', '1')
             ->filter(fn($p) => $p->precio > 0)
-            ->values();
+            ->values()
+            ->map(function ($producto) use ($user) {
+                $inventario = Inventario::where('id_producto', $producto->id_producto)
+                    ->where('id_negocio', $user->id_negocio)
+                    ->where('id_usuario', $user->id_usuario)
+                    ->whereNull('id_producto_modelo')
+                    ->first();
+
+                $producto->stock_disponible = $inventario ? (int) $inventario->cantidad : 0;
+                return $producto;
+            });
 
         $config         = CatalogService::getConfigNegocio($user->id_negocio);
         $metodosActivos = $config['metodos_pago'] ?? ['efectivo'];
@@ -368,10 +381,11 @@ class VentaController extends Controller
                 'total'           => $totalFinal,
             ]);
 
-            $bicicletasBroadcast = [];
-            $seriesParaInvalidar = [];
-            $eventosBicicleta    = [];
-            $jobsPostVenta       = [];
+            $bicicletasBroadcast  = [];
+            $seriesParaInvalidar  = [];
+            $eventosBicicleta     = [];
+            $jobsPostVenta        = [];
+            $accesoriosVendidos   = []; // para el evento StockActualizado
 
             // ── Items del carrito ────────────────────────────────────────────
             foreach ($request->items as $item) {
@@ -466,6 +480,12 @@ class VentaController extends Controller
                         throw new \Exception("Stock insuficiente para el producto {$producto->nombre_producto}.");
                     }
                     $inventario->decrement('cantidad', $cantidad);
+
+                    // Guardar el nuevo stock para el evento Reverb
+                    $accesoriosVendidos[] = [
+                        'id_producto' => $item['id_producto'],
+                        'stock'       => max(0, (int) $inventario->cantidad - $cantidad),
+                    ];
                 }
             }
 
@@ -510,14 +530,35 @@ class VentaController extends Controller
 
             DB::commit();
 
-            // ── Registrar en caja (post-commit) ───────────────────────────
+           
             $snapshot = null;
             try {
-                $snapshot = \App\Services\CajaService::registrarVenta(
-                    venta:     $venta,
-                    idUsuario: $user->id_usuario,
-                    idNegocio: $user->id_negocio,
-                );
+                $caja = CajaService::cajaDeUsuario($user->id_usuario, $user->id_negocio);
+
+                if ($caja) {
+                    $sesionActiva = CajaService::sesionActiva($caja->id_caja);
+
+                    if (!$sesionActiva) {
+                        // No hay sesión — abrimos automáticamente con fondo 0
+                        $sesionActiva = CajaService::abrirSesion(
+                            caja:         $caja,
+                            idUsuario:    $user->id_usuario,
+                            fondoInicial: 0.0,
+                        );
+
+                        Log::info('CajaService: auto-apertura de sesión al registrar venta', [
+                            'id_sesion'  => $sesionActiva->id_sesion,
+                            'id_venta'   => $venta->id_venta,
+                            'id_usuario' => $user->id_usuario,
+                        ]);
+                    }
+
+                    $snapshot = CajaService::registrarVenta(
+                        venta:     $venta,
+                        idUsuario: $user->id_usuario,
+                        idNegocio: $user->id_negocio,
+                    );
+                }
             } catch (\Throwable $cajaEx) {
                 Log::error('CajaService: error inesperado al registrar venta', [
                     'id_venta' => $venta->id_venta,
@@ -593,6 +634,28 @@ class VentaController extends Controller
                 total:          $totalFinal,
                 bicicletas:     $bicicletasBroadcast,
             ));
+
+            if (!empty($accesoriosVendidos)) {
+                // Re-leer el stock real post-decrement desde DB para precisión
+                $stockFinal = collect($accesoriosVendidos)->map(function ($item) use ($user) {
+                    $inv = Inventario::where('id_producto', $item['id_producto'])
+                        ->where('id_negocio', $user->id_negocio)
+                        ->where('id_usuario', $user->id_usuario)
+                        ->whereNull('id_producto_modelo')
+                        ->value('cantidad');
+
+                    return [
+                        'id_producto' => $item['id_producto'],
+                        'stock'       => (int) ($inv ?? 0),
+                    ];
+                })->toArray();
+
+                event(new StockActualizado(
+                    idNegocio: $user->id_negocio,
+                    idUsuario: $user->id_usuario,
+                    accesorios: $stockFinal,
+                ));
+            }
 
             // ── Respuesta final ───────────────────────────────────────────
             if ($debeCorreo && $debeTicket) {

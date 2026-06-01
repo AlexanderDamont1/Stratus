@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\StockActualizado;
 use App\Models\Inventario;
 use App\Models\ProductoModelo;
 use App\Services\CatalogService;
@@ -21,7 +22,6 @@ class InventarioController extends Controller
         $idNegocio = $user->id_negocio;
         $esAdmin   = $user->id_rol === 1;
 
-        
         if ($esAdmin) {
             $inventario = CatalogService::getInventarioByNegocio($idNegocio);
         } else {
@@ -33,7 +33,6 @@ class InventarioController extends Controller
 
     /* =====================================================
      | SINCRONIZAR DESDE BICICLETAS
-     | Fallback manual si el conteo se desincroniza
      ===================================================== */
 
     public function sincronizar()
@@ -63,7 +62,6 @@ class InventarioController extends Controller
             }
         });
 
-        
         CatalogService::invalidateInventario($idNegocio);
 
         return response()->json([
@@ -99,6 +97,7 @@ class InventarioController extends Controller
         }
 
         $esBicicleta = $inventario->productoModelo?->producto?->tipo === '2';
+        $esAccesorio = !$esBicicleta && $inventario->id_producto !== null;
 
         if ($request->has('cantidad') && !$esBicicleta) {
             $data['cantidad'] = $request->cantidad;
@@ -106,8 +105,20 @@ class InventarioController extends Controller
 
         $inventario->update($data);
 
-      
         CatalogService::invalidateInventario($idNegocio, $inventario->id_usuario);
+
+        // ── Notificar stock actualizado a vendedores via Reverb ───────────
+        // Solo accesorios con id_usuario asignado (stock de sucursal)
+        if ($esAccesorio && $inventario->id_usuario && $request->has('cantidad')) {
+            event(new StockActualizado(
+                idNegocio:  $idNegocio,
+                idUsuario:  $inventario->id_usuario,
+                accesorios: [[
+                    'id_producto' => $inventario->id_producto,
+                    'stock'       => (int) $inventario->cantidad,
+                ]],
+            ));
+        }
 
         return response()->json(['ok' => true]);
     }
@@ -122,7 +133,6 @@ class InventarioController extends Controller
         $idNegocio = $user->id_negocio;
         $esAdmin   = $user->id_rol === 1;
 
-       
         $query = Inventario::with(['productoModelo.producto', 'sucursal'])
             ->where('id_negocio', $idNegocio)
             ->stockBajo();
