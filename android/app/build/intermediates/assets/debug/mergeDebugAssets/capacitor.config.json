@@ -1,0 +1,9 @@
+{
+	"appId": "com.cloudlabs.pos",
+	"appName": "ArrowK",
+	"webDir": "public",
+	"server": {
+		"url": "http://10.166.142.197:8000",
+		"cleartext": true
+	}
+}
