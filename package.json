@@ -8,6 +8,7 @@
         "dev:full": "concurrently --kill-others-on-fail \"php artisan serve --host=0.0.0.0 --port=8000\" \"php artisan reverb:start\" \"php artisan queue:listen --queue=emails,default --verbose --tries=3 --timeout=60\" \"php artisan schedule:work\" \"npm run dev\""
     },
     "devDependencies": {
+        "@capacitor/assets": "^3.0.5",
         "@tailwindcss/forms": "^0.5.2",
         "@tailwindcss/vite": "^4.0.0",
         "alpinejs": "^3.4.2",
@@ -20,5 +21,10 @@
         "pusher-js": "^8.5.0",
         "tailwindcss": "^3.1.0",
         "vite": "^7.0.7"
+    },
+    "dependencies": {
+        "@capacitor/android": "^8.3.4",
+        "@capacitor/cli": "^8.3.4",
+        "@capacitor/core": "^8.3.4"
     }
 }
