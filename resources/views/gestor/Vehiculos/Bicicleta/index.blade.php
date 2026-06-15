@@ -56,9 +56,6 @@
         data-negocio-id="{{ auth()->user()->id_negocio }}"
         x-init="init()">
 
-        {{-- ===== MENSAJE FLASH ===== --}}
-        <x-flash-messages />
-
         {{-- ===== ENCABEZADO ===== --}}
         <div class="flex justify-between items-center">
             <div>
@@ -77,6 +74,11 @@
             </div>
             @endif
         </div>
+
+        {{-- ===== MENSAJE FLASH ===== --}}
+        <x-flash-messages />
+
+        
 
         {{-- ===== ESTADÍSTICAS (con skeleton) ===== --}}
         @if(auth()->user()->id_rol === 1)

@@ -144,17 +144,7 @@
         {{-- Navegación --}}
         <nav class="flex-1 px-2 py-3 overflow-y-auto space-y-0.5">
 
-            {{-- Dashboard (todos los roles) --}}
-            <a href="{{ route('dashboard') }}"
-               class="nav-item {{ request()->routeIs('dashboard') ? 'nav-item-active' : 'nav-item-inactive' }}"
-               @click="open = false">
-                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1h3a1 1 0 001-1V10" />
-                </svg>
-                <span>Dashboard</span>
-            </a>
-
+            
             {{-- ============================================================
                  ROL ROOT (id_rol === 0)
             ============================================================ --}}

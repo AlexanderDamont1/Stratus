@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 use App\Events\SessionTokenUpdated;
+use App\Models\Usuario;
 
 
 class AuthenticatedSessionController extends Controller
@@ -43,22 +44,25 @@ class AuthenticatedSessionController extends Controller
         $usuario = Auth::user();
 
         if ($usuario->requiereSesionUnica()) {
-
             $newToken = Str::uuid()->toString();
-
             $usuario->session_token = $newToken;
             $usuario->save();
-
             session(['session_token' => $newToken]);
-
-            // 🔴 Notificar a otros dispositivos
-            broadcast(new SessionTokenUpdated(
-                $usuario->id_usuario,
-                $newToken
-            ));
+            broadcast(new SessionTokenUpdated($usuario->id_usuario, $newToken));
         }
 
-        return redirect()->intended(route('dashboard'));
+        return redirect()->intended($this->dashboardPorRol($usuario->id_rol));
+    }
+
+    private function dashboardPorRol(int $rol): string
+    {
+        return match ($rol) {
+            0 => route('root.dashboard'),
+            1 => route('administrador.dashboard'),
+            2 => route('stock.index'),
+            5 => route('gestor.dashboard'),
+            default => route('root.dashboard'),
+        };
     }
 
 

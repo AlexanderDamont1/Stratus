@@ -601,7 +601,7 @@ class VentaController extends Controller
                 dispatch($job);
             }
 
-            // ── Invalidaciones de caché ───────────────────────────────────
+           // ── Invalidaciones de caché ───────────────────────────────────────
             foreach ($seriesParaInvalidar as $serie) {
                 CatalogService::invalidateBicicleta($serie, $user->id_negocio);
             }
@@ -610,6 +610,15 @@ class VentaController extends Controller
             CatalogService::invalidateSeccion(null, $user->id_negocio);
             CatalogService::invalidateVentasByVendedor($user->id_negocio, $user->id_usuario);
             CatalogService::invalidateInventario($user->id_negocio, $user->id_usuario);
+
+            // Solo invalida las secciones de analytics, nada más
+            $hoy = Carbon::today()->toDateString();
+            CatalogService::invalidateVentasAnalytics(
+                idNegocio: $user->id_negocio,
+                idUsuario: $user->id_usuario,
+                desde: $hoy,
+                hasta: $hoy,
+            );
 
             // ── Broadcasts ────────────────────────────────────────────────
             foreach ($eventosBicicleta as $ev) {

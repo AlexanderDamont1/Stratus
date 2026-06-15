@@ -42,6 +42,7 @@ use App\Http\Controllers\Root\NovedadController;
 use App\Http\Controllers\Sucursal\ReparacionController;
 use App\Http\Controllers\CotizacionController;
 use App\Http\Controllers\Sucursal\StockController;
+use App\Http\Controllers\Admin\DashboardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -70,6 +71,11 @@ Route::prefix('cotizacion')->name('cotizacion.')->group(function () {
     Route::get('/{token}/responder', function ($token) {return redirect()->route('cotizacion.show', $token);});
     Route::post('/{token}/responder', [CotizacionController::class, 'responder'])->name('responder');
 });
+
+Route::get('/arrowk/favicon.ico', function ()
+    {$path = public_path('arrowk/favicon.ico');return response()->file($path, ['Cache-Control' => 'public, max-age=604800, immutable','Expires'     
+    => now()->addDays(7)->toRfc7231String(),]);
+    })->name('favicon');
 
 /*
 |--------------------------------------------------------------------------
@@ -182,8 +188,7 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
     |----------------------------------------------------------------------
     */
 
-    Route::get('/dashboard', fn() => view('dashboard'))->name('dashboard');
-
+    
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -215,13 +220,10 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
 
     Route::middleware('administrador')->group(function () {
 
-        Route::get('/Inicio', function () {
-            $enlace = \App\Models\Enlace::where('id_usuario1', auth()->user()->id_usuario)
-                ->whereIn('estado', ['pendiente', 'activo', 'cancelado'])
-                ->with('usuarioDestino:id_usuario,nombre_usuario')
-                ->first();
-            return view('administrador.dashboard', ['enlace' => $enlace]);
-        })->name('administrador.dashboard');
+
+
+        Route::get('admin/dashboard', [DashboardController::class, 'index'])->name('administrador.dashboard');
+        Route::get('admin/dashboard/stats', [DashboardController::class, 'stats'])->name('admin.dashboard.stats'); // ← AGREGAR
 
         // Vendedores
         Route::get('/admin/vendedores/create', [VendedorController::class, 'create'])->name('admin.vendedores.create');
@@ -478,7 +480,7 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
 
     Route::middleware('ventas')->group(function () {
 
-        Route::get('/vendedor/dashboard', [BicicletaController::class, 'showB'])->name('stock.index');
+        Route::get('/sucursal/stock', [BicicletaController::class, 'showB'])->name('stock.index');
         Route::get('/bicicletas/qrv/{num_serie}', [BicicletaController::class, 'buscarPorSerieQr'])->name('bicicletas.qr');
         Route::post('/bicicletas/asignar-usuario', [BicicletaController::class, 'asignarUsuario'])->name('bicicletas.asignarUsuario');
         Route::post('/sucursal/bicicletas/masivo', [BicicletaController::class, 'storeMasivo'])

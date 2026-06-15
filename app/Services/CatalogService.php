@@ -10,6 +10,7 @@ use App\Models\Voltaje;
 use App\Models\ModeloVoltaje;
 use App\Models\Bicicleta;
 use App\Models\Pedido;
+use App\Models\Personal;
 use App\Models\Usuario;
 use App\Models\Venta;
 use App\Models\Producto;
@@ -1358,5 +1359,373 @@ class CatalogService
                 ?->cliente,
             $idNegocio
         );
+    }
+
+
+    public static function getPersonalByNegocio(string $idNegocio): array
+    {
+        return self::remember(
+            "personal:negocio:{$idNegocio}",
+            self::CACHE_TTL['usuarios'],
+            function () use ($idNegocio) {
+                return Personal::with('sucursal:id_usuario,nombre_usuario')
+                    ->deNegocio($idNegocio)
+                    ->orderBy('nombre')
+                    ->get()
+                    ->groupBy('nombre')
+                    ->map(function ($grupo) {
+                        $primero = $grupo->first();
+                        return [
+                            'id_personal' => $primero->id_personal,
+                            'nombre'      => $primero->nombre,
+                            'activo'      => (bool) $primero->activo,
+                            'sucursales'  => $grupo->map(fn($p) => [
+                                'id_usuario'     => $p->id_usuario,
+                                'nombre_usuario' => $p->sucursal->nombre_usuario ?? '—',
+                            ])->values()->toArray(),
+                        ];
+                    })
+                    ->values()
+                    ->toArray();
+            },
+            $idNegocio
+        );
+    }
+
+    public static function getPersonalItem(string $nombre, string $idNegocio): array
+    {
+        // Cache corto — solo se usa justo después de un write, dura lo suficiente
+        // para que el response JSON lo reciba el cliente sin re-consultar
+        return self::remember(
+            "personal:item:" . md5($nombre) . ":{$idNegocio}",
+            60, // 1 minuto — solo para absorber el response inmediato post-write
+            function () use ($nombre, $idNegocio) {
+                $registros = Personal::with('sucursal:id_usuario,nombre_usuario')
+                    ->deNegocio($idNegocio)
+                    ->where('nombre', $nombre)
+                    ->get();
+
+                if ($registros->isEmpty()) return [];
+
+                $primero = $registros->first();
+                return [
+                    'id_personal' => $primero->id_personal,
+                    'nombre'      => $primero->nombre,
+                    'activo'      => (bool) $primero->activo,
+                    'sucursales'  => $registros->map(fn($p) => [
+                        'id_usuario'     => $p->id_usuario,
+                        'nombre_usuario' => $p->sucursal->nombre_usuario ?? '—',
+                    ])->values()->toArray(),
+                ];
+            },
+            $idNegocio
+        );
+    }
+
+    public static function invalidatePersonal(string $idNegocio): void
+    {
+        // Incrementar versión invalida getPersonalByNegocio y getPersonalItem
+        // a la vez, porque ambos usan remember() con la versión del tenant
+        self::incrementVersion($idNegocio);
+    }
+
+    // ─── VENTAS ANALYTICS ────────────────────────────────────────────────────────
+
+    public static function getVentasKpi(string $idNegocio, string $desde, string $hasta): array
+    {
+        return self::remember(
+            "analytics:kpi:{$idNegocio}:{$desde}:{$hasta}",
+            self::CACHE_TTL['stats'],
+            function () use ($idNegocio, $desde, $hasta) {
+                $desdeTs = \Carbon\Carbon::parse($desde)->startOfDay();
+                $hastaTs = \Carbon\Carbon::parse($hasta)->endOfDay();
+                $base    = Venta::where('id_negocio', $idNegocio)
+                            ->whereBetween('created_at', [$desdeTs, $hastaTs]);
+
+                $totalVentas    = (clone $base)->count();
+                $totalIngresos  = (float)(clone $base)->sum('total');
+                $descuentos     = (float)(clone $base)->sum('descuento_total');
+                $clientesUnicos = (clone $base)->distinct('id_cliente')->count('id_cliente');
+                $ticketProm     = $totalVentas > 0 ? round($totalIngresos / $totalVentas) : 0;
+
+                return compact('totalVentas', 'totalIngresos', 'descuentos', 'clientesUnicos', 'ticketProm');
+            },
+            $idNegocio
+        );
+    }
+
+    public static function getVentasGrafica(string $idNegocio, string $desde, string $hasta): array
+    {
+        return self::remember(
+            "analytics:grafica:{$idNegocio}:{$desde}:{$hasta}",
+            self::CACHE_TTL['stats'],
+            function () use ($idNegocio, $desde, $hasta) {
+                $desdeC      = \Carbon\Carbon::parse($desde);
+                $hastaC      = \Carbon\Carbon::parse($hasta);
+                $diasPeriodo = max(1, $desdeC->diffInDays($hastaC) + 1);
+                $fmt         = $diasPeriodo === 1 ? 'H:00' : ($diasPeriodo <= 31 ? 'd/m' : 'M y');
+
+                return collect(range(0, $diasPeriodo - 1))
+                    ->map(function ($offset) use ($idNegocio, $desdeC, $fmt) {
+                        $dia = $desdeC->copy()->addDays($offset);
+                        $row = \Illuminate\Support\Facades\DB::table('ventas')
+                            ->where('id_negocio', $idNegocio)
+                            ->whereDate('created_at', $dia)
+                            ->selectRaw('COUNT(*) as ventas, COALESCE(SUM(total),0) as ingresos')
+                            ->first();
+                        return [
+                            'label'    => $dia->translatedFormat($fmt),
+                            'ventas'   => (int)$row->ventas,
+                            'ingresos' => (float)$row->ingresos,
+                        ];
+                    })->toArray();
+            },
+            $idNegocio
+        );
+    }
+
+    public static function getVentasIngresosVendedor(string $idNegocio, string $desde, string $hasta): array
+    {
+        return self::remember(
+            "analytics:vendedores:{$idNegocio}:{$desde}:{$hasta}",
+            self::CACHE_TTL['stats'],
+            function () use ($idNegocio, $desde, $hasta) {
+                $desdeTs = \Carbon\Carbon::parse($desde)->startOfDay();
+                $hastaTs = \Carbon\Carbon::parse($hasta)->endOfDay();
+
+                return \Illuminate\Support\Facades\DB::table('ventas as v')
+                    ->join('usuarios as u', 'v.id_usuario', '=', 'u.id_usuario')
+                    ->where('v.id_negocio', $idNegocio)
+                    ->whereBetween('v.created_at', [$desdeTs, $hastaTs])
+                    ->selectRaw('u.id_usuario, u.nombre_usuario,
+                        COUNT(*) as total_ventas,
+                        COALESCE(SUM(v.total),0) as total_ingresos,
+                        COALESCE(SUM(v.descuento_total),0) as total_descuentos')
+                    ->groupBy('u.id_usuario', 'u.nombre_usuario')
+                    ->orderByDesc('total_ingresos')
+                    ->get()
+                    ->map(fn($r) => [
+                        'nombre'     => $r->nombre_usuario,
+                        'id_usuario' => $r->id_usuario,
+                        'ventas'     => (int)$r->total_ventas,
+                        'monto'      => (float)$r->total_ingresos,
+                        'descuentos' => (float)$r->total_descuentos,
+                        'ticket'     => $r->total_ventas > 0
+                            ? round($r->total_ingresos / $r->total_ventas) : 0,
+                    ])->toArray();
+            },
+            $idNegocio
+        );
+    }
+
+    public static function getVentasMetodosPago(string $idNegocio, string $desde, string $hasta): array
+    {
+        return self::remember(
+            "analytics:metodos:{$idNegocio}:{$desde}:{$hasta}",
+            self::CACHE_TTL['stats'],
+            function () use ($idNegocio, $desde, $hasta) {
+                $desdeTs = \Carbon\Carbon::parse($desde)->startOfDay();
+                $hastaTs = \Carbon\Carbon::parse($hasta)->endOfDay();
+
+                return \Illuminate\Support\Facades\DB::table('venta_pagos as vp')
+                    ->join('ventas as v', 'vp.id_venta', '=', 'v.id_venta')
+                    ->where('v.id_negocio', $idNegocio)
+                    ->whereBetween('v.created_at', [$desdeTs, $hastaTs])
+                    ->selectRaw('vp.metodo, COUNT(*) as usos, COALESCE(SUM(vp.monto),0) as monto_total')
+                    ->groupBy('vp.metodo')
+                    ->orderByDesc('monto_total')
+                    ->get()
+                    ->map(fn($r) => [
+                        'metodo' => $r->metodo,
+                        'usos'   => (int)$r->usos,
+                        'monto'  => (float)$r->monto_total,
+                    ])->toArray();
+            },
+            $idNegocio
+        );
+    }
+
+    public static function getVentasTopModelos(string $idNegocio, string $desde, string $hasta): array
+    {
+        return self::remember(
+            "analytics:top_modelos:{$idNegocio}:{$desde}:{$hasta}",
+            self::CACHE_TTL['stats'],
+            function () use ($idNegocio, $desde, $hasta) {
+                $desdeTs = \Carbon\Carbon::parse($desde)->startOfDay();
+                $hastaTs = \Carbon\Carbon::parse($hasta)->endOfDay();
+
+                $modelos = \Illuminate\Support\Facades\DB::table('detalle_venta as dv')
+                    ->join('ventas as v', 'dv.id_venta', '=', 'v.id_venta')
+                    ->join('bicicletas as b', 'dv.num_serie', '=', 'b.num_serie')
+                    ->join('modelos as m', 'b.id_modelo', '=', 'm.id_modelo')
+                    ->where('v.id_negocio', $idNegocio)
+                    ->whereBetween('v.created_at', [$desdeTs, $hastaTs])
+                    ->whereNotNull('dv.num_serie')
+                    ->selectRaw('m.id_modelo, m.nombre_modelo,
+                        COUNT(*) as unidades,
+                        COALESCE(SUM(dv.precio_unitario * dv.cantidad),0) as ingresos')
+                    ->groupBy('m.id_modelo', 'm.nombre_modelo')
+                    ->orderByDesc('unidades')
+                    ->limit(8)
+                    ->get()
+                    ->map(fn($r) => [
+                        'id_modelo' => $r->id_modelo,
+                        'nombre'    => $r->nombre_modelo,
+                        'unidades'  => (int)$r->unidades,
+                        'ingresos'  => (float)$r->ingresos,
+                    ]);
+
+                $topIds  = $modelos->take(5)->pluck('id_modelo')->toArray();
+                $detalle = [];
+
+                if (!empty($topIds)) {
+                    $colores = \Illuminate\Support\Facades\DB::table('detalle_venta as dv')
+                        ->join('ventas as v', 'dv.id_venta', '=', 'v.id_venta')
+                        ->join('bicicletas as b', 'dv.num_serie', '=', 'b.num_serie')
+                        ->join('colores as c', 'b.id_color', '=', 'c.id_color')
+                        ->where('v.id_negocio', $idNegocio)
+                        ->whereBetween('v.created_at', [$desdeTs, $hastaTs])
+                        ->whereIn('b.id_modelo', $topIds)
+                        ->selectRaw('b.id_modelo, c.color, COUNT(*) as cnt')
+                        ->groupBy('b.id_modelo', 'c.color')->orderByDesc('cnt')
+                        ->get()->groupBy('id_modelo');
+
+                    $voltajes = \Illuminate\Support\Facades\DB::table('detalle_venta as dv')
+                        ->join('ventas as v', 'dv.id_venta', '=', 'v.id_venta')
+                        ->join('bicicletas as b', 'dv.num_serie', '=', 'b.num_serie')
+                        ->join('voltajes as vt', 'b.id_voltaje', '=', 'vt.id_voltaje')
+                        ->where('v.id_negocio', $idNegocio)
+                        ->whereBetween('v.created_at', [$desdeTs, $hastaTs])
+                        ->whereIn('b.id_modelo', $topIds)
+                        ->selectRaw('b.id_modelo, vt.voltaje, COUNT(*) as cnt')
+                        ->groupBy('b.id_modelo', 'vt.voltaje')->orderByDesc('cnt')
+                        ->get()->groupBy('id_modelo');
+
+                    foreach ($topIds as $id) {
+                        $detalle[$id] = [
+                            'colores'  => collect($colores->get($id, []))
+                                ->map(fn($r) => ['color' => $r->color, 'cnt' => (int)$r->cnt])->values(),
+                            'voltajes' => collect($voltajes->get($id, []))
+                                ->map(fn($r) => ['voltaje' => $r->voltaje, 'cnt' => (int)$r->cnt])->values(),
+                        ];
+                    }
+                }
+
+                return ['modelos' => $modelos->toArray(), 'detalle' => $detalle];
+            },
+            $idNegocio
+        );
+    }
+
+    public static function getVentasTopAccesorios(string $idNegocio, string $desde, string $hasta): array
+    {
+        return self::remember(
+            "analytics:accesorios:{$idNegocio}:{$desde}:{$hasta}",
+            self::CACHE_TTL['stats'],
+            function () use ($idNegocio, $desde, $hasta) {
+                $desdeTs = \Carbon\Carbon::parse($desde)->startOfDay();
+                $hastaTs = \Carbon\Carbon::parse($hasta)->endOfDay();
+
+                return \Illuminate\Support\Facades\DB::table('detalle_venta as dv')
+                    ->join('ventas as v', 'dv.id_venta', '=', 'v.id_venta')
+                    ->join('productos as p', 'dv.id_producto', '=', 'p.id_producto')
+                    ->where('v.id_negocio', $idNegocio)
+                    ->whereBetween('v.created_at', [$desdeTs, $hastaTs])
+                    ->whereNull('dv.num_serie')
+                    ->selectRaw('p.nombre_producto,
+                        SUM(dv.cantidad) as unidades,
+                        COALESCE(SUM(dv.precio_unitario * dv.cantidad),0) as ingresos')
+                    ->groupBy('p.nombre_producto')
+                    ->orderByDesc('unidades')
+                    ->limit(6)
+                    ->get()
+                    ->map(fn($r) => [
+                        'nombre'   => $r->nombre_producto,
+                        'unidades' => (int)$r->unidades,
+                        'ingresos' => (float)$r->ingresos,
+                    ])->toArray();
+            },
+            $idNegocio
+        );
+    }
+
+    public static function getVentasHorasPico(string $idNegocio, string $desde, string $hasta): array
+    {
+        return self::remember(
+            "analytics:horas:{$idNegocio}:{$desde}:{$hasta}",
+            self::CACHE_TTL['stats'],
+            function () use ($idNegocio, $desde, $hasta) {
+                $desdeTs = \Carbon\Carbon::parse($desde)->startOfDay();
+                $hastaTs = \Carbon\Carbon::parse($hasta)->endOfDay();
+
+                return \Illuminate\Support\Facades\DB::table('ventas')
+                    ->where('id_negocio', $idNegocio)
+                    ->whereBetween('created_at', [$desdeTs, $hastaTs])
+                    ->selectRaw('HOUR(created_at) as hora, COUNT(*) as cnt')
+                    ->groupBy('hora')->orderBy('hora')
+                    ->get()
+                    ->map(fn($r) => ['hora' => (int)$r->hora, 'cnt' => (int)$r->cnt])
+                    ->toArray();
+            },
+            $idNegocio
+        );
+    }
+
+    public static function getVentasClientesTipo(string $idNegocio, string $desde, string $hasta): array
+    {
+        return self::remember(
+            "analytics:clientes_tipo:{$idNegocio}:{$desde}:{$hasta}",
+            self::CACHE_TTL['stats'],
+            function () use ($idNegocio, $desde, $hasta) {
+                $desdeTs = \Carbon\Carbon::parse($desde)->startOfDay();
+                $hastaTs = \Carbon\Carbon::parse($hasta)->endOfDay();
+
+                $clientesEnPeriodo = Venta::where('id_negocio', $idNegocio)
+                    ->whereBetween('created_at', [$desdeTs, $hastaTs])
+                    ->distinct('id_cliente')->pluck('id_cliente');
+
+                $nuevos = \Illuminate\Support\Facades\DB::table('ventas')
+                    ->where('id_negocio', $idNegocio)
+                    ->whereIn('id_cliente', $clientesEnPeriodo)
+                    ->select('id_cliente', \Illuminate\Support\Facades\DB::raw('MIN(created_at) as primera_compra'))
+                    ->groupBy('id_cliente')
+                    ->havingRaw('primera_compra BETWEEN ? AND ?', [$desdeTs, $hastaTs])
+                    ->count();
+
+                return [
+                    'nuevos'      => $nuevos,
+                    'recurrentes' => max(0, $clientesEnPeriodo->count() - $nuevos),
+                ];
+            },
+            $idNegocio
+        );
+    }
+
+    // ─── INVALIDACIONES GRANULARES ────────────────────────────────────────────────
+
+    // Invalida SOLO las secciones que cambian al registrar una venta.
+    // No toca bicicletas, pedidos, piezas ni catálogo.
+    public static function invalidateVentasAnalytics(
+        string $idNegocio,
+        string $idUsuario,
+        string $desde,  // fecha de la venta = Carbon::today()->toDateString()
+        string $hasta
+    ): void {
+        $version = self::getVersion($idNegocio);
+
+        $secciones = [
+            "analytics:kpi:{$idNegocio}:{$desde}:{$hasta}",
+            "analytics:grafica:{$idNegocio}:{$desde}:{$hasta}",
+            "analytics:vendedores:{$idNegocio}:{$desde}:{$hasta}",
+            "analytics:metodos:{$idNegocio}:{$desde}:{$hasta}",
+            "analytics:top_modelos:{$idNegocio}:{$desde}:{$hasta}",
+            "analytics:accesorios:{$idNegocio}:{$desde}:{$hasta}",
+            "analytics:horas:{$idNegocio}:{$desde}:{$hasta}",
+            "analytics:clientes_tipo:{$idNegocio}:{$desde}:{$hasta}",
+        ];
+
+        foreach ($secciones as $key) {
+            Cache::forget(self::key($key) . ":v{$version}");
+        }
     }
 }
