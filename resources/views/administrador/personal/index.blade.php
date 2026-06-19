@@ -1,363 +1,9 @@
 <x-app-layout>
 
-<style>
-/* ── Variables modo claro ─────────────────────── */
-:root {
-    --card-bg:            #ffffff;
-    --card-border:        rgba(0,0,0,.08);
-    --card-shadow:        0 1px 2px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.06);
-    --card-shadow-hover:  0 4px 10px rgba(0,0,0,.09), 0 16px 40px rgba(0,0,0,.09);
-    --header-bg:          #fafafa;
-    --divider:            rgba(0,0,0,.055);
-    --footer-bg:          #fafafa;
-    --row-hover:          rgba(0,0,0,.024);
-    --num-txt:            #c8c8c8;
-    --name-txt:           #111111;
-    --name-off-txt:       #b0b0b0;
-    --sub-txt:            #999999;
-    --branch-title:       #111111;
-    --branch-sub:         #999999;
-    --dot-color:          #22c55e;
-    --badge-on-bg:        #dcfce7;
-    --badge-on-txt:       #166534;
-    --badge-off-bg:       #f3f4f6;
-    --badge-off-txt:      #9ca3af;
-    --footer-count-txt:   #aaaaaa;
-    --add-btn-txt:        #aaaaaa;
-    --add-btn-hover:      #111111;
-    --ic-color:           #d4d4d4;
-    --ic-hover-edit-txt:  #3B4FC8;
-    --ic-hover-edit-bg:   rgba(59,79,200,.07);
-    --ic-hover-warn-txt:  #d97706;
-    --ic-hover-warn-bg:   rgba(217,119,6,.07);
-    --ic-hover-ok-txt:    #059669;
-    --ic-hover-ok-bg:     rgba(5,150,105,.07);
-    --input-bg:           #fafafa;
-    --input-border:       rgba(0,0,0,.13);
-    --input-focus-border: #3B4FC8;
-    --input-focus-ring:   rgba(59,79,200,.18);
-    --check-on-bg:        #111;
-    --check-on-border:    #111;
-    --check-svg:          #fff;
-    --tag-on-border:      rgba(0,0,0,.55);
-    --tag-on-bg:          rgba(0,0,0,.025);
-    --modal-bg:           #ffffff;
-    --modal-border:       rgba(0,0,0,.09);
-    --notif-ok-bg:        rgba(220,252,231,.92);
-    --notif-ok-border:    rgba(134,239,172,.6);
-    --notif-ok-title:     #166534;
-    --notif-ok-sub:       #15803d;
-    --notif-warn-bg:      rgba(254,249,195,.92);
-    --notif-warn-border:  rgba(253,224,71,.55);
-    --notif-warn-title:   #854d0e;
-    --notif-warn-sub:     #a16207;
-    --notif-err-bg:       rgba(254,226,226,.92);
-    --notif-err-border:   rgba(252,165,165,.6);
-    --notif-err-title:    #991b1b;
-    --notif-err-sub:      #b91c1c;
-    --acento-borde:       #111111;
-}
-
-/* ── Variables modo oscuro ────────────────────── */
-.dark {
-    --card-bg:            #18181b;
-    --card-border:        rgba(255,255,255,.08);
-    --card-shadow:        0 1px 2px rgba(0,0,0,.25), 0 4px 16px rgba(0,0,0,.22);
-    --card-shadow-hover:  0 4px 10px rgba(0,0,0,.35), 0 16px 40px rgba(0,0,0,.32);
-    --header-bg:          rgba(255,255,255,.02);
-    --divider:            rgba(255,255,255,.07);
-    --footer-bg:          rgba(255,255,255,.02);
-    --row-hover:          rgba(255,255,255,.032);
-    --num-txt:            #3a3a3c;
-    --name-txt:           #f0f0f0;
-    --name-off-txt:       #444444;
-    --sub-txt:            #555555;
-    --branch-title:       #f0f0f0;
-    --branch-sub:         #555555;
-    --dot-color:          #34d399;
-    --badge-on-bg:        rgba(22,101,52,.35);
-    --badge-on-txt:       #86efac;
-    --badge-off-bg:       rgba(255,255,255,.07);
-    --badge-off-txt:      #555555;
-    --footer-count-txt:   #444444;
-    --add-btn-txt:        #3a3a3c;
-    --add-btn-hover:      #e0e0e0;
-    --ic-color:           #2d2d2f;
-    --ic-hover-edit-txt:  #7B8FF5;
-    --ic-hover-edit-bg:   rgba(123,143,245,.1);
-    --ic-hover-warn-txt:  #fbbf24;
-    --ic-hover-warn-bg:   rgba(251,191,36,.09);
-    --ic-hover-ok-txt:    #34d399;
-    --ic-hover-ok-bg:     rgba(52,211,153,.09);
-    --input-bg:           #111113;
-    --input-border:       rgba(255,255,255,.11);
-    --input-focus-border: #7B8FF5;
-    --input-focus-ring:   rgba(123,143,245,.2);
-    --check-on-bg:        #fff;
-    --check-on-border:    #fff;
-    --check-svg:          #111;
-    --tag-on-border:      rgba(255,255,255,.45);
-    --tag-on-bg:          rgba(255,255,255,.04);
-    --modal-bg:           #18181b;
-    --modal-border:       rgba(255,255,255,.09);
-    --notif-ok-bg:        rgba(6,78,59,.7);
-    --notif-ok-border:    rgba(52,211,153,.22);
-    --notif-ok-title:     #6ee7b7;
-    --notif-ok-sub:       #34d399;
-    --notif-warn-bg:      rgba(78,61,6,.7);
-    --notif-warn-border:  rgba(251,191,36,.22);
-    --notif-warn-title:   #fde68a;
-    --notif-warn-sub:     #fbbf24;
-    --notif-err-bg:       rgba(78,6,6,.7);
-    --notif-err-border:   rgba(248,113,113,.22);
-    --notif-err-title:    #fca5a5;
-    --notif-err-sub:      #f87171;
-    --acento-borde:       #ffffff;
-}
-
-/* ── Tarjeta ──────────────────────────────────── */
-.pm-card {
-    background: var(--card-bg);
-    border: 1px solid var(--card-border);
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: var(--card-shadow);
-    transition: box-shadow .18s ease, transform .18s ease;
-    display: flex;
-    flex-direction: column;
-}
-.pm-card:hover {
-    box-shadow: var(--card-shadow-hover);
-    transform: translateY(-2px);
-}
-
-/* ── Cabecera de sucursal ─────────────────────── */
-.pm-card-header {
-    padding: 14px 18px 13px;
-    border-bottom: 1px solid var(--divider);
-    background: var(--header-bg);
-    border-left: 3px solid var(--acento-borde);
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 8px;
-}
-.pm-branch-title {
-    font-size: 13.5px;
-    font-weight: 600;
-    color: var(--branch-title);
-    line-height: 1.2;
-}
-.pm-branch-sub {
-    font-size: 11.5px;
-    color: var(--branch-sub);
-    margin-top: 3px;
-}
-.pm-dot-wrap {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    flex-shrink: 0;
-    margin-top: 1px;
-}
-.pm-dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--dot-color);
-    flex-shrink: 0;
-}
-.pm-dot-label {
-    font-size: 10.5px;
-    font-weight: 500;
-    color: var(--dot-color);
-}
-
-/* ── Fila de vendedor ─────────────────────────── */
-.pm-row {
-    display: grid;
-    grid-template-columns: 28px 1fr auto auto;
-    align-items: center;
-    gap: 0;
-    padding: 0 6px 0 0;
-    border-bottom: 1px solid var(--divider);
-    transition: background .1s;
-    min-height: 44px;
-}
-.pm-row:last-child { border-bottom: none; }
-.pm-row:hover { background: var(--row-hover); }
-
-.pm-num {
-    font-size: 11px;
-    font-variant-numeric: tabular-nums;
-    color: var(--num-txt);
-    text-align: center;
-    padding-left: 4px;
-    user-select: none;
-}
-.pm-info {
-    padding: 10px 10px 10px 8px;
-    min-width: 0;
-}
-.pm-name {
-    font-size: 13.5px;
-    font-weight: 500;
-    color: var(--name-txt);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.pm-name.off {
-    color: var(--name-off-txt);
-    text-decoration: line-through;
-}
-.pm-name-sub {
-    font-size: 11px;
-    color: var(--sub-txt);
-    margin-top: 1px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* ── Badge de estado ──────────────────────────── */
-.pm-badge {
-    font-size: 10.5px;
-    font-weight: 600;
-    padding: 3px 8px;
-    border-radius: 99px;
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-.pm-badge.on  { background: var(--badge-on-bg);  color: var(--badge-on-txt);  }
-.pm-badge.off { background: var(--badge-off-bg); color: var(--badge-off-txt); }
-
-/* ── Acciones inline ──────────────────────────── */
-.pm-actions {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    padding-left: 8px;
-    opacity: 0;
-    transition: opacity .1s;
-    flex-shrink: 0;
-}
-.pm-row:hover .pm-actions,
-.pm-row:focus-within .pm-actions { opacity: 1; }
-
-.pm-ic {
-    width: 26px; height: 26px;
-    border-radius: 7px;
-    border: none;
-    background: transparent;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
-    color: var(--ic-color);
-    transition: color .1s, background .1s;
-    flex-shrink: 0;
-}
-.pm-ic.edit:hover { color: var(--ic-hover-edit-txt); background: var(--ic-hover-edit-bg); }
-.pm-ic.warn:hover { color: var(--ic-hover-warn-txt); background: var(--ic-hover-warn-bg); }
-.pm-ic.ok:hover   { color: var(--ic-hover-ok-txt);   background: var(--ic-hover-ok-bg);  }
-
-/* ── Footer ───────────────────────────────────── */
-.pm-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 18px;
-    border-top: 1px solid var(--divider);
-    background: var(--footer-bg);
-    margin-top: auto;
-}
-.pm-footer-count {
-    font-size: 11.5px;
-    color: var(--footer-count-txt);
-}
-.pm-add-btn {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 11.5px;
-    font-weight: 500;
-    color: var(--add-btn-txt);
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    transition: color .12s;
-}
-.pm-add-btn:hover { color: var(--add-btn-hover); }
-
-/* ── Empty state por sucursal ─────────────────── */
-.pm-empty-row {
-    padding: 24px 18px;
-    text-align: center;
-    font-size: 12px;
-    color: var(--sub-txt);
-}
-
-/* ── Botón principal (header) ─────────────────── */
-.pm-btn-hero {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    padding: 9px 16px;
-    border-radius: 11px;
-    font-size: 13.5px;
-    font-weight: 600;
-    background: #111;
-    color: #fff;
-    border: none;
-    cursor: pointer;
-    box-shadow: 0 1px 4px rgba(0,0,0,.18), 0 3px 10px rgba(0,0,0,.14);
-    transition: opacity .12s, transform .1s;
-}
-.dark .pm-btn-hero { background: #fff; color: #111; }
-.pm-btn-hero:hover  { opacity: .87; }
-.pm-btn-hero:active { transform: scale(.97); }
-
-/* ── Skeleton ─────────────────────────────────── */
-@keyframes pm-shimmer {
-    0%   { background-position: -500px 0; }
-    100% { background-position:  500px 0; }
-}
-.pm-skel {
-    border-radius: 5px;
-    background: linear-gradient(90deg,
-        rgba(0,0,0,.055) 25%,
-        rgba(0,0,0,.09)  50%,
-        rgba(0,0,0,.055) 75%);
-    background-size: 500px 100%;
-    animation: pm-shimmer 1.5s ease infinite;
-}
-.dark .pm-skel {
-    background: linear-gradient(90deg,
-        rgba(255,255,255,.04) 25%,
-        rgba(255,255,255,.08) 50%,
-        rgba(255,255,255,.04) 75%);
-    background-size: 500px 100%;
-}
-
-/* ── Notificación ─────────────────────────────── */
-.pm-notif {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 11px 15px;
-    border-radius: 13px;
-    border: 1px solid;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-}
-.pm-notif.ok      { background: var(--notif-ok-bg);   border-color: var(--notif-ok-border);   }
-.pm-notif.warning { background: var(--notif-warn-bg);  border-color: var(--notif-warn-border);  }
-.pm-notif.error   { background: var(--notif-err-bg);   border-color: var(--notif-err-border);   }
-</style>
-
 <div
     x-data="personalManager()"
     x-init="init()"
-    class="space-y-6  mx-auto"
+    class="space-y-6 mx-auto"
 >
 
     {{-- ══ HEADER ══ --}}
@@ -366,7 +12,7 @@
             <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Personal</h2>
             <p class="text-xs text-gray-400 mt-0.5">Gestiona los vendedores de tus sucursales.</p>
         </div>
-        <button @click="abrirCrear()" class="pm-btn-hero">
+        <button @click="abrirCrear()" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-black dark:bg-white text-white dark:text-black shadow-md hover:opacity-80 active:scale-95 transition">
             <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.8" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
             </svg>
@@ -374,7 +20,7 @@
         </button>
     </div>
 
-    {{-- ══ NOTIFICACIÓN ══ --}}
+    {{-- ══ NOTIFICACIÓN (TOAST) ══ --}}
     <div
         x-show="notif.msg"
         x-cloak
@@ -385,30 +31,43 @@
         x-transition:leave-end="opacity-0 -translate-y-2 scale-95"
         class="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none"
         style="min-width:300px;max-width:420px;">
-        <div class="pm-notif" :class="notif.tipo">
+        <div class="flex items-start gap-2.5 px-3.5 py-2.5 rounded-xl border backdrop-blur-sm"
+             :class="{
+                'bg-green-50/90 dark:bg-green-900/30 border-green-200 dark:border-green-700': notif.tipo === 'ok',
+                'bg-yellow-50/90 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-700': notif.tipo === 'warning',
+                'bg-red-50/90 dark:bg-red-900/30 border-red-200 dark:border-red-700': notif.tipo === 'error'
+             }">
             <div class="shrink-0 mt-0.5">
                 <template x-if="notif.tipo === 'ok'">
-                    <svg width="15" height="15" fill="currentColor" viewBox="0 0 20 20" :style="'color:var(--notif-ok-title)'">
+                    <svg class="w-3.5 h-3.5 text-green-700 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                     </svg>
                 </template>
                 <template x-if="notif.tipo === 'warning'">
-                    <svg width="15" height="15" fill="currentColor" viewBox="0 0 20 20" :style="'color:var(--notif-warn-title)'">
+                    <svg class="w-3.5 h-3.5 text-yellow-700 dark:text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
                     </svg>
                 </template>
                 <template x-if="notif.tipo === 'error'">
-                    <svg width="15" height="15" fill="currentColor" viewBox="0 0 20 20" :style="'color:var(--notif-err-title)'">
+                    <svg class="w-3.5 h-3.5 text-red-700 dark:text-red-400" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
                     </svg>
                 </template>
             </div>
             <div class="flex-1 min-w-0">
                 <p class="text-[13px] font-semibold leading-snug"
-                   :style="notif.tipo === 'ok' ? 'color:var(--notif-ok-title)' : notif.tipo === 'warning' ? 'color:var(--notif-warn-title)' : 'color:var(--notif-err-title)'"
+                   :class="{
+                       'text-green-700 dark:text-green-300': notif.tipo === 'ok',
+                       'text-yellow-700 dark:text-yellow-300': notif.tipo === 'warning',
+                       'text-red-700 dark:text-red-300': notif.tipo === 'error'
+                   }"
                    x-text="notif.msg"></p>
                 <p x-show="notif.sub" class="text-[12px] mt-0.5 opacity-80"
-                   :style="notif.tipo === 'ok' ? 'color:var(--notif-ok-sub)' : notif.tipo === 'warning' ? 'color:var(--notif-warn-sub)' : 'color:var(--notif-err-sub)'"
+                   :class="{
+                       'text-green-600 dark:text-green-400': notif.tipo === 'ok',
+                       'text-yellow-600 dark:text-yellow-400': notif.tipo === 'warning',
+                       'text-red-600 dark:text-red-400': notif.tipo === 'error'
+                   }"
                    x-text="notif.sub"></p>
             </div>
         </div>
@@ -418,24 +77,24 @@
     <div x-show="loading" x-cloak>
         <div class="{{ $sucursales->count() === 1 ? 'max-w-sm' : ($sucursales->count() === 2 ? 'grid grid-cols-1 sm:grid-cols-2 gap-5' : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5') }}">
             @foreach($sucursales as $s)
-            <div class="pm-card">
-                <div class="pm-card-header" style="border-left-color:var(--card-border);">
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm flex flex-col">
+                <div class="p-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex items-start justify-between gap-2 border-l-2 border-gray-200 dark:border-gray-600">
                     <div class="space-y-2">
-                        <div class="pm-skel h-3.5 w-28"></div>
-                        <div class="pm-skel h-2.5 w-20"></div>
+                        <div class="animate-pulse bg-gray-200 dark:bg-gray-700 h-3.5 w-28 rounded"></div>
+                        <div class="animate-pulse bg-gray-200 dark:bg-gray-700 h-2.5 w-20 rounded"></div>
                     </div>
                 </div>
                 @for($i = 0; $i < 3; $i++)
-                <div class="pm-row" style="padding:11px 14px;">
-                    <div class="pm-skel h-2.5 w-4 rounded"></div>
-                    <div class="pm-skel h-3 rounded w-2/3 mx-2"></div>
-                    <div class="pm-skel h-4 w-14 rounded-full"></div>
+                <div class="grid grid-cols-[28px_1fr_auto_auto] items-center border-b border-gray-100 dark:border-gray-700 min-h-[44px] px-1.5">
+                    <div class="animate-pulse bg-gray-200 dark:bg-gray-700 h-2.5 w-4 rounded"></div>
+                    <div class="animate-pulse bg-gray-200 dark:bg-gray-700 h-3 rounded w-2/3 mx-2"></div>
+                    <div class="animate-pulse bg-gray-200 dark:bg-gray-700 h-4 w-14 rounded-full"></div>
                     <div></div>
                 </div>
                 @endfor
-                <div class="pm-footer">
-                    <div class="pm-skel h-2.5 w-16 rounded"></div>
-                    <div class="pm-skel h-2.5 w-14 rounded"></div>
+                <div class="flex items-center justify-between p-2 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                    <div class="animate-pulse bg-gray-200 dark:bg-gray-700 h-2.5 w-16 rounded"></div>
+                    <div class="animate-pulse bg-gray-200 dark:bg-gray-700 h-2.5 w-14 rounded"></div>
                 </div>
             </div>
             @endforeach
@@ -449,15 +108,14 @@
 
             {{-- Empty state global --}}
             <template x-if="personal.length === 0">
-                <div class="pm-card px-6 py-16 text-center">
-                    <div class="w-11 h-11 rounded-2xl flex items-center justify-center mx-auto mb-3"
-                         style="background:var(--header-bg);border:1px solid var(--divider);">
-                        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.4" viewBox="0 0 24 24" style="color:var(--sub-txt);">
+                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm px-6 py-16 text-center">
+                    <div class="w-11 h-11 rounded-2xl flex items-center justify-center mx-auto mb-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+                        <svg class="w-5 h-5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" stroke-width="1.4" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
                         </svg>
                     </div>
                     <p class="text-[14px] font-semibold text-gray-600 dark:text-gray-400">Sin vendedores aún</p>
-                    <p class="text-[12px] mt-1" style="color:var(--sub-txt);">Crea el primer vendedor con el botón de arriba.</p>
+                    <p class="text-[12px] mt-1 text-gray-400 dark:text-gray-500">Crea el primer vendedor con el botón de arriba.</p>
                 </div>
             </template>
 
@@ -465,21 +123,21 @@
             <template x-if="personal.length > 0">
                 <div class="{{ $sucursales->count() === 1 ? 'max-w-sm' : ($sucursales->count() === 2 ? 'grid grid-cols-1 sm:grid-cols-2 gap-5' : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5') }}">
                     @foreach($sucursales as $s)
-                    <div class="pm-card">
+                    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm hover:shadow-md transition-transform duration-200 hover:-translate-y-1 flex flex-col">
 
                         {{-- Cabecera --}}
-                        <div class="pm-card-header">
+                        <div class="p-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex items-start justify-between gap-2 border-l-2 border-black dark:border-white">
                             <div class="min-w-0 flex-1">
-                                <div class="pm-branch-title truncate">{{ $s->nombre_usuario }}</div>
-                                <div class="pm-branch-sub"
+                                <div class="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{{ $s->nombre_usuario }}</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400"
                                      x-text="
                                          personal.filter(p => p.sucursales.some(su => su.id_usuario === '{{ $s->id_usuario }}')).length + ' vendedores · ' +
                                          personal.filter(p => p.activo && p.sucursales.some(su => su.id_usuario === '{{ $s->id_usuario }}')).length + ' activos'
                                      "></div>
                             </div>
-                            <div class="pm-dot-wrap">
-                                <div class="pm-dot"></div>
-                                <span class="pm-dot-label">Activa</span>
+                            <div class="flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-green-500 dark:bg-green-400"></span>
+                                <span class="text-[10px] font-medium text-green-500 dark:text-green-400">Activa</span>
                             </div>
                         </div>
 
@@ -487,39 +145,43 @@
                         <div class="flex-1">
 
                             <template x-if="personal.filter(p => p.sucursales.some(su => su.id_usuario === '{{ $s->id_usuario }}')).length === 0">
-                                <div class="pm-empty-row">Sin vendedores asignados</div>
+                                <div class="px-4 py-6 text-center text-sm text-gray-400 dark:text-gray-500">Sin vendedores asignados</div>
                             </template>
 
                             <template x-for="(p, idx) in personal.filter(p => p.sucursales.some(su => su.id_usuario === '{{ $s->id_usuario }}'))"
                                       :key="p.id_personal + '-{{ $s->id_usuario }}'">
-                                <div class="pm-row">
+                                <div class="group grid grid-cols-[28px_1fr_auto_auto] items-center border-b border-gray-100 dark:border-gray-700 min-h-[44px] hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors px-1.5">
 
                                     {{-- Número --}}
-                                    <span class="pm-num" x-text="idx + 1"></span>
+                                    <span class="text-xs text-gray-300 dark:text-gray-600 text-center pl-1" x-text="idx + 1"></span>
 
                                     {{-- Info --}}
-                                    <div class="pm-info min-w-0">
-                                        <div class="pm-name" :class="!p.activo ? 'off' : ''" x-text="p.nombre"></div>
+                                    <div class="p-2.5 pl-2 min-w-0">
+                                        <div class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate"
+                                             :class="{'line-through text-gray-400 dark:text-gray-500': !p.activo}"
+                                             x-text="p.nombre"></div>
                                         <template x-if="p.sucursales.length > 1">
-                                            <div class="pm-name-sub"
+                                            <div class="text-xs text-gray-400 dark:text-gray-500 truncate"
                                                  x-text="'+ ' + p.sucursales.filter(su => su.id_usuario !== '{{ $s->id_usuario }}').map(su => su.nombre_usuario).join(', ')">
                                             </div>
                                         </template>
                                     </div>
 
                                     {{-- Badge estado --}}
-                                    <span class="pm-badge" :class="p.activo ? 'on' : 'off'"
+                                    <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap"
+                                          :class="p.activo ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-gray-100 text-gray-400 dark:bg-gray-700/30 dark:text-gray-500'"
                                           x-text="p.activo ? 'Activo' : 'Inactivo'"></span>
 
                                     {{-- Acciones --}}
-                                    <div class="pm-actions">
-                                        <button @click="abrirEditar(p)" class="pm-ic edit" title="Editar">
+                                    <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                                        <button @click="abrirEditar(p)" class="w-6 h-6 rounded-md flex items-center justify-center text-gray-300 dark:text-gray-600 hover:text-blue-600 hover:bg-blue-50 dark:hover:text-blue-400 dark:hover:bg-blue-900/20 transition" title="Editar">
                                             <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                             </svg>
                                         </button>
                                         <button @click="pedirConfirmToggle(p)"
-                                                class="pm-ic" :class="p.activo ? 'warn' : 'ok'"
+                                                class="w-6 h-6 rounded-md flex items-center justify-center text-gray-300 dark:text-gray-600 transition"
+                                                :class="p.activo ? 'hover:text-yellow-600 hover:bg-yellow-50 dark:hover:text-yellow-400 dark:hover:bg-yellow-900/20' : 'hover:text-emerald-600 hover:bg-emerald-50 dark:hover:text-emerald-400 dark:hover:bg-emerald-900/20'"
                                                 :title="p.activo ? 'Desactivar' : 'Activar'">
                                             <template x-if="p.activo">
                                                 <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -539,11 +201,11 @@
                         </div>
 
                         {{-- Footer --}}
-                        <div class="pm-footer">
-                            <span class="pm-footer-count"
+                        <div class="flex items-center justify-between p-2 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 mt-auto">
+                            <span class="text-xs text-gray-400 dark:text-gray-500"
                                   x-text="personal.filter(p => p.activo && p.sucursales.some(su => su.id_usuario === '{{ $s->id_usuario }}')).length + ' / ' + personal.filter(p => p.sucursales.some(su => su.id_usuario === '{{ $s->id_usuario }}')).length + ' activos'">
                             </span>
-                            <button @click="abrirCrearEnSucursal('{{ $s->id_usuario }}')" class="pm-add-btn">
+                            <button @click="abrirCrearEnSucursal('{{ $s->id_usuario }}')" class="flex items-center gap-1 text-xs font-medium text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 transition">
                                 <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
                                 </svg>
@@ -556,8 +218,8 @@
             </template>
 
         @else
-            <div class="pm-card px-6 py-12 text-center">
-                <p class="text-[13.5px]" style="color:var(--sub-txt);">No tienes sucursales configuradas aún.</p>
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm px-6 py-12 text-center">
+                <p class="text-[13.5px] text-gray-400 dark:text-gray-500">No tienes sucursales configuradas aún.</p>
             </div>
         @endif
 
@@ -664,7 +326,7 @@
     </div>
 
     {{-- ══════════════════════════════════════════
-         MODAL: CONFIRMAR ACTIVAR / DESACTIVAR (estilo productos)
+         MODAL: CONFIRMAR ACTIVAR / DESACTIVAR
     ══════════════════════════════════════════ --}}
     <div x-show="confirm.open" x-cloak
          x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0"

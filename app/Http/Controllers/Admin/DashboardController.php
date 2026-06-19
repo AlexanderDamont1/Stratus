@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\EstadisticaDiaria;
 use Illuminate\Http\Request;
 use App\Services\CatalogService;
 use App\Models\Enlace;
-use App\Models\Venta;
-use App\Models\Pedido;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -27,7 +26,7 @@ class DashboardController extends Controller
             ]);
 
         $piezasBajas = CatalogService::getPiezasPaginadas(
-            idNegocio:     $idNegocio,
+            idNegocio: $idNegocio,
             soloStockBajo: true
         )->getCollection()->map(fn($p) => [
             'id_pieza' => $p->id_pieza,
@@ -61,340 +60,540 @@ class DashboardController extends Controller
             ->first();
 
         return view('administrador.dashboard', compact(
-            'biciStats', 'stockVendedores', 'piezasBajas',
-            'personal', 'catalogo', 'enlace',
+            'biciStats',
+            'stockVendedores',
+            'piezasBajas',
+            'personal',
+            'catalogo',
+            'enlace',
         ));
     }
 
-    // ─── ENDPOINT PRINCIPAL ───────────────────────────────────────────────────
-    // GET /admin/dashboard/stats?periodo=7d
-    // GET /admin/dashboard/stats?desde=YYYY-MM-DD&hasta=YYYY-MM-DD
+    // ─── STATS (AJAX) — lee de estadisticas_diarias ───────────────────────────
     public function stats(Request $request)
     {
         $user      = auth()->user();
         $idNegocio = $user->id_negocio;
 
         [$desde, $hasta] = $this->resolvePeriod($request);
-        $desdeTs = $desde->copy()->startOfDay();
-        $hastaTs = $hasta->copy()->endOfDay();
+        $diasPeriodo     = max(1, $desde->diffInDays($hasta) + 1);
 
-        // ── KPIs base ────────────────────────────────────────────────────────
-        $ventasBase = Venta::where('id_negocio', $idNegocio)
-            ->whereBetween('created_at', [$desdeTs, $hastaTs]);
+        // ── Leer filas del periodo desde la tabla pre-calculada ───────────────
+        $cached = CatalogService::getDashboardStats(
+            $idNegocio,
+            $desde->toDateString(),
+            $hasta->toDateString(),
+        );
 
-        $totalVentas    = (clone $ventasBase)->count();
-        $totalIngresos  = (float)(clone $ventasBase)->sum('total');
-        $ticketProm     = $totalVentas > 0 ? round($totalIngresos / $totalVentas) : 0;
-        $clientesUnicos = (clone $ventasBase)->distinct('id_cliente')->count('id_cliente');
-        $descuentos     = (float)(clone $ventasBase)->sum('descuento_total');
+        $filas = $cached
+        ? collect($cached['filas'])->map(fn($f) => (object) $f)
+        : collect();
 
-        // ── Gráfica por día ───────────────────────────────────────────────────
-        $diasPeriodo = max(1, $desde->diffInDays($hasta) + 1);
-        $fmt         = $diasPeriodo === 1 ? 'H:00' : ($diasPeriodo <= 31 ? 'd/m' : 'M y');
-        $graficaDias = collect(range(0, $diasPeriodo - 1))->map(function ($offset) use ($idNegocio, $desde, $fmt) {
-            $dia = $desde->copy()->addDays($offset);
-            $row = DB::table('ventas')
-                ->where('id_negocio', $idNegocio)
-                ->whereDate('created_at', $dia)
-                ->selectRaw('COUNT(*) as ventas, COALESCE(SUM(total),0) as ingresos')
-                ->first();
-            return [
-                'label'    => $dia->translatedFormat($fmt),
-                'ventas'   => (int)$row->ventas,
-                'ingresos' => (float)$row->ingresos,
-            ];
-        });
 
-        // ── Pedidos ───────────────────────────────────────────────────────────
-        $pedidoStats    = CatalogService::getPedidoStats($idNegocio);
-        $pedidosActivos = $pedidoStats['pendientes'] + $pedidoStats['en_proceso'];
-        $conversion     = ($totalVentas + $pedidosActivos) > 0
-            ? round($totalVentas / ($totalVentas + $pedidosActivos), 2) : 0;
+        // ── KPIs agregados (simple suma de filas) ─────────────────────────────
+        $ventasCount     = $filas->sum('ventas_count');
+        $ingresosTotal   = (float) $filas->sum('ingresos_total');
+        $descuentosTotal = (float) $filas->sum('descuentos_total');
+        $ticketPromedio  = $ventasCount > 0 ? round($ingresosTotal / $ventasCount, 2) : 0;
+        $clientesNuevos  = $filas->sum('clientes_nuevos');
+        $clientesRec     = $filas->sum('clientes_rec');
+        $cuponesUsados   = $filas->sum('cupones_usados');
+        $cuponesDescuento= (float) $filas->sum('cupones_descuento');
 
+        // ── Tops del periodo (el que más se repite en los días) ───────────────
+        $modeloTop = $filas
+            ->whereNotNull('modelo_top_nombre')
+            ->groupBy('modelo_top_nombre')
+            ->map(fn($g) => ['nombre' => $g->first()->modelo_top_nombre, 'unidades' => $g->sum('modelo_top_unidades')])
+            ->sortByDesc('unidades')
+            ->first();
+
+        $configTop = $filas
+            ->whereNotNull('config_top')
+            ->groupBy('config_top')
+            ->map(fn($g) => ['config' => $g->first()->config_top, 'unidades' => $g->sum('config_top_unidades')])
+            ->sortByDesc('unidades')
+            ->first();
+
+        $accesorioTop = $filas
+            ->whereNotNull('accesorio_top_nombre')
+            ->groupBy('accesorio_top_nombre')
+            ->map(fn($g) => ['nombre' => $g->first()->accesorio_top_nombre, 'uds' => $g->sum('accesorio_top_uds')])
+            ->sortByDesc('uds')
+            ->first();
+
+        $comboTop = $filas
+            ->whereNotNull('combo_top')
+            ->groupBy('combo_top')
+            ->map(fn($g) => ['combo' => $g->first()->combo_top, 'uds' => $g->sum('combo_top_uds')])
+            ->sortByDesc('uds')
+            ->first();
+
+        $cuponTop = $filas
+            ->whereNotNull('cupon_top_codigo')
+            ->groupBy('cupon_top_codigo')
+            ->map(fn($g) => ['codigo' => $g->first()->cupon_top_codigo, 'usos' => $g->sum('cupon_top_usos')])
+            ->sortByDesc('usos')
+            ->first();
+
+        // ── Métodos de pago agregados ─────────────────────────────────────────
+        $metodosPago = $filas
+            ->flatMap(fn($f) => $f->metodos_pago ?? [])
+            ->groupBy('metodo')
+            ->map(fn($g, $metodo) => [
+                'metodo' => $metodo,
+                'usos'   => $g->sum('usos'),
+                'monto'  => (float) $g->sum('monto'),
+            ])
+            ->sortByDesc('monto')
+            ->values();
+
+        // ── Horas pico agregadas ──────────────────────────────────────────────
+        $horasPico = $filas
+            ->flatMap(fn($f) => $f->horas_pico ?? [])
+            ->groupBy('hora')
+            ->map(fn($g, $hora) => ['hora' => (int)$hora, 'cnt' => $g->sum('cnt')])
+            ->sortBy('hora')
+            ->values();
+
+        // ── Sucursales agregadas ──────────────────────────────────────────────
+        $sucursalesAgregadas = $filas
+            ->flatMap(fn($f) => $f->sucursal_data ?? [])
+            ->groupBy('id_usuario')
+            ->map(function ($g, $idUsuario) {
+                $ventasSuc   = $g->sum('ventas_count');
+                $ingresosSuc = (float) $g->sum('ingresos_total');
+                return [
+                    'id_usuario'          => $idUsuario,
+                    'nombre'              => $g->first()['nombre'],
+                    'ventas_count'        => $ventasSuc,
+                    'ingresos_total'      => $ingresosSuc,
+                    'ticket_promedio'     => $ventasSuc > 0 ? round($ingresosSuc / $ventasSuc, 2) : 0,
+                    'unidades_bicis'      => $g->sum('unidades_bicis'),
+                    'unidades_accesorios' => $g->sum('unidades_accesorios'),
+                    'descuentos_total'    => (float) $g->sum('descuentos_total'),
+                    'aporte_pct'          => 0, // se recalcula abajo
+                ];
+            })
+            ->values();
+
+        // Recalcular aporte_pct con totales reales del periodo
+        $sucursalesAgregadas = $sucursalesAgregadas->map(function ($s) use ($ventasCount) {
+            $s['aporte_pct'] = $ventasCount > 0
+                ? round($s['ventas_count'] / $ventasCount * 100, 1)
+                : 0;
+            return $s;
+        })->sortByDesc('ingresos_total')->values();
+
+        // ── Gráfica: granularidad hora (hoy) o día (resto) ───────────────────
+        if ($diasPeriodo === 1) {
+            $fechas = collect(range(0, 23))
+                ->map(fn($h) => str_pad($h, 2, '0', STR_PAD_LEFT) . ':00')
+                ->toArray();
+
+            // Para hoy: query en vivo por hora (son muy pocas filas)
+            $graficaDias = collect(range(0, 23))->map(function ($hora) use ($idNegocio, $desde) {
+                $row = DB::table('ventas')
+                    ->where('id_negocio', $idNegocio)
+                    ->whereDate('created_at', $desde)
+                    ->whereRaw('HOUR(created_at) = ?', [$hora])
+                    ->selectRaw('COUNT(*) as ventas, COALESCE(SUM(total),0) as ingresos')
+                    ->first();
+                return [
+                    'label'    => str_pad($hora, 2, '0', STR_PAD_LEFT) . ':00',
+                    'ventas'   => (int)   $row->ventas,
+                    'ingresos' => (float) $row->ingresos,
+                ];
+            });
+
+            $ayer = $desde->copy()->subDay();
+            $graficaAnterior = collect(range(0, 23))->map(function ($hora) use ($idNegocio, $ayer) {
+                $row = DB::table('ventas')
+                    ->where('id_negocio', $idNegocio)
+                    ->whereDate('created_at', $ayer)
+                    ->whereRaw('HOUR(created_at) = ?', [$hora])
+                    ->selectRaw('COUNT(*) as ventas, COALESCE(SUM(total),0) as ingresos')
+                    ->first();
+                return [
+                    'ventas'   => (int)   $row->ventas,
+                    'ingresos' => (float) $row->ingresos,
+                ];
+            });
+
+            // Sucursales por hora
+            $graficaSucursales = $this->sucursalesPorHora($idNegocio, $desde, $fechas);
+            $ventasPersonal    = $this->personalPorHora($idNegocio, $desde, $fechas);
+
+        } else {
+            // Gráfica desde estadisticas_diarias — sin queries a ventas
+            $fechas = collect(range(0, $diasPeriodo - 1))
+                ->map(fn($i) => $desde->copy()->addDays($i)->toDateString())
+                ->toArray();
+
+            $fmt        = $diasPeriodo <= 31 ? 'd/m' : 'M y';
+            $filasIndex = $filas->keyBy(fn($f) => $f->fecha->toDateString());
+
+            $graficaDias = collect($fechas)->map(function ($fecha) use ($filasIndex, $fmt) {
+                $fila = $filasIndex[$fecha] ?? null;
+                return [
+                    'label'    => Carbon::parse($fecha)->translatedFormat($fmt),
+                    'ventas'   => (int)   ($fila?->ventas_count   ?? 0),
+                    'ingresos' => (float) ($fila?->ingresos_total ?? 0),
+                ];
+            });
+
+            // Periodo anterior desde la tabla también
+            $desdeAnt   = $desde->copy()->subDays($diasPeriodo);
+            $hastaAnt   = $hasta->copy()->subDays($diasPeriodo);
+            $filasAnt   = EstadisticaDiaria::where('id_negocio', $idNegocio)
+                ->whereBetween('fecha', [$desdeAnt->toDateString(), $hastaAnt->toDateString()])
+                ->orderBy('fecha')
+                ->get()
+                ->keyBy(fn($f) => $f->fecha->toDateString());
+
+            $fechasAnt = collect(range(0, $diasPeriodo - 1))
+                ->map(fn($i) => $desdeAnt->copy()->addDays($i)->toDateString());
+
+            $graficaAnterior = $fechasAnt->map(function ($fecha) use ($filasAnt) {
+                $fila = $filasAnt[$fecha] ?? null;
+                return [
+                    'ventas'   => (int)   ($fila?->ventas_count   ?? 0),
+                    'ingresos' => (float) ($fila?->ingresos_total ?? 0),
+                ];
+            });
+
+            // Sucursales por día desde sucursal_data
+            $graficaSucursales = $this->sucursalesPorDia($filas, $fechas, $fmt);
+            $ventasPersonal    = $this->personalPorDia($idNegocio, $desde, $hasta, $fechas, $fmt);
+        }
+
+        // ── Pedidos y OTs (estos siguen en vivo, son pocos registros) ────────
+        $pedidoStats      = CatalogService::getPedidoStats($idNegocio);
         $pedidosRecientes = CatalogService::getPedidosRecientesByNegocio($idNegocio, 6)
             ->map(fn($p) => [
                 'id'      => $p->id_pedido,
-                'estado'  => match((int)$p->status) { 1 => 'pendiente', 2 => 'proceso', default => 'completado' },
+                'estado'  => match ((int)$p->status) {
+                    1 => 'pendiente',
+                    2 => 'proceso',
+                    default => 'completado'
+                },
                 'monto'   => (float)($p->total ?? 0),
                 'cliente' => $p->usuario?->nombre_usuario ?? 'Sin cliente',
                 'items'   => $p->items?->count() ?? 0,
                 'fecha'   => $p->created_at?->diffForHumans() ?? '—',
             ]);
 
-        // ── OTs activas ───────────────────────────────────────────────────────
         $otsActivas = $this->getOtsActivas($idNegocio);
 
-        // ── Ingresos por vendedor/sucursal ────────────────────────────────────
-        $ingresosVendedor = DB::table('ventas as v')
-            ->join('usuarios as u', 'v.id_usuario', '=', 'u.id_usuario')
-            ->where('v.id_negocio', $idNegocio)
-            ->whereBetween('v.created_at', [$desdeTs, $hastaTs])
-            ->selectRaw('u.id_usuario, u.nombre_usuario,
-                COUNT(*) as total_ventas,
-                COALESCE(SUM(v.total),0) as total_ingresos,
-                COALESCE(SUM(v.descuento_total),0) as total_descuentos')
-            ->groupBy('u.id_usuario', 'u.nombre_usuario')
-            ->orderByDesc('total_ingresos')
-            ->get()
-            ->map(fn($r) => [
-                'nombre'     => $r->nombre_usuario,
-                'id_usuario' => $r->id_usuario,
-                'ventas'     => (int)$r->total_ventas,
-                'monto'      => (float)$r->total_ingresos,
-                'descuentos' => (float)$r->total_descuentos,
-                'ticket'     => $r->total_ventas > 0 ? round($r->total_ingresos / $r->total_ventas) : 0,
-            ]);
-
-        // ── Métodos de pago ───────────────────────────────────────────────────
-        $metodosPago = DB::table('venta_pagos as vp')
-            ->join('ventas as v', 'vp.id_venta', '=', 'v.id_venta')
-            ->where('v.id_negocio', $idNegocio)
-            ->whereBetween('v.created_at', [$desdeTs, $hastaTs])
-            ->selectRaw('vp.metodo, COUNT(*) as usos, COALESCE(SUM(vp.monto),0) as monto_total')
-            ->groupBy('vp.metodo')
-            ->orderByDesc('monto_total')
-            ->get()
-            ->map(fn($r) => [
-                'metodo' => $r->metodo,
-                'usos'   => (int)$r->usos,
-                'monto'  => (float)$r->monto_total,
-            ]);
-
-        // ── Top modelos vendidos ──────────────────────────────────────────────
-        $topModelos = DB::table('detalle_venta as dv')
-            ->join('ventas as v', 'dv.id_venta', '=', 'v.id_venta')
-            ->join('bicicletas as b', 'dv.num_serie', '=', 'b.num_serie')
-            ->join('modelos as m', 'b.id_modelo', '=', 'm.id_modelo')
-            ->where('v.id_negocio', $idNegocio)
-            ->whereBetween('v.created_at', [$desdeTs, $hastaTs])
-            ->whereNotNull('dv.num_serie')
-            ->selectRaw('m.id_modelo, m.nombre_modelo,
-                COUNT(*) as unidades,
-                COALESCE(SUM(dv.precio_unitario * dv.cantidad),0) as ingresos')
-            ->groupBy('m.id_modelo', 'm.nombre_modelo')
-            ->orderByDesc('unidades')
-            ->limit(8)
-            ->get()
-            ->map(fn($r) => [
-                'id_modelo' => $r->id_modelo,
-                'nombre'    => $r->nombre_modelo,
-                'unidades'  => (int)$r->unidades,
-                'ingresos'  => (float)$r->ingresos,
-            ]);
-
-        // ── Detalle por modelo: colores y voltajes ────────────────────────────
-        $topModeloIds   = $topModelos->take(5)->pluck('id_modelo')->toArray();
-        $detalleModelos = [];
-
-        if (!empty($topModeloIds)) {
-            $coloresVendidos = DB::table('detalle_venta as dv')
-                ->join('ventas as v', 'dv.id_venta', '=', 'v.id_venta')
-                ->join('bicicletas as b', 'dv.num_serie', '=', 'b.num_serie')
-                ->join('colores as c', 'b.id_color', '=', 'c.id_color')
-                ->where('v.id_negocio', $idNegocio)
-                ->whereBetween('v.created_at', [$desdeTs, $hastaTs])
-                ->whereIn('b.id_modelo', $topModeloIds)
-                ->selectRaw('b.id_modelo, c.color, COUNT(*) as cnt')
-                ->groupBy('b.id_modelo', 'c.color')
-                ->orderByDesc('cnt')
-                ->get()
-                ->groupBy('id_modelo');
-
-            $voltajesVendidos = DB::table('detalle_venta as dv')
-                ->join('ventas as v', 'dv.id_venta', '=', 'v.id_venta')
-                ->join('bicicletas as b', 'dv.num_serie', '=', 'b.num_serie')
-                ->join('voltajes as vt', 'b.id_voltaje', '=', 'vt.id_voltaje')
-                ->where('v.id_negocio', $idNegocio)
-                ->whereBetween('v.created_at', [$desdeTs, $hastaTs])
-                ->whereIn('b.id_modelo', $topModeloIds)
-                ->selectRaw('b.id_modelo, vt.voltaje, COUNT(*) as cnt')
-                ->groupBy('b.id_modelo', 'vt.voltaje')
-                ->orderByDesc('cnt')
-                ->get()
-                ->groupBy('id_modelo');
-
-            foreach ($topModeloIds as $idModelo) {
-                $detalleModelos[$idModelo] = [
-                    'colores'  => collect($coloresVendidos->get($idModelo, []))
-                        ->map(fn($r) => ['color' => $r->color, 'cnt' => (int)$r->cnt])
-                        ->values(),
-                    'voltajes' => collect($voltajesVendidos->get($idModelo, []))
-                        ->map(fn($r) => ['voltaje' => $r->voltaje, 'cnt' => (int)$r->cnt])
-                        ->values(),
-                ];
-            }
-        }
-
-        // ── Accesorios más vendidos ───────────────────────────────────────────
-        $topAccesorios = DB::table('detalle_venta as dv')
-            ->join('ventas as v', 'dv.id_venta', '=', 'v.id_venta')
-            ->join('productos as p', 'dv.id_producto', '=', 'p.id_producto')
-            ->where('v.id_negocio', $idNegocio)
-            ->whereBetween('v.created_at', [$desdeTs, $hastaTs])
-            ->whereNull('dv.num_serie')
-            ->selectRaw('p.nombre_producto,
-                SUM(dv.cantidad) as unidades,
-                COALESCE(SUM(dv.precio_unitario * dv.cantidad),0) as ingresos')
-            ->groupBy('p.nombre_producto')
-            ->orderByDesc('unidades')
-            ->limit(6)
-            ->get()
-            ->map(fn($r) => [
-                'nombre'   => $r->nombre_producto,
-                'unidades' => (int)$r->unidades,
-                'ingresos' => (float)$r->ingresos,
-            ]);
-
-        // ── Horas pico (para heatmap) ─────────────────────────────────────────
-        $horasPico = DB::table('ventas')
-            ->where('id_negocio', $idNegocio)
-            ->whereBetween('created_at', [$desdeTs, $hastaTs])
-            ->selectRaw('HOUR(created_at) as hora, COUNT(*) as cnt')
-            ->groupBy('hora')
-            ->orderBy('hora')
-            ->get()
-            ->map(fn($r) => ['hora' => (int)$r->hora, 'cnt' => (int)$r->cnt]);
-
-        // ── Clientes nuevos vs recurrentes ────────────────────────────────────
-        $clientesEnPeriodo  = (clone $ventasBase)->distinct('id_cliente')->pluck('id_cliente');
-        $clientesNuevos     = DB::table('ventas')
-            ->where('id_negocio', $idNegocio)
-            ->whereIn('id_cliente', $clientesEnPeriodo)
-            ->select('id_cliente', DB::raw('MIN(created_at) as primera_compra'))
-            ->groupBy('id_cliente')
-            ->havingRaw('primera_compra BETWEEN ? AND ?', [$desdeTs, $hastaTs])
-            ->count();
-        $clientesRecurrentes = max(0, $clientesUnicos - $clientesNuevos);
-
-        // ── Ventas hoy (siempre) ──────────────────────────────────────────────
+        // ── Ventas hoy (siempre en vivo) ──────────────────────────────────────
         $ventasHoy = (int) DB::table('ventas')
             ->where('id_negocio', $idNegocio)
             ->whereDate('created_at', Carbon::today())
             ->count();
 
-        // ═════════════════════════════════════════════════════════════════════
-        // ESTADÍSTICAS CALCULADAS EN BACKEND
-        // ═════════════════════════════════════════════════════════════════════
-
-        // ── 1. Regresión lineal sobre ingresos diarios ────────────────────────
-        $ingresosArr = $graficaDias->pluck('ingresos')->map(fn($v) => (float)$v)->values()->toArray();
-        $n           = count($ingresosArr);
-        $regression  = ['slope' => 0, 'intercept' => 0, 'r2' => 0, 'equation' => '', 'prediction' => 0, 'line' => [], 'scatter' => []];
-
-        if ($n >= 2) {
-            $xs    = range(0, $n - 1);
-            $sumX  = array_sum($xs);
-            $sumY  = array_sum($ingresosArr);
-            $sumXY = 0;
-            $sumX2 = 0;
-            foreach ($xs as $i) {
-                $sumXY += $i * $ingresosArr[$i];
-                $sumX2 += $i * $i;
-            }
-
-            $denom     = ($n * $sumX2 - $sumX * $sumX);
-            $slope     = $denom ? ($n * $sumXY - $sumX * $sumY) / $denom : 0;
-            $intercept = ($sumY - $slope * $sumX) / $n;
-
-            $meanY = $sumY / $n;
-            $ssTot = 0;
-            $ssRes = 0;
-            foreach ($ingresosArr as $i => $y) {
-                $ssTot += ($y - $meanY) ** 2;
-                $ssRes += ($y - ($slope * $i + $intercept)) ** 2;
-            }
-            $r2 = $ssTot > 0 ? 1 - ($ssRes / $ssTot) : 0;
-
-            $regression = [
-                'slope'      => round($slope, 2),
-                'intercept'  => round($intercept, 2),
-                'r2'         => round($r2, 4),
-                'equation'   => 'y = ' . round($slope, 2) . 'x + ' . number_format($intercept, 0, '.', ','),
-                'prediction' => round(max(0, $slope * ($n - 1 + 7) + $intercept), 2),
-                'line'       => array_map(fn($i) => round($slope * $i + $intercept, 2), $xs),
-                'scatter'    => array_map(fn($i) => ['x' => $i, 'y' => $ingresosArr[$i]], $xs),
-            ];
-        }
-
-        // ── 2. Media móvil 7 días ─────────────────────────────────────────────
-        $window        = 7;
-        $movingAverage = [];
-        foreach ($ingresosArr as $i => $_) {
-            $start           = max(0, $i - $window + 1);
-            $slice           = array_slice($ingresosArr, $start, $i - $start + 1);
-            $movingAverage[] = round(array_sum($slice) / count($slice), 2);
-        }
-
-        // ── 3. Heatmap: ventas por día de semana × hora ───────────────────────
-        // DAYOFWEEK en MySQL: 1=Dom … 7=Sáb → ajustamos a 0=Lun … 6=Dom
-        $heatmapRaw = DB::table('ventas')
-            ->where('id_negocio', $idNegocio)
-            ->whereBetween('created_at', [$desdeTs, $hastaTs])
-            ->selectRaw('MOD(DAYOFWEEK(created_at) + 5, 7) AS dow, HOUR(created_at) AS hora, COUNT(*) AS cnt')
-            ->groupByRaw('dow, hora')
-            ->get();
-
-        $matrixRaw = array_fill(0, 7, array_fill(0, 24, 0));
-        foreach ($heatmapRaw as $row) {
-            $dow = (int)$row->dow;
-            $h   = (int)$row->hora;
-            if ($dow >= 0 && $dow < 7 && $h >= 0 && $h < 24) {
-                $matrixRaw[$dow][$h] = (int)$row->cnt;
-            }
-        }
-
-        $maxHeatmap = max(array_map('max', $matrixRaw)) ?: 1;
-        $matrixNorm = array_map(
-            fn($row) => array_map(fn($v) => round($v / $maxHeatmap, 3), $row),
-            $matrixRaw
-        );
-
-        // ─────────────────────────────────────────────────────────────────────
-
         return response()->json([
+            'ventas_personal'    => $ventasPersonal,
             'periodo' => [
                 'desde' => $desde->toDateString(),
                 'hasta' => $hasta->toDateString(),
                 'dias'  => $diasPeriodo,
             ],
             'kpi' => [
-                'ventas'          => $totalVentas,
-                'ingresos'        => $totalIngresos,
-                'ticket'          => $ticketProm,
-                'clientes'        => $clientesUnicos,
-                'clientes_nuevos' => $clientesNuevos,
-                'clientes_rec'    => $clientesRecurrentes,
-                'conversion'      => $conversion,
-                'ots_activas'     => count($otsActivas),
-                'ventas_hoy'      => $ventasHoy,
-                'pedidos_activos' => $pedidosActivos,
-                'descuentos'      => $descuentos,
+                'ventas'           => $ventasCount,
+                'ingresos'         => $ingresosTotal,
+                'ticket'           => $ticketPromedio,
+                'clientes'         => $clientesNuevos + $clientesRec,
+                'clientes_nuevos'  => $clientesNuevos,
+                'clientes_rec'     => $clientesRec,
+                'ots_activas'      => count($otsActivas),
+                'ventas_hoy'       => $ventasHoy,
+                'descuentos'       => $descuentosTotal,
+                'cupones_usados'   => $cuponesUsados,
+                'cupones_descuento'=> $cuponesDescuento,
             ],
-            'grafica'           => $graficaDias,
-            'pedidos'           => ['recientes' => $pedidosRecientes, 'stats' => $pedidoStats],
-            'ots'               => $otsActivas,
-            'ingresos_vendedor' => $ingresosVendedor,
-            'metodos_pago'      => $metodosPago,
-            'top_modelos'       => $topModelos,
-            'detalle_modelos'   => $detalleModelos,
-            'top_accesorios'    => $topAccesorios,
-            'horas_pico'        => $horasPico,
-            'clientes_tipo'     => [
+            'tops' => [
+                'modelo'    => $modeloTop,
+                'config'    => $configTop,
+                'accesorio' => $accesorioTop,
+                'combo'     => $comboTop,
+                'cupon'     => $cuponTop,
+            ],
+            'grafica'            => $graficaDias,
+            'grafica_anterior'   => $graficaAnterior,
+            'grafica_sucursales' => $graficaSucursales,
+            'sucursales'         => $sucursalesAgregadas,
+            'pedidos'            => ['recientes' => $pedidosRecientes, 'stats' => $pedidoStats],
+            'ots'                => $otsActivas,
+            'metodos_pago'       => $metodosPago,
+            'horas_pico'         => $horasPico,
+            'clientes_tipo'      => [
                 ['tipo' => 'Nuevos',      'cnt' => $clientesNuevos],
-                ['tipo' => 'Recurrentes', 'cnt' => $clientesRecurrentes],
-            ],
-            // Estadísticas calculadas en backend
-            'regression'        => $regression,
-            'moving_average'    => $movingAverage,
-            'heatmap'           => [
-                'matrix'     => $matrixNorm,
-                'matrix_raw' => $matrixRaw,
-                'max'        => $maxHeatmap,
+                ['tipo' => 'Recurrentes', 'cnt' => $clientesRec],
             ],
         ]);
     }
 
+    // ─── DETALLE (AJAX — lazy, solo cuando abre modal) ───────────────────────
+    public function detalle(Request $request)
+    {
+        $user      = auth()->user();
+        $idNegocio = $user->id_negocio;
+        $tipo      = $request->input('tipo');
+
+        [$desde, $hasta] = $this->resolvePeriod($request);
+        $desdeTs = $desde->copy()->startOfDay();
+        $hastaTs = $hasta->copy()->endOfDay();
+
+        $data = match ($tipo) {
+
+            'top_modelos' => DB::table('detalle_venta as dv')
+                ->join('ventas as v',    'dv.id_venta',  '=', 'v.id_venta')
+                ->join('bicicletas as b','dv.num_serie',  '=', 'b.num_serie')
+                ->join('modelos as m',   'b.id_modelo',   '=', 'm.id_modelo')
+                ->where('v.id_negocio', $idNegocio)
+                ->whereBetween('v.created_at', [$desdeTs, $hastaTs])
+                ->whereNotNull('dv.num_serie')
+                ->selectRaw('m.id_modelo, m.nombre_modelo, COUNT(*) as unidades, COALESCE(SUM(dv.precio_unitario * dv.cantidad),0) as ingresos')
+                ->groupBy('m.id_modelo', 'm.nombre_modelo')
+                ->orderByDesc('unidades')
+                ->limit(8)
+                ->get()
+                ->map(fn($r) => [
+                    'id_modelo' => $r->id_modelo,
+                    'nombre'    => $r->nombre_modelo,
+                    'unidades'  => (int)   $r->unidades,
+                    'ingresos'  => (float) $r->ingresos,
+                ]),
+
+            'detalle_modelo' => (function () use ($request, $idNegocio, $desdeTs, $hastaTs) {
+                $idModelo = $request->input('id_modelo');
+
+                $colores = DB::table('detalle_venta as dv')
+                    ->join('ventas as v',    'dv.id_venta', '=', 'v.id_venta')
+                    ->join('bicicletas as b','dv.num_serie', '=', 'b.num_serie')
+                    ->join('colores as c',   'b.id_color',  '=', 'c.id_color')
+                    ->where('v.id_negocio', $idNegocio)
+                    ->whereBetween('v.created_at', [$desdeTs, $hastaTs])
+                    ->where('b.id_modelo', $idModelo)
+                    ->selectRaw('c.color, COUNT(*) as cnt')
+                    ->groupBy('c.color')
+                    ->orderByDesc('cnt')
+                    ->get()
+                    ->map(fn($r) => ['color' => $r->color, 'cnt' => (int)$r->cnt]);
+
+                $voltajes = DB::table('detalle_venta as dv')
+                    ->join('ventas as v',    'dv.id_venta',  '=', 'v.id_venta')
+                    ->join('bicicletas as b','dv.num_serie',  '=', 'b.num_serie')
+                    ->join('voltajes as vt', 'b.id_voltaje', '=', 'vt.id_voltaje')
+                    ->where('v.id_negocio', $idNegocio)
+                    ->whereBetween('v.created_at', [$desdeTs, $hastaTs])
+                    ->where('b.id_modelo', $idModelo)
+                    ->selectRaw('vt.voltaje, COUNT(*) as cnt')
+                    ->groupBy('vt.voltaje')
+                    ->orderByDesc('cnt')
+                    ->get()
+                    ->map(fn($r) => ['voltaje' => $r->voltaje, 'cnt' => (int)$r->cnt]);
+
+                return ['colores' => $colores, 'voltajes' => $voltajes];
+            })(),
+
+            'top_accesorios' => DB::table('detalle_venta as dv')
+                ->join('ventas as v',   'dv.id_venta',   '=', 'v.id_venta')
+                ->join('productos as p','dv.id_producto', '=', 'p.id_producto')
+                ->where('v.id_negocio', $idNegocio)
+                ->whereBetween('v.created_at', [$desdeTs, $hastaTs])
+                ->whereNull('dv.num_serie')
+                ->where('p.tipo', '1')
+                ->selectRaw('p.id_producto, p.nombre_producto, SUM(dv.cantidad) as unidades, COALESCE(SUM(dv.precio_unitario * dv.cantidad),0) as ingresos')
+                ->groupBy('p.id_producto', 'p.nombre_producto')
+                ->orderByDesc('unidades')
+                ->limit(8)
+                ->get()
+                ->map(fn($r) => [
+                    'nombre'   => $r->nombre_producto,
+                    'unidades' => (int)   $r->unidades,
+                    'ingresos' => (float) $r->ingresos,
+                ]),
+
+            'combos' => DB::table('detalle_venta as dv1')
+                ->join('detalle_venta as dv2', 'dv1.id_venta', '=', 'dv2.id_venta')
+                ->join('ventas as v',          'dv1.id_venta', '=', 'v.id_venta')
+                ->join('bicicletas as b',      'dv1.num_serie','=', 'b.num_serie')
+                ->join('modelos as m',         'b.id_modelo',  '=', 'm.id_modelo')
+                ->join('productos as p',       'dv2.id_producto','=','p.id_producto')
+                ->where('v.id_negocio', $idNegocio)
+                ->whereBetween('v.created_at', [$desdeTs, $hastaTs])
+                ->whereNotNull('dv1.num_serie')
+                ->whereNull('dv2.num_serie')
+                ->where('p.tipo', '1')
+                ->selectRaw("CONCAT(m.nombre_modelo, ' + ', p.nombre_producto) as combo, COUNT(*) as uds")
+                ->groupBy('combo')
+                ->orderByDesc('uds')
+                ->limit(8)
+                ->get()
+                ->map(fn($r) => ['combo' => $r->combo, 'uds' => (int)$r->uds]),
+
+            'clientes' => (function () use ($idNegocio, $desdeTs, $hastaTs) {
+                $top = DB::table('ventas as v')
+                    ->join('clientes as c', 'v.id_cliente', '=', 'c.id_cliente')
+                    ->where('v.id_negocio', $idNegocio)
+                    ->whereBetween('v.created_at', [$desdeTs, $hastaTs])
+                    ->selectRaw('c.nombre_cliente, c.apellido1, COUNT(*) as compras, SUM(v.total) as total_gastado')
+                    ->groupBy('c.id_cliente', 'c.nombre_cliente', 'c.apellido1')
+                    ->orderByDesc('total_gastado')
+                    ->limit(8)
+                    ->get()
+                    ->map(fn($r) => [
+                        'nombre'        => $r->nombre_cliente . ' ' . $r->apellido1,
+                        'compras'       => (int)   $r->compras,
+                        'total_gastado' => (float) $r->total_gastado,
+                    ]);
+                return ['top_clientes' => $top];
+            })(),
+
+            'cupones' => DB::table('cupon_usos as cu')
+                ->join('cupones as c', 'cu.id_cupon', '=', 'c.id_cupon')
+                ->where('cu.id_negocio', $idNegocio)
+                ->whereBetween('cu.created_at', [$desdeTs, $hastaTs])
+                ->selectRaw('c.codigo, c.nombre, COUNT(*) as usos, SUM(cu.descuento_aplicado) as total_descuento')
+                ->groupBy('c.id_cupon', 'c.codigo', 'c.nombre')
+                ->orderByDesc('usos')
+                ->get()
+                ->map(fn($r) => [
+                    'codigo'          => $r->codigo,
+                    'nombre'          => $r->nombre,
+                    'usos'            => (int)   $r->usos,
+                    'total_descuento' => (float) $r->total_descuento,
+                ]),
+
+            'vendedor_detalle' => (function () use ($request, $idNegocio, $desdeTs, $hastaTs) {
+                $idUsuario = $request->input('id_usuario');
+                return DB::table('ventas as v')
+                    ->join('personal as p', 'v.id_personal', '=', 'p.id_personal')
+                    ->where('v.id_negocio', $idNegocio)
+                    ->where('v.id_usuario', $idUsuario)
+                    ->whereBetween('v.created_at', [$desdeTs, $hastaTs])
+                    ->selectRaw('p.nombre, COUNT(*) as ventas, SUM(v.total) as ingresos')
+                    ->groupBy('p.id_personal', 'p.nombre')
+                    ->orderByDesc('ingresos')
+                    ->get()
+                    ->map(fn($r) => [
+                        'nombre'   => $r->nombre,
+                        'ventas'   => (int)   $r->ventas,
+                        'ingresos' => (float) $r->ingresos,
+                    ]);
+            })(),
+
+            default => [],
+        };
+
+        return response()->json(['tipo' => $tipo, 'data' => $data]);
+    }
+
     // ─── HELPERS PRIVADOS ─────────────────────────────────────────────────────
+
+    private function sucursalesPorDia($filas, array $fechas, string $fmt): \Illuminate\Support\Collection
+    {
+        $vendedoresMap = [];
+
+        foreach ($filas as $fila) {
+            $fechaStr = $fila->fecha->toDateString();
+            foreach ($fila->sucursal_data ?? [] as $suc) {
+                $nombre = $suc['nombre'];
+                $vendedoresMap[$nombre][$fechaStr] = [
+                    'ventas'   => $suc['ventas_count'],
+                    'ingresos' => $suc['ingresos_total'],
+                ];
+            }
+        }
+
+        return collect($vendedoresMap)->map(fn($diasData, $nombre) => [
+            'nombre'   => $nombre,
+            'ventas'   => array_map(fn($f) => $diasData[$f]['ventas']   ?? 0, $fechas),
+            'ingresos' => array_map(fn($f) => $diasData[$f]['ingresos'] ?? 0, $fechas),
+        ])->values();
+    }
+
+    private function sucursalesPorHora(string $idNegocio, Carbon $desde, array $fechas): \Illuminate\Support\Collection
+    {
+        $raw = DB::table('ventas as v')
+            ->join('usuarios as u', 'v.id_usuario', '=', 'u.id_usuario')
+            ->where('v.id_negocio', $idNegocio)
+            ->whereDate('v.created_at', $desde)
+            ->selectRaw('u.nombre_usuario, HOUR(v.created_at) as hora, COUNT(*) as ventas, COALESCE(SUM(v.total),0) as ingresos')
+            ->groupBy('u.nombre_usuario', 'hora')
+            ->orderBy('hora')
+            ->get();
+
+        $map = [];
+        foreach ($raw as $row) {
+            $key = str_pad($row->hora, 2, '0', STR_PAD_LEFT) . ':00';
+            $map[$row->nombre_usuario][$key] = [
+                'ventas'   => (int)   $row->ventas,
+                'ingresos' => (float) $row->ingresos,
+            ];
+        }
+
+        return collect($map)->map(fn($diasData, $nombre) => [
+            'nombre'   => $nombre,
+            'ventas'   => array_map(fn($f) => $diasData[$f]['ventas']   ?? 0, $fechas),
+            'ingresos' => array_map(fn($f) => $diasData[$f]['ingresos'] ?? 0, $fechas),
+        ])->values();
+    }
+
+    private function personalPorDia(string $idNegocio, Carbon $desde, Carbon $hasta, array $fechas, string $fmt): \Illuminate\Support\Collection
+    {
+        $raw = DB::table('ventas as v')
+            ->join('personal as p', 'v.id_personal', '=', 'p.id_personal')
+            ->where('v.id_negocio', $idNegocio)
+            ->whereBetween('v.created_at', [$desde->copy()->startOfDay(), $hasta->copy()->endOfDay()])
+            ->selectRaw('p.nombre, DATE(v.created_at) as dia, COUNT(*) as ventas, COALESCE(SUM(v.total),0) as ingresos')
+            ->groupBy('p.id_personal', 'p.nombre', 'dia')
+            ->orderBy('dia')
+            ->get();
+
+        $map = [];
+        foreach ($raw as $row) {
+            $map[$row->nombre][$row->dia] = [
+                'ventas'   => (int)   $row->ventas,
+                'ingresos' => (float) $row->ingresos,
+            ];
+        }
+
+        return collect($map)->map(fn($diasData, $nombre) => [
+            'nombre'   => $nombre,
+            'ventas'   => array_map(fn($f) => $diasData[$f]['ventas']   ?? 0, $fechas),
+            'ingresos' => array_map(fn($f) => $diasData[$f]['ingresos'] ?? 0, $fechas),
+        ])->values();
+    }
+
+    private function personalPorHora(string $idNegocio, Carbon $desde, array $fechas): \Illuminate\Support\Collection
+    {
+        $raw = DB::table('ventas as v')
+            ->join('personal as p', 'v.id_personal', '=', 'p.id_personal')
+            ->where('v.id_negocio', $idNegocio)
+            ->whereDate('v.created_at', $desde)
+            ->selectRaw('p.nombre, HOUR(v.created_at) as hora, COUNT(*) as ventas, COALESCE(SUM(v.total),0) as ingresos')
+            ->groupBy('p.id_personal', 'p.nombre', 'hora')
+            ->orderBy('hora')
+            ->get();
+
+        $map = [];
+        foreach ($raw as $row) {
+            $key = str_pad($row->hora, 2, '0', STR_PAD_LEFT) . ':00';
+            $map[$row->nombre][$key] = [
+                'ventas'   => (int)   $row->ventas,
+                'ingresos' => (float) $row->ingresos,
+            ];
+        }
+
+        return collect($map)->map(fn($diasData, $nombre) => [
+            'nombre'   => $nombre,
+            'ventas'   => array_map(fn($f) => $diasData[$f]['ventas']   ?? 0, $fechas),
+            'ingresos' => array_map(fn($f) => $diasData[$f]['ingresos'] ?? 0, $fechas),
+        ])->values();
+    }
+
     private function resolvePeriod(Request $request): array
     {
         $hoy = Carbon::today();

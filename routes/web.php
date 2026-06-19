@@ -151,12 +151,8 @@ Route::prefix('registro/google')->group(function () {
 */
 
 Route::middleware('auth')->group(function () {
-    Route::get('/verificacion-pendiente', function () {
-        if (auth()->user()->emailVerificado()) {
-            return redirect()->route('dashboard');
-        }
-        return view('auth.verificacion-pendiente');
-    })->name('verificacion.pendiente');
+    // Simplemente apuntas al método del controlador
+    Route::get('/verificacion-pendiente', [AuthenticatedSessionController::class, 'verificacionPendiente'])->name('verificacion.pendiente');
 
     Route::post('/reenviar-verificacion', [EmailVerificationController::class, 'reenviar'])
         ->name('verificacion.reenviar')
@@ -172,6 +168,8 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'email.verificado'])->group(function () {
     Route::get('/trial/expirado', [TrialController::class, 'expirado'])->name('trial.expirado');
     Route::get('/suscripcion/expirada', [TrialController::class, 'suscripcionExpirada'])->name('suscripcion.expirada');
+    Route::get('/sucursales/registro', [AuthenticatedSessionController::class, 'rol44Dashboard'])->name('rol44.dashboard');
+
 });
 
 /*
@@ -223,7 +221,8 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
 
 
         Route::get('admin/dashboard', [DashboardController::class, 'index'])->name('administrador.dashboard');
-        Route::get('admin/dashboard/stats', [DashboardController::class, 'stats'])->name('admin.dashboard.stats'); // ← AGREGAR
+        Route::get('admin/dashboard/stats', [DashboardController::class, 'stats'])->name('admin.dashboard.stats');
+        Route::get('admin/dashboard/detalle', [DashboardController::class, 'detalle'])->name('admin.dashboard.detalle'); // ← nueva
 
         // Vendedores
         Route::get('/admin/vendedores/create', [VendedorController::class, 'create'])->name('admin.vendedores.create');

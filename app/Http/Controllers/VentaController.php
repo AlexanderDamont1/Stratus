@@ -23,6 +23,7 @@ use App\Models\Personal;
 use App\Models\VentaPago;
 use App\Jobs\ProcesarPostVenta;
 use App\Services\CuponService;
+use Illuminate\Support\Carbon;
 
 class VentaController extends Controller
 {
@@ -530,6 +531,8 @@ class VentaController extends Controller
 
             DB::commit();
 
+            \App\Jobs\ActualizarEstadisticasDiarias::dispatch($user->id_negocio,now()->toDateString(),)->onQueue('default');
+
            
             $snapshot = null;
             try {
@@ -610,15 +613,7 @@ class VentaController extends Controller
             CatalogService::invalidateSeccion(null, $user->id_negocio);
             CatalogService::invalidateVentasByVendedor($user->id_negocio, $user->id_usuario);
             CatalogService::invalidateInventario($user->id_negocio, $user->id_usuario);
-
-            // Solo invalida las secciones de analytics, nada más
-            $hoy = Carbon::today()->toDateString();
-            CatalogService::invalidateVentasAnalytics(
-                idNegocio: $user->id_negocio,
-                idUsuario: $user->id_usuario,
-                desde: $hoy,
-                hasta: $hoy,
-            );
+            CatalogService::invalidateDashboardStats($user->id_negocio);
 
             // ── Broadcasts ────────────────────────────────────────────────
             foreach ($eventosBicicleta as $ev) {

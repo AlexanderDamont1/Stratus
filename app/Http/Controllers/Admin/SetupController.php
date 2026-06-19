@@ -102,7 +102,7 @@ class SetupController extends Controller
         }
 
         return redirect()
-            ->route('dashboard')
+            ->route('administrador.dashboard')
             ->with('success', 'Cuenta activada correctamente');
     }
 }
