@@ -19,18 +19,19 @@
             {{-- ── Columna izquierda (oculta en mobile) ── --}}
             <div class="hidden lg:block text-center lg:text-left space-y-5">
 
-                <div class="flex justify-center lg:justify-start">
-                    <img src="{{ asset('arrowk/favicon-arrowk.svg') }}" alt="ArrowK"
-                        class="h-14 w-auto object-contain dark:hidden" />
-                    <img src="{{ asset('arrowk/favicon-arrowk-white.svg') }}" alt="ArrowK"
-                        class="h-14 w-auto object-contain hidden dark:block" />
-                </div>
+                <div class="flex items-center gap-3">
+                <img src="{{ asset('arrowk/favicon-arrowk.svg') }}" alt="ArrowK"
+                     class="h-14 w-auto object-contain dark:hidden" />
+                <img src="{{ asset('arrowk/favicon-arrowk-white.svg') }}" alt="ArrowK"
+                     class="h-14 w-auto object-contain hidden dark:block" />
 
                 <span class="inline-block px-4 py-1.5 text-xs font-semibold rounded-full
-                             bg-blue-100 text-blue-800
-                             dark:bg-blue-800/30 dark:text-blue-400">
+                             bg-sky-100 text-sky-800
+                             dark:bg-sky-800/30 dark:text-sky-400">
                     Acceso seguro
                 </span>
+            </div>
+                
 
                 <div class="space-y-2">
                     <h1 class="text-3xl font-light text-gray-900 dark:text-white leading-tight">
@@ -64,7 +65,7 @@
                     <div class="min-w-0 text-left">
                         <p class="text-xs text-gray-400">Accede con tu cuenta</p>
                         <p class="text-base font-medium text-gray-800 dark:text-gray-200 truncate">
-                            CloudLabs Enterprise
+                            ArrowK Enterprise
                         </p>
                     </div>
                 </div>

@@ -1,1808 +1,2116 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-<meta charset="UTF-8">
-<meta name="csrf-token" content="{{ csrf_token() }}">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ArrowK — Sistema para distribuidores de bicicletas eléctricas</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.bunny.net/css?family=figtree:300,400,500,600&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
-<style>
-/* ================================================================
-   DESIGN TOKENS — Sistema completo light / dark
-   ================================================================ */
-:root {
-  color-scheme: light dark;
-
-  /* ── LIGHT ── */
-  --bg:        #f7f5fa;
-  --bg-2:      #ede9f4;
-  --bg-3:      #e3dced;
-  --bg-4:      #d8cfe6;
-
-  --surface:   rgba(82,37,102,0.05);
-  --surface-2: rgba(82,37,102,0.09);
-  --surface-3: rgba(82,37,102,0.14);
-
-  --border:    rgba(82,37,102,0.10);
-  --border-2:  rgba(82,37,102,0.18);
-  --border-3:  rgba(82,37,102,0.28);
-
-  --text:      #1e1529;
-  --text-2:    #4d3b61;
-  --text-3:    #8a789a;
-
-  /* ── BRAND PURPLE ── */
-  --p1: #3d1a52;
-  --p2: #7A3A8E;
-  --p3: #AD74C3;
-  --p4: #d4aadf;
-  --p5: #f3e8f9;
-
-  --primary: var(--p2);
-  --accent:  var(--p3);
-
-  /* ── STATUS ── */
-  --green:  #16a34a;
-  --yellow: #ca8a04;
-  --red:    #dc2626;
-  --blue:   #2563eb;
-
-  /* ── NAV (light) ── */
-  --nav-bg:      rgba(247,245,250,0.82);
-  --nav-border:  rgba(82,37,102,0.16);
-
-  /* ── MISC ── */
-  --radius:    14px;
-  --radius-sm: 8px;
-  --serif: 'DM Serif Display', serif;
-  --sans:  'Figtree', system-ui, sans-serif;
-
-  /* ── SHADOW ── */
-  --shadow-sm: 0 2px 8px rgba(82,37,102,0.10);
-  --shadow-md: 0 8px 32px rgba(82,37,102,0.14);
-  --shadow-lg: 0 24px 64px rgba(82,37,102,0.18);
-}
-
-/* ── DARK OVERRIDE ── */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg:        #0d0b12;
-    --bg-2:      #141020;
-    --bg-3:      #1c1728;
-    --bg-4:      #241f30;
-
-    --surface:   rgba(173,116,195,0.05);
-    --surface-2: rgba(173,116,195,0.09);
-    --surface-3: rgba(173,116,195,0.14);
-
-    --border:    rgba(173,116,195,0.10);
-    --border-2:  rgba(173,116,195,0.16);
-    --border-3:  rgba(173,116,195,0.26);
-
-    --text:      #f0ebf7;
-    --text-2:    #c4afd4;
-    --text-3:    #7a6a8a;
-
-    --p4: #c49ad4;
-    --p5: #2a1a38;
-
-    --green:  #22c55e;
-    --yellow: #eab308;
-    --red:    #ef4444;
-    --blue:   #60a5fa;
-
-    --nav-bg:     rgba(13,11,18,0.85);
-    --nav-border: rgba(173,116,195,0.18);
-
-    --shadow-sm: 0 2px 8px rgba(0,0,0,0.40);
-    --shadow-md: 0 8px 32px rgba(0,0,0,0.50);
-    --shadow-lg: 0 24px 64px rgba(0,0,0,0.65);
-  }
-}
-
-/* ================================================================
-   RESET
-   ================================================================ */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--sans);
-  font-size: 15px;
-  line-height: 1.65;
-  overflow-x: hidden;
-  -webkit-font-smoothing: antialiased;
-  transition: background 0.3s, color 0.3s;
-}
-a { color: inherit; text-decoration: none; }
-button { cursor: pointer; font-family: var(--sans); border: none; background: none; }
-svg { display: block; flex-shrink: 0; }
-img { display: block; max-width: 100%; }
-
-/* ================================================================
-   CUSTOM CURSOR (desktop only)
-   ================================================================ */
-@media (hover: hover) and (pointer: fine) {
-  * { cursor: none; }
-  .cursor {
-    position: fixed; z-index: 9998; pointer-events: none;
-    width: 10px; height: 10px;
-    background: var(--p3);
-    border-radius: 50%;
-    transform: translate(-50%,-50%);
-    transition: width .2s, height .2s, background .2s;
-    mix-blend-mode: multiply;
-  }
-  @media (prefers-color-scheme: dark) {
-    .cursor { mix-blend-mode: screen; }
-  }
-  .cursor-ring {
-    position: fixed; z-index: 9997; pointer-events: none;
-    width: 36px; height: 36px;
-    border: 1.5px solid rgba(173,116,195,0.5);
-    border-radius: 50%;
-    transform: translate(-50%,-50%);
-    transition: all .12s ease;
-  }
-  body:has(a:hover) .cursor,
-  body:has(button:hover) .cursor { width: 16px; height: 16px; }
-  body:has(a:hover) .cursor-ring,
-  body:has(button:hover) .cursor-ring { width: 52px; height: 52px; border-color: rgba(173,116,195,0.85); }
-}
-.cursor, .cursor-ring { display: none; }
-@media (hover: hover) and (pointer: fine) {
-  .cursor, .cursor-ring { display: block; }
-}
-
-/* ================================================================
-   LOADER
-   ================================================================ */
-#loader {
-  position: fixed; inset: 0; z-index: 9999;
-  background: var(--bg);
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: 2.5rem;
-  transition: opacity .7s ease, visibility .7s ease;
-}
-#loader.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
-.loader-wordmark {
-  font-family: var(--serif); font-size: 1.75rem;
-  letter-spacing: -.01em; color: var(--text);
-  display: flex; align-items: center; gap: .65rem;
-}
-.loader-wordmark-icon {
-  width: 34px; height: 34px; background: var(--p2); border-radius: 9px;
-  display: flex; align-items: center; justify-content: center;
-}
-.wheel-and-hamster { --dur:1s; position:relative; width:12em; height:12em; font-size:14px; }
-.wheel,.hamster,.hamster div,.spoke { position:absolute; }
-.wheel,.spoke { border-radius:50%; top:0; left:0; width:100%; height:100%; }
-.wheel { background:radial-gradient(100% 100% at center,hsla(0,0%,60%,0) 47.8%,hsl(285,38%,46%) 48%,hsl(285,38%,46%) 52%,hsla(0,0%,60%,0) 52.2%); z-index:2; }
-.hamster { animation:hamster var(--dur) ease-in-out infinite; top:50%; left:calc(50% - 3.5em); width:7em; height:3.75em; transform:rotate(4deg) translate(-0.8em,1.85em); transform-origin:50% 0; z-index:1; }
-.hamster__head { animation:hamsterHead var(--dur) ease-in-out infinite; background:hsl(30,80%,62%); border-radius:70% 30% 0 100%/40% 25% 25% 60%; box-shadow:0 -0.25em 0 hsl(30,80%,74%) inset,0.75em -1.55em 0 hsl(30,80%,88%) inset; top:0; left:-2em; width:2.75em; height:2.5em; transform-origin:100% 50%; }
-.hamster__ear { animation:hamsterEar var(--dur) ease-in-out infinite; background:hsl(0,70%,80%); border-radius:50%; box-shadow:-0.25em 0 hsl(30,80%,62%) inset; top:-0.25em; right:-0.25em; width:0.75em; height:0.75em; transform-origin:50% 75%; }
-.hamster__eye { animation:hamsterEye var(--dur) linear infinite; background-color:hsl(0,0%,5%); border-radius:50%; top:0.375em; left:1.25em; width:0.5em; height:0.5em; }
-.hamster__nose { background:hsl(0,80%,72%); border-radius:35% 65% 85% 15%/70% 50% 50% 30%; top:0.75em; left:0; width:0.2em; height:0.25em; }
-.hamster__body { animation:hamsterBody var(--dur) ease-in-out infinite; background:hsl(30,80%,88%); border-radius:50% 30% 50% 30%/15% 60% 40% 40%; box-shadow:0.1em 0.75em 0 hsl(30,80%,62%) inset,0.15em -0.5em 0 hsl(30,80%,78%) inset; top:0.25em; left:2em; width:4.5em; height:3em; transform-origin:17% 50%; transform-style:preserve-3d; }
-.hamster__limb--fr,.hamster__limb--fl { clip-path:polygon(0 0,100% 0,70% 80%,60% 100%,0% 100%,40% 80%); top:2em; left:0.5em; width:1em; height:1.5em; transform-origin:50% 0; }
-.hamster__limb--fr { animation:hamsterFRLimb var(--dur) linear infinite; background:linear-gradient(hsl(30,80%,78%) 80%,hsl(0,80%,72%) 80%); transform:rotate(15deg) translateZ(-1px); }
-.hamster__limb--fl { animation:hamsterFLLimb var(--dur) linear infinite; background:linear-gradient(hsl(30,80%,88%) 80%,hsl(0,80%,82%) 80%); transform:rotate(15deg); }
-.hamster__limb--br,.hamster__limb--bl { border-radius:0.75em 0.75em 0 0; clip-path:polygon(0 0,100% 0,100% 30%,70% 90%,70% 100%,30% 100%,40% 90%,0% 30%); top:1em; left:2.8em; width:1.5em; height:2.5em; transform-origin:50% 30%; }
-.hamster__limb--br { animation:hamsterBRLimb var(--dur) linear infinite; background:linear-gradient(hsl(30,80%,78%) 90%,hsl(0,80%,72%) 90%); transform:rotate(-25deg) translateZ(-1px); }
-.hamster__limb--bl { animation:hamsterBLLimb var(--dur) linear infinite; background:linear-gradient(hsl(30,80%,88%) 90%,hsl(0,80%,82%) 90%); transform:rotate(-25deg); }
-.hamster__tail { animation:hamsterTail var(--dur) linear infinite; background:hsl(0,80%,82%); border-radius:0.25em 50% 50% 0.25em; box-shadow:0 -0.2em 0 hsl(0,80%,72%) inset; top:1.5em; right:-0.5em; width:1em; height:0.5em; transform:rotate(30deg) translateZ(-1px); transform-origin:0.25em 0.25em; }
-.spoke { animation:spoke var(--dur) linear infinite; background:radial-gradient(100% 100% at center,hsl(285,38%,46%) 4.8%,hsla(0,0%,40%,0) 5%),linear-gradient(hsla(0,0%,40%,0) 46.9%,hsl(285,33%,42%) 47% 52.9%,hsla(0,0%,40%,0) 53%) 50% 50%/99% 99% no-repeat; }
-@keyframes hamster{from,to{transform:rotate(4deg) translate(-0.8em,1.85em)}50%{transform:rotate(0) translate(-0.8em,1.85em)}}
-@keyframes hamsterHead{from,25%,50%,75%,to{transform:rotate(0)}12.5%,37.5%,62.5%,87.5%{transform:rotate(8deg)}}
-@keyframes hamsterEye{from,90%,to{transform:scaleY(1)}95%{transform:scaleY(0)}}
-@keyframes hamsterEar{from,25%,50%,75%,to{transform:rotate(0)}12.5%,37.5%,62.5%,87.5%{transform:rotate(12deg)}}
-@keyframes hamsterBody{from,25%,50%,75%,to{transform:rotate(0)}12.5%,37.5%,62.5%,87.5%{transform:rotate(-2deg)}}
-@keyframes hamsterFRLimb{from,25%,50%,75%,to{transform:rotate(50deg) translateZ(-1px)}12.5%,37.5%,62.5%,87.5%{transform:rotate(-30deg) translateZ(-1px)}}
-@keyframes hamsterFLLimb{from,25%,50%,75%,to{transform:rotate(-30deg)}12.5%,37.5%,62.5%,87.5%{transform:rotate(50deg)}}
-@keyframes hamsterBRLimb{from,25%,50%,75%,to{transform:rotate(-60deg) translateZ(-1px)}12.5%,37.5%,62.5%,87.5%{transform:rotate(20deg) translateZ(-1px)}}
-@keyframes hamsterBLLimb{from,25%,50%,75%,to{transform:rotate(20deg)}12.5%,37.5%,62.5%,87.5%{transform:rotate(-60deg)}}
-@keyframes hamsterTail{from,25%,50%,75%,to{transform:rotate(30deg) translateZ(-1px)}12.5%,37.5%,62.5%,87.5%{transform:rotate(10deg) translateZ(-1px)}}
-@keyframes spoke{from{transform:rotate(0)}to{transform:rotate(-1turn)}}
-.loader-progress { width:160px; height:2px; background:var(--surface-3); border-radius:2px; overflow:hidden; margin-top:.5rem; }
-.loader-progress-fill { height:100%; background:var(--p2); animation:progFill 2.4s cubic-bezier(.4,0,.2,1) forwards; width:0; }
-@keyframes progFill{0%{width:0}60%{width:72%}85%{width:91%}100%{width:100%}}
-.loader-label { font-size:.7rem; letter-spacing:.14em; text-transform:uppercase; color:var(--text-3); margin-top:.5rem; }
-
-/* ================================================================
-   AMBIENT & NOISE
-   ================================================================ */
-.ambient { position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
-.ambient-grid {
-  position:absolute; inset:0;
-  background-image:
-    linear-gradient(rgba(122,58,142,0.06) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(122,58,142,0.06) 1px,transparent 1px);
-  background-size:64px 64px;
-  mask-image:radial-gradient(ellipse 80% 60% at 50% 0%,black 20%,transparent 100%);
-}
-@media (prefers-color-scheme: dark) {
-  .ambient-grid {
-    background-image:
-      linear-gradient(rgba(173,116,195,0.04) 1px,transparent 1px),
-      linear-gradient(90deg,rgba(173,116,195,0.04) 1px,transparent 1px);
-  }
-}
-.ambient-orb { position:absolute; border-radius:50%; filter:blur(120px); }
-.ao1 { width:700px; height:600px; background:rgba(122,58,142,0.12); top:-250px; left:-200px; }
-.ao2 { width:600px; height:500px; background:rgba(82,37,102,0.08); top:40%; right:-200px; }
-.ao3 { width:500px; height:400px; background:rgba(173,116,195,0.06); bottom:-100px; left:25%; }
-@media (prefers-color-scheme: dark) {
-  .ao1 { background:rgba(122,58,142,0.2); }
-  .ao2 { background:rgba(82,37,102,0.14); }
-  .ao3 { background:rgba(173,116,195,0.07); }
-}
-.noise {
-  position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.03;
-  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size:200px 200px;
-}
-
-/* ================================================================
-   LAYOUT
-   ================================================================ */
-.container { max-width:1180px; margin:0 auto; padding:0 2rem; position:relative; z-index:1; }
-section { position:relative; z-index:1; }
-
-/* ================================================================
-   REVEAL SYSTEM
-   ================================================================ */
-.rv { opacity:0; transform:translateY(28px); transition:opacity .7s ease,transform .7s ease; }
-.rv.in { opacity:1; transform:translateY(0); }
-.rv.d1 { transition-delay:.1s; } .rv.d2 { transition-delay:.2s; } .rv.d3 { transition-delay:.3s; } .rv.d4 { transition-delay:.4s; }
-.rv-left { opacity:0; transform:translateX(-36px); transition:opacity .8s ease,transform .8s ease; }
-.rv-left.in { opacity:1; transform:translateX(0); }
-.rv-right { opacity:0; transform:translateX(36px); transition:opacity .8s ease,transform .8s ease; }
-.rv-right.in { opacity:1; transform:translateX(0); }
-
-/* ================================================================
-   BUTTONS
-   ================================================================ */
-.btn-primary {
-  display:inline-flex; align-items:center; gap:.5rem;
-  padding:.78rem 1.65rem;
-  background:var(--p2); color:#fff;
-  border-radius:100px; font-size:.875rem; font-weight:500;
-  transition:background .2s,transform .15s,box-shadow .2s;
-  box-shadow:0 0 24px rgba(122,58,142,0.4),0 2px 8px rgba(0,0,0,0.2);
-}
-.btn-primary:hover { background:#8B45A0; transform:translateY(-2px); box-shadow:0 0 40px rgba(122,58,142,0.55); }
-.btn-primary:active { transform:translateY(0); }
-.btn-ghost {
-  display:inline-flex; align-items:center; gap:.45rem;
-  padding:.78rem 1.4rem;
-  background:var(--surface); color:var(--text-2);
-  border:1px solid var(--border-3); border-radius:100px;
-  font-size:.875rem; font-weight:450;
-  transition:all .2s;
-}
-.btn-ghost:hover { background:var(--surface-2); color:var(--text); border-color:var(--p3); }
-
-/* ================================================================
-   NAVBAR
-   ================================================================ */
-nav {
-  position:fixed; top:1.25rem; left:50%; transform:translateX(-50%);
-  z-index:200; width:calc(100% - 3rem); max-width:1100px;
-  display:flex; align-items:center; justify-content:space-between;
-  padding:.65rem 1.25rem;
-  background:var(--nav-bg);
-  backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);
-  border:1px solid var(--nav-border); border-radius:100px;
-  transition:top .3s, background .3s, box-shadow .3s;
-  box-shadow: var(--shadow-sm);
-}
-nav.scrolled {
-  top:.5rem;
-  box-shadow: var(--shadow-md);
-}
-.nav-logo {
-  display:flex; align-items:center; gap:.6rem;
-  font-family:var(--serif); font-size:1.2rem; color:var(--text);
-  white-space: nowrap;
-}
-.nav-logo-mark {
-  width:28px; height:28px; background:var(--p2); border-radius:7px;
-  display:flex; align-items:center; justify-content:center; flex-shrink:0;
-}
-.nav-links { display:flex; align-items:center; gap:1.75rem; list-style:none; }
-.nav-links a { font-size:.84rem; color:var(--text-2); font-weight:450; transition:color .2s; white-space:nowrap; }
-.nav-links a:hover { color:var(--text); }
-.nav-right { display:flex; align-items:center; gap:.6rem; }
-.nav-cta {
-  padding:.45rem 1.1rem; background:var(--p2); color:#fff;
-  border-radius:100px; font-size:.8rem; font-weight:500;
-  transition:background .2s,transform .15s;
-  box-shadow:0 0 16px rgba(122,58,142,0.35);
-  white-space:nowrap;
-}
-.nav-cta:hover { background:#8B45A0; transform:scale(1.02); }
-.nav-back {
-  display:flex; align-items:center; gap:.35rem;
-  font-size:.75rem; color:var(--text-3);
-  padding:.35rem .8rem;
-  border:1px solid var(--border-2); border-radius:100px;
-  transition:all .2s; white-space:nowrap;
-}
-.nav-back:hover { color:var(--text-2); border-color:var(--border-3); background:var(--surface); }
-
-/* Hamburger */
-.nav-hamburger {
-  display:none; flex-direction:column; gap:4.5px;
-  padding:7px; background:var(--surface); border:1px solid var(--border-2);
-  border-radius:8px;
-}
-.nav-hamburger span {
-  display:block; width:18px; height:1.5px;
-  background:var(--text-2); border-radius:2px;
-  transition:all .28s cubic-bezier(.4,0,.2,1); transform-origin:center;
-}
-.nav-hamburger.open span:nth-child(1) { transform:translateY(6px) rotate(45deg); }
-.nav-hamburger.open span:nth-child(2) { opacity:0; transform:scaleX(0); }
-.nav-hamburger.open span:nth-child(3) { transform:translateY(-6px) rotate(-45deg); }
-
-/* Mobile menu */
-.mobile-menu {
-  position:fixed; top:0; left:0; right:0; z-index:190;
-  background:var(--bg); border-bottom:1px solid var(--border-2);
-  padding:5.5rem 1.5rem 1.75rem;
-  transform:translateY(-110%);
-  transition:transform .35s cubic-bezier(.4,0,.2,1);
-  pointer-events:none;
-  box-shadow: var(--shadow-lg);
-}
-.mobile-menu.open { transform:translateY(0); pointer-events:all; }
-.mobile-menu-links { display:flex; flex-direction:column; gap:0; margin-bottom:1.25rem; }
-.mobile-menu-links a {
-  font-size:.975rem; font-weight:500; color:var(--text-2);
-  padding:.8rem .5rem; border-bottom:1px solid var(--border);
-  display:flex; align-items:center; justify-content:space-between;
-  transition:color .2s;
-}
-.mobile-menu-links a:last-child { border-bottom:none; }
-.mobile-menu-links a:hover { color:var(--text); }
-.mobile-menu-footer { display:grid; grid-template-columns:1fr 1fr; gap:.65rem; }
-.mobile-menu-footer button { justify-content:center; }
-
-/* ================================================================
-   HERO
-   ================================================================ */
-.hero {
-  min-height:100svh; display:flex; align-items:center;
-  padding:8rem 0 5rem; position:relative; overflow:hidden;
-}
-.hero-ring {
-  position:absolute; right:-100px; top:50%; transform:translateY(-50%);
-  width:560px; height:560px; pointer-events:none;
-  animation:ringRotate 40s linear infinite;
-  opacity:.12;
-}
-@media (prefers-color-scheme: dark) { .hero-ring { opacity:.08; } }
-@keyframes ringRotate { to { transform:translateY(-50%) rotate(1turn); } }
-
-.hero-grid {
-  display:grid; grid-template-columns:1fr 1.05fr;
-  gap:4rem; align-items:center;
-}
-.hero-badge {
-  display:inline-flex; align-items:center; gap:.5rem;
-  padding:.3rem .85rem;
-  background:rgba(122,58,142,0.10); border:1px solid rgba(122,58,142,0.22);
-  border-radius:100px; font-size:.74rem; color:var(--p2); font-weight:500;
-  margin-bottom:1.75rem;
-  animation:fadeUp .5s ease both;
-}
-@media (prefers-color-scheme: dark) {
-  .hero-badge { color:var(--p4); }
-}
-.badge-dot { width:5px; height:5px; background:var(--p3); border-radius:50%; animation:pulse 2s ease-in-out infinite; }
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.7)}}
-
-.hero h1 {
-  font-family:var(--serif);
-  font-size:clamp(2.6rem,5vw,4.6rem);
-  line-height:1.06; letter-spacing:-.03em;
-  color:var(--text);
-  animation:fadeUp .55s .08s ease both;
-}
-.hero h1 em { font-style:italic; color:var(--p2); }
-@media (prefers-color-scheme: dark) { .hero h1 em { color:var(--p3); } }
-
-.hero-sub {
-  margin-top:1.4rem; font-size:1rem; color:var(--text-2);
-  line-height:1.8; max-width:500px; font-weight:350;
-  animation:fadeUp .55s .16s ease both;
-}
-.hero-actions {
-  display:flex; align-items:center; gap:1rem; margin-top:2.5rem;
-  animation:fadeUp .55s .22s ease both;
-  flex-wrap:wrap;
-}
-.hero-live {
-  display:flex; align-items:center; gap:.6rem; margin-top:1.75rem;
-  animation:fadeUp .55s .28s ease both;
-}
-.live-dot {
-  width:7px; height:7px; background:var(--green); border-radius:50%;
-  box-shadow:0 0 8px color-mix(in srgb,var(--green) 60%,transparent);
-  animation:livePulse 2s ease-in-out infinite;
-}
-@keyframes livePulse{0%,100%{box-shadow:0 0 8px color-mix(in srgb,var(--green) 60%,transparent)}50%{box-shadow:0 0 18px color-mix(in srgb,var(--green) 80%,transparent)}}
-.live-label { font-size:.78rem; color:var(--text-3); }
-.live-count { font-size:.78rem; font-weight:600; color:var(--green); }
-
-.hero-metrics {
-  display:flex; gap:2.5rem; margin-top:2.5rem; padding-top:2rem;
-  border-top:1px solid var(--border);
-  animation:fadeUp .55s .34s ease both;
-  flex-wrap:wrap;
-}
-.metric-val {
-  font-family:var(--serif); font-size:1.9rem;
-  letter-spacing:-.025em; line-height:1; color:var(--text);
-}
-.metric-label { font-size:.75rem; color:var(--text-3); margin-top:.28rem; }
-@keyframes fadeUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
-
-/* ================================================================
-   DASHBOARD MOCKUP
-   ================================================================ */
-.hero-visual { position:relative; animation:fadeRight .8s .3s ease both; }
-@keyframes fadeRight{from{opacity:0;transform:translateX(36px)}to{opacity:1;transform:translateX(0)}}
-
-.float-card {
-  position:absolute; z-index:3;
-  background:var(--bg-2); border:1px solid var(--border-3);
-  border-radius:14px; padding:.8rem 1rem;
-  box-shadow:var(--shadow-md);
-  pointer-events:none;
-}
-.float-card-a { top:-16px; right:-20px; animation:floatA 3.5s ease-in-out infinite; }
-.float-card-b { bottom:28px; left:-20px; animation:floatB 4.2s ease-in-out infinite; }
-@keyframes floatA{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-8px) rotate(.5deg)}}
-@keyframes floatB{0%,100%{transform:translateY(0) rotate(.5deg)}50%{transform:translateY(8px) rotate(-1deg)}}
-.fc-label { font-size:.62rem; color:var(--text-3); text-transform:uppercase; letter-spacing:.07em; margin-bottom:.2rem; }
-.fc-val { font-weight:600; font-size:1.05rem; letter-spacing:-.02em; }
-.fc-val.green { color:var(--green); }
-.fc-val.purple { color:var(--p2); }
-@media (prefers-color-scheme: dark) { .fc-val.purple { color:var(--p4); } }
-
-.mockup-shell {
-  background:var(--bg-2); border:1px solid var(--border-2);
-  border-radius:18px; overflow:hidden;
-  box-shadow:var(--shadow-lg), 0 0 60px rgba(122,58,142,0.10);
-  position:relative;
-}
-.mockup-shell::after {
-  content:''; position:absolute; top:0; left:0; right:0; height:1px;
-  background:linear-gradient(90deg,transparent,rgba(122,58,142,0.55),transparent);
-}
-.m-topbar {
-  padding:.65rem 1rem; background:var(--bg-3); border-bottom:1px solid var(--border);
-  display:flex; align-items:center; gap:.65rem;
-}
-.m-dots { display:flex; gap:5px; }
-.m-dot { width:9px; height:9px; border-radius:50%; }
-.m-dot:nth-child(1){background:#ff5f57}.m-dot:nth-child(2){background:#febc2e}.m-dot:nth-child(3){background:#28c840}
-.m-url-bar {
-  flex:1; max-width:240px; margin:0 auto;
-  background:var(--surface); border:1px solid var(--border); border-radius:4px;
-  height:20px; display:flex; align-items:center; justify-content:center;
-  font-size:.62rem; color:var(--text-3);
-}
-.m-body { display:grid; grid-template-columns:160px 1fr; min-height:380px; }
-.m-sidebar {
-  background:var(--bg-3); border-right:1px solid var(--border);
-  padding:.9rem .6rem; display:flex; flex-direction:column; gap:2px;
-}
-.m-logo {
-  display:flex; align-items:center; gap:.45rem;
-  font-family:var(--serif); font-size:.9rem; color:var(--text);
-  padding:.25rem .5rem .8rem;
-}
-.m-logo-mark {
-  width:18px; height:18px; background:var(--p2); border-radius:4px;
-  display:flex; align-items:center; justify-content:center;
-}
-.m-nav {
-  display:flex; align-items:center; gap:.5rem;
-  padding:.42rem .6rem; border-radius:6px;
-  font-size:.68rem; color:var(--text-3);
-  transition:all .15s; cursor:pointer;
-}
-.m-nav.active { background:rgba(122,58,142,0.14); color:var(--p2); }
-@media (prefers-color-scheme: dark) { .m-nav.active { color:var(--p4); } }
-.m-nav:hover:not(.active) { background:var(--surface); color:var(--text-2); }
-.m-nav-ico { width:13px; height:13px; opacity:.75; }
-.m-main { padding:1.1rem; overflow:hidden; }
-.m-ptitle { font-size:.76rem; font-weight:600; margin-bottom:.8rem; letter-spacing:-.01em; }
-.m-stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:.5rem; margin-bottom:.8rem; }
-.m-stat {
-  background:var(--surface); border:1px solid var(--border);
-  border-radius:8px; padding:.55rem .6rem;
-}
-.m-stat-l { font-size:.55rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-3); }
-.m-stat-v { font-size:1.2rem; font-weight:700; margin-top:.1rem; letter-spacing:-.03em; }
-.m-stat-c { font-size:.55rem; margin-top:.06rem; }
-.m-bars-wrap { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:.7rem; margin-bottom:.5rem; }
-.m-bars-label { font-size:.58rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-3); margin-bottom:.5rem; }
-.m-bars { display:flex; align-items:flex-end; gap:3px; height:52px; }
-.m-bar {
-  flex:1; border-radius:2px 2px 0 0;
-  background:linear-gradient(180deg,var(--p2) 0%,rgba(122,58,142,0.2) 100%);
-  transform-origin:bottom;
-  animation:barGrow 1s cubic-bezier(.4,0,.2,1) both;
-}
-@keyframes barGrow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
-.m-bar:nth-child(1){animation-delay:.04s}.m-bar:nth-child(2){animation-delay:.08s}.m-bar:nth-child(3){animation-delay:.12s}.m-bar:nth-child(4){animation-delay:.16s}.m-bar:nth-child(5){animation-delay:.20s}.m-bar:nth-child(6){animation-delay:.24s}.m-bar:nth-child(7){animation-delay:.28s}.m-bar:nth-child(8){animation-delay:.32s}
-.m-table-wrap { background:var(--surface); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
-.m-trow {
-  display:flex; align-items:center; justify-content:space-between;
-  padding:.32rem .6rem; border-bottom:1px solid var(--border);
-  font-size:.62rem; color:var(--text-2); transition:background .15s;
-}
-.m-trow:last-child { border-bottom:none; }
-.m-trow:hover { background:var(--surface-2); }
-.m-trow-head { font-size:.56rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-3); background:var(--surface-2); }
-.mbadge { padding:.1rem .4rem; border-radius:3px; font-size:.52rem; font-weight:600; }
-.mbadge-y { background:rgba(202,138,4,0.12); color:var(--yellow); }
-.mbadge-b { background:rgba(37,99,235,0.12); color:var(--blue); }
-.mbadge-g { background:rgba(22,163,74,0.12); color:var(--green); }
-@media (prefers-color-scheme: dark) {
-  .mbadge-y { background:rgba(234,179,8,0.15); }
-  .mbadge-b { background:rgba(96,165,250,0.15); }
-  .mbadge-g { background:rgba(34,197,94,0.15); }
-}
-
-/* ================================================================
-   TRUST STRIP
-   ================================================================ */
-.strip {
-  border-top:1px solid var(--border); border-bottom:1px solid var(--border);
-  padding:1.75rem 0; overflow:hidden; background:var(--bg-2);
-}
-.strip-track {
-  display:flex; gap:3.5rem; align-items:center;
-  animation:stripScroll 22s linear infinite;
-  white-space:nowrap; width:max-content;
-}
-@keyframes stripScroll { to { transform:translateX(-50%); } }
-.strip-label { font-size:.7rem; color:var(--text-3); text-transform:uppercase; letter-spacing:.1em; }
-.strip-sep { width:4px; height:4px; border-radius:50%; background:var(--p3); opacity:.4; flex-shrink:0; }
-.strip-item { font-size:.82rem; font-weight:500; color:var(--text-2); }
-
-/* ================================================================
-   EYEBROW / HEADINGS
-   ================================================================ */
-.eyebrow {
-  display:inline-flex; align-items:center; gap:.5rem;
-  font-size:.7rem; font-weight:600; text-transform:uppercase; letter-spacing:.14em;
-  color:var(--p2); margin-bottom:1rem;
-}
-@media (prefers-color-scheme: dark) { .eyebrow { color:var(--p3); } }
-.eyebrow-line { width:20px; height:1px; background:currentColor; opacity:.6; }
-h2 {
-  font-family:var(--serif);
-  font-size:clamp(1.9rem,4vw,2.9rem);
-  letter-spacing:-.025em; line-height:1.12; color:var(--text);
-}
-h2 em { font-style:italic; color:var(--p2); }
-@media (prefers-color-scheme: dark) { h2 em { color:var(--p3); } }
-.sub { color:var(--text-2); font-size:.975rem; line-height:1.8; max-width:500px; margin-top:.75rem; font-weight:300; }
-
-/* ================================================================
-   PROBLEM / SOLUTION
-   ================================================================ */
-.ps { padding:8rem 0; }
-.ps-header { text-align:center; margin-bottom:4.5rem; }
-.ps-grid { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; }
-.ps-card {
-  border-radius:22px; padding:2.25rem 2rem;
-  border:1px solid var(--border); position:relative; overflow:hidden;
-}
-.ps-before { background:var(--bg-2); }
-.ps-after {
-  background:linear-gradient(145deg,rgba(122,58,142,0.08),rgba(122,58,142,0.02));
-  border-color:rgba(122,58,142,0.22);
-}
-.ps-after::before {
-  content:''; position:absolute; top:0; left:0; right:0; height:1px;
-  background:linear-gradient(90deg,transparent,rgba(122,58,142,0.5),transparent);
-}
-.ps-pill {
-  display:inline-flex; align-items:center; gap:.4rem;
-  padding:.25rem .75rem; border-radius:100px;
-  font-size:.7rem; font-weight:600; margin-bottom:1.25rem;
-}
-.ps-pill-before { background:rgba(220,38,38,0.10); color:var(--red); }
-.ps-pill-after  { background:rgba(22,163,74,0.10);  color:var(--green); }
-@media (prefers-color-scheme: dark) {
-  .ps-pill-before { background:rgba(239,68,68,0.15); }
-  .ps-pill-after  { background:rgba(34,197,94,0.15); }
-}
-.ps-card h3 { font-family:var(--serif); font-size:1.35rem; letter-spacing:-.02em; margin-bottom:1.4rem; }
-.ps-items { display:flex; flex-direction:column; gap:.85rem; }
-.ps-item { display:flex; align-items:flex-start; gap:.8rem; }
-.ps-ico {
-  width:28px; height:28px; border-radius:7px; flex-shrink:0;
-  display:flex; align-items:center; justify-content:center; margin-top:.05rem;
-}
-.ps-ico-b { background:rgba(220,38,38,0.10); color:var(--red); }
-.ps-ico-a { background:rgba(22,163,74,0.10); color:var(--green); }
-@media (prefers-color-scheme: dark) {
-  .ps-ico-b { background:rgba(239,68,68,0.14); }
-  .ps-ico-a { background:rgba(34,197,94,0.14); }
-}
-.ps-item-text { font-size:.875rem; color:var(--text-2); line-height:1.65; }
-
-/* ================================================================
-   FEATURES
-   ================================================================ */
-.features { padding:8rem 0; }
-.features-header { margin-bottom:3.5rem; }
-.feat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1.1rem; }
-.feat-card {
-  background:var(--bg-2); border:1px solid var(--border);
-  border-radius:18px; padding:1.75rem;
-  position:relative; overflow:hidden;
-  transition:border-color .25s,transform .25s,box-shadow .25s;
-}
-.feat-card::before {
-  content:''; position:absolute; top:0; left:0; right:0; height:1px;
-  background:transparent; transition:background .3s;
-}
-.feat-card:hover { border-color:rgba(122,58,142,0.35); transform:translateY(-4px); box-shadow:var(--shadow-md), 0 0 24px rgba(122,58,142,0.10); }
-.feat-card:hover::before { background:linear-gradient(90deg,transparent,rgba(122,58,142,0.45),transparent); }
-.feat-icon {
-  width:44px; height:44px; border-radius:11px;
-  display:flex; align-items:center; justify-content:center;
-  margin-bottom:1.1rem; color:var(--p2);
-  transition:transform .25s;
-}
-@media (prefers-color-scheme: dark) { .feat-icon { color:var(--p3); } }
-.feat-card:hover .feat-icon { transform:scale(1.08) rotate(4deg); }
-.feat-card h3 { font-family:var(--serif); font-size:1.1rem; letter-spacing:-.02em; margin-bottom:.45rem; }
-.feat-card p { font-size:.855rem; color:var(--text-2); line-height:1.72; }
-
-.feat-card:nth-child(1) .feat-icon { background:rgba(122,58,142,0.10); border:1px solid rgba(122,58,142,0.18); }
-.feat-card:nth-child(2) .feat-icon { background:rgba(22,163,74,0.08); border:1px solid rgba(22,163,74,0.16); color:var(--green); }
-.feat-card:nth-child(3) .feat-icon { background:rgba(37,99,235,0.08); border:1px solid rgba(37,99,235,0.16); color:var(--blue); }
-.feat-card:nth-child(4) .feat-icon { background:rgba(202,138,4,0.08); border:1px solid rgba(202,138,4,0.16); color:var(--yellow); }
-.feat-card:nth-child(5) .feat-icon { background:rgba(220,38,38,0.07); border:1px solid rgba(220,38,38,0.14); color:var(--red); }
-.feat-card:nth-child(6) .feat-icon { background:rgba(122,58,142,0.10); border:1px solid rgba(122,58,142,0.18); }
-@media (prefers-color-scheme: dark) {
-  .feat-card:nth-child(2) .feat-icon { background:rgba(34,197,94,0.10); border-color:rgba(34,197,94,0.2); }
-  .feat-card:nth-child(3) .feat-icon { background:rgba(96,165,250,0.10); border-color:rgba(96,165,250,0.2); }
-  .feat-card:nth-child(4) .feat-icon { background:rgba(234,179,8,0.10); border-color:rgba(234,179,8,0.2); }
-  .feat-card:nth-child(5) .feat-icon { background:rgba(239,68,68,0.10); border-color:rgba(239,68,68,0.18); }
-}
-
-/* ================================================================
-   FULL DASHBOARD PREVIEW
-   ================================================================ */
-.preview { padding:8rem 0; text-align:center; }
-.preview-wrap { margin-top:3rem; position:relative; }
-.preview-glow {
-  position:absolute; bottom:-50px; left:50%; transform:translateX(-50%);
-  width:60%; height:80px;
-  background:radial-gradient(ellipse,rgba(122,58,142,0.3),transparent 70%);
-  pointer-events:none;
-}
-.big-mock {
-  background:var(--bg-2); border:1px solid var(--border-2);
-  border-radius:22px; overflow:hidden; text-align:left;
-  box-shadow:var(--shadow-lg), 0 0 80px rgba(122,58,142,0.08);
-  position:relative;
-}
-.big-mock::after {
-  content:''; position:absolute; top:0; left:0; right:0; height:1px;
-  background:linear-gradient(90deg,transparent,rgba(122,58,142,0.55),transparent);
-}
-.bm-topbar { padding:.7rem 1.2rem; background:var(--bg-3); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:.75rem; }
-.bm-dots { display:flex; gap:5px; }
-.bm-dot { width:9px; height:9px; border-radius:50%; }
-.bm-dot:nth-child(1){background:#ff5f57}.bm-dot:nth-child(2){background:#febc2e}.bm-dot:nth-child(3){background:#28c840}
-.bm-url { flex:1; max-width:280px; margin:0 auto; background:var(--surface); border:1px solid var(--border); border-radius:5px; height:22px; display:flex; align-items:center; justify-content:center; font-size:.65rem; color:var(--text-3); }
-.bm-body { display:grid; grid-template-columns:195px 1fr; min-height:520px; }
-.bm-sidebar { background:var(--bg-3); border-right:1px solid var(--border); padding:1.2rem .85rem; display:flex; flex-direction:column; gap:2px; }
-.bm-logo { display:flex; align-items:center; gap:.55rem; font-family:var(--serif); font-size:.95rem; color:var(--text); padding:.25rem .5rem 1rem; }
-.bm-logo-mark { width:20px; height:20px; background:var(--p2); border-radius:5px; display:flex; align-items:center; justify-content:center; }
-.bm-nav { display:flex; align-items:center; gap:.55rem; padding:.48rem .65rem; border-radius:7px; font-size:.7rem; color:var(--text-3); transition:all .15s; cursor:pointer; }
-.bm-nav.active { background:rgba(122,58,142,0.14); color:var(--p2); }
-@media (prefers-color-scheme: dark) { .bm-nav.active { color:var(--p4); } }
-.bm-nav:hover:not(.active) { background:var(--surface); color:var(--text-2); }
-.bm-nav-ico { width:14px; height:14px; flex-shrink:0; opacity:.8; }
-.bm-main { padding:1.6rem; }
-.bm-ph { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.4rem; flex-wrap:wrap; gap:.75rem; }
-.bm-pt { font-size:.875rem; font-weight:600; letter-spacing:-.01em; }
-.bm-ps { font-size:.63rem; color:var(--text-3); margin-top:.1rem; }
-.bm-add { padding:.38rem .85rem; background:var(--surface-2); border:1px solid var(--border-2); border-radius:7px; font-size:.66rem; font-weight:500; color:var(--text); display:flex; align-items:center; gap:.35rem; transition:background .15s; }
-.bm-add:hover { background:var(--surface-3); }
-.bm-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:.8rem; margin-bottom:1.1rem; }
-.bm-stat { background:var(--surface); border:1px solid var(--border); border-radius:9px; padding:.85rem .9rem; }
-.bm-sl { font-size:.6rem; text-transform:uppercase; letter-spacing:.07em; color:var(--text-3); }
-.bm-sv { font-size:1.45rem; font-weight:700; margin-top:.15rem; letter-spacing:-.03em; }
-.bm-sc { font-size:.6rem; margin-top:.06rem; color:var(--text-3); }
-.bm-filter { display:flex; gap:.65rem; margin-bottom:.9rem; flex-wrap:wrap; }
-.bm-fi { flex:1; min-width:120px; background:var(--surface); border:1px solid var(--border-2); border-radius:7px; padding:.38rem .7rem; font-size:.63rem; color:var(--text-3); display:flex; align-items:center; gap:.4rem; }
-.bm-fs { background:var(--surface); border:1px solid var(--border-2); border-radius:7px; padding:.38rem .7rem; font-size:.63rem; color:var(--text-2); display:flex; align-items:center; gap:.35rem; }
-.bm-table { width:100%; border-collapse:collapse; font-size:.67rem; }
-.bm-table thead tr { border-bottom:1px solid var(--border); }
-.bm-table th { padding:.38rem .6rem; text-align:left; font-size:.58rem; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:var(--text-3); }
-.bm-table th:nth-child(3),.bm-table th:nth-child(4),.bm-table th:nth-child(5) { text-align:center; }
-.bm-table tbody tr { border-bottom:1px solid var(--border); transition:background .15s; }
-.bm-table tbody tr:last-child { border-bottom:none; }
-.bm-table tbody tr:hover { background:var(--surface); }
-.bm-table td { padding:.5rem .6rem; color:var(--text-2); vertical-align:middle; }
-.bm-table td:first-child { color:var(--text); font-weight:500; font-size:.6rem; }
-.bm-table td:nth-child(3),.bm-table td:nth-child(4),.bm-table td:nth-child(5) { text-align:center; }
-.bm-status { display:inline-flex; align-items:center; padding:.14rem .46rem; border-radius:4px; font-size:.56rem; font-weight:600; }
-.bm-sy { background:rgba(202,138,4,0.12); color:var(--yellow); }
-.bm-sb { background:rgba(37,99,235,0.12); color:var(--blue); }
-.bm-sg { background:rgba(22,163,74,0.12); color:var(--green); }
-@media (prefers-color-scheme: dark) {
-  .bm-sy { background:rgba(234,179,8,0.15); }
-  .bm-sb { background:rgba(96,165,250,0.15); }
-  .bm-sg { background:rgba(34,197,94,0.15); }
-}
-.bm-pag { display:flex; align-items:center; justify-content:space-between; margin-top:.9rem; padding-top:.7rem; border-top:1px solid var(--border); flex-wrap:wrap; gap:.5rem; }
-.bm-pi { font-size:.6rem; color:var(--text-3); }
-.bm-pb { display:flex; gap:.35rem; }
-.bm-btn { padding:.22rem .52rem; background:var(--surface); border:1px solid var(--border-2); border-radius:5px; font-size:.6rem; color:var(--text-2); font-family:var(--sans); transition:background .15s; }
-.bm-btn.active { background:var(--p2); color:#fff; border-color:var(--p2); }
-
-/* ================================================================
-   PRICING
-   ================================================================ */
-.pricing { padding:8rem 0; text-align:center; }
-.pricing-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1.1rem; margin-top:3.5rem; align-items:start; }
-.price-card {
-  background:var(--bg-2); border:1px solid var(--border); border-radius:20px;
-  padding:2.1rem 1.75rem; text-align:left; transition:all .25s; position:relative; overflow:hidden;
-}
-.price-card:hover { border-color:rgba(122,58,142,0.35); transform:translateY(-3px); box-shadow:var(--shadow-md); }
-.price-card.featured {
-  background:linear-gradient(145deg,rgba(122,58,142,0.10),rgba(122,58,142,0.03));
-  border-color:rgba(122,58,142,0.35); box-shadow:0 0 48px rgba(122,58,142,0.14); transform:scale(1.02);
-}
-.price-card.featured:hover { transform:scale(1.02) translateY(-3px); }
-.price-card.featured::before {
-  content:''; position:absolute; top:0; left:0; right:0; height:1px;
-  background:linear-gradient(90deg,transparent,var(--p2),transparent);
-}
-.price-badge {
-  position:absolute; top:-1px; right:1.25rem;
-  background:var(--p2); color:#fff; font-size:.62rem; font-weight:600;
-  padding:.24rem .68rem; border-radius:0 0 7px 7px; letter-spacing:.04em; text-transform:uppercase;
-}
-.price-tier { font-size:.7rem; font-weight:600; text-transform:uppercase; letter-spacing:.1em; color:var(--text-3); }
-.price-amount { display:flex; align-items:baseline; gap:.25rem; margin:1.1rem 0 .15rem; }
-.price-currency { font-size:1.05rem; font-weight:500; color:var(--text-2); }
-.price-num { font-family:var(--serif); font-size:2.6rem; letter-spacing:-.03em; color:var(--text); }
-.price-num.hl { color:var(--p2); }
-@media (prefers-color-scheme: dark) { .price-num.hl { color:var(--p4); } }
-.price-num.sm { font-size:1.45rem; color:var(--text-2); }
-.price-period { font-size:.73rem; color:var(--text-3); margin-bottom:1.35rem; }
-.price-desc { font-size:.82rem; color:var(--text-3); line-height:1.6; margin-bottom:1.35rem; }
-.price-feats { display:flex; flex-direction:column; gap:.55rem; margin-bottom:1.85rem; }
-.price-feat { display:flex; align-items:center; gap:.5rem; font-size:.84rem; color:var(--text-2); }
-.pfyes { color:var(--green); flex-shrink:0; }
-.pfno  { color:var(--text-3); flex-shrink:0; }
-.btn-price {
-  width:100%; padding:.78rem; border-radius:var(--radius-sm);
-  font-size:.855rem; font-weight:500; transition:all .2s; font-family:var(--sans);
-}
-.btn-price-outline { background:transparent; border:1px solid var(--border-3); color:var(--text); }
-.btn-price-outline:hover { background:var(--surface-2); transform:translateY(-1px); }
-.btn-price-fill { background:var(--p2); color:#fff; box-shadow:0 0 22px rgba(122,58,142,0.35); }
-.btn-price-fill:hover { background:#8B45A0; box-shadow:0 0 32px rgba(122,58,142,0.5); transform:translateY(-1px); }
-
-/* ================================================================
-   CTA / CONTACT
-   ================================================================ */
-.cta-section { padding:7rem 0; }
-.cta-box {
-  background:linear-gradient(145deg,rgba(122,58,142,0.10),rgba(82,37,102,0.04));
-  border:1px solid rgba(122,58,142,0.22); border-radius:28px;
-  padding:4.5rem 3.5rem; text-align:center; position:relative; overflow:hidden;
-}
-.cta-box::before {
-  content:''; position:absolute; top:0; left:0; right:0; height:1px;
-  background:linear-gradient(90deg,transparent,var(--p2),rgba(173,116,195,.5),transparent);
-}
-.glow-l { position:absolute; top:-80px; left:10%; width:300px; height:300px; background:radial-gradient(ellipse,rgba(122,58,142,0.15),transparent 70%); pointer-events:none; }
-.glow-r { position:absolute; bottom:-60px; right:10%; width:250px; height:250px; background:radial-gradient(ellipse,rgba(173,116,195,0.08),transparent 70%); pointer-events:none; }
-.cta-box h2 { font-size:clamp(1.9rem,4vw,2.75rem); margin-bottom:.9rem; }
-.cta-box p { color:var(--text-2); max-width:460px; margin:0 auto 2.25rem; font-size:.975rem; }
-.cta-actions { display:flex; justify-content:center; gap:1rem; flex-wrap:wrap; }
-.cta-form { margin-top:2.25rem; max-width:440px; margin-left:auto; margin-right:auto; text-align:left; }
-.form-row2 { display:grid; grid-template-columns:1fr 1fr; gap:.8rem; }
-.form-grp { margin-bottom:.8rem; }
-.form-lbl { display:block; font-size:.76rem; color:var(--text-2); margin-bottom:.35rem; font-weight:450; }
-.form-ctrl {
-  width:100%; background:var(--bg); border:1.5px solid var(--border-2);
-  border-radius:var(--radius-sm); padding:.65rem .9rem;
-  color:var(--text); font-family:var(--sans); font-size:.875rem;
-  outline:none; appearance:none; transition:border-color .2s,box-shadow .2s;
-}
-.form-ctrl:focus { border-color:var(--p2); box-shadow:0 0 0 3px rgba(122,58,142,0.12); }
-.form-ctrl::placeholder { color:var(--text-3); }
-textarea.form-ctrl { resize:vertical; min-height:90px; }
-select.form-ctrl option { background:var(--bg-2); color:var(--text); }
-.btn-submit {
-  width:100%; padding:.85rem; background:var(--p2); color:#fff;
-  border-radius:var(--radius-sm); font-size:.9rem; font-weight:500;
-  font-family:var(--sans); cursor:pointer;
-  transition:background .2s,transform .15s,box-shadow .2s;
-  box-shadow:0 0 22px rgba(122,58,142,0.35);
-  display:flex; align-items:center; justify-content:center; gap:.5rem;
-}
-.btn-submit:hover { background:#8B45A0; transform:translateY(-2px); box-shadow:0 0 32px rgba(122,58,142,0.5); }
-.btn-submit.sent  { background:#15803d; box-shadow:0 0 22px rgba(21,128,61,0.3); }
-.btn-submit.error { background:#b91c1c; box-shadow:0 0 22px rgba(185,28,28,0.3); }
-@media (prefers-color-scheme: dark) {
-  .btn-submit.sent  { background:#16a34a; }
-}
-
-/* ================================================================
-   FOOTER
-   ================================================================ */
-footer { border-top:1px solid var(--border); padding:3rem 0; background:var(--bg-2); }
-.footer-grid { display:grid; grid-template-columns:1.6fr 1fr 1fr 1fr; gap:2.5rem; margin-bottom:2.5rem; }
-.footer-brand p { font-size:.82rem; color:var(--text-3); line-height:1.7; margin-top:.7rem; max-width:200px; }
-.footer-col-title { font-size:.7rem; font-weight:600; text-transform:uppercase; letter-spacing:.1em; color:var(--text-3); margin-bottom:.9rem; }
-.footer-links { display:flex; flex-direction:column; gap:.45rem; }
-.footer-links a { font-size:.83rem; color:var(--text-3); transition:color .2s; }
-.footer-links a:hover { color:var(--text-2); }
-.footer-bottom { padding-top:1.5rem; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; }
-.footer-copy { font-size:.77rem; color:var(--text-3); }
-.footer-logo { display:flex; align-items:center; gap:.55rem; font-family:var(--serif); font-size:1.1rem; color:var(--text); }
-.footer-logo-mark { width:21px; height:21px; background:var(--p2); border-radius:5px; display:flex; align-items:center; justify-content:center; }
-
-/* ================================================================
-   MODALS
-   ================================================================ */
-.modal-backdrop {
-  position:fixed; inset:0; z-index:500;
-  background:rgba(0,0,0,0.5);
-  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
-  display:flex; align-items:center; justify-content:center; padding:1.5rem;
-  opacity:0; pointer-events:none; transition:opacity .25s ease;
-}
-@media (prefers-color-scheme: dark) { .modal-backdrop { background:rgba(0,0,0,0.75); } }
-.modal-backdrop.open { opacity:1; pointer-events:all; }
-.modal {
-  background:var(--bg-2); border:1px solid var(--border-2);
-  border-radius:22px; width:100%; max-width:520px; max-height:90vh;
-  overflow-y:auto; position:relative;
-  transform:translateY(20px) scale(0.97);
-  transition:transform .3s cubic-bezier(.4,0,.2,1);
-  scrollbar-width:none; box-shadow:var(--shadow-lg);
-}
-.modal::-webkit-scrollbar { display:none; }
-.modal-backdrop.open .modal { transform:translateY(0) scale(1); }
-.modal::before {
-  content:''; position:absolute; top:0; left:0; right:0; height:1px;
-  background:linear-gradient(90deg,transparent,rgba(122,58,142,0.5),transparent);
-  border-radius:22px 22px 0 0;
-}
-.modal-close {
-  position:absolute; top:1rem; right:1rem;
-  width:30px; height:30px; background:var(--surface-2); border:1px solid var(--border-2);
-  border-radius:8px; display:flex; align-items:center; justify-content:center;
-  color:var(--text-3); cursor:pointer; transition:all .15s; z-index:2;
-}
-.modal-close:hover { background:var(--surface-3); color:var(--text); }
-.modal-body { padding:1.85rem; }
-.modal-title { font-family:var(--serif); font-size:1.6rem; letter-spacing:-.02em; line-height:1.15; margin-bottom:.35rem; }
-.modal-title em { font-style:italic; color:var(--p2); }
-@media (prefers-color-scheme: dark) { .modal-title em { color:var(--p3); } }
-.modal-sub { font-size:.84rem; color:var(--text-3); margin-bottom:1.4rem; line-height:1.65; }
-
-/* Pricing modal */
-.mprice-card {
-  background:var(--bg-3); border:1px solid var(--border); border-radius:14px;
-  padding:1.35rem 1.4rem; margin-bottom:.8rem; position:relative; transition:all .2s;
-}
-.mprice-card:hover { border-color:rgba(122,58,142,0.28); transform:translateY(-2px); box-shadow:var(--shadow-sm); }
-.mprice-card.featured {
-  background:linear-gradient(145deg,rgba(122,58,142,0.09),rgba(122,58,142,0.02));
-  border-color:rgba(122,58,142,0.32);
-}
-.mprice-card.featured::before {
-  content:''; position:absolute; top:0; left:0; right:0; height:1px;
-  background:linear-gradient(90deg,transparent,rgba(122,58,142,0.5),transparent); border-radius:14px 14px 0 0;
-}
-.mprice-badge { position:absolute; top:-1px; right:1rem; background:var(--p2); color:#fff; font-size:.6rem; font-weight:600; padding:.2rem .58rem; border-radius:0 0 6px 6px; text-transform:uppercase; letter-spacing:.05em; }
-.mprice-tier { font-size:.66rem; font-weight:600; text-transform:uppercase; letter-spacing:.1em; color:var(--text-3); }
-.mprice-amount { display:flex; align-items:baseline; gap:.2rem; margin:.55rem 0 .2rem; }
-.mprice-currency { font-size:.9rem; color:var(--text-2); }
-.mprice-num { font-family:var(--serif); font-size:1.9rem; letter-spacing:-.03em; color:var(--text); }
-.mprice-num.hl { color:var(--p2); }
-@media (prefers-color-scheme: dark) { .mprice-num.hl { color:var(--p4); } }
-.mprice-num.sm { font-size:1.1rem; color:var(--text-2); }
-.mprice-period { font-size:.63rem; color:var(--text-3); margin-bottom:.7rem; }
-.mprice-feats { display:flex; flex-direction:column; gap:.38rem; margin-bottom:1rem; }
-.mprice-feat { display:flex; align-items:center; gap:.42rem; font-size:.79rem; color:var(--text-2); }
-.mpfyes { color:var(--green); flex-shrink:0; }
-.mpfno  { color:var(--text-3); flex-shrink:0; }
-
-/* ================================================================
-   TOAST NOTIFICATION
-   ================================================================ */
-.toast {
-  position:fixed; bottom:1.5rem; right:1.5rem; z-index:9000;
-  background:var(--bg-2); border:1px solid var(--border-2);
-  border-radius:12px; padding:.875rem 1.25rem;
-  display:flex; align-items:center; gap:.75rem;
-  box-shadow:var(--shadow-lg);
-  transform:translateY(120%); opacity:0;
-  transition:transform .35s cubic-bezier(.4,0,.2,1), opacity .35s ease;
-  max-width:320px;
-}
-.toast.show { transform:translateY(0); opacity:1; }
-.toast-icon { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-.toast-icon.success { background:rgba(22,163,74,0.12); color:var(--green); }
-.toast-title { font-size:.84rem; font-weight:600; color:var(--text); }
-.toast-msg { font-size:.75rem; color:var(--text-3); margin-top:.1rem; }
-
-/* ================================================================
-   RESPONSIVE
-   ================================================================ */
-/* 1024px */
-@media (max-width:1024px) {
-  .feat-grid { grid-template-columns:repeat(2,1fr); }
-  .pricing-grid { grid-template-columns:1fr; max-width:420px; margin-left:auto; margin-right:auto; }
-  .price-card.featured { transform:none; }
-  .price-card.featured:hover { transform:translateY(-3px); }
-  .footer-grid { grid-template-columns:1fr 1fr; gap:2rem; }
-  .bm-body { grid-template-columns:1fr; }
-  .bm-sidebar { display:none; }
-  .bm-stats { grid-template-columns:repeat(2,1fr); }
-  .hero-grid { gap:3rem; }
-}
-
-/* 900px */
-@media (max-width:900px) {
-  .hero-grid { grid-template-columns:1fr; }
-  .hero-visual { display:none; }
-  .hero h1 { font-size:clamp(2.4rem,7vw,3.5rem); }
-}
-
-/* 768px */
-@media (max-width:768px) {
-  nav { width:calc(100% - 2rem); }
-  .nav-links,.nav-cta,.nav-back { display:none; }
-  .nav-hamburger { display:flex; }
-  .container { padding:0 1.25rem; }
-  .hero { padding:7rem 0 4rem; min-height:auto; }
-  .hero-actions { flex-direction:column; align-items:stretch; }
-  .hero-actions .btn-primary,.hero-actions .btn-ghost { justify-content:center; }
-  .hero-metrics { gap:1.5rem; }
-  .ps-grid { grid-template-columns:1fr; }
-  .feat-grid { grid-template-columns:1fr; max-width:440px; margin:0 auto; }
-  .ps,.features,.preview,.pricing,.cta-section { padding:5.5rem 0; }
-  .cta-box { padding:2.75rem 1.5rem; }
-  .form-row2 { grid-template-columns:1fr; }
-  .footer-grid { grid-template-columns:1fr; gap:1.5rem; }
-  .footer-bottom { flex-direction:column; align-items:flex-start; gap:.65rem; }
-  .bm-main { padding:1rem; }
-  .bm-stats { grid-template-columns:1fr 1fr; }
-  .bm-filter { flex-wrap:wrap; }
-  .bm-fi { min-width:100%; }
-  .mobile-menu-footer { grid-template-columns:1fr; }
-  .pricing-grid { max-width:100%; }
-}
-
-/* 480px */
-@media (max-width:480px) {
-  .hero h1 { font-size:2rem; }
-  .metric-val { font-size:1.5rem; }
-  .cta-box { padding:2rem 1.1rem; }
-  .cta-actions { flex-direction:column; align-items:stretch; }
-  .toast { right:.75rem; left:.75rem; max-width:none; }
-  .bm-table th:nth-child(5), .bm-table td:nth-child(5) { display:none; }
-  .ps-card { padding:1.75rem 1.4rem; }
-  .modal-body { padding:1.35rem; }
-}
-
-/* Reduce motion */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration:.01ms !important; transition-duration:.01ms !important; }
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>ArrowK</title>
+  <link rel="preconnect" href="https://fonts.bunny.net">
+  <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet">
+  @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body>
 
-<!-- CURSORS -->
-<div class="cursor" id="cursor"></div>
-<div class="cursor-ring" id="cursorRing"></div>
+<body class="font-figtree bg-white dark:bg-gray-900 text-gray-900 dark:text-white antialiased overflow-x-hidden">
 
-<!-- TOAST -->
-<div class="toast" id="toast">
-  <div class="toast-icon success" id="toast-icon">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-  </div>
-  <div>
-    <div class="toast-title" id="toast-title">¡Mensaje enviado!</div>
-    <div class="toast-msg" id="toast-msg">Te respondemos en menos de 24 h.</div>
-  </div>
-</div>
-
-<!-- LOADER -->
-<div id="loader">
-  <div class="loader-wordmark">
-    <div class="loader-wordmark-icon">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-    </div>
-    ArrowK
-  </div>
-  <div class="wheel-and-hamster" role="img" aria-label="Cargando...">
-    <div class="wheel"></div>
-    <div class="hamster">
-      <div class="hamster__body">
-        <div class="hamster__head"><div class="hamster__ear"></div><div class="hamster__eye"></div><div class="hamster__nose"></div></div>
-        <div class="hamster__limb hamster__limb--fr"></div>
-        <div class="hamster__limb hamster__limb--fl"></div>
-        <div class="hamster__limb hamster__limb--br"></div>
-        <div class="hamster__limb hamster__limb--bl"></div>
-        <div class="hamster__tail"></div>
-      </div>
-    </div>
-    <div class="spoke"></div>
-  </div>
-  <div class="loader-progress"><div class="loader-progress-fill"></div></div>
-  <div class="loader-label">Iniciando sistema</div>
-</div>
-
-<!-- AMBIENT -->
-<div class="ambient">
-  <div class="ambient-grid"></div>
-  <div class="ambient-orb ao1"></div>
-  <div class="ambient-orb ao2"></div>
-  <div class="ambient-orb ao3"></div>
-</div>
-<div class="noise"></div>
-
-<!-- ====================================================  NAVBAR ==================================================== -->
-<nav id="navbar">
-  <a href="/" class="nav-logo">
-    <div class="nav-logo-mark">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-    </div>
-    ArrowK
-  </a>
-  <ul class="nav-links">
-    <li><a href="#features">Características</a></li>
-    <li><a href="#preview">Plataforma</a></li>
-    <li><a href="#pricing">Precios</a></li>
-    <li><a href="#contact">Contacto</a></li>
-  </ul>
-  <div class="nav-right">
-    <a href="/" class="nav-back">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-      CloudLabs
+  <!-- NAV -->
+  <nav id="nav" class="fixed top-0 left-0 right-0 z-50 px-6 h-14 flex items-center justify-between transition-colors duration-300 border-b border-transparent bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm">
+    <a href="/" class="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-white">
+      <img src="{{ asset('arrowk/favicon-arrowk.svg') }}" alt="ArrowK" class="h-8 w-auto dark:hidden">
+      <img src="{{ asset('arrowk/favicon-arrowk-white.svg') }}" alt="ArrowK" class="h-8 w-auto hidden dark:block">
     </a>
-    <button class="nav-cta" onclick="openModal('modal-contact')">Solicitar demo</button>
-  </div>
-  <button class="nav-hamburger" id="hamburger" aria-label="Abrir menú" onclick="toggleMenu()">
-    <span></span><span></span><span></span>
-  </button>
-</nav>
-
-<!-- Mobile menu -->
-<div class="mobile-menu" id="mobile-menu">
-  <div class="mobile-menu-links">
-    <a href="#features" onclick="closeMenu()">Características <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></a>
-    <a href="#preview" onclick="closeMenu()">Plataforma <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></a>
-    <a href="#pricing" onclick="closeMenu()">Precios <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></a>
-    <a href="#contact" onclick="closeMenu()">Contacto <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></a>
-  </div>
-  <div class="mobile-menu-footer">
-    <button class="btn-ghost" onclick="closeMenu(); openModal('modal-pricing')">Ver planes</button>
-    <button class="btn-primary" onclick="closeMenu(); openModal('modal-contact')">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-      Solicitar demo
+    <ul class="hidden md:flex items-center gap-7 text-sm text-gray-500 dark:text-gray-400">
+      <li><a href="#problema" class="hover:text-gray-900 dark:hover:text-white transition-colors duration-200">El problema</a></li>
+      <li><a href="#plataforma" class="hover:text-gray-900 dark:hover:text-white transition-colors duration-200">Plataforma</a></li>
+      <li><a href="#contacto" class="hover:text-gray-900 dark:hover:text-white transition-colors duration-200">Contacto</a></li>
+    </ul>
+    <div class="hidden md:flex items-center gap-3">
+      @auth
+      <a href="{{ url('/dashboard') }}" class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors duration-200 text-sm">Ir al panel</a>
+      @else
+      <a href="{{ route('login') }}" class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors duration-200 text-sm">Iniciar sesión</a>
+      @endauth
+      <a href="#contacto" class="bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-4 py-1.5 rounded-full text-sm font-medium hover:bg-gray-800 dark:hover:bg-white transition-all duration-200 transform hover:scale-105 active:scale-95">Solicitar demo</a>
+    </div>
+    <!-- Burger -->
+    <button id="burger" class="md:hidden flex flex-col gap-1 p-2 border border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-200 hover:border-gray-400 dark:hover:border-gray-500" onclick="toggleMenu()">
+      <span class="block w-5 h-0.5 bg-gray-600 dark:bg-gray-400 transition-all duration-200"></span>
+      <span class="block w-5 h-0.5 bg-gray-600 dark:bg-gray-400 transition-all duration-200"></span>
+      <span class="block w-5 h-0.5 bg-gray-600 dark:bg-gray-400 transition-all duration-200"></span>
     </button>
-  </div>
-</div>
+  </nav>
 
-<!-- MODAL — CONTACT -->
-<div class="modal-backdrop" id="modal-contact" onclick="handleBackdropClick(event,'modal-contact')">
-  <div class="modal">
-    <button class="modal-close" onclick="closeModal('modal-contact')" aria-label="Cerrar">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    </button>
-    <div class="modal-body">
-      <div class="eyebrow" style="margin-bottom:.65rem"><span class="eyebrow-line"></span>Demo gratuita</div>
-      <h3 class="modal-title">¿Listo para ver<br>ArrowK <em>en acción?</em></h3>
-      <p class="modal-sub">Completa el formulario y agendamos una demo personalizada sin costo ni compromiso.</p>
-      <div class="form-row2">
-        <div class="form-grp"><label class="form-lbl">Nombre *</label><input type="text" class="form-ctrl" placeholder="Tu nombre" id="f-name"></div>
-        <div class="form-grp"><label class="form-lbl">Empresa</label><input type="text" class="form-ctrl" placeholder="Nombre del negocio" id="f-company"></div>
-      </div>
-      <div class="form-grp"><label class="form-lbl">Correo *</label><input type="email" class="form-ctrl" placeholder="tu@correo.com" id="f-email"></div>
-      <div class="form-grp">
-        <label class="form-lbl">Tu rol</label>
-        <select class="form-ctrl" id="f-role">
-          <option value="">Selecciona tu rol</option>
-          <option>Distribuidor — Vendo bicicletas al público</option>
-          <option>Vendedor — Abastezco a distribuidores</option>
-          <option>Ambos roles</option>
-          <option>Otro</option>
-        </select>
-      </div>
-      <div class="form-grp"><label class="form-lbl">Mensaje</label><textarea class="form-ctrl" placeholder="Cuéntanos sobre tu operación..." id="f-message" style="min-height:80px"></textarea></div>
-      <button class="btn-submit" id="btn-submit" onclick="handleSubmit()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-        Solicitar demo gratuita
-      </button>
+  <!-- MOBILE MENU -->
+  <div id="mob-menu" class="fixed inset-0 z-40 bg-white dark:bg-gray-900 p-6 pt-20 flex flex-col transform -translate-y-full transition-transform duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] pointer-events-none">
+    <a href="#problema" class="py-4 border-b border-white dark:border-gray-800 text-gray-700 dark:text-gray-300 flex justify-between items-center transition-colors duration-200 hover:text-gray-900 dark:hover:text-white" onclick="closeMenu()">El problema <span class="text-gray-400 transition-transform duration-200 group-hover:translate-x-1">→</span></a>
+    <a href="#plataforma" class="py-4 border-b border-white dark:border-gray-800 text-gray-700 dark:text-gray-300 flex justify-between items-center transition-colors duration-200 hover:text-gray-900 dark:hover:text-white" onclick="closeMenu()">Plataforma <span class="text-gray-400 transition-transform duration-200 group-hover:translate-x-1">→</span></a>
+    <a href="#contacto" class="py-4 border-b border-white dark:border-gray-800 text-gray-700 dark:text-gray-300 flex justify-between items-center transition-colors duration-200 hover:text-gray-900 dark:hover:text-white" onclick="closeMenu()">Contacto <span class="text-gray-400 transition-transform duration-200 group-hover:translate-x-1">→</span></a>
+    @auth
+    <a href="{{ url('/dashboard') }}" class="py-4 border-b border-white dark:border-gray-800 text-gray-700 dark:text-gray-300 flex justify-between items-center transition-colors duration-200 hover:text-gray-900 dark:hover:text-white" onclick="closeMenu()">Ir al panel <span class="text-gray-400 transition-transform duration-200 group-hover:translate-x-1">→</span></a>
+    @else
+    <a href="{{ route('login') }}" class="py-4 border-b border-white dark:border-gray-800 text-gray-700 dark:text-gray-300 flex justify-between items-center transition-colors duration-200 hover:text-gray-900 dark:hover:text-white" onclick="closeMenu()">Iniciar sesión <span class="text-gray-400 transition-transform duration-200 group-hover:translate-x-1">→</span></a>
+    @endauth
+    <a href="#contacto" class="mt-8 w-full bg-gray-900 dark:bg-white text-white dark:text-gray-900 py-3 rounded-xl text-center text-sm font-medium transition-all duration-200 hover:bg-gray-800 dark:hover:bg-white transform hover:scale-[1.02] active:scale-95" onclick="closeMenu()">Solicitar demo</a>
+  </div>
+
+  <!-- HERO -->
+  <section class="min-h-screen flex items-center px-6 pt-24 pb-16 max-w-3xl mx-auto">
+  <div class="w-full">
+    <div class="inline-flex items-center gap-2 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border border-yellow-300 dark:border-yellow-700 rounded-full px-3 py-1 text-xs mb-7 transition-all duration-700 ease-out hover:scale-105 hover:rotate-1 hover:shadow-md">
+      <i class="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_0_3px_rgba(34,197,94,0.15)] animate-pulse"></i>
+      Face beta · Prueba gratis 15 días
     </div>
-  </div>
-</div>
-
-<!-- MODAL — PRICING -->
-<div class="modal-backdrop" id="modal-pricing" onclick="handleBackdropClick(event,'modal-pricing')">
-  <div class="modal" style="max-width:560px;">
-    <button class="modal-close" onclick="closeModal('modal-pricing')">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    </button>
-    <div class="modal-body">
-      <div class="eyebrow" style="margin-bottom:.65rem"><span class="eyebrow-line"></span>Precios</div>
-      <h3 class="modal-title">Planes para cada <em>etapa</em></h3>
-      <p class="modal-sub">Sin comisiones ocultas. Sin contratos forzosos.</p>
-      <div class="mprice-card">
-        <div class="mprice-tier">Starter</div>
-        <div class="mprice-amount"><span class="mprice-currency">$</span><span class="mprice-num">299</span></div>
-        <div class="mprice-period">por mes · MXN</div>
-        <div class="mprice-feats">
-          <div class="mprice-feat"><svg class="mpfyes" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> POS básico + inventario 50 productos</div>
-          <div class="mprice-feat"><svg class="mpfyes" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Clientes (100) y garantías</div>
-          <div class="mprice-feat"><svg class="mpfno" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span style="color:var(--text-3)"> Órdenes a vendedores</span></div>
-        </div>
-        <button class="btn-price btn-price-outline" onclick="switchModal('modal-pricing','modal-contact')">Comenzar gratis</button>
-      </div>
-      <div class="mprice-card featured">
-        <div class="mprice-badge">Popular</div>
-        <div class="mprice-tier">Pro</div>
-        <div class="mprice-amount"><span class="mprice-currency">$</span><span class="mprice-num hl">499</span></div>
-        <div class="mprice-period">por mes · MXN</div>
-        <div class="mprice-feats">
-          <div class="mprice-feat"><svg class="mpfyes" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> POS completo + inventario ilimitado</div>
-          <div class="mprice-feat"><svg class="mpfyes" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Órdenes digitales + soporte prioritario</div>
-          <div class="mprice-feat"><svg class="mpfyes" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Garantías avanzadas</div>
-        </div>
-        <button class="btn-price btn-price-fill" onclick="switchModal('modal-pricing','modal-contact')">Empezar con Pro</button>
-      </div>
-      <div class="mprice-card">
-        <div class="mprice-tier">Enterprise</div>
-        <div class="mprice-amount"><span class="mprice-num sm">A la medida</span></div>
-        <div class="mprice-period">&nbsp;</div>
-        <div class="mprice-feats">
-          <div class="mprice-feat"><svg class="mpfyes" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Todo Pro + Red de distribuidores + API</div>
-          <div class="mprice-feat"><svg class="mpfyes" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Onboarding dedicado + SLA garantizado</div>
-        </div>
-        <button class="btn-price btn-price-outline" onclick="switchModal('modal-pricing','modal-contact')">Hablar con ventas</button>
-      </div>
+    <h1 class="text-4xl md:text-5xl font-semibold text-gray-900 dark:text-white leading-[1.05] tracking-tight mb-4 transition-all duration-700 ease-out">
+      Tu negocio. <em class="not-italic text-gray-500 dark:text-gray-400">Sin caos.</em>
+    </h1>
+    <p class="text-base md:text-lg text-gray-500 dark:text-gray-400 leading-relaxed max-w-md mb-8 transition-all duration-700 delay-100 ease-out">
+      ArrowK centraliza pedidos, inventario, clientes y garantías.
+      Reemplaza WhatsApp y hojas de cálculo con una plataforma
+      diseñada para distribuidores de bicicletas eléctricas en México.
+    </p>
+    <div class="flex flex-wrap items-center gap-3 mb-10">
+      <a href="#contacto" class="inline-flex items-center gap-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-6 py-2.5 rounded-full text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-100 transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-sm hover:shadow-md">
+        Solicitar demo gratis
+        <svg class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5l7 7-7 7" />
+        </svg>
+      </a>
+      <a href="#plataforma" class="inline-flex items-center gap-2 px-5 py-2.5 border border-gray-200 dark:border-gray-700 rounded-full text-sm text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 transform hover:scale-105 active:scale-95">Ver plataforma</a>
     </div>
-  </div>
-</div>
-
-<!-- ====================================================  HERO ==================================================== -->
-<section class="hero" id="hero">
-  <div class="container">
-    <svg class="hero-ring" viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg" fill="none">
-      <circle cx="300" cy="300" r="290" stroke="rgba(122,58,142,1)" stroke-width=".6" stroke-dasharray="4 12"/>
-      <circle cx="300" cy="300" r="220" stroke="rgba(122,58,142,1)" stroke-width=".6"/>
-      <circle cx="300" cy="300" r="150" stroke="rgba(173,116,195,1)" stroke-width=".5" stroke-dasharray="2 8"/>
-    </svg>
-    <div class="hero-grid">
-      <div>
-        <div class="hero-badge">
-          <span class="badge-dot"></span>
-          CRM · ERP · POS para bicicletas eléctricas
-        </div>
-        <h1>El sistema que<br>transforma tu<br>negocio <em>eléctrico</em></h1>
-        <p class="hero-sub">ArrowK centraliza pedidos, inventario, clientes y garantías. Reemplaza WhatsApp y hojas de cálculo con una plataforma diseñada para distribuidores y vendedores del sector.</p>
-        <div class="hero-actions">
-          <button class="btn-primary" onclick="openModal('modal-contact')">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-            Solicitar demo gratis
-          </button>
-          <button class="btn-ghost" onclick="smoothScroll('#preview')">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
-            Ver plataforma
-          </button>
-        </div>
-        <div class="hero-live">
-          <span class="live-dot"></span>
-          <span class="live-label">Pedidos procesados hoy —</span>
-          <span class="live-count" id="live-counter">0</span>
-        </div>
-        <div class="hero-metrics">
-          <div>
-            <div class="metric-val" data-count="3" data-suffix="×">3×</div>
-            <div class="metric-label">Más ágil que WhatsApp</div>
-          </div>
-          <div>
-            <div class="metric-val" data-count="100" data-suffix="%">100%</div>
-            <div class="metric-label">Trazabilidad</div>
-          </div>
-          <div>
-            <div class="metric-val" data-count="0">0</div>
-            <div class="metric-label">Pedidos sin seguimiento</div>
-          </div>
-        </div>
+    <div class="flex flex-wrap gap-2">
+      <div class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-full text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 transition-all duration-200 hover:scale-105 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm">
+        <svg class="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+          <line x1="3" y1="6" x2="21" y2="6" />
+        </svg>POS
       </div>
-
-      <!-- Dashboard mockup -->
-      <div class="hero-visual">
-        <div class="float-card float-card-a">
-          <div class="fc-label">Ventas del día</div>
-          <div class="fc-val green">+$12,400</div>
-        </div>
-        <div class="float-card float-card-b">
-          <div class="fc-label">Stock disponible</div>
-          <div class="fc-val purple">48 unidades</div>
-        </div>
-        <div class="mockup-shell">
-          <div class="m-topbar">
-            <div class="m-dots"><div class="m-dot"></div><div class="m-dot"></div><div class="m-dot"></div></div>
-            <div class="m-url-bar">app.arrowk.io — Dashboard</div>
-          </div>
-          <div class="m-body">
-            <div class="m-sidebar">
-              <div class="m-logo">
-                <div class="m-logo-mark"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
-                ArrowK
-              </div>
-              <div class="m-nav active" data-tab="dashboard"><svg class="m-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</div>
-              <div class="m-nav" data-tab="pedidos"><svg class="m-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/></svg>Pedidos</div>
-              <div class="m-nav" data-tab="inventario"><svg class="m-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"/></svg>Inventario</div>
-              <div class="m-nav" data-tab="clientes"><svg class="m-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Clientes</div>
-              <div class="m-nav" data-tab="garantias"><svg class="m-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Garantías</div>
-            </div>
-            <div class="m-main" id="mockup-main"></div>
-          </div>
-        </div>
+      <div class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-full text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 transition-all duration-200 hover:scale-105 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm">
+        <svg class="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" />
+        </svg>Inventario
+      </div>
+      <div class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-full text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 transition-all duration-200 hover:scale-105 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm">
+        <svg class="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+        </svg>Clientes
+      </div>
+      <div class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-full text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 transition-all duration-200 hover:scale-105 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm">
+        <svg class="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+        </svg>Garantías
+      </div>
+      <div class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-full text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 transition-all duration-200 hover:scale-105 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm">
+        <svg class="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
+          <rect x="9" y="3" width="6" height="4" rx="2" />
+        </svg>Reparaciones
+      </div>
+      <div class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-full text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 transition-all duration-200 hover:scale-105 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm">
+        <svg class="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="7" height="7" />
+          <rect x="14" y="3" width="7" height="7" />
+          <rect x="14" y="14" width="7" height="7" />
+          <rect x="3" y="14" width="7" height="7" />
+        </svg>Dashboard
       </div>
     </div>
   </div>
 </section>
 
-<!-- TRUST STRIP -->
-<div class="strip">
-  <div class="strip-track" id="stripTrack">
-    <span class="strip-label">Diseñado para</span>
-    <span class="strip-sep"></span><span class="strip-item">Distribuidores independientes</span>
-    <span class="strip-sep"></span><span class="strip-item">Redes de distribución</span>
-    <span class="strip-sep"></span><span class="strip-item">Vendedores mayoristas</span>
-    <span class="strip-sep"></span><span class="strip-item">Puntos de venta físicos</span>
-    <span class="strip-sep"></span><span class="strip-item">E-commerce de bicicletas eléctricas</span>
-    <span class="strip-sep"></span>
-    <span class="strip-label">Diseñado para</span>
-    <span class="strip-sep"></span><span class="strip-item">Distribuidores independientes</span>
-    <span class="strip-sep"></span><span class="strip-item">Redes de distribución</span>
-    <span class="strip-sep"></span><span class="strip-item">Vendedores mayoristas</span>
-    <span class="strip-sep"></span><span class="strip-item">Puntos de venta físicos</span>
-    <span class="strip-sep"></span><span class="strip-item">E-commerce de bicicletas eléctricas</span>
-    <span class="strip-sep"></span>
-  </div>
-</div>
-
-<!-- PROBLEM / SOLUTION -->
-<section class="ps" id="problem">
-  <div class="container">
-    <div class="ps-header rv">
-      <div class="eyebrow"><span class="eyebrow-line"></span>El problema</div>
-      <h2>Del caos informal<br>al <em>control total</em></h2>
-      <p class="sub" style="margin:.75rem auto 0">Así opera la mayoría de distribuidores hoy. Y así operan con ArrowK.</p>
-    </div>
-    <div class="ps-grid">
-      <div class="ps-card ps-before rv rv-left">
-        <div class="ps-pill ps-pill-before"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Sin ArrowK</div>
-        <h3>Operación fragmentada</h3>
-        <div class="ps-items">
-          <div class="ps-item"><div class="ps-ico ps-ico-b"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div><span class="ps-item-text">Pedidos por WhatsApp sin confirmación formal ni trazabilidad</span></div>
-          <div class="ps-item"><div class="ps-ico ps-ico-b"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div><span class="ps-item-text">Inventario en Excel desactualizado, propenso a errores humanos</span></div>
-          <div class="ps-item"><div class="ps-ico ps-ico-b"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div><span class="ps-item-text">Garantías imposibles de rastrear por falta de registros centralizados</span></div>
-          <div class="ps-item"><div class="ps-ico ps-ico-b"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div><span class="ps-item-text">Clientes sin historial ni seguimiento post-venta efectivo</span></div>
-          <div class="ps-item"><div class="ps-ico ps-ico-b"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div><span class="ps-item-text">Horas invertidas en tareas administrativas repetitivas cada semana</span></div>
-        </div>
+  <!-- PROBLEMA / SOLUCIÓN -->
+  <section id="problema" class="py-16 px-6 bg-white dark:bg-gray-900">
+    <div class="max-w-5xl mx-auto">
+      <div class="text-center sm:text-left rv opacity-0 translate-y-5 transition-all duration-700 ease-out">
+        <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Problema · Solución</p>
+        <h2 class="text-3xl md:text-4xl font-semibold text-gray-900 dark:text-white leading-tight tracking-tight mb-2">Del caos informal al <em class="not-italic text-gray-500 dark:text-gray-400">control total</em></h2>
+        <p class="text-sm text-gray-500 dark:text-gray-400 max-w-lg">Así opera la mayoría de distribuidores hoy. Así operan con ArrowK.</p>
       </div>
-      <div class="ps-card ps-after rv rv-right">
-        <div class="ps-pill ps-pill-after"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Con ArrowK</div>
-        <h3>Operación centralizada</h3>
-        <div class="ps-items">
-          <div class="ps-item"><div class="ps-ico ps-ico-a"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div><span class="ps-item-text">Órdenes digitales con aprobación, seguimiento y trazabilidad completa</span></div>
-          <div class="ps-item"><div class="ps-ico ps-ico-a"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div><span class="ps-item-text">Stock actualizado automáticamente en cada venta o entrada</span></div>
-          <div class="ps-item"><div class="ps-ico ps-ico-a"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div><span class="ps-item-text">Módulo de garantías con historial completo por número de serie</span></div>
-          <div class="ps-item"><div class="ps-ico ps-ico-a"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div><span class="ps-item-text">CRM completo con historial, notas y seguimiento de cada cliente</span></div>
-          <div class="ps-item"><div class="ps-ico ps-ico-a"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div><span class="ps-item-text">Flujos comerciales automatizados entre vendedores y distribuidores</span></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- FEATURES -->
-<section class="features" id="features">
-  <div class="container">
-    <div class="features-header rv">
-      <div class="eyebrow"><span class="eyebrow-line"></span>Características</div>
-      <h2>Todo lo que necesitas<br>en <em>un solo sistema</em></h2>
-      <p class="sub">Módulos diseñados para la cadena de valor completa del sector de bicicletas eléctricas.</p>
-    </div>
-    <div class="feat-grid">
-      <div class="feat-card rv d1">
-        <div class="feat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg></div>
-        <h3>POS Inteligente</h3>
-        <p>Punto de venta optimizado para bicicletas eléctricas. Registra ventas, aplica descuentos y genera tickets en segundos, con soporte offline.</p>
-      </div>
-      <div class="feat-card rv d2">
-        <div class="feat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"/></svg></div>
-        <h3>Inventario Automático</h3>
-        <p>El stock se ajusta con cada operación. Alertas de mínimos, historial de movimientos y valoración de inventario en tiempo real.</p>
-      </div>
-      <div class="feat-card rv d3">
-        <div class="feat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
-        <h3>Gestión de Clientes</h3>
-        <p>CRM completo con historial de compras, garantías activas y seguimiento. Cada cliente, perfectamente documentado.</p>
-      </div>
-      <div class="feat-card rv d1">
-        <div class="feat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
-        <h3>Control de Garantías</h3>
-        <p>Registra y rastrea garantías por número de serie. Alertas de vencimiento e historial de reclamaciones centralizado.</p>
-      </div>
-      <div class="feat-card rv d2">
-        <div class="feat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg></div>
-        <h3>Órdenes Digitales</h3>
-        <p>Distribuidores solicitan pedidos directamente a sus vendedores con aprobación, seguimiento y trazabilidad completa.</p>
-      </div>
-      <div class="feat-card rv d3">
-        <div class="feat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
-        <h3>Dashboard de Vendedor</h3>
-        <p>Gestiona todos tus distribuidores, recibe pedidos y mantén visibilidad total sobre tu red comercial en un solo lugar.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- FULL DASHBOARD PREVIEW -->
-<section class="preview" id="preview">
-  <div class="container">
-    <div class="rv">
-      <div class="eyebrow" style="justify-content:center"><span class="eyebrow-line"></span>Vista del producto</div>
-      <h2>Diseñado para <em>escalar</em></h2>
-      <p class="sub" style="margin:.75rem auto 0">Dashboard completo que refleja la operación real de pedidos, inventario y ventas.</p>
-    </div>
-    <div class="preview-wrap rv">
-      <div class="big-mock">
-        <div class="bm-topbar">
-          <div class="bm-dots"><div class="bm-dot"></div><div class="bm-dot"></div><div class="bm-dot"></div></div>
-          <div class="bm-url">app.arrowk.io/pedidos</div>
-        </div>
-        <div class="bm-body">
-          <div class="bm-sidebar">
-            <div class="bm-logo"><div class="bm-logo-mark"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>ArrowK</div>
-            <div class="bm-nav"><svg class="bm-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Inicio</div>
-            <div class="bm-nav"><svg class="bm-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>Administrador</div>
-            <div class="bm-nav active"><svg class="bm-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/></svg>Pedidos</div>
-            <div class="bm-nav"><svg class="bm-nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Perfil</div>
+      <div class="grid md:grid-cols-2 gap-6 mt-10">
+        <!-- Bad -->
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md rv opacity-0 translate-y-5 transition-all duration-700 delay-100 ease-out">
+          <div class="inline-flex items-center gap-1.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-medium px-3 py-1 rounded-full mb-4">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+            Sin ArrowK
           </div>
-          <div class="bm-main">
-            <div class="bm-ph">
-              <div><div class="bm-pt">Pedidos</div><div class="bm-ps">Gestiona los pedidos de bicicletas</div></div>
-              <div class="bm-add"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nuevo Pedido</div>
+          <h3 class="text-sm font-medium text-gray-900 dark:text-white mb-4">Operación fragmentada</h3>
+          <div class="space-y-3">
+            <div class="flex gap-2 transition-all duration-200 hover:translate-x-1">
+              <div class="w-5 h-5 rounded bg-red-50 dark:bg-red-900/20 flex items-center justify-center flex-shrink-0 mt-0.5"><svg class="w-3.5 h-3.5 text-red-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg></div>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Pedidos por WhatsApp sin confirmación ni trazabilidad</p>
             </div>
-            <div class="bm-stats">
-              <div class="bm-stat"><div class="bm-sl">Total</div><div class="bm-sv">48</div><div class="bm-sc">pedidos registrados</div></div>
-              <div class="bm-stat"><div class="bm-sl">Esta página</div><div class="bm-sv" style="color:var(--blue)">10</div><div class="bm-sc">pedidos visibles</div></div>
-              <div class="bm-stat"><div class="bm-sl">Página</div><div class="bm-sv">1<span style="font-size:.85rem;color:var(--text-3);font-weight:400">/5</span></div><div class="bm-sc">de 5 páginas</div></div>
+            <div class="flex gap-2 transition-all duration-200 hover:translate-x-1">
+              <div class="w-5 h-5 rounded bg-red-50 dark:bg-red-900/20 flex items-center justify-center flex-shrink-0 mt-0.5"><svg class="w-3.5 h-3.5 text-red-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg></div>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Inventario en Excel siempre desactualizado</p>
             </div>
-            <div class="bm-filter">
-              <div class="bm-fi"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>N° Pedido o Negocio</div>
-              <div class="bm-fs"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>Status: Todos</div>
+            <div class="flex gap-2 transition-all duration-200 hover:translate-x-1">
+              <div class="w-5 h-5 rounded bg-red-50 dark:bg-red-900/20 flex items-center justify-center flex-shrink-0 mt-0.5"><svg class="w-3.5 h-3.5 text-red-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg></div>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Garantías sin registro ni control centralizado</p>
             </div>
-            <table class="bm-table">
-              <thead><tr><th>N° Pedido</th><th>Negocio</th><th>Items</th><th>Status</th><th>Fecha</th></tr></thead>
-              <tbody>
-                <tr><td>PED-00048</td><td>Distribuidora Norte</td><td>3</td><td><span class="bm-status bm-sy">Solicitado</span></td><td>09/03/2025</td></tr>
-                <tr><td>PED-00047</td><td>Bici Express</td><td>5</td><td><span class="bm-status bm-sb">Preparado</span></td><td>08/03/2025</td></tr>
-                <tr><td>PED-00046</td><td>VoltageMX</td><td>2</td><td><span class="bm-status bm-sg">Entregado</span></td><td>07/03/2025</td></tr>
-                <tr><td>PED-00045</td><td>EcoRide Sur</td><td>4</td><td><span class="bm-status bm-sg">Entregado</span></td><td>06/03/2025</td></tr>
-                <tr><td>PED-00044</td><td>PowerCycle MX</td><td>1</td><td><span class="bm-status bm-sy">Solicitado</span></td><td>05/03/2025</td></tr>
-              </tbody>
-            </table>
-            <div class="bm-pag">
-              <span class="bm-pi">Mostrando 1–10 de 48 pedidos</span>
-              <div class="bm-pb">
-                <button class="bm-btn active">1</button>
-                <button class="bm-btn">2</button>
-                <button class="bm-btn">3</button>
-                <button class="bm-btn">→</button>
-              </div>
+            <div class="flex gap-2 transition-all duration-200 hover:translate-x-1">
+              <div class="w-5 h-5 rounded bg-red-50 dark:bg-red-900/20 flex items-center justify-center flex-shrink-0 mt-0.5"><svg class="w-3.5 h-3.5 text-red-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg></div>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Clientes sin historial ni seguimiento efectivo</p>
+            </div>
+          </div>
+        </div>
+        <!-- Good -->
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md rv opacity-0 translate-y-5 transition-all duration-700 delay-200 ease-out">
+          <div class="inline-flex items-center gap-1.5 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-xs font-medium px-3 py-1 rounded-full mb-4">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            Con ArrowK
+          </div>
+          <h3 class="text-sm font-medium text-gray-900 dark:text-white mb-4">Operación centralizada</h3>
+          <div class="space-y-3">
+            <div class="flex gap-2 transition-all duration-200 hover:translate-x-1">
+              <div class="w-5 h-5 rounded bg-green-50 dark:bg-green-900/20 flex items-center justify-center flex-shrink-0 mt-0.5"><svg class="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg></div>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Órdenes digitales con aprobación y trazabilidad completa</p>
+            </div>
+            <div class="flex gap-2 transition-all duration-200 hover:translate-x-1">
+              <div class="w-5 h-5 rounded bg-green-50 dark:bg-green-900/20 flex items-center justify-center flex-shrink-0 mt-0.5"><svg class="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg></div>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Stock actualizado automáticamente en cada venta</p>
+            </div>
+            <div class="flex gap-2 transition-all duration-200 hover:translate-x-1">
+              <div class="w-5 h-5 rounded bg-green-50 dark:bg-green-900/20 flex items-center justify-center flex-shrink-0 mt-0.5"><svg class="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg></div>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Garantías rastreadas por número de serie con alertas</p>
+            </div>
+            <div class="flex gap-2 transition-all duration-200 hover:translate-x-1">
+              <div class="w-5 h-5 rounded bg-green-50 dark:bg-green-900/20 flex items-center justify-center flex-shrink-0 mt-0.5"><svg class="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg></div>
+              <p class="text-sm text-gray-600 dark:text-gray-400">CRM completo con historial y seguimiento por cliente</p>
             </div>
           </div>
         </div>
       </div>
-      <div class="preview-glow"></div>
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- PRICING -->
-<section class="pricing" id="pricing">
-  <div class="container">
-    <div class="rv">
-      <div class="eyebrow" style="justify-content:center"><span class="eyebrow-line"></span>Precios</div>
-      <h2>Planes para cada <em>etapa</em></h2>
-      <p class="sub" style="margin:.75rem auto 0">Sin comisiones ocultas. Sin contratos forzosos. Cancela en cualquier momento.</p>
-    </div>
-    <div class="pricing-grid">
-      <div class="price-card rv d1">
-        <div class="price-tier">Starter</div>
-        <div class="price-amount"><span class="price-currency">$</span><span class="price-num">299</span></div>
-        <div class="price-period">por mes · MXN</div>
-        <p class="price-desc">Para distribuidores independientes que buscan organizarse.</p>
-        <div class="price-feats">
-          <div class="price-feat"><svg class="pfyes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> POS básico</div>
-          <div class="price-feat"><svg class="pfyes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Inventario hasta 50 productos</div>
-          <div class="price-feat"><svg class="pfyes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Clientes (100) y garantías</div>
-          <div class="price-feat"><svg class="pfno" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span style="color:var(--text-3)"> Órdenes a vendedores</span></div>
-        </div>
-        <button class="btn-price btn-price-outline" onclick="openModal('modal-contact')">Comenzar gratis</button>
+  <!-- PLATAFORMA (previews) -->
+  <section id="plataforma" class="py-16 px-6 bg-white dark:bg-gray-900 border-y border-white dark:border-gray-900 shadow-sm">
+    <div class="max-w-6xl mx-auto">
+      <div class="mb-8 rv opacity-0 translate-y-5 transition-all duration-700 ease-out">
+        <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">Vista del producto</p>
+        <h2 class="text-3xl md:text-4xl font-semibold text-gray-900 dark:text-white leading-tight tracking-tight">Diseñado para <em class="not-italic text-gray-500 dark:text-gray-400">escalar</em></h2>
+        <p class="text-sm text-gray-500 dark:text-gray-400 max-w-lg">Dashboard completo que refleja la operación real de tu negocio.</p>
       </div>
-      <div class="price-card featured rv d2">
-        <div class="price-badge">Popular</div>
-        <div class="price-tier">Pro</div>
-        <div class="price-amount"><span class="price-currency">$</span><span class="price-num hl">499</span></div>
-        <div class="price-period">por mes · MXN</div>
-        <p class="price-desc">Para distribuidores activos conectados a una red de vendedores.</p>
-        <div class="price-feats">
-          <div class="price-feat"><svg class="pfyes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> POS completo con reportes</div>
-          <div class="price-feat"><svg class="pfyes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Inventario y clientes ilimitados</div>
-          <div class="price-feat"><svg class="pfyes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Órdenes digitales a vendedores</div>
-          <div class="price-feat"><svg class="pfyes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Soporte prioritario</div>
-        </div>
-        <button class="btn-price btn-price-fill" onclick="openModal('modal-contact')">Empezar con Pro</button>
-      </div>
-      <div class="price-card rv d3">
-        <div class="price-tier">Enterprise</div>
-        <div class="price-amount"><span class="price-num sm">A la medida</span></div>
-        <div class="price-period">&nbsp;</div>
-        <p class="price-desc">Para vendedores y redes de distribuidores a gran escala.</p>
-        <div class="price-feats">
-          <div class="price-feat"><svg class="pfyes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Todo lo de Pro</div>
-          <div class="price-feat"><svg class="pfyes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Red de distribuidores + API</div>
-          <div class="price-feat"><svg class="pfyes" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Onboarding dedicado + SLA</div>
-        </div>
-        <button class="btn-price btn-price-outline" onclick="openModal('modal-contact')">Hablar con ventas</button>
-      </div>
-    </div>
-  </div>
-</section>
 
-<!-- CTA / CONTACT -->
-<section class="cta-section" id="contact">
-  <div class="container">
-    <div class="cta-box rv">
-      <div class="glow-l"></div>
-      <div class="glow-r"></div>
-      <div class="eyebrow" style="justify-content:center"><span class="eyebrow-line"></span>Hablemos</div>
-      <h2>¿Listo para <em>digitalizar</em><br>tu operación?</h2>
-      <p>Cuéntanos de qué se trata. Respondemos en menos de 24 horas con una demo personalizada sin costo ni compromiso.</p>
-      <div class="cta-form">
-        <div class="form-row2">
-          <div class="form-grp"><label class="form-lbl">Nombre *</label><input type="text" class="form-ctrl" placeholder="Tu nombre" id="fc-name"></div>
-          <div class="form-grp"><label class="form-lbl">Empresa</label><input type="text" class="form-ctrl" placeholder="Tu negocio" id="fc-company"></div>
-        </div>
-        <div class="form-grp"><label class="form-lbl">Correo *</label><input type="email" class="form-ctrl" placeholder="tu@correo.com" id="fc-email"></div>
-        <div class="form-grp">
-          <label class="form-lbl">¿En qué te ayudamos?</label>
-          <select class="form-ctrl" id="fc-service">
-            <option value="">Selecciona una opción</option>
-            <option>Demo de ArrowK</option>
-            <option>Plan Starter</option>
-            <option>Plan Pro</option>
-            <option>Plan Enterprise</option>
-            <option>Otro</option>
-          </select>
-        </div>
-        <div class="form-grp"><label class="form-lbl">Mensaje</label><textarea class="form-ctrl" placeholder="Cuéntanos sobre tu operación actual..." id="fc-message"></textarea></div>
-        <button class="btn-submit" id="btn-submit-main" onclick="handleSubmitMain()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-          Enviar mensaje
+      <!-- Pestañas -->
+      <div class="flex flex-wrap items-center gap-2 border-b border-gray-200 dark:border-gray-700 pb-3 mb-6">
+        <button class="tab-btn active flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border border-gray-900 bg-gray-900 text-white transition-all duration-200 hover:scale-105 hover:shadow-md" data-tab="pedidos">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="8" y1="10" x2="16" y2="10" />
+            <line x1="8" y1="14" x2="12" y2="14" />
+          </svg>
+          Pedidos
+        </button>
+        <button class="tab-btn flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-white dark:hover:bg-gray-600 transition-all duration-200 hover:scale-105" data-tab="catalogo">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <rect x="3" y="3" width="7" height="7" />
+            <rect x="14" y="3" width="7" height="7" />
+            <rect x="14" y="14" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" />
+          </svg>
+          Catálogo
+        </button>
+        <button class="tab-btn flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-white dark:hover:bg-gray-600 transition-all duration-200 hover:scale-105" data-tab="garantias">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            <polyline points="9 12 11 14 15 10" />
+          </svg>
+          Garantías
+        </button>
+        <button class="tab-btn flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-white dark:hover:bg-gray-600 transition-all duration-200 hover:scale-105" data-tab="cajas">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <rect x="3" y="9" width="18" height="12" rx="2" />
+            <path d="M3 9V5a2 2 0 012-2h14a2 2 0 012 2v4" />
+            <line x1="8" y1="15" x2="16" y2="15" />
+          </svg>
+          Cajas
+        </button>
+        <button class="tab-btn flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-white dark:hover:bg-gray-600 transition-all duration-200 hover:scale-105" data-tab="config">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+          </svg>
+          Configuración
+        </button>
+        <button class="tab-btn flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-white dark:hover:bg-gray-600 transition-all duration-200 hover:scale-105" data-tab="sucursales">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+            <circle cx="12" cy="10" r="3" />
+          </svg>
+          Sucursales
+        </button>
+        <button class="tab-btn flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border border-orange-300 dark:border-orange-700 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:border-orange-400 dark:hover:border-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/30 transition-all duration-200 hover:scale-105" data-tab="corte">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <rect x="2" y="7" width="20" height="14" rx="2" />
+            <path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16" />
+          </svg>
+          Corte
+        </button>
+        <button class="tab-btn flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border border-red-300 dark:border-red-700 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:border-red-400 dark:hover:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all duration-200 hover:scale-105" data-tab="robo">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M12 8v4" />
+            <path d="M12 16h.01" />
+            <path d="M12 2a10 10 0 100 20 10 10 0 000-20z" />
+          </svg>
+          Robo
+        </button>
+        <button class="tab-btn flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-white dark:hover:bg-gray-600 transition-all duration-200 hover:scale-105" data-tab="ordenes">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <rect x="9" y="2" width="6" height="4" rx="1" />
+            <path d="M4 10h16" />
+            <path d="M4 14h16" />
+            <path d="M4 18h12" />
+          </svg>
+          Órdenes
+        </button>
+        <button class="tab-btn flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border border-green-300 dark:border-green-700 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:border-green-400 dark:hover:border-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 transition-all duration-200 hover:scale-105" data-tab="ventas">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="9" cy="21" r="1" />
+            <circle cx="20" cy="21" r="1" />
+            <path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6" />
+          </svg>
+          Ventas
+        </button>
+        <button class="tab-btn flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border border-blue-300 dark:border-blue-700 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:border-blue-400 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all duration-200 hover:scale-105" data-tab="nuevaventa">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M12 5v14" />
+            <path d="M5 12h14" />
+          </svg>
+          Nueva Venta
         </button>
       </div>
-    </div>
-  </div>
-</section>
 
-<!-- FOOTER -->
-<footer>
-  <div class="container">
-    <div class="footer-grid">
-      <div class="footer-brand">
-        <div class="footer-logo">
-          <div class="footer-logo-mark"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
-          ArrowK
-        </div>
-        <p>CRM + ERP + POS para distribuidores y vendedores del sector de bicicletas eléctricas.</p>
-      </div>
-      <div>
-        <div class="footer-col-title">Producto</div>
-        <div class="footer-links">
-          <a href="#features">Características</a>
-          <a href="#preview">Plataforma</a>
-          <a href="#pricing">Precios</a>
-        </div>
-      </div>
-      <div>
-        <div class="footer-col-title">Empresa</div>
-        <div class="footer-links">
-          <a href="/">CloudLabs</a>
-          <a href="#contact">Contacto</a>
-          <a href="#">Privacidad</a>
-        </div>
-      </div>
-      @auth
-        <div>
-          <div class="footer-col-title">Dashboard</div>
-          <div class="footer-links">
-            <a href="{{ url('/dashboard') }}">Dashboard</a>
-          </div>
-        </div>                
-        @else
-          <div>
-            <div class="footer-col-title">Log in</div>
-            <div class="footer-links">
-              <a href="{{ route('login') }}">Log in</a>
+      <!-- Contenedor de paneles -->
+      <div style="font-size: 13px; transform: scale(0.90);  width: 105%;">
+        <!-- ===== PANEL: PEDIDOS ===== -->
+        <div id="panel-pedidos" class="tab-panel transition-all duration-300 ease-out opacity-0 scale-95 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm transition-all duration-300 hover:shadow-md">
+          <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
+            <div class="flex gap-1.5">
+              <span class="w-3 h-3 rounded-full bg-red-400"></span>
+              <span class="w-3 h-3 rounded-full bg-yellow-400"></span>
+              <span class="w-3 h-3 rounded-full bg-green-400"></span>
             </div>
-          </div>  
-                          
+            <span class="text-xs text-gray-400 dark:text-gray-500 font-mono">cloudlabs.arrowk / pedidos</span>
+          </div>
+          <div class="bg-white dark:bg-gray-900">
+            <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+              <div>
+                <h3 class="text-base font-semibold text-gray-900 dark:text-white">Pedidos</h3>
+                <p class="text-xs text-gray-400 dark:text-gray-500">Gestiona los pedidos de bicicletas</p>
+              </div>
+              <button disabled class="px-4 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-md text-xs font-medium opacity-60 cursor-not-allowed transition-all duration-200 hover:opacity-80">+ Nuevo Pedido</button>
+            </div>
+            <div class="grid grid-cols-3 gap-3 p-4 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+              <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-900 rounded p-3 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+                <div class="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wide">Total</div>
+                <div class="text-lg font-semibold text-gray-900 dark:text-white">48</div>
+                <div class="text-[10px] text-gray-400 dark:text-gray-500">pedidos registrados</div>
+              </div>
+              <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-900 rounded p-3 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+                <div class="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wide">Esta página</div>
+                <div class="text-lg font-semibold text-blue-600">10</div>
+                <div class="text-[10px] text-gray-400 dark:text-gray-500">pedidos visibles</div>
+              </div>
+              <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-3 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+                <div class="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wide">Página</div>
+                <div class="text-lg font-semibold text-gray-900 dark:text-white">1 <span class="text-sm text-gray-400 dark:text-gray-500 font-normal">/5</span></div>
+                <div class="text-[10px] text-gray-400 dark:text-gray-500">de 5 páginas</div>
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-3 p-4 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 items-end">
+              <div class="flex-1 min-w-[140px]">
+                <label class="text-[10px] text-gray-400 dark:text-gray-500 block mb-1">Buscar</label>
+                <input type="text" placeholder="N° Pedido o Negocio" disabled class="w-full px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500 transition-all duration-200 focus:ring-1 focus:ring-gray-300">
+              </div>
+              <div class="min-w-[120px]">
+                <label class="text-[10px] text-gray-400 dark:text-gray-500 block mb-1">Status</label>
+                <select disabled class="w-full px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded text-sm bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500 transition-all duration-200 focus:ring-1 focus:ring-gray-300">
+                  <option>Todos</option>
+                  <option>Solicitado</option>
+                  <option>Verificando Pago</option>
+                  <option>Listo para Entregar</option>
+                  <option>Entregado</option>
+                </select>
+              </div>
+              <div class="flex gap-2">
+                <button disabled class="px-4 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full text-xs font-medium opacity-60 transition-all duration-200 hover:opacity-80">Filtrar</button>
+                <button disabled class="px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-full text-xs text-gray-400 dark:text-gray-500 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-600 dark:hover:text-gray-300">Limpiar</button>
+              </div>
+            </div>
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                <tr>
+                  <th class="px-4 py-2 text-left text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">N° Pedido</th>
+                  <th class="px-4 py-2 text-left text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">Negocio</th>
+                  <th class="px-4 py-2 text-center text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">Cantidad</th>
+                  <th class="px-4 py-2 text-center text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">Status</th>
+                  <th class="px-4 py-2 text-left text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">Fecha</th>
+                  <th class="px-4 py-2 text-center text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">Acciones</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white dark:divide-gray-800">
+                <tr class="transition-colors duration-200 hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <td class="px-4 py-2.5 font-mono text-xs text-gray-900 dark:text-white">PED-00048</td>
+                  <td class="px-4 py-2.5 text-gray-500 dark:text-gray-400">Distribuidora Norte</td>
+                  <td class="px-4 py-2.5 text-center">3</td>
+                  <td class="px-4 py-2.5 text-center"><span class="inline-block px-2 py-0.5 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-700 rounded text-[10px] font-medium">Solicitado</span></td>
+                  <td class="px-4 py-2.5">09/03/2025</td>
+                  <td class="px-4 py-2.5 text-center text-red-600 text-xs font-medium transition-colors duration-200 hover:text-red-800">Eliminar</td>
+                </tr>
+                <tr class="transition-colors duration-200 hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <td class="px-4 py-2.5 font-mono text-xs text-gray-900 dark:text-white">PED-00047</td>
+                  <td class="px-4 py-2.5 text-gray-500 dark:text-gray-400">Bici Express</td>
+                  <td class="px-4 py-2.5 text-center">5</td>
+                  <td class="px-4 py-2.5 text-center"><span class="inline-block px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 rounded text-[10px] font-medium">Preparado</span></td>
+                  <td class="px-4 py-2.5">08/03/2025</td>
+                  <td class="px-4 py-2.5 text-center text-gray-400">—</td>
+                </tr>
+                <tr class="transition-colors duration-200 hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <td class="px-4 py-2.5 font-mono text-xs text-gray-900 dark:text-white">PED-00046</td>
+                  <td class="px-4 py-2.5 text-gray-500 dark:text-gray-400">VoltageMX</td>
+                  <td class="px-4 py-2.5 text-center">2</td>
+                  <td class="px-4 py-2.5 text-center"><span class="inline-block px-2 py-0.5 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-700 rounded text-[10px] font-medium">Entregado</span></td>
+                  <td class="px-4 py-2.5">07/03/2025</td>
+                  <td class="px-4 py-2.5 text-center text-gray-400">—</td>
+                </tr>
+                <tr class="transition-colors duration-200 hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <td class="px-4 py-2.5 font-mono text-xs text-gray-900 dark:text-white">PED-00045</td>
+                  <td class="px-4 py-2.5 text-gray-500 dark:text-gray-400">EcoRide Sur</td>
+                  <td class="px-4 py-2.5 text-center">4</td>
+                  <td class="px-4 py-2.5 text-center"><span class="inline-block px-2 py-0.5 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-700 rounded text-[10px] font-medium">Entregado</span></td>
+                  <td class="px-4 py-2.5">06/03/2025</td>
+                  <td class="px-4 py-2.5 text-center text-gray-400">—</td>
+                </tr>
+                <tr class="transition-colors duration-200 hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <td class="px-4 py-2.5 font-mono text-xs text-gray-900 dark:text-white">PED-00044</td>
+                  <td class="px-4 py-2.5 text-gray-500 dark:text-gray-400">PowerCycle MX</td>
+                  <td class="px-4 py-2.5 text-center">6</td>
+                  <td class="px-4 py-2.5 text-center"><span class="inline-block px-2 py-0.5 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-700 rounded text-[10px] font-medium">Solicitado</span></td>
+                  <td class="px-4 py-2.5">05/03/2025</td>
+                  <td class="px-4 py-2.5 text-center text-red-600 text-xs font-medium transition-colors duration-200 hover:text-red-800">Eliminar</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="px-4 py-2.5 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800 text-xs text-gray-400 dark:text-gray-500">
+              <span>Mostrando 1–5 de 48</span>
+              <div class="flex gap-1">
+                <span class="px-2 py-1 border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">‹</span>
+                <span class="px-2.5 py-1 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded transition-all duration-200 hover:bg-gray-800 dark:hover:bg-white">1</span>
+                <span class="px-2 py-1 border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">2</span>
+                <span class="px-2 py-1 border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">3</span>
+                <span class="px-2 py-1 border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">4</span>
+                <span class="px-2 py-1 border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">5</span>
+                <span class="px-2 py-1 border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">›</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== PANEL: CATÁLOGO ===== -->
+        <div id="panel-catalogo" class="tab-panel transition-all duration-300 ease-out opacity-0 scale-95 hidden border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm transition-all duration-300 hover:shadow-md">
+          <!-- Contenido del catálogo (idéntico al anterior pero con animaciones) -->
+          <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
+            <div class="flex gap-1.5">
+              <span class="w-3 h-3 rounded-full bg-red-400"></span>
+              <span class="w-3 h-3 rounded-full bg-yellow-400"></span>
+              <span class="w-3 h-3 rounded-full bg-green-400"></span>
+            </div>
+            <span class="text-xs text-gray-400 dark:text-gray-500 font-mono">cloudlabs.arrowk / catalogo</span>
+          </div>
+          <div class="bg-white dark:bg-gray-900 p-5">
+            <div class="flex flex-wrap justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-3 mb-4">
+              <div>
+                <h3 class="text-base font-semibold text-gray-900 dark:text-white">Catálogo de productos</h3>
+                <p class="text-xs text-gray-400 dark:text-gray-500">Gestiona marcas, modelos, colores y voltajes</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 px-3 py-1 rounded-full border border-gray-200 dark:border-gray-700">5 / 10 marcas</span>
+                <button disabled class="px-3 py-1 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded text-xs font-medium opacity-60 transition-all duration-200 hover:opacity-80">+ Nueva marca</button>
+              </div>
+            </div>
+            <div class="space-y-4">
+              <!-- Yadea -->
+              <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+                <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                  <div class="flex items-center gap-2">
+                    <svg class="w-3.5 h-3.5 text-gray-400 transition-transform duration-200 group-hover:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                    <span class="font-semibold text-sm text-gray-900 dark:text-white">Yadea</span>
+                    <span class="text-xs text-gray-400 dark:text-gray-500">3 modelos</span>
+                  </div>
+                  <div class="flex gap-2">
+                    <span class="text-xs text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 px-2 py-0.5 rounded bg-white dark:bg-gray-800 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">Editar</span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 px-2 py-0.5 rounded bg-white dark:bg-gray-800 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">+ Modelo</span>
+                    <span class="text-xs text-red-600 border border-red-200 dark:border-red-800 px-2 py-0.5 rounded bg-red-50 dark:bg-red-900/30 transition-all duration-200 hover:bg-red-100 dark:hover:bg-red-900/50 hover:border-red-300 dark:hover:border-red-700">Eliminar</span>
+                  </div>
+                </div>
+                <div class="p-4 space-y-3">
+                  <div class="grid grid-cols-3 gap-2 text-[10px] text-gray-400 dark:text-gray-500 border-b pb-1">
+                    <div>Modelo</div>
+                    <div>Colores</div>
+                    <div>Voltajes</div>
+                  </div>
+                  <div class="grid grid-cols-3 gap-2 items-center border-b pb-2 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800 -mx-2 px-2 rounded">
+                    <div class="flex justify-between items-center"><span class="text-sm text-gray-700 dark:text-gray-300">Ova</span><span class="text-gray-400 text-xs transition-opacity duration-200 hover:opacity-100">✎ ✕</span></div>
+                    <div class="flex gap-1">
+                      <span class="w-6 h-6 rounded border border-gray-200 dark:border-gray-700 bg-red-500 transition-transform duration-200 hover:scale-110"></span>
+                      <span class="w-6 h-6 rounded border border-gray-200 dark:border-gray-700 bg-blue-500 transition-transform duration-200 hover:scale-110"></span>
+                      <span class="w-6 h-6 rounded border border-gray-200 dark:border-gray-700 bg-green-500 transition-transform duration-200 hover:scale-110"></span>
+                      <span class="w-6 h-6 rounded border border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm transition-all duration-200 hover:border-gray-400 dark:hover:border-gray-500 hover:text-gray-600 dark:hover:text-gray-300">+</span>
+                    </div>
+                    <div class="flex gap-1"><span class="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-2 py-0.5 transition-all duration-200 hover:bg-gray-200 dark:hover:bg-gray-700">48V</span><span class="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-2 py-0.5 transition-all duration-200 hover:bg-gray-200 dark:hover:bg-gray-700">60V</span><span class="text-xs border border-dashed border-gray-300 dark:border-gray-600 rounded-full px-2 py-0.5 text-gray-400 dark:text-gray-500 transition-all duration-200 hover:border-gray-400 dark:hover:border-gray-500 hover:text-gray-600 dark:hover:text-gray-300">+ voltaje</span></div>
+                  </div>
+                  <div class="grid grid-cols-3 gap-2 items-center border-b pb-2 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800 -mx-2 px-2 rounded">
+                    <div class="flex justify-between items-center"><span class="text-sm text-gray-700 dark:text-gray-300">GB18</span><span class="text-gray-400 text-xs transition-opacity duration-200 hover:opacity-100">✎ ✕</span></div>
+                    <div class="flex gap-1">
+                      <span class="w-6 h-6 rounded border border-gray-200 dark:border-gray-700 bg-black transition-transform duration-200 hover:scale-110"></span>
+                      <span class="w-6 h-6 rounded border border-gray-200 dark:border-gray-700 bg-white transition-transform duration-200 hover:scale-110"></span>
+                      <span class="w-6 h-6 rounded border border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm transition-all duration-200 hover:border-gray-400 dark:hover:border-gray-500 hover:text-gray-600 dark:hover:text-gray-300">+</span>
+                    </div>
+                    <div class="flex gap-1"><span class="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-2 py-0.5 transition-all duration-200 hover:bg-gray-200 dark:hover:bg-gray-700">72V</span><span class="text-xs border border-dashed border-gray-300 dark:border-gray-600 rounded-full px-2 py-0.5 text-gray-400 dark:text-gray-500 transition-all duration-200 hover:border-gray-400 dark:hover:border-gray-500 hover:text-gray-600 dark:hover:text-gray-300">+ voltaje</span></div>
+                  </div>
+                  <div class="grid grid-cols-3 gap-2 items-center transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800 -mx-2 px-2 rounded">
+                    <div class="flex justify-between items-center"><span class="text-sm text-gray-700 dark:text-gray-300">Keeness</span><span class="text-gray-400 text-xs transition-opacity duration-200 hover:opacity-100">✎ ✕</span></div>
+                    <div class="flex gap-1">
+                      <span class="w-6 h-6 rounded border border-gray-200 dark:border-gray-700 bg-gray-500 transition-transform duration-200 hover:scale-110"></span>
+                      <span class="w-6 h-6 rounded border border-gray-200 dark:border-gray-700 bg-orange-500 transition-transform duration-200 hover:scale-110"></span>
+                      <span class="w-6 h-6 rounded border border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm transition-all duration-200 hover:border-gray-400 dark:hover:border-gray-500 hover:text-gray-600 dark:hover:text-gray-300">+</span>
+                    </div>
+                    <div class="flex gap-1"><span class="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-2 py-0.5 transition-all duration-200 hover:bg-gray-200 dark:hover:bg-gray-700">48V</span><span class="text-xs border border-dashed border-gray-300 dark:border-gray-600 rounded-full px-2 py-0.5 text-gray-400 dark:text-gray-500 transition-all duration-200 hover:border-gray-400 dark:hover:border-gray-500 hover:text-gray-600 dark:hover:text-gray-300">+ voltaje</span></div>
+                  </div>
+                  <div class="flex items-center gap-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+                    <span class="text-[10px] text-gray-400 dark:text-gray-500">3 / 20 modelos</span>
+                    <div class="flex-1 h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div class="w-[15%] h-full bg-green-500 rounded-full transition-all duration-1000"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Evobike -->
+              <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+                <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2 flex justify-between items-center">
+                  <div class="flex items-center gap-2">
+                    <svg class="w-3.5 h-3.5 text-gray-400 transition-transform duration-200 group-hover:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                    <span class="font-semibold text-sm text-gray-900 dark:text-white">Evobike</span>
+                    <span class="text-xs text-gray-400 dark:text-gray-500">1 modelo</span>
+                  </div>
+                  <div class="flex gap-2">
+                    <span class="text-xs text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 px-2 py-0.5 rounded bg-white dark:bg-gray-800 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">Editar</span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 px-2 py-0.5 rounded bg-white dark:bg-gray-800 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">+ Modelo</span>
+                    <span class="text-xs text-red-600 border border-red-200 dark:border-red-800 px-2 py-0.5 rounded bg-red-50 dark:bg-red-900/30 transition-all duration-200 hover:bg-red-100 dark:hover:bg-red-900/50 hover:border-red-300 dark:hover:border-red-700">Eliminar</span>
+                  </div>
+                </div>
+              </div>
+              <!-- NWOW -->
+              <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+                <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                  <div class="flex items-center gap-2">
+                    <svg class="w-3.5 h-3.5 text-gray-400 transition-transform duration-200 group-hover:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                    <span class="font-semibold text-sm text-gray-900 dark:text-white">NWOW</span>
+                    <span class="text-xs text-gray-400 dark:text-gray-500">2 modelos</span>
+                  </div>
+                  <div class="flex gap-2">
+                    <span class="text-xs text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 px-2 py-0.5 rounded bg-white dark:bg-gray-800 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">Editar</span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 px-2 py-0.5 rounded bg-white dark:bg-gray-800 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">+ Modelo</span>
+                    <span class="text-xs text-red-600 border border-red-200 dark:border-red-800 px-2 py-0.5 rounded bg-red-50 dark:bg-red-900/30 transition-all duration-200 hover:bg-red-100 dark:hover:bg-red-900/50 hover:border-red-300 dark:hover:border-red-700">Eliminar</span>
+                  </div>
+                </div>
+                <div class="p-4 space-y-3">
+                  <div class="grid grid-cols-3 gap-2 text-[10px] text-gray-400 dark:text-gray-500 border-b pb-1">
+                    <div>Modelo</div>
+                    <div>Colores</div>
+                    <div>Voltajes</div>
+                  </div>
+                  <div class="grid grid-cols-3 gap-2 items-center border-b pb-2 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800 -mx-2 px-2 rounded">
+                    <div class="flex justify-between items-center"><span class="text-sm text-gray-700 dark:text-gray-300">EMC Golf2</span><span class="text-gray-400 text-xs transition-opacity duration-200 hover:opacity-100">✎ ✕</span></div>
+                    <div class="flex gap-1">
+                      <span class="w-6 h-6 rounded border border-gray-200 dark:border-gray-700 bg-red-500 transition-transform duration-200 hover:scale-110"></span>
+                      <span class="w-6 h-6 rounded border border-gray-200 dark:border-gray-700 bg-white transition-transform duration-200 hover:scale-110"></span>
+                      <span class="w-6 h-6 rounded border border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm transition-all duration-200 hover:border-gray-400 dark:hover:border-gray-500 hover:text-gray-600 dark:hover:text-gray-300">+</span>
+                    </div>
+                    <div class="flex gap-1"><span class="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-2 py-0.5 transition-all duration-200 hover:bg-gray-200 dark:hover:bg-gray-700">48V</span><span class="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-2 py-0.5 transition-all duration-200 hover:bg-gray-200 dark:hover:bg-gray-700">60V</span><span class="text-xs border border-dashed border-gray-300 dark:border-gray-600 rounded-full px-2 py-0.5 text-gray-400 dark:text-gray-500 transition-all duration-200 hover:border-gray-400 dark:hover:border-gray-500 hover:text-gray-600 dark:hover:text-gray-300">+ voltaje</span></div>
+                  </div>
+                  <div class="grid grid-cols-3 gap-2 items-center transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800 -mx-2 px-2 rounded">
+                    <div class="flex justify-between items-center"><span class="text-sm text-gray-700 dark:text-gray-300">ERV2</span><span class="text-gray-400 text-xs transition-opacity duration-200 hover:opacity-100">✎ ✕</span></div>
+                    <div class="flex gap-1">
+                      <span class="w-6 h-6 rounded border border-gray-200 dark:border-gray-700 bg-black transition-transform duration-200 hover:scale-110"></span>
+                      <span class="w-6 h-6 rounded border border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm transition-all duration-200 hover:border-gray-400 dark:hover:border-gray-500 hover:text-gray-600 dark:hover:text-gray-300">+</span>
+                    </div>
+                    <div class="flex gap-1"><span class="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-2 py-0.5 transition-all duration-200 hover:bg-gray-200 dark:hover:bg-gray-700">72V</span><span class="text-xs border border-dashed border-gray-300 dark:border-gray-600 rounded-full px-2 py-0.5 text-gray-400 dark:text-gray-500 transition-all duration-200 hover:border-gray-400 dark:hover:border-gray-500 hover:text-gray-600 dark:hover:text-gray-300">+ voltaje</span></div>
+                  </div>
+                  <div class="flex items-center gap-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+                    <span class="text-[10px] text-gray-400 dark:text-gray-500">2 / 20 modelos</span>
+                    <div class="flex-1 h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div class="w-[10%] h-full bg-green-500 rounded-full transition-all duration-1000"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== PANEL: GARANTÍAS ===== -->
+        <div id="panel-garantias" class="tab-panel transition-all duration-300 ease-out opacity-0 scale-95 hidden border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm transition-all duration-300 hover:shadow-md">
+          <!-- Contenido abreviado por brevedad, pero aplicando mismas animaciones -->
+          <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
+            <div class="flex gap-1.5">
+              <span class="w-3 h-3 rounded-full bg-red-400"></span>
+              <span class="w-3 h-3 rounded-full bg-yellow-400"></span>
+              <span class="w-3 h-3 rounded-full bg-green-400"></span>
+            </div>
+            <span class="text-xs text-gray-400 dark:text-gray-500 font-mono">cloudlabs.arrowk / garantias / editar-marca</span>
+          </div>
+          <div class="bg-white dark:bg-gray-900 p-5">
+            <div class="flex flex-wrap justify-between items-start border-b border-gray-200 dark:border-gray-700 pb-3 mb-4">
+              <div>
+                <h3 class="text-base font-semibold text-gray-900 dark:text-white">Garantía — Yadea</h3>
+                <p class="text-xs text-gray-400 dark:text-gray-500">Sube la póliza PDF, configura los componentes y la política de reemplazo</p>
+              </div>
+              <div class="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-3 py-1 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600">
+                <span class="text-xs text-gray-500 dark:text-gray-400 font-medium">Garantía activa</span>
+                <div class="w-8 h-4 bg-gray-900 dark:bg-white rounded-full relative transition-all duration-200"><span class="absolute right-0.5 top-0.5 w-3 h-3 bg-white dark:bg-gray-900 rounded-full shadow transition-all duration-200"></span></div>
+              </div>
+            </div>
+            <div class="grid md:grid-cols-3 gap-4">
+              <!-- Columna izquierda -->
+              <div class="md:col-span-1 space-y-4">
+                <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-4 transition-all duration-200 hover:shadow-md">
+                  <p class="font-semibold text-sm text-gray-900 dark:text-white">Póliza PDF</p>
+                  <p class="text-xs text-gray-400 dark:text-gray-500">La IA extrae los componentes automáticamente</p>
+                  <div class="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded mt-3 px-3 py-1.5 transition-all duration-200 hover:bg-blue-100 dark:hover:bg-blue-900/50">
+                    <svg class="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                    <span class="text-xs text-blue-700 dark:text-blue-300 font-medium truncate">poliza_yadea_2025.pdf</span>
+                  </div>
+                  <div class="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg p-4 text-center mt-3 bg-gray-50 dark:bg-gray-800 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-white dark:hover:bg-gray-700">
+                    <svg class="w-7 h-7 text-gray-400 dark:text-gray-500 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                    </svg>
+                    <p class="text-xs text-gray-500 dark:text-gray-400"><span class="font-medium">Haz clic</span> o arrastra el PDF</p>
+                    <p class="text-[10px] text-gray-400 dark:text-gray-500">Máximo 4 MB</p>
+                  </div>
+                  <div class="flex items-center gap-2 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 rounded mt-3 px-3 py-1.5 transition-all duration-200 hover:bg-green-100 dark:hover:bg-green-900/50">
+                    <svg class="w-3.5 h-3.5 text-green-600 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="text-xs text-green-700 dark:text-green-300">PDF procesado correctamente.</span>
+                  </div>
+                </div>
+                <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-4 transition-all duration-200 hover:shadow-md">
+                  <p class="font-semibold text-sm text-gray-900 dark:text-white">Política de reemplazo</p>
+                  <p class="text-xs text-gray-400 dark:text-gray-500">¿Qué garantía recibe un componente sustituido?</p>
+                  <div class="mt-3 space-y-2">
+                    <div class="border border-gray-200 dark:border-gray-700 rounded p-3 flex gap-3 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800">
+                      <div class="w-4 h-4 rounded-full border-2 border-gray-300 dark:border-gray-600 mt-0.5"></div>
+                      <div>
+                        <p class="text-sm font-medium text-gray-900 dark:text-white">Heredar <span class="text-[10px] bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 px-1.5 rounded ml-1">Tiempo restante</span></p>
+                        <p class="text-xs text-gray-400 dark:text-gray-500">El componente nuevo continúa con el tiempo de garantía que le quedaba al original.</p>
+                      </div>
+                    </div>
+                    <div class="border-2 border-gray-900 dark:border-white rounded p-3 flex gap-3 bg-gray-50 dark:bg-gray-800 transition-all duration-200 hover:shadow-inner">
+                      <div class="w-4 h-4 rounded-full bg-gray-900 dark:bg-white border-2 border-gray-900 dark:border-white flex items-center justify-center"><span class="w-1.5 h-1.5 rounded-full bg-white dark:bg-gray-900"></span></div>
+                      <div>
+                        <p class="text-sm font-medium text-gray-900 dark:text-white">Nueva completa <span class="text-[10px] bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-1.5 rounded ml-1">Duración original</span></p>
+                        <p class="text-xs text-gray-400 dark:text-gray-500">El componente nuevo recibe la duración total de garantía como si fuera compra nueva.</p>
+                      </div>
+                    </div>
+                    <div class="border border-gray-200 dark:border-gray-700 rounded p-3 flex gap-3 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800">
+                      <div class="w-4 h-4 rounded-full border-2 border-gray-300 dark:border-gray-600 mt-0.5"></div>
+                      <div>
+                        <p class="text-sm font-medium text-gray-900 dark:text-white">Mini <span class="text-[10px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 px-1.5 rounded ml-1">Configurable</span></p>
+                        <p class="text-xs text-gray-400 dark:text-gray-500">Garantía corta con días configurables. Ideal para reemplazos en garantía.</p>
+                      </div>
+                    </div>
+                    <button disabled class="w-full py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded text-sm font-medium opacity-60 transition-all duration-200 hover:opacity-80">Guardar política</button>
+                  </div>
+                </div>
+              </div>
+              <!-- Columna derecha -->
+              <div class="md:col-span-2 border border-gray-200 dark:border-gray-700 rounded-xl p-4 transition-all duration-200 hover:shadow-md">
+                <div class="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-2 mb-3">
+                  <div>
+                    <p class="font-semibold text-sm text-gray-900 dark:text-white">Componentes con garantía</p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500">Revisa lo que la IA extrajo y ajusta antes de guardar.</p>
+                  </div>
+                  <button disabled class="px-3 py-1 border border-gray-200 dark:border-gray-700 rounded text-xs text-gray-500 dark:text-gray-400 bg-transparent transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800">+ Agregar</button>
+                </div>
+                <div class="space-y-3">
+                  <div class="border border-gray-200 dark:border-gray-700 rounded p-3 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <div class="flex justify-between items-center"><span class="font-medium text-sm text-gray-900 dark:text-white">Motor</span><span class="flex gap-1"><span class="text-[10px] bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 px-1.5 rounded">Serial</span><button disabled class="text-gray-400 transition-colors duration-200 hover:text-red-500">✕</button></span></div>
+                    <div class="grid grid-cols-3 gap-2 mt-2">
+                      <div><label class="text-[10px] text-gray-400 dark:text-gray-500">Clave</label><input disabled value="motor" class="w-full border border-gray-200 dark:border-gray-700 rounded px-2 py-1 text-xs bg-gray-50 dark:bg-gray-800 transition-all duration-200 focus:ring-1 focus:ring-gray-300"></div>
+                      <div><label class="text-[10px] text-gray-400 dark:text-gray-500">Nombre</label><input disabled value="Motor eléctrico" class="w-full border border-gray-200 dark:border-gray-700 rounded px-2 py-1 text-xs bg-gray-50 dark:bg-gray-800 transition-all duration-200 focus:ring-1 focus:ring-gray-300"></div>
+                      <div><label class="text-[10px] text-gray-400 dark:text-gray-500">Meses</label><input disabled value="24" class="w-full border border-gray-200 dark:border-gray-700 rounded px-2 py-1 text-xs text-center bg-gray-50 dark:bg-gray-800 transition-all duration-200 focus:ring-1 focus:ring-gray-300"></div>
+                    </div>
+                    <div class="mt-1"><label class="text-[10px] text-gray-400 dark:text-gray-500">Cobertura</label><input disabled value="Defecto de fábrica, mal funcionamiento" class="w-full border border-gray-200 dark:border-gray-700 rounded px-2 py-1 text-xs bg-gray-50 dark:bg-gray-800 transition-all duration-200 focus:ring-1 focus:ring-gray-300"></div>
+                    <div class="mt-1"><label class="text-[10px] text-gray-400 dark:text-gray-500">Incluye <span class="font-normal text-gray-400 dark:text-gray-500">(separado por comas)</span></label><input disabled value="mando, freno, convertidor de velocidad" class="w-full border border-gray-200 dark:border-gray-700 rounded px-2 py-1 text-xs bg-gray-50 dark:bg-gray-800 transition-all duration-200 focus:ring-1 focus:ring-gray-300"></div>
+                    <div class="flex gap-4 mt-2"><label class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 transition-colors duration-200 hover:text-gray-700 dark:hover:text-gray-300"><input type="checkbox" checked disabled class="accent-purple-600 transition-all duration-200"> Serializable</label><label class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 transition-colors duration-200 hover:text-gray-700 dark:hover:text-gray-300"><input type="checkbox" disabled> Excluido (consumible)</label></div>
+                  </div>
+                  <div class="border border-gray-200 dark:border-gray-700 rounded p-3 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <div class="flex justify-between items-center"><span class="font-medium text-sm text-gray-900 dark:text-white">Batería</span><span class="flex gap-1"><span class="text-[10px] bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 px-1.5 rounded">Serial</span><span class="text-[10px] bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-1.5 rounded">Excluido</span><button disabled class="text-gray-400 transition-colors duration-200 hover:text-red-500">✕</button></span></div>
+                    <div class="grid grid-cols-3 gap-2 mt-2">
+                      <div><label class="text-[10px] text-gray-400 dark:text-gray-500">Clave</label><input disabled value="bateria" class="w-full border border-gray-200 dark:border-gray-700 rounded px-2 py-1 text-xs bg-gray-50 dark:bg-gray-800 transition-all duration-200 focus:ring-1 focus:ring-gray-300"></div>
+                      <div><label class="text-[10px] text-gray-400 dark:text-gray-500">Nombre</label><input disabled value="Batería de litio" class="w-full border border-gray-200 dark:border-gray-700 rounded px-2 py-1 text-xs bg-gray-50 dark:bg-gray-800 transition-all duration-200 focus:ring-1 focus:ring-gray-300"></div>
+                      <div><label class="text-[10px] text-gray-400 dark:text-gray-500">Meses</label><input disabled value="18" class="w-full border border-gray-200 dark:border-gray-700 rounded px-2 py-1 text-xs text-center bg-gray-50 dark:bg-gray-800 transition-all duration-200 focus:ring-1 focus:ring-gray-300"></div>
+                    </div>
+                    <div class="mt-1"><label class="text-[10px] text-gray-400 dark:text-gray-500">Cobertura</label><input disabled value="Capacidad reducida, defecto de fábrica" class="w-full border border-gray-200 dark:border-gray-700 rounded px-2 py-1 text-xs bg-gray-50 dark:bg-gray-800 transition-all duration-200 focus:ring-1 focus:ring-gray-300"></div>
+                    <div class="mt-1"><label class="text-[10px] text-gray-400 dark:text-gray-500">Incluye <span class="font-normal text-gray-400 dark:text-gray-500">(separado por comas)</span></label><input disabled value="cargador, BMS" class="w-full border border-gray-200 dark:border-gray-700 rounded px-2 py-1 text-xs bg-gray-50 dark:bg-gray-800 transition-all duration-200 focus:ring-1 focus:ring-gray-300"></div>
+                    <div class="flex gap-4 mt-2"><label class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 transition-colors duration-200 hover:text-gray-700 dark:hover:text-gray-300"><input type="checkbox" checked disabled class="accent-purple-600 transition-all duration-200"> Serializable</label><label class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 transition-colors duration-200 hover:text-gray-700 dark:hover:text-gray-300"><input type="checkbox" checked disabled class="accent-red-600 transition-all duration-200"> Excluido (consumible)</label></div>
+                  </div>
+                  <div class="flex justify-between items-center border-t border-gray-200 dark:border-gray-700 pt-2">
+                    <span class="text-xs text-gray-400 dark:text-gray-500">1 activo · 1 excluido</span>
+                    <button disabled class="px-4 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded text-sm font-medium opacity-60 transition-all duration-200 hover:opacity-80">Guardar componentes</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== PANEL: CAJAS ===== -->
+        <div id="panel-cajas" class="tab-panel transition-all duration-300 ease-out opacity-0 scale-95 hidden border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm transition-all duration-300 hover:shadow-md">
+          <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
+            <div class="flex gap-1.5">
+              <span class="w-3 h-3 rounded-full bg-red-400"></span>
+              <span class="w-3 h-3 rounded-full bg-yellow-400"></span>
+              <span class="w-3 h-3 rounded-full bg-green-400"></span>
+            </div>
+            <span class="text-xs text-gray-400 dark:text-gray-500 font-mono">cloudlabs.arrowk / cajas</span>
+          </div>
+          <div class="bg-white dark:bg-gray-900 p-5">
+            <div class="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-3 mb-4">
+              <div>
+                <h3 class="text-base font-semibold text-gray-900 dark:text-white">Gestión de Cajas</h3>
+                <p class="text-xs text-gray-400 dark:text-gray-500">Vista consolidada — todas las sucursales</p>
+              </div>
+              <button disabled class="px-3 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded text-xs font-medium opacity-60 transition-all duration-200 hover:opacity-80">+ Asignar caja</button>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+              <div class="border border-gray-200 dark:border-gray-700 rounded p-3 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+                <div class="text-[10px] text-gray-400 dark:text-gray-500 uppercase">Total en cajas</div>
+                <div class="text-xl font-semibold text-green-600">$128,450.00</div>
+              </div>
+              <div class="border border-gray-200 dark:border-gray-700 rounded p-3 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+                <div class="text-[10px] text-gray-400 dark:text-gray-500 uppercase">Ventas del día</div>
+                <div class="text-xl font-semibold text-yellow-600">$46,320.00</div>
+              </div>
+              <div class="border border-gray-200 dark:border-gray-700 rounded p-3 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+                <div class="text-[10px] text-gray-400 dark:text-gray-500 uppercase">Sesiones abiertas</div>
+                <div class="text-xl font-semibold text-blue-600">3</div>
+              </div>
+              <div class="border border-gray-200 dark:border-gray-700 rounded p-3 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+                <div class="text-[10px] text-gray-400 dark:text-gray-500 uppercase">Sin caja</div>
+                <div class="text-xl font-semibold text-yellow-600">1</div>
+              </div>
+            </div>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <!-- Tarjeta caja -->
+              <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden flex flex-col transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+                <div class="px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                  <div>
+                    <p class="font-semibold text-sm text-gray-900 dark:text-white">Sucursal Norte</p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 font-mono">Caja Principal</p>
+                  </div>
+                  <span class="inline-flex items-center gap-1 text-[10px] font-medium bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full"><span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>Abierta</span>
+                </div>
+                <div class="p-3 flex-1">
+                  <div class="grid grid-cols-2 gap-2">
+                    <div class="bg-gray-50 dark:bg-gray-800 rounded p-2 transition-all duration-200 hover:bg-white dark:hover:bg-gray-700">
+                      <div class="text-[10px] text-gray-400 dark:text-gray-500">Total sistema</div>
+                      <div class="text-base font-semibold text-green-600">$58,200.00</div>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-800 rounded p-2 transition-all duration-200 hover:bg-white dark:hover:bg-gray-700">
+                      <div class="text-[10px] text-gray-400 dark:text-gray-500">Ventas</div>
+                      <div class="text-base font-semibold text-yellow-600">$21,400.00</div>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-800 rounded p-2 transition-all duration-200 hover:bg-white dark:hover:bg-gray-700">
+                      <div class="text-[10px] text-gray-400 dark:text-gray-500"># Ventas</div>
+                      <div class="text-base font-semibold text-gray-900 dark:text-white">12</div>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-800 rounded p-2 transition-all duration-200 hover:bg-white dark:hover:bg-gray-700">
+                      <div class="text-[10px] text-gray-400 dark:text-gray-500">Fondo inicial</div>
+                      <div class="text-base font-semibold text-gray-900 dark:text-white">$5,000.00</div>
+                    </div>
+                  </div>
+                  <div class="text-xs text-gray-400 dark:text-gray-500 border-t border-gray-200 dark:border-gray-700 pt-2 mt-2 flex justify-between"><span>Abierta desde</span><span class="font-mono text-gray-600 dark:text-gray-300">10/03 09:30</span></div>
+                </div>
+                <div class="px-4 py-2 border-t border-gray-200 dark:border-gray-700 flex flex-wrap gap-1">
+                  <button disabled class="text-xs border border-gray-200 dark:border-gray-700 rounded px-2 py-0.5 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">Ver detalle</button>
+                  <button disabled class="text-xs border border-gray-200 dark:border-gray-700 rounded px-2 py-0.5 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">+ Ingreso</button>
+                  <button disabled class="text-xs border border-gray-200 dark:border-gray-700 rounded px-2 py-0.5 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">− Retiro</button>
+                  <button disabled class="text-xs border border-red-200 dark:border-red-800 rounded px-2 py-0.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 transition-all duration-200 hover:bg-red-100 dark:hover:bg-red-900/50 hover:border-red-300 dark:hover:border-red-700">Forzar cierre</button>
+                </div>
+              </div>
+              <!-- Otras tarjetas (similares con animaciones) -->
+              <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden flex flex-col transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+                <div class="px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                  <div>
+                    <p class="font-semibold text-sm text-gray-900 dark:text-white">Sucursal Sur</p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 font-mono">Caja Secundaria</p>
+                  </div>
+                  <span class="inline-flex items-center gap-1 text-[10px] font-medium bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full"><span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>Abierta</span>
+                </div>
+                <div class="p-3 flex-1">
+                  <div class="grid grid-cols-2 gap-2">
+                    <div class="bg-gray-50 dark:bg-gray-800 rounded p-2 transition-all duration-200 hover:bg-white dark:hover:bg-gray-700">
+                      <div class="text-[10px] text-gray-400 dark:text-gray-500">Total sistema</div>
+                      <div class="text-base font-semibold text-green-600">$42,800.00</div>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-800 rounded p-2 transition-all duration-200 hover:bg-white dark:hover:bg-gray-700">
+                      <div class="text-[10px] text-gray-400 dark:text-gray-500">Ventas</div>
+                      <div class="text-base font-semibold text-yellow-600">$15,600.00</div>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-800 rounded p-2 transition-all duration-200 hover:bg-white dark:hover:bg-gray-700">
+                      <div class="text-[10px] text-gray-400 dark:text-gray-500"># Ventas</div>
+                      <div class="text-base font-semibold text-gray-900 dark:text-white">8</div>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-800 rounded p-2 transition-all duration-200 hover:bg-white dark:hover:bg-gray-700">
+                      <div class="text-[10px] text-gray-400 dark:text-gray-500">Fondo inicial</div>
+                      <div class="text-base font-semibold text-gray-900 dark:text-white">$3,000.00</div>
+                    </div>
+                  </div>
+                  <div class="text-xs text-gray-400 dark:text-gray-500 border-t border-gray-200 dark:border-gray-700 pt-2 mt-2 flex justify-between"><span>Abierta desde</span><span class="font-mono text-gray-600 dark:text-gray-300">10/03 08:15</span></div>
+                </div>
+                <div class="px-4 py-2 border-t border-gray-200 dark:border-gray-700 flex flex-wrap gap-1">
+                  <button disabled class="text-xs border border-gray-200 dark:border-gray-700 rounded px-2 py-0.5 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">Ver detalle</button>
+                  <button disabled class="text-xs border border-gray-200 dark:border-gray-700 rounded px-2 py-0.5 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">+ Ingreso</button>
+                  <button disabled class="text-xs border border-gray-200 dark:border-gray-700 rounded px-2 py-0.5 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">− Retiro</button>
+                  <button disabled class="text-xs border border-red-200 dark:border-red-800 rounded px-2 py-0.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 transition-all duration-200 hover:bg-red-100 dark:hover:bg-red-900/50 hover:border-red-300 dark:hover:border-red-700">Forzar cierre</button>
+                </div>
+              </div>
+              <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden flex flex-col transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 opacity-60">
+                <div class="px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                  <div>
+                    <p class="font-semibold text-sm text-gray-900 dark:text-white">Sucursal Centro</p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 font-mono">Caja Principal</p>
+                  </div>
+                  <span class="text-[10px] font-medium bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full">Cerrada</span>
+                </div>
+                <div class="p-3 flex-1 text-center py-6">
+                  <div class="text-3xl mb-2">🔒</div>
+                  <div class="text-xs text-gray-400 dark:text-gray-500">Sesión cerrada</div>
+                </div>
+                <div class="px-4 py-2 border-t border-gray-200 dark:border-gray-700 flex flex-wrap gap-1">
+                  <button disabled class="text-xs border border-gray-200 dark:border-gray-700 rounded px-2 py-0.5 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">Ver detalle</button>
+                  <button disabled class="text-xs border border-gray-200 dark:border-gray-700 rounded px-2 py-0.5 bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500 opacity-50">+ Ingreso</button>
+                  <button disabled class="text-xs border border-gray-200 dark:border-gray-700 rounded px-2 py-0.5 bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500 opacity-50">− Retiro</button>
+                  <button disabled class="text-xs border border-gray-200 dark:border-gray-700 rounded px-2 py-0.5 bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500 opacity-50">Forzar cierre</button>
+                </div>
+              </div>
+              <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden flex flex-col transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+                <div class="px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                  <div>
+                    <p class="font-semibold text-sm text-gray-900 dark:text-white">Sucursal Oriente</p>
+                  </div>
+                  <span class="text-[10px] font-medium bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 px-2 py-0.5 rounded-full">Sin caja</span>
+                </div>
+                <div class="p-3 flex-1 text-center py-6">
+                  <div class="text-3xl mb-2">📭</div>
+                  <div class="text-xs text-gray-400 dark:text-gray-500 mb-3">Esta sucursal no tiene caja asignada.</div>
+                  <button disabled class="text-xs border border-yellow-300 dark:border-yellow-700 rounded px-3 py-1 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 transition-all duration-200 hover:bg-yellow-100 dark:hover:bg-yellow-900/50 hover:border-yellow-400 dark:hover:border-yellow-600">+ Asignar caja</button>
+                </div>
+                <div class="px-4 py-2 border-t border-gray-200 dark:border-gray-700 flex flex-wrap gap-1">
+                  <button disabled class="text-xs border border-gray-200 dark:border-gray-700 rounded px-2 py-0.5 bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500 opacity-50">Ver detalle</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== PANEL: CONFIGURACIÓN ===== -->
+        <div id="panel-config" class="tab-panel transition-all duration-300 ease-out opacity-0 scale-95 hidden border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm transition-all duration-300 hover:shadow-md">
+          <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
+            <div class="flex gap-1.5">
+              <span class="w-3 h-3 rounded-full bg-red-400"></span>
+              <span class="w-3 h-3 rounded-full bg-yellow-400"></span>
+              <span class="w-3 h-3 rounded-full bg-green-400"></span>
+            </div>
+            <span class="text-xs text-gray-400 dark:text-gray-500 font-mono">cloudlabs.arrowk / configuracion</span>
+          </div>
+          <div class="bg-white dark:bg-gray-900 p-5">
+            <div class="border-b border-gray-200 dark:border-gray-700 pb-3 mb-4">
+              <h3 class="text-base font-semibold text-gray-900 dark:text-white">Configuración general</h3>
+              <p class="text-xs text-gray-400 dark:text-gray-500">Estos ajustes afectarán a todas las sucursales y centros de venta.</p>
+            </div>
+            <div class="border border-gray-200 dark:border-gray-700 rounded-xl divide-y divide-gray-200 dark:divide-gray-700">
+              <div x-data="{ open: true }">
+                <button @click="open = !open" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200">
+                  <div class="w-9 h-9 rounded-lg bg-gray-900 dark:bg-white flex items-center justify-center text-white dark:text-gray-900"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.5 6h11M10 19a1 1 0 100 2 1 1 0 000-2zm7 0a1 1 0 100 2 1 1 0 000-2z" />
+                    </svg></div>
+                  <div class="flex-1 text-left">
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">Modo de venta</p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500">Controla el flujo de ventas por defecto.</p>
+                  </div>
+                  <span class="text-xs bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 px-2 py-1 rounded-full transition-colors duration-200 hover:bg-gray-200 dark:hover:bg-gray-600">Estándar</span>
+                  <svg class="w-4 h-4 text-gray-400 transition-transform duration-300" :class="{ 'rotate-90': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+                <div x-show="open" class="px-4 py-4 border-t border-gray-200 dark:border-gray-900 bg-gray-50 dark:bg-gray-900">
+                  <div class="grid grid-cols-2 gap-3">
+                    <div class="border-2 border-gray-900 dark:border-white rounded p-3 bg-white dark:bg-gray-900 flex items-start gap-2 transition-all duration-200 hover:shadow-md">
+                      <div class="w-5 h-5 rounded-full bg-gray-900 dark:bg-white flex items-center justify-center flex-shrink-0 mt-0.5"><span class="w-2 h-2 rounded-full bg-white dark:bg-gray-900"></span></div>
+                      <div>
+                        <p class="text-sm font-medium text-gray-900 dark:text-white">Estándar</p>
+                        <p class="text-xs text-gray-400 dark:text-gray-500">Venta tradicional con ticket y caja.</p>
+                      </div>
+                    </div>
+                    <div class="border-2 border-gray-200 dark:border-gray-700 rounded p-3 bg-white dark:bg-gray-900 flex items-start gap-2 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md">
+                      <div class="w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 flex-shrink-0 mt-0.5"></div>
+                      <div>
+                        <p class="text-sm font-medium text-gray-900 dark:text-white">Rápido</p>
+                        <p class="text-xs text-gray-400 dark:text-gray-500">Sin ticket, solo cierre de caja.</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="flex justify-end border-t border-gray-200 dark:border-gray-700 pt-3 mt-3"><button disabled class="px-4 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded text-sm font-medium opacity-60 transition-all duration-200 hover:opacity-80">Guardar</button></div>
+                </div>
+              </div>
+              <div x-data="{ open: false }">
+                <button @click="open = !open" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200">
+                  <div class="w-9 h-9 rounded-lg bg-gray-900 dark:bg-white flex items-center justify-center text-white dark:text-gray-900"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg></div>
+                  <div class="flex-1 text-left">
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">IVA predeterminado</p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500">Porcentaje de IVA aplicado en nuevas ventas.</p>
+                  </div>
+                  <span class="text-xs bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded-full transition-colors duration-200 hover:bg-gray-200 dark:hover:bg-gray-600">16%</span>
+                  <svg class="w-4 h-4 text-gray-400 transition-transform duration-300" :class="{ 'rotate-90': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+                <div x-show="open" class="px-4 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                  <input disabled type="number" value="16" class="w-full border border-gray-200 dark:border-gray-700 rounded px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 focus:ring-1 focus:ring-gray-300">
+                  <div class="flex justify-end border-t border-gray-200 dark:border-gray-700 pt-3 mt-3"><button disabled class="px-4 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded text-sm font-medium opacity-60 transition-all duration-200 hover:opacity-80">Guardar</button></div>
+                </div>
+              </div>
+              <div x-data="{ open: false }">
+                <button @click="open = !open" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200">
+                  <div class="w-9 h-9 rounded-lg bg-gray-900 dark:bg-white flex items-center justify-center text-white dark:text-gray-900"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg></div>
+                  <div class="flex-1 text-left">
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">Notificaciones por correo</p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500">Envía alertas de ventas y eventos a los administradores.</p>
+                  </div>
+                  <span class="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-1 rounded-full transition-colors duration-200 hover:bg-green-200 dark:hover:bg-green-900/50">Activado</span>
+                  <svg class="w-4 h-4 text-gray-400 transition-transform duration-300" :class="{ 'rotate-90': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+                <div x-show="open" class="px-4 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                  <div class="flex items-center gap-3">
+                    <div class="w-11 h-6 bg-gray-900 dark:bg-white rounded-full relative transition-all duration-200"><span class="absolute right-0.5 top-0.5 w-4 h-4 bg-white dark:bg-gray-900 rounded-full shadow transition-all duration-200"></span></div><span class="text-sm text-gray-500 dark:text-gray-400">Activado</span>
+                  </div>
+                  <div class="flex justify-end border-t border-gray-200 dark:border-gray-700 pt-3 mt-3"><button disabled class="px-4 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded text-sm font-medium opacity-60 transition-all duration-200 hover:opacity-80">Guardar</button></div>
+                </div>
+              </div>
+              <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2 text-xs font-medium text-gray-400 dark:text-gray-500 uppercase">Facturación</div>
+              <div x-data="{ open: false }">
+                <button @click="open = !open" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200">
+                  <div class="w-9 h-9 rounded-lg bg-gray-900 dark:bg-white flex items-center justify-center text-white dark:text-gray-900"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg></div>
+                  <div class="flex-1 text-left">
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">Serie de facturación</p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500">Prefijo para los folios de factura.</p>
+                  </div>
+                  <span class="text-xs bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded-full transition-colors duration-200 hover:bg-gray-200 dark:hover:bg-gray-600">F-001</span>
+                  <svg class="w-4 h-4 text-gray-400 transition-transform duration-300" :class="{ 'rotate-90': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+                <div x-show="open" class="px-4 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                  <input disabled type="text" value="F-001" class="w-full border border-gray-200 dark:border-gray-700 rounded px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 focus:ring-1 focus:ring-gray-300">
+                  <div class="flex justify-end border-t border-gray-200 dark:border-gray-700 pt-3 mt-3"><button disabled class="px-4 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded text-sm font-medium opacity-60 transition-all duration-200 hover:opacity-80">Guardar</button></div>
+                </div>
+              </div>
+            </div>
+            <div class="text-center text-xs text-gray-400 dark:text-gray-500 mt-4">Los cambios se aplicarán de inmediato para todas las sucursales.</div>
+          </div>
+        </div>
+
         
-      @endauth
-      <div>
-        <div class="footer-col-title">Contacto</div>
-        <div class="footer-links">
-          <a href="mailto:cloudlabs342@gmail.com">cloudlabs342@gmail.com</a>
-          <a href="https://wa.me/5512416031">WhatsApp</a>
-          <a href="#contact">Solicitar demo</a>
+        <!-- ===== PANEL: SUCURSALES ===== -->
+        <div id="panel-sucursales" class="tab-panel transition-all duration-300 ease-out opacity-0 scale-95 hidden border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm transition-all duration-300 hover:shadow-md">
+          <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
+            <div class="flex gap-1.5">
+              <span class="w-3 h-3 rounded-full bg-red-400"></span>
+              <span class="w-3 h-3 rounded-full bg-yellow-400"></span>
+              <span class="w-3 h-3 rounded-full bg-green-400"></span>
+            </div>
+            <span class="text-xs text-gray-400 dark:text-gray-500 font-mono">cloudlabs.arrowk / bicicletas</span>
+          </div>
+          <div class="bg-white dark:bg-gray-900 p-5">
+            <div class="flex flex-wrap justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-3 mb-4">
+              <div>
+                <h3 class="text-base font-semibold text-gray-900 dark:text-white">Bicicletas</h3>
+                <p class="text-xs text-gray-400 dark:text-gray-500">Gestiona el inventario de bicicletas</p>
+              </div>
+              <button disabled class="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded text-xs font-medium opacity-60 transition-all duration-200 hover:opacity-80"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg> Ingresar Bicicleta</button>
+            </div>
+            <div class="grid grid-cols-3 gap-3 mb-4">
+              <div class="border border-gray-200 dark:border-gray-700 rounded p-3 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+                <div class="text-[10px] text-gray-400 dark:text-gray-500 uppercase">Total</div>
+                <div class="text-2xl font-semibold text-gray-900 dark:text-white">48</div>
+              </div>
+              <div class="border border-gray-200 dark:border-gray-700 rounded p-3 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+                <div class="text-[10px] text-gray-400 dark:text-gray-500 uppercase">En Stock</div>
+                <div class="text-2xl font-semibold text-green-600">32</div>
+              </div>
+              <div class="border border-gray-200 dark:border-gray-700 rounded p-3 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+                <div class="text-[10px] text-gray-400 dark:text-gray-500 uppercase">Vendidas</div>
+                <div class="text-2xl font-semibold text-blue-600">16</div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <!-- Acordeón Sucursal Norte -->
+              <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md">
+                <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2 flex justify-between items-center cursor-pointer" onclick="toggleAcordeon(this)">
+                  <div class="flex items-center gap-2">
+                    <svg class="w-3.5 h-3.5 text-gray-400 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                    <span class="font-semibold text-sm text-gray-900 dark:text-white">Sucursal Norte</span>
+                    <span class="text-xs text-gray-400 dark:text-gray-500">12 unidades</span>
+                  </div>
+                  <span class="text-xs text-gray-400 dark:text-gray-500">Mostrando 5 de 12</span>
+                </div>
+                <div class="overflow-x-auto">
+                  <table class="w-full min-w-[700px] text-sm">
+                    <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                      <tr>
+                        <th class="px-3 py-2 text-left text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">N° Serie</th>
+                        <th class="px-3 py-2 text-left text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Marca</th>
+                        <th class="px-3 py-2 text-left text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Modelo</th>
+                        <th class="px-3 py-2 text-left text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Voltaje</th>
+                        <th class="px-3 py-2 text-left text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Color</th>
+                        <th class="px-3 py-2 text-center text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Status</th>
+                        <th class="px-3 py-2 text-left text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Fecha</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white dark:divide-gray-800">
+                      <tr class="transition-colors duration-200 hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <td class="px-3 py-2 font-mono text-xs text-gray-900 dark:text-white">SN-2025-001</td>
+                        <td class="px-3 py-2 text-gray-500 dark:text-gray-400">Yadea</td>
+                        <td class="px-3 py-2 text-gray-500 dark:text-gray-400">Ova</td>
+                        <td class="px-3 py-2 text-gray-500 dark:text-gray-400">48V</td>
+                        <td class="px-3 py-2">
+                          <div class="w-7 h-7 rounded border border-gray-200 dark:border-gray-700 overflow-hidden relative">
+                            <div class="absolute left-0 top-0 w-1/2 h-full bg-red-500"></div>
+                            <div class="absolute right-0 top-0 w-1/2 h-full bg-blue-500"></div>
+                          </div>
+                        </td>
+                        <td class="px-3 py-2 text-center"><span class="inline-block text-[10px] font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full">En Stock</span></td>
+                        <td class="px-3 py-2 text-xs text-gray-400 dark:text-gray-500">10/03/2025</td>
+                      </tr>
+                      <tr class="transition-colors duration-200 hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <td class="px-3 py-2 font-mono text-xs text-gray-900 dark:text-white">SN-2025-002</td>
+                        <td class="px-3 py-2 text-gray-500 dark:text-gray-400">NWOW</td>
+                        <td class="px-3 py-2 text-gray-500 dark:text-gray-400">EMC Golf2</td>
+                        <td class="px-3 py-2 text-gray-500 dark:text-gray-400">60V</td>
+                        <td class="px-3 py-2"><span class="text-gray-500 dark:text-gray-400">Negro</span></td>
+                        <td class="px-3 py-2 text-center"><span class="inline-block text-[10px] font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 px-2 py-0.5 rounded-full">En Reparación</span></td>
+                        <td class="px-3 py-2 text-xs text-gray-400 dark:text-gray-500">09/03/2025</td>
+                      </tr>
+                      <tr class="transition-colors duration-200 hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <td class="px-3 py-2 font-mono text-xs text-gray-900 dark:text-white">SN-2025-003</td>
+                        <td class="px-3 py-2 text-gray-500 dark:text-gray-400">Evobike</td>
+                        <td class="px-3 py-2 text-gray-500 dark:text-gray-400">Keeness</td>
+                        <td class="px-3 py-2 text-gray-500 dark:text-gray-400">48V</td>
+                        <td class="px-3 py-2">
+                          <div class="w-7 h-7 rounded border border-gray-200 dark:border-gray-700 overflow-hidden relative">
+                            <div class="absolute left-0 top-0 w-1/2 h-full bg-gray-400"></div>
+                            <div class="absolute right-0 top-0 w-1/2 h-full bg-orange-500"></div>
+                          </div>
+                        </td>
+                        <td class="px-3 py-2 text-center"><span class="inline-block text-[10px] font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full">En Stock</span></td>
+                        <td class="px-3 py-2 text-xs text-gray-400 dark:text-gray-500">08/03/2025</td>
+                      </tr>
+                      <tr class="transition-colors duration-200 hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <td class="px-3 py-2 font-mono text-xs text-gray-900 dark:text-white">SN-2025-004</td>
+                        <td class="px-3 py-2 text-gray-500 dark:text-gray-400">&lt;</td>
+                        <td class="px-3 py-2 text-gray-500 dark:text-gray-400">Model X</td>
+                        <td class="px-3 py-2 text-gray-500 dark:text-gray-400">72V</td>
+                        <td class="px-3 py-2"><span class="text-gray-500 dark:text-gray-400">Blanco</span></td>
+                        <td class="px-3 py-2 text-center"><span class="inline-block text-[10px] font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full">Vendido</span></td>
+                        <td class="px-3 py-2 text-xs text-gray-400 dark:text-gray-500">07/03/2025</td>
+                      </tr>
+                      <tr class="transition-colors duration-200 hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <td class="px-3 py-2 font-mono text-xs text-gray-900 dark:text-white">SN-2025-005</td>
+                        <td class="px-3 py-2 text-gray-500 dark:text-gray-400">Yadea</td>
+                        <td class="px-3 py-2 text-gray-500 dark:text-gray-400">GB18</td>
+                        <td class="px-3 py-2 text-gray-500 dark:text-gray-400">60V</td>
+                        <td class="px-3 py-2"><span class="text-gray-500 dark:text-gray-400">Rojo</span></td>
+                        <td class="px-3 py-2 text-center"><span class="inline-block text-[10px] font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full">En Stock</span></td>
+                        <td class="px-3 py-2 text-xs text-gray-400 dark:text-gray-500">06/03/2025</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center text-xs text-gray-400 dark:text-gray-500">
+                  <span>Página 1 de 3</span>
+                  <div class="flex gap-1">
+                    <span class="px-2 py-1 border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">← Anterior</span>
+                    <span class="px-2 py-1 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded transition-all duration-200 hover:bg-gray-800 dark:hover:bg-white">1</span>
+                    <span class="px-2 py-1 border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">2</span>
+                    <span class="px-2 py-1 border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">3</span>
+                    <span class="px-2 py-1 border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">Siguiente →</span>
+                  </div>
+                </div>
+              </div>
+              <!-- Sucursal Sur (colapsado) -->
+              <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md">
+                <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2 flex justify-between items-center cursor-pointer" onclick="toggleAcordeon(this)">
+                  <div class="flex items-center gap-2">
+                    <svg class="w-3.5 h-3.5 text-gray-400 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                    <span class="font-semibold text-sm text-gray-900 dark:text-white">Sucursal Sur</span>
+                    <span class="text-xs text-gray-400 dark:text-gray-500">8 unidades</span>
+                  </div>
+                  <span class="text-xs text-gray-400 dark:text-gray-500">Mostrando 5 de 8</span>
+                </div>
+                <div style="display:none;" class="overflow-x-auto">
+                  <table class="w-full min-w-[700px] text-sm">
+                    <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                      <tr>
+                        <th class="px-3 py-2 text-left text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">N° Serie</th>
+                        <th class="px-3 py-2 text-left text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Marca</th>
+                        <th class="px-3 py-2 text-left text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Modelo</th>
+                        <th class="px-3 py-2 text-left text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Voltaje</th>
+                        <th class="px-3 py-2 text-left text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Color</th>
+                        <th class="px-3 py-2 text-center text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Status</th>
+                        <th class="px-3 py-2 text-left text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Fecha</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white dark:divide-gray-800">
+                      <tr class="transition-colors duration-200 hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <td class="px-3 py-2 font-mono text-xs text-gray-900 dark:text-white">SN-2025-010</td>
+                        <td class="px-3 py-2 text-gray-500 dark:text-gray-400">NWOW</td>
+                        <td class="px-3 py-2 text-gray-500 dark:text-gray-400">ERV2</td>
+                        <td class="px-3 py-2 text-gray-500 dark:text-gray-400">72V</td>
+                        <td class="px-3 py-2"><span class="text-gray-500 dark:text-gray-400">Negro</span></td>
+                        <td class="px-3 py-2 text-center"><span class="inline-block text-[10px] font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full">En Stock</span></td>
+                        <td class="px-3 py-2 text-xs text-gray-400 dark:text-gray-500">10/03/2025</td>
+                      </tr>
+                      <tr class="transition-colors duration-200 hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <td class="px-3 py-2 font-mono text-xs text-gray-900 dark:text-white">SN-2025-011</td>
+                        <td class="px-3 py-2 text-gray-500 dark:text-gray-400">Yadea</td>
+                        <td class="px-3 py-2 text-gray-500 dark:text-gray-400">Ova</td>
+                        <td class="px-3 py-2 text-gray-500 dark:text-gray-400">48V</td>
+                        <td class="px-3 py-2"><span class="text-gray-500 dark:text-gray-400">Azul</span></td>
+                        <td class="px-3 py-2 text-center"><span class="inline-block text-[10px] font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full">Vendido</span></td>
+                        <td class="px-3 py-2 text-xs text-gray-400 dark:text-gray-500">09/03/2025</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <!-- Sucursal Centro (colapsado) -->
+              <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md">
+                <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2 flex justify-between items-center cursor-pointer" onclick="toggleAcordeon(this)">
+                  <div class="flex items-center gap-2">
+                    <svg class="w-3.5 h-3.5 text-gray-400 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                    <span class="font-semibold text-sm text-gray-900 dark:text-white">Sucursal Centro</span>
+                    <span class="text-xs text-gray-400 dark:text-gray-500">5 unidades</span>
+                  </div>
+                  <span class="text-xs text-gray-400 dark:text-gray-500">Mostrando 5 de 5</span>
+                </div>
+                <div style="display:none;" class="overflow-x-auto">
+                  <table class="w-full min-w-[700px] text-sm">
+                    <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                      <tr>
+                        <th class="px-3 py-2 text-left text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">N° Serie</th>
+                        <th class="px-3 py-2 text-left text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Marca</th>
+                        <th class="px-3 py-2 text-left text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Modelo</th>
+                        <th class="px-3 py-2 text-left text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Voltaje</th>
+                        <th class="px-3 py-2 text-left text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Color</th>
+                        <th class="px-3 py-2 text-center text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Status</th>
+                        <th class="px-3 py-2 text-left text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Fecha</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white dark:divide-gray-800">
+                      <tr class="transition-colors duration-200 hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <td class="px-3 py-2 font-mono text-xs text-gray-900 dark:text-white">SN-2025-020</td>
+                        <td class="px-3 py-2 text-gray-500 dark:text-gray-400">Tesla</td>
+                        <td class="px-3 py-2 text-gray-500 dark:text-gray-400">Model Y</td>
+                        <td class="px-3 py-2 text-gray-500 dark:text-gray-400">72V</td>
+                        <td class="px-3 py-2"><span class="text-gray-500 dark:text-gray-400">Blanco</span></td>
+                        <td class="px-3 py-2 text-center"><span class="inline-block text-[10px] font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full">En Stock</span></td>
+                        <td class="px-3 py-2 text-xs text-gray-400 dark:text-gray-500">08/03/2025</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== PANEL: CORTE ===== -->
+        <div id="panel-corte" class="tab-panel transition-all duration-300 ease-out opacity-0 scale-95 hidden border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm transition-all duration-300 hover:shadow-md">
+          <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
+            <div class="flex gap-1.5">
+              <span class="w-3 h-3 rounded-full bg-red-400"></span>
+              <span class="w-3 h-3 rounded-full bg-yellow-400"></span>
+              <span class="w-3 h-3 rounded-full bg-green-400"></span>
+            </div>
+            <span class="text-xs text-gray-400 dark:text-gray-500 font-mono">cloudlabs.arrowk / mi-caja</span>
+          </div>
+          <div class="bg-white dark:bg-gray-900 p-5">
+            <div class="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-3 mb-4">
+              <div>
+                <h3 class="text-base font-semibold text-gray-900 dark:text-white">Mi Caja</h3>
+                <p class="text-xs text-gray-400 dark:text-gray-500">Caja principal · Administrador</p>
+              </div>
+              <span class="inline-flex items-center gap-1.5 text-[10px] font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full"><span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>Abierta</span>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mb-3">
+              <div class="bg-gray-50 dark:bg-gray-800 rounded p-3 transition-all duration-200 hover:bg-white dark:hover:bg-gray-700">
+                <div class="text-[10px] text-gray-400 dark:text-gray-500 uppercase">Total sistema</div>
+                <div class="text-xl font-semibold text-green-600">$128,450.00</div>
+              </div>
+              <div class="bg-gray-50 dark:bg-gray-800 rounded p-3 transition-all duration-200 hover:bg-white dark:hover:bg-gray-700">
+                <div class="text-[10px] text-gray-400 dark:text-gray-500 uppercase">Ventas cobradas</div>
+                <div class="text-xl font-semibold text-yellow-600">$46,320.00</div>
+              </div>
+              <div class="bg-gray-50 dark:bg-gray-800 rounded p-3 transition-all duration-200 hover:bg-white dark:hover:bg-gray-700">
+                <div class="text-[10px] text-gray-400 dark:text-gray-500 uppercase"># Ventas</div>
+                <div class="text-xl font-semibold text-gray-900 dark:text-white">12</div>
+              </div>
+              <div class="bg-gray-50 dark:bg-gray-800 rounded p-3 transition-all duration-200 hover:bg-white dark:hover:bg-gray-700">
+                <div class="text-[10px] text-gray-400 dark:text-gray-500 uppercase">Fondo inicial</div>
+                <div class="text-xl font-semibold text-gray-900 dark:text-white">$5,000.00</div>
+              </div>
+            </div>
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-2 text-xs text-gray-400 dark:text-gray-500 space-y-1">
+              <div class="flex justify-between"><span>Abierta desde</span><span class="text-gray-600 dark:text-gray-300 font-medium">10/03/2025 09:30</span></div>
+              <div class="flex justify-between"><span>Ingresos manuales</span><span class="text-blue-600 font-medium">+$1,200.00</span></div>
+              <div class="flex justify-between"><span>Retiros</span><span class="text-red-600 font-medium">-$350.00</span></div>
+              <div class="flex justify-between"><span>Ajustes</span><span class="text-green-600 font-medium">+$50.00</span></div>
+            </div>
+            <div class="border-t border-gray-200 dark:border-gray-700 mt-3 pt-3">
+              <div class="text-[10px] text-gray-400 dark:text-gray-500 uppercase">Por método de pago</div>
+              <div class="flex justify-between text-xs mt-1"><span>💵 Efectivo</span><span class="text-green-600 font-medium">$32,100.00</span></div>
+              <div class="flex justify-between text-xs"><span>💳 Tarjeta</span><span class="text-green-600 font-medium">$14,220.00</span></div>
+            </div>
+            <div class="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+              <button disabled class="text-xs border border-gray-200 dark:border-gray-700 rounded px-3 py-1 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">+ Ingreso manual</button>
+              <button disabled class="text-xs border border-gray-200 dark:border-gray-700 rounded px-3 py-1 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">Corte parcial</button>
+              <button disabled class="text-xs border border-red-200 dark:border-red-800 rounded px-3 py-1 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 transition-all duration-200 hover:bg-red-100 dark:hover:bg-red-900/50 hover:border-red-300 dark:hover:border-red-700">Cerrar caja</button>
+            </div>
+            <div class="border-t border-gray-200 dark:border-gray-700 mt-4">
+              <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2 flex justify-between text-xs font-medium text-gray-400 dark:text-gray-500"><span>Últimas sesiones</span><span>3 registros</span></div>
+              <div class="overflow-x-auto">
+                <table class="w-full min-w-[600px] text-xs">
+                  <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                    <tr>
+                      <th class="px-3 py-2 text-left text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Apertura</th>
+                      <th class="px-3 py-2 text-left text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Cierre</th>
+                      <th class="px-3 py-2 text-left text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Fondo</th>
+                      <th class="px-3 py-2 text-left text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Sistema</th>
+                      <th class="px-3 py-2 text-left text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Diferencia</th>
+                      <th class="px-3 py-2 text-center text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Estado</th>
+                      <th class="px-3 py-2 text-center text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">PDF</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-white dark:divide-gray-800">
+                    <tr class="transition-colors duration-200 hover:bg-gray-50 dark:hover:bg-gray-800">
+                      <td class="px-3 py-2 font-medium text-gray-900 dark:text-white">10/03/2025 09:30</td>
+                      <td class="px-3 py-2 text-gray-400 dark:text-gray-500">—</td>
+                      <td class="px-3 py-2 text-gray-900 dark:text-white">$5,000.00</td>
+                      <td class="px-3 py-2 text-gray-900 dark:text-white">$128,450.00</td>
+                      <td class="px-3 py-2 text-green-600 font-medium">+$150.00</td>
+                      <td class="px-3 py-2 text-center"><span class="inline-block text-[10px] font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full">Abierta</span></td>
+                      <td class="px-3 py-2 text-center text-gray-400 dark:text-gray-500">—</td>
+                    </tr>
+                    <tr class="transition-colors duration-200 hover:bg-gray-50 dark:hover:bg-gray-800">
+                      <td class="px-3 py-2 font-medium text-gray-900 dark:text-white">09/03/2025 08:15</td>
+                      <td class="px-3 py-2 text-gray-400 dark:text-gray-500">09/03/2025 20:00</td>
+                      <td class="px-3 py-2 text-gray-900 dark:text-white">$5,000.00</td>
+                      <td class="px-3 py-2 text-gray-900 dark:text-white">$92,300.00</td>
+                      <td class="px-3 py-2 text-green-600 font-medium">+$80.00</td>
+                      <td class="px-3 py-2 text-center"><span class="inline-block text-[10px] font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 px-2 py-0.5 rounded-full">Cerrada</span></td>
+                      <td class="px-3 py-2 text-center"><a href="#" class="text-red-600 font-medium inline-flex items-center gap-1 transition-colors duration-200 hover:text-red-800"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                          </svg>PDF</a></td>
+                    </tr>
+                    <tr class="transition-colors duration-200 hover:bg-gray-50 dark:hover:bg-gray-800">
+                      <td class="px-3 py-2 font-medium text-gray-900 dark:text-white">08/03/2025 09:00</td>
+                      <td class="px-3 py-2 text-gray-400 dark:text-gray-500">08/03/2025 19:30</td>
+                      <td class="px-3 py-2 text-gray-900 dark:text-white">$5,000.00</td>
+                      <td class="px-3 py-2 text-gray-900 dark:text-white">$67,800.00</td>
+                      <td class="px-3 py-2 text-red-600 font-medium">-$20.00</td>
+                      <td class="px-3 py-2 text-center"><span class="inline-block text-[10px] font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-2 py-0.5 rounded-full">Cerrada</span></td>
+                      <td class="px-3 py-2 text-center"><a href="#" class="text-red-600 font-medium inline-flex items-center gap-1 transition-colors duration-200 hover:text-red-800"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                          </svg>PDF</a></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2 border-t border-gray-200 dark:border-gray-700 flex justify-center gap-2 text-xs text-gray-400 dark:text-gray-500 mt-3">
+              <span>Modales:</span>
+              <button disabled class="border border-gray-200 dark:border-gray-700 rounded px-2 py-0.5 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">Abrir caja</button>
+              <button disabled class="border border-gray-200 dark:border-gray-700 rounded px-2 py-0.5 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">Ingreso manual</button>
+              <button disabled class="border border-gray-200 dark:border-gray-700 rounded px-2 py-0.5 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">Corte parcial</button>
+              <button disabled class="border border-red-200 dark:border-red-800 rounded px-2 py-0.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 transition-all duration-200 hover:bg-red-100 dark:hover:bg-red-900/50 hover:border-red-300 dark:hover:border-red-700">Cerrar caja</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== PANEL: ÓRDENES ===== -->
+        <div id="panel-ordenes" class="tab-panel transition-all duration-300 ease-out opacity-0 scale-95 hidden border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm transition-all duration-300 hover:shadow-md">
+          <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
+            <div class="flex gap-1.5">
+              <span class="w-3 h-3 rounded-full bg-red-400"></span>
+              <span class="w-3 h-3 rounded-full bg-yellow-400"></span>
+              <span class="w-3 h-3 rounded-full bg-green-400"></span>
+            </div>
+            <span class="text-xs text-gray-400 dark:text-gray-500 font-mono">cloudlabs.arrowk / ordenes</span>
+          </div>
+          <div class="bg-white dark:bg-gray-900">
+            <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex flex-wrap justify-between items-start gap-2">
+              <div>
+                <h3 class="text-base font-semibold text-gray-900 dark:text-white">Órdenes de trabajo</h3>
+                <p class="text-xs text-gray-400 dark:text-gray-500">5 activas · 2 listas para entrega</p>
+              </div>
+              <button disabled class="inline-flex items-center gap-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-3 py-1.5 rounded text-xs font-medium opacity-60 transition-all duration-200 hover:opacity-80"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg> Nueva OT</button>
+            </div>
+            <div class="flex gap-1 overflow-x-auto px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 scrollbar-hide">
+              <span class="inline-block text-xs font-medium px-3 py-1 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full whitespace-nowrap">Todas</span>
+              <span class="inline-block text-xs font-medium px-3 py-1 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-full whitespace-nowrap transition-colors duration-200 hover:bg-white dark:hover:bg-gray-600">Recibidas</span>
+              <span class="inline-block text-xs font-medium px-3 py-1 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-full whitespace-nowrap transition-colors duration-200 hover:bg-white dark:hover:bg-gray-600">Diagnóstico</span>
+              <span class="inline-block text-xs font-medium px-3 py-1 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-full whitespace-nowrap transition-colors duration-200 hover:bg-white dark:hover:bg-gray-600">Cotización enviada</span>
+              <span class="inline-block text-xs font-medium px-3 py-1 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-full whitespace-nowrap transition-colors duration-200 hover:bg-white dark:hover:bg-gray-600">En proceso</span>
+              <span class="inline-block text-xs font-medium px-3 py-1 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-full whitespace-nowrap transition-colors duration-200 hover:bg-white dark:hover:bg-gray-600">Listas</span>
+            </div>
+            <div class="grid md:grid-cols-3 gap-0">
+              <!-- Lista -->
+              <div class="md:col-span-1 border-r border-gray-200 dark:border-gray-700 p-3 bg-gray-50 dark:bg-gray-800 max-h-[500px] overflow-y-auto">
+                <div class="border-2 border-gray-900 dark:border-white rounded-lg p-3 bg-white dark:bg-gray-900 mb-2 transition-all duration-200 hover:shadow-md">
+                  <div class="flex justify-between items-start">
+                    <div class="flex flex-wrap gap-1"><span class="text-xs font-mono text-gray-400 dark:text-gray-500">OT-001</span><span class="text-[10px] font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 px-1.5 rounded-full">Cotización enviada</span><span class="text-[10px] font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-1.5 rounded-full">Garantía</span></div><span class="text-[10px] text-gray-400 dark:text-gray-500">hace 2h</span>
+                  </div>
+                  <div class="text-sm font-semibold text-gray-900 dark:text-white mt-1">Juan Pérez</div>
+                  <div class="text-xs text-gray-400 dark:text-gray-500 font-mono">Yadea · Ova · 48V</div>
+                  <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">No enciende, batería dañada</div>
+                  <div class="flex justify-between items-center mt-2"><span class="text-[10px] text-red-600 font-medium">⏰ Cotización expirada</span><span class="text-xs font-semibold text-gray-900 dark:text-white">$3,500.00</span></div>
+                </div>
+                <div class="border border-gray-200 dark:border-gray-700 border-l-4 border-yellow-400 rounded-lg p-3 bg-white dark:bg-gray-900 mb-2 transition-all duration-200 hover:shadow-md">
+                  <div class="flex justify-between items-start">
+                    <div class="flex flex-wrap gap-1"><span class="text-xs font-mono text-gray-400 dark:text-gray-500">OT-002</span><span class="text-[10px] font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-1.5 rounded-full">Diagnóstico</span></div><span class="text-[10px] text-gray-400 dark:text-gray-500">hace 4h</span>
+                  </div>
+                  <div class="text-sm font-semibold text-gray-900 dark:text-white mt-1">María Gómez</div>
+                  <div class="text-xs text-gray-400 dark:text-gray-500 font-mono">NWOW · EMC Golf2 · 60V</div>
+                  <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Freno delantero no responde</div>
+                  <div class="flex justify-between items-center mt-2"><span class="text-[10px] text-gray-400 dark:text-gray-500">&nbsp;</span><span class="text-xs font-semibold text-gray-400 dark:text-gray-500">Por cotizar</span></div>
+                </div>
+                <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-white dark:bg-gray-900 mb-2 transition-all duration-200 hover:shadow-md">
+                  <div class="flex justify-between items-start">
+                    <div class="flex flex-wrap gap-1"><span class="text-xs font-mono text-gray-400 dark:text-gray-500">OT-003</span><span class="text-[10px] font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-1.5 rounded-full">En proceso</span><span class="text-[10px] font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-1.5 rounded-full">Mantenimiento</span></div><span class="text-[10px] text-gray-400 dark:text-gray-500">ayer</span>
+                  </div>
+                  <div class="text-sm font-semibold text-gray-900 dark:text-white mt-1">Carlos Ruiz</div>
+                  <div class="text-xs text-gray-400 dark:text-gray-500 font-mono">Evobike · Keeness · 48V</div>
+                  <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Limpieza general y ajuste de cadena</div>
+                  <div class="flex justify-between items-center mt-2"><span class="text-[10px] text-gray-400 dark:text-gray-500">&nbsp;</span><span class="text-xs font-semibold text-gray-900 dark:text-white">$1,200.00</span></div>
+                </div>
+                <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-white dark:bg-gray-900 transition-all duration-200 hover:shadow-md">
+                  <div class="flex justify-between items-start">
+                    <div class="flex flex-wrap gap-1"><span class="text-xs font-mono text-gray-400 dark:text-gray-500">OT-004</span><span class="text-[10px] font-medium bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 px-1.5 rounded-full">Lista</span></div><span class="text-[10px] text-gray-400 dark:text-gray-500">ayer</span>
+                  </div>
+                  <div class="text-sm font-semibold text-gray-900 dark:text-white mt-1">Laura Sánchez</div>
+                  <div class="text-xs text-gray-400 dark:text-gray-500 font-mono">NWOW · ERV2 · 72V</div>
+                  <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Cambio de motor trasero</div>
+                  <div class="flex justify-between items-center mt-2"><span class="text-[10px] text-gray-400 dark:text-gray-500">&nbsp;</span><span class="text-xs font-semibold text-gray-900 dark:text-white">$4,800.00</span></div>
+                </div>
+                <div class="flex justify-between items-center mt-3 text-xs text-gray-400 dark:text-gray-500">
+                  <span class="border border-gray-200 dark:border-gray-700 rounded px-3 py-1 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">← Anterior</span>
+                  <span>1 / 2</span>
+                  <span class="border border-gray-200 dark:border-gray-700 rounded px-3 py-1 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">Siguiente →</span>
+                </div>
+              </div>
+              <!-- Detalle -->
+              <div class="md:col-span-2 p-4 bg-white dark:bg-gray-900">
+                <div class="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-2 mb-3">
+                  <div class="flex flex-wrap items-center gap-2"><span class="font-mono text-sm font-semibold text-gray-900 dark:text-white">OT-001</span><span class="text-[10px] font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 px-2 py-0.5 rounded-full">Cotización enviada</span><span class="text-[10px] font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full">✦ Garantía</span></div>
+                  <button disabled class="text-gray-400 dark:text-gray-500 text-lg transition-colors duration-200 hover:text-gray-600 dark:hover:text-gray-300">✕</button>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+                  <div class="bg-gray-50 dark:bg-gray-800 rounded p-2 transition-all duration-200 hover:bg-white dark:hover:bg-gray-700">
+                    <div class="text-[9px] text-gray-400 dark:text-gray-500 uppercase">Cliente</div>
+                    <div class="text-sm font-semibold text-gray-900 dark:text-white">Juan Pérez</div>
+                  </div>
+                  <div class="bg-gray-50 dark:bg-gray-800 rounded p-2 transition-all duration-200 hover:bg-white dark:hover:bg-gray-700">
+                    <div class="text-[9px] text-gray-400 dark:text-gray-500 uppercase">Unidad</div>
+                    <div class="text-sm font-semibold text-gray-900 dark:text-white font-mono">Yadea · Ova · 48V</div>
+                  </div>
+                  <div class="bg-gray-50 dark:bg-gray-800 rounded p-2 transition-all duration-200 hover:bg-white dark:hover:bg-gray-700">
+                    <div class="text-[9px] text-gray-400 dark:text-gray-500 uppercase">Costo total</div>
+                    <div class="text-sm font-semibold text-gray-900 dark:text-white">$3,500.00</div>
+                  </div>
+                  <div class="bg-gray-50 dark:bg-gray-800 rounded p-2 transition-all duration-200 hover:bg-white dark:hover:bg-gray-700">
+                    <div class="text-[9px] text-gray-400 dark:text-gray-500 uppercase">Teléfono</div>
+                    <div class="text-sm font-semibold text-gray-900 dark:text-white font-mono">555-1234</div>
+                  </div>
+                </div>
+                <div class="flex items-start gap-2 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded p-3 mb-3 transition-all duration-200 hover:bg-red-100 dark:hover:bg-red-900/50">
+                  <svg class="w-4 h-4 text-red-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                  <div>
+                    <p class="text-xs font-semibold text-red-700 dark:text-red-400">El cliente rechazó la cotización</p>
+                    <p class="text-xs text-red-600 dark:text-red-300">Contáctalo para decidir si se cancela o se negocia: <span class="font-semibold">555-1234</span></p>
+                    <div class="flex gap-2 mt-1"><span class="text-[10px] bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-2 py-0.5 rounded transition-colors duration-200 hover:bg-red-200 dark:hover:bg-red-900/50">📞 Llamar</span><span class="text-[10px] bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-0.5 rounded transition-colors duration-200 hover:bg-green-200 dark:hover:bg-green-900/50">WhatsApp</span></div>
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <p class="text-[10px] text-gray-400 dark:text-gray-500 font-medium">Problema reportado</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">No enciende, batería dañada</p>
+                  </div>
+                  <div>
+                    <p class="text-[10px] text-gray-400 dark:text-gray-500 font-medium">Diagnóstico</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Batería con celdas en corto, requiere reemplazo</p>
+                  </div>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-3 mb-3 transition-all duration-200 hover:bg-white dark:hover:bg-gray-700">
+                  <div class="flex justify-between items-center"><span class="text-xs font-medium text-gray-400 dark:text-gray-500">Cotización enviada</span><span class="text-[10px] font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 px-2 py-0.5 rounded-full">Pendiente</span></div>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Reemplazo de batería y verificación del sistema eléctrico.</p>
+                  <div class="flex justify-between text-xs text-gray-400 dark:text-gray-500"><span>Piezas: Batería × 1</span><span class="font-medium text-gray-900 dark:text-white">$3,500.00</span></div>
+                  <div class="flex justify-between text-xs border-t border-gray-200 dark:border-gray-700 pt-1 mt-1"><span class="text-gray-400 dark:text-gray-500">Total cotización</span><span class="font-semibold text-gray-900 dark:text-white">$3,500.00</span></div>
+                </div>
+                <div class="mb-3">
+                  <p class="text-[10px] text-gray-400 dark:text-gray-500 font-medium">Piezas</p>
+                  <div class="bg-gray-50 dark:bg-gray-800 rounded p-2 flex justify-between text-xs transition-all duration-200 hover:bg-white dark:hover:bg-gray-700"><span>Batería de litio × 1</span><span class="font-medium text-gray-900 dark:text-white">$3,500.00</span></div>
+                </div>
+                <div class="mb-3">
+                  <p class="text-[10px] text-gray-400 dark:text-gray-500 font-medium">Progreso</p>
+                  <div class="flex items-center gap-0">
+                    <div class="flex flex-col items-center flex-1"><span class="w-2 h-2 rounded-full bg-gray-900 dark:bg-white"></span><span class="text-[8px] text-gray-900 dark:text-white font-medium mt-0.5">Recibida</span></div>
+                    <div class="h-0.5 flex-1 bg-gray-900 dark:bg-white"></div>
+                    <div class="flex flex-col items-center flex-1"><span class="w-2 h-2 rounded-full bg-gray-900 dark:bg-white"></span><span class="text-[8px] text-gray-900 dark:text-white font-medium mt-0.5">Diagnóst.</span></div>
+                    <div class="h-0.5 flex-1 bg-gray-900 dark:bg-white"></div>
+                    <div class="flex flex-col items-center flex-1"><span class="w-2 h-2 rounded-full bg-gray-900 dark:bg-white"></span><span class="text-[8px] text-gray-900 dark:text-white font-medium mt-0.5">Cotización</span></div>
+                    <div class="h-0.5 flex-1 bg-gray-200 dark:bg-gray-700"></div>
+                    <div class="flex flex-col items-center flex-1"><span class="w-2 h-2 rounded-full bg-gray-200 dark:bg-gray-700"></span><span class="text-[8px] text-gray-400 dark:text-gray-500 mt-0.5">Proceso</span></div>
+                    <div class="h-0.5 flex-1 bg-gray-200 dark:bg-gray-700"></div>
+                    <div class="flex flex-col items-center flex-1"><span class="w-2 h-2 rounded-full bg-gray-200 dark:bg-gray-700"></span><span class="text-[8px] text-gray-400 dark:text-gray-500 mt-0.5">Lista</span></div>
+                    <div class="h-0.5 flex-1 bg-gray-200 dark:bg-gray-700"></div>
+                    <div class="flex flex-col items-center flex-1"><span class="w-2 h-2 rounded-full bg-gray-200 dark:bg-gray-700"></span><span class="text-[8px] text-gray-400 dark:text-gray-500 mt-0.5">Entregada</span></div>
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <p class="text-[10px] text-gray-400 dark:text-gray-500 font-medium">Historial</p>
+                  <div class="text-xs text-gray-400 dark:text-gray-500 space-y-1 max-h-12 overflow-y-auto">
+                    <div class="flex items-center gap-1 transition-colors duration-200 hover:text-gray-600 dark:hover:text-gray-300"><span class="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>Recibida · Admin · hace 2h</div>
+                    <div class="flex items-center gap-1 transition-colors duration-200 hover:text-gray-600 dark:hover:text-gray-300"><span class="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>Diagnóstico · Técnico · hace 1h</div>
+                    <div class="flex items-center gap-1 transition-colors duration-200 hover:text-gray-600 dark:hover:text-gray-300"><span class="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>Cotización enviada · Admin · hace 30m</div>
+                  </div>
+                </div>
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-3 flex gap-2">
+                  <button disabled class="px-4 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded text-xs font-medium opacity-60 transition-all duration-200 hover:opacity-80">Resolver manualmente</button>
+                  <button disabled class="px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">Cancelar orden</button>
+                </div>
+              </div>
+            </div>
+            <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2 border-t border-gray-200 dark:border-gray-700 flex justify-center gap-2 text-xs text-gray-400 dark:text-gray-500">
+              <span>Modales:</span>
+              <button disabled class="border border-gray-200 dark:border-gray-700 rounded px-2 py-0.5 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">Enviar cotización</button>
+              <button disabled class="border border-gray-200 dark:border-gray-700 rounded px-2 py-0.5 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">Resolver manualmente</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== PANEL: ROBO ===== -->
+        <div id="panel-robo" class="tab-panel transition-all duration-300 ease-out opacity-0 scale-95 hidden border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm transition-all duration-300 hover:shadow-md">
+          <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
+            <div class="flex gap-1.5">
+              <span class="w-3 h-3 rounded-full bg-red-400"></span>
+              <span class="w-3 h-3 rounded-full bg-yellow-400"></span>
+              <span class="w-3 h-3 rounded-full bg-green-400"></span>
+            </div>
+            <span class="text-xs text-gray-400 dark:text-gray-500 font-mono">cloudlabs.arrowk / reporte-robo</span>
+          </div>
+          <div class="bg-white dark:bg-gray-900 p-5 relative">
+            <div class="mb-5">
+              <h3 class="text-base font-semibold text-gray-900 dark:text-white">Reporte de robo</h3>
+              <p class="text-xs text-gray-400 dark:text-gray-500">Registra el robo de un vehículo ArrowX</p>
+            </div>
+
+            <!-- Vehículos en custodia -->
+            <div class="mb-5">
+              <div class="flex items-center gap-2 mb-2"><span class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span>
+                <p class="text-[10px] font-semibold text-yellow-600 dark:text-yellow-400 uppercase tracking-wider">Vehículos en custodia — esperando recolección del dueño</p>
+              </div>
+              <div class="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-xl p-3 mb-2 flex justify-between items-start transition-all duration-200 hover:shadow-md">
+                <div>
+                  <p class="text-xs font-mono font-semibold text-gray-900 dark:text-white">SN-2025-001</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">Yadea · Ova</p>
+                  <p class="text-xs text-gray-400 dark:text-gray-500">Cliente: <span class="font-medium text-gray-700 dark:text-gray-300">Juan Pérez</span> · 555-1234</p>
+                  <p class="text-xs text-gray-400 dark:text-gray-500">Reportado por: <span class="text-gray-700 dark:text-gray-300">Sucursal Norte</span></p>
+                  <p class="text-xs text-gray-400 dark:text-gray-500">En custodia desde: <span class="text-gray-700 dark:text-gray-300">10/03/2025</span></p>
+                </div>
+                <button disabled class="bg-yellow-600 dark:bg-yellow-500 text-white text-xs font-semibold px-3 py-1 rounded opacity-60 transition-all duration-200 hover:opacity-80">✓ Marcar entregado</button>
+              </div>
+              <div class="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-xl p-3 flex justify-between items-start transition-all duration-200 hover:shadow-md">
+                <div>
+                  <p class="text-xs font-mono font-semibold text-gray-900 dark:text-white">SN-2025-002</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">NWOW · EMC Golf2</p>
+                  <p class="text-xs text-gray-400 dark:text-gray-500">Cliente: <span class="font-medium text-gray-700 dark:text-gray-300">María García</span> · 555-5678</p>
+                  <p class="text-xs text-gray-400 dark:text-gray-500">Reportado por: <span class="text-gray-700 dark:text-gray-300">Sucursal Sur</span></p>
+                  <p class="text-xs text-gray-400 dark:text-gray-500">En custodia desde: <span class="text-gray-700 dark:text-gray-300">09/03/2025</span></p>
+                </div>
+                <button disabled class="bg-yellow-600 dark:bg-yellow-500 text-white text-xs font-semibold px-3 py-1 rounded opacity-60 transition-all duration-200 hover:opacity-80">✓ Marcar entregado</button>
+              </div>
+            </div>
+
+            <!-- Paso 1 -->
+            <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-4 max-w-md mb-5 transition-all duration-200 hover:shadow-md">
+              <p class="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Paso 1 — Buscar vehículo</p>
+              <div class="flex gap-2 mt-2">
+                <input type="text" placeholder="Número de serie (17 caracteres)" maxlength="17" disabled class="flex-1 px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded text-sm bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500 uppercase transition-all duration-200 focus:ring-1 focus:ring-gray-300">
+                <button disabled class="px-4 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded text-sm font-medium opacity-60 transition-all duration-200 hover:opacity-80 flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg> Buscar</button>
+              </div>
+              <button disabled class="text-xs text-gray-400 dark:text-gray-500 underline mt-2 transition-colors duration-200 hover:text-gray-600 dark:hover:text-gray-300">← Buscar otro vehículo</button>
+            </div>
+
+            <!-- Paso 2 -->
+            <div class="mb-5">
+              <p class="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Paso 2 — Confirma los datos con el cliente</p>
+              <div class="grid sm:grid-cols-2 gap-3 mt-2">
+                <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-3 transition-all duration-200 hover:shadow-md">
+                  <p class="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Vehículo</p>
+                  <dl class="text-xs space-y-1 mt-1">
+                    <div class="flex justify-between">
+                      <dt class="text-gray-400 dark:text-gray-500">N° de serie</dt>
+                      <dd class="font-mono font-medium text-gray-900 dark:text-white">SN-2025-001</dd>
+                    </div>
+                    <div class="flex justify-between">
+                      <dt class="text-gray-400 dark:text-gray-500">Marca</dt>
+                      <dd class="font-medium text-gray-900 dark:text-white">Yadea</dd>
+                    </div>
+                    <div class="flex justify-between">
+                      <dt class="text-gray-400 dark:text-gray-500">Modelo</dt>
+                      <dd class="font-medium text-gray-900 dark:text-white">Ova</dd>
+                    </div>
+                    <div class="flex justify-between">
+                      <dt class="text-gray-400 dark:text-gray-500">Voltaje</dt>
+                      <dd class="font-medium text-gray-900 dark:text-white">48V</dd>
+                    </div>
+                    <div class="flex justify-between">
+                      <dt class="text-gray-400 dark:text-gray-500">Color</dt>
+                      <dd class="font-medium text-gray-900 dark:text-white">Rojo</dd>
+                    </div>
+                  </dl>
+                </div>
+                <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-3 transition-all duration-200 hover:shadow-md">
+                  <p class="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Cliente</p>
+                  <dl class="text-xs space-y-1 mt-1">
+                    <div class="flex justify-between">
+                      <dt class="text-gray-400 dark:text-gray-500">Nombre</dt>
+                      <dd class="font-medium text-gray-900 dark:text-white">Juan Pérez</dd>
+                    </div>
+                    <div class="flex justify-between">
+                      <dt class="text-gray-400 dark:text-gray-500">Teléfono</dt>
+                      <dd class="font-medium text-gray-900 dark:text-white">555-1234</dd>
+                    </div>
+                    <div class="flex justify-between">
+                      <dt class="text-gray-400 dark:text-gray-500">Correo</dt>
+                      <dd class="font-medium text-gray-900 dark:text-white">juan@email.com</dd>
+                    </div>
+                    <div class="flex justify-between border-t border-gray-200 dark:border-gray-700 pt-1 mt-1">
+                      <dt class="text-gray-400 dark:text-gray-500">Comprado en</dt>
+                      <dd class="font-medium text-gray-900 dark:text-white">Sucursal Norte</dd>
+                    </div>
+                    <div class="flex justify-between">
+                      <dt class="text-gray-400 dark:text-gray-500">Fecha de compra</dt>
+                      <dd class="font-medium text-gray-900 dark:text-white">05/01/2025</dd>
+                    </div>
+                  </dl>
+                </div>
+              </div>
+              <div class="flex items-start gap-2 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-xl p-3 max-w-xl mt-2 transition-all duration-200 hover:bg-yellow-100 dark:hover:bg-yellow-900/50">
+                <svg class="w-4 h-4 text-yellow-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+                <p class="text-xs text-yellow-800 dark:text-yellow-300">El cliente no tiene correo registrado. Se levantará el reporte pero <strong>no se podrá enviar la notificación por correo</strong>.</p>
+              </div>
+            </div>
+
+            <!-- Paso 3 -->
+            <div class="max-w-xl mb-5">
+              <p class="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Paso 3 — Levantar reporte</p>
+              <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-4 space-y-3 transition-all duration-200 hover:shadow-md">
+                <div><label class="text-xs text-gray-400 dark:text-gray-500 block mb-1">Notas adicionales <span class="text-gray-400 dark:text-gray-500 font-normal">(opcional)</span></label><textarea rows="2" disabled placeholder="Describe las circunstancias del robo, lugar, hora aproximada..." class="w-full border border-gray-200 dark:border-gray-700 rounded px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500 resize-none transition-all duration-200 focus:ring-1 focus:ring-gray-300"></textarea></div>
+                <div class="flex items-start gap-2 bg-gray-50 dark:bg-gray-800 rounded p-2 text-xs text-gray-400 dark:text-gray-500 transition-all duration-200 hover:bg-white dark:hover:bg-gray-700"><svg class="w-4 h-4 text-gray-400 dark:text-gray-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p>Al levantar el reporte, el sistema enviará un correo al cliente para que <strong>confirme el robo</strong>. Una vez confirmado, el vehículo quedará marcado en toda la red ArrowX.</p>
+                </div>
+                <div class="flex justify-end"><button disabled class="inline-flex items-center gap-1.5 bg-red-600 text-white px-4 py-1.5 rounded text-sm font-semibold opacity-60 transition-all duration-200 hover:opacity-80"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg> Levantar reporte de robo</button></div>
+              </div>
+            </div>
+
+            <!-- Modal activo -->
+            <div class="relative bg-black/40 dark:bg-black/60 rounded-xl p-8 flex items-center justify-center transition-all duration-300">
+              <div class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-sm w-full text-center shadow-2xl transition-all duration-300 hover:scale-105">
+                <div class="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-3 transition-all duration-300 hover:scale-110"><svg class="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  </svg></div>
+                <h3 class="text-base font-semibold text-gray-900 dark:text-white mb-1">Reporte registrado</h3>
+                <p class="text-sm text-gray-400 dark:text-gray-500 mb-3">Se envió un correo al cliente para confirmar el robo. El vehículo quedará marcado en la red ArrowX al confirmarse.</p>
+                <div class="bg-gray-50 dark:bg-gray-700 rounded p-3 text-left mb-4 transition-all duration-200 hover:bg-white dark:hover:bg-gray-600">
+                  <p class="text-xs text-gray-400 dark:text-gray-500">Folio del reporte</p>
+                  <p class="text-sm font-mono font-semibold text-gray-900 dark:text-white">RPT-2025-0042</p>
+                </div>
+                <button disabled class="w-full bg-gray-900 dark:bg-white text-white dark:text-gray-900 py-2 rounded text-sm font-medium opacity-60 transition-all duration-200 hover:opacity-80">Cerrar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== PANEL: VENTAS ===== -->
+        <div id="panel-ventas" class="tab-panel transition-all duration-300 ease-out opacity-0 scale-95 hidden border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm transition-all duration-300 hover:shadow-md">
+          <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
+            <div class="flex gap-1.5">
+              <span class="w-3 h-3 rounded-full bg-red-400"></span>
+              <span class="w-3 h-3 rounded-full bg-yellow-400"></span>
+              <span class="w-3 h-3 rounded-full bg-green-400"></span>
+            </div>
+            <span class="text-xs text-gray-400 dark:text-gray-500 font-mono">cloudlabs.arrowk / ventas</span>
+          </div>
+          <div class="bg-white dark:bg-gray-900 p-5">
+            <div class="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-3 mb-4">
+              <div>
+                <h3 class="text-base font-semibold text-gray-900 dark:text-white">Ventas</h3>
+                <p class="text-xs text-gray-400 dark:text-gray-500">Historial de ventas registradas</p>
+              </div>
+              <button disabled class="inline-flex items-center gap-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-3 py-1.5 rounded text-xs font-medium opacity-60 transition-all duration-200 hover:opacity-80"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+                </svg> Nueva venta</button>
+            </div>
+            <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+              <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2 flex justify-between items-center border-b border-gray-200 dark:border-gray-700"><span class="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Registro</span><span class="text-xs text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-700 px-2 py-0.5 rounded-full border border-gray-200 dark:border-gray-700">8 ventas</span></div>
+              <!-- Lista desktop -->
+              <div class="hidden md:block divide-y divide-white dark:divide-gray-800">
+                <div class="flex items-center gap-3 px-4 py-2 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <div class="w-9 h-9 rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-xs font-semibold text-gray-500 dark:text-gray-400">JP</div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-baseline gap-2"><span class="text-sm font-semibold text-gray-900 dark:text-white">Juan Pérez</span><span class="font-mono text-[10px] text-gray-400 dark:text-gray-500">VTA-001</span></div>
+                    <div class="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500"><span>555-1234</span><span class="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span><span>2 productos</span></div>
+                  </div>
+                  <div class="text-right shrink-0 text-xs text-gray-400 dark:text-gray-500">
+                    <p>10/03/2025</p>
+                    <p>14:30</p>
+                  </div>
+                  <div class="w-px h-7 bg-gray-200 dark:bg-gray-700 shrink-0"></div>
+                  <div class="text-right shrink-0 min-w-[80px]"><span class="text-sm font-semibold text-gray-900 dark:text-white">$12,800.00</span></div>
+                  <div class="w-px h-7 bg-gray-200 dark:bg-gray-700 shrink-0"></div>
+                  <div class="flex flex-col items-end gap-1 shrink-0"><span class="text-xs text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded px-2 py-0.5 bg-white dark:bg-gray-800 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">Ver</span><span class="text-xs text-blue-600 border border-blue-200 dark:border-blue-700 rounded px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 transition-all duration-200 hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:border-blue-300 dark:hover:border-blue-600">Ticket</span></div>
+                </div>
+                <div class="flex items-center gap-3 px-4 py-2 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <div class="w-9 h-9 rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-xs font-semibold text-gray-500 dark:text-gray-400">MG</div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-baseline gap-2"><span class="text-sm font-semibold text-gray-900 dark:text-white">María García</span><span class="font-mono text-[10px] text-gray-400 dark:text-gray-500">VTA-002</span></div>
+                    <div class="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500"><span>555-5678</span><span class="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span><span>1 producto</span></div>
+                  </div>
+                  <div class="text-right shrink-0 text-xs text-gray-400 dark:text-gray-500">
+                    <p>09/03/2025</p>
+                    <p>11:15</p>
+                  </div>
+                  <div class="w-px h-7 bg-gray-200 dark:bg-gray-700 shrink-0"></div>
+                  <div class="text-right shrink-0 min-w-[80px]"><span class="text-sm font-semibold text-gray-900 dark:text-white">$6,500.00</span></div>
+                  <div class="w-px h-7 bg-gray-200 dark:bg-gray-700 shrink-0"></div>
+                  <div class="flex flex-col items-end gap-1 shrink-0"><span class="text-xs text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded px-2 py-0.5 bg-white dark:bg-gray-800 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">Ver</span><span class="text-xs text-blue-600 border border-blue-200 dark:border-blue-700 rounded px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 transition-all duration-200 hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:border-blue-300 dark:hover:border-blue-600">Póliza</span></div>
+                </div>
+                <div class="flex items-center gap-3 px-4 py-2 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <div class="w-9 h-9 rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-xs font-semibold text-gray-500 dark:text-gray-400">CR</div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-baseline gap-2"><span class="text-sm font-semibold text-gray-900 dark:text-white">Carlos Ruiz</span><span class="font-mono text-[10px] text-gray-400 dark:text-gray-500">VTA-003</span></div>
+                    <div class="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500"><span>555-9012</span><span class="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span><span>3 productos</span></div>
+                  </div>
+                  <div class="text-right shrink-0 text-xs text-gray-400 dark:text-gray-500">
+                    <p>08/03/2025</p>
+                    <p>16:45</p>
+                  </div>
+                  <div class="w-px h-7 bg-gray-200 dark:bg-gray-700 shrink-0"></div>
+                  <div class="text-right shrink-0 min-w-[80px]"><span class="text-sm font-semibold text-gray-900 dark:text-white">$23,400.00</span></div>
+                  <div class="w-px h-7 bg-gray-200 dark:bg-gray-700 shrink-0"></div>
+                  <div class="flex flex-col items-end gap-1 shrink-0"><span class="text-xs text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded px-2 py-0.5 bg-white dark:bg-gray-800 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">Ver</span><span class="text-xs text-blue-600 border border-blue-200 dark:border-blue-700 rounded px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 transition-all duration-200 hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:border-blue-300 dark:hover:border-blue-600">Póliza</span></div>
+                </div>
+              </div>
+              <!-- Lista mobile -->
+              <div class="block md:hidden divide-y divide-white dark:divide-gray-800">
+                <div class="flex items-center gap-2 px-4 py-2 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <div class="w-9 h-9 rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-xs font-semibold text-gray-500 dark:text-gray-400">JP</div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white">Juan Pérez</p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500">10/03/2025 · 2 prod.</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white">$12,800.00</p><span class="text-xs text-blue-600 transition-colors duration-200 hover:text-blue-800">Ver →</span>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 px-4 py-2 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <div class="w-9 h-9 rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-xs font-semibold text-gray-500 dark:text-gray-400">MG</div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white">María García</p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500">09/03/2025 · 1 prod.</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white">$6,500.00</p><span class="text-xs text-blue-600 transition-colors duration-200 hover:text-blue-800">Ver →</span>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 px-4 py-2 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <div class="w-9 h-9 rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-xs font-semibold text-gray-500 dark:text-gray-400">CR</div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white">Carlos Ruiz</p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500">08/03/2025 · 3 prod.</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white">$23,400.00</p><span class="text-xs text-blue-600 transition-colors duration-200 hover:text-blue-800">Ver →</span>
+                  </div>
+                </div>
+              </div>
+              <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center text-xs text-gray-400 dark:text-gray-500">
+                <span>Mostrando 1–3 de 8</span>
+                <div class="flex gap-1">
+                  <span class="px-2 py-1 border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">‹</span>
+                  <span class="px-2.5 py-1 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded transition-all duration-200 hover:bg-gray-800 dark:hover:bg-white">1</span>
+                  <span class="px-2 py-1 border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">2</span>
+                  <span class="px-2 py-1 border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">3</span>
+                  <span class="px-2 py-1 border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">›</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== PANEL: NUEVA VENTA ===== -->
+        <div id="panel-nuevaventa" class="tab-panel transition-all duration-300 ease-out opacity-0 scale-95 hidden border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm transition-all duration-300 hover:shadow-md">
+          <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
+            <div class="flex gap-1.5">
+              <span class="w-3 h-3 rounded-full bg-red-400"></span>
+              <span class="w-3 h-3 rounded-full bg-yellow-400"></span>
+              <span class="w-3 h-3 rounded-full bg-green-400"></span>
+            </div>
+            <span class="text-xs text-gray-400 dark:text-gray-500 font-mono">cloudlabs.arrowk / ventas/nueva</span>
+          </div>
+          <div class="bg-white dark:bg-gray-900 p-5">
+            <div class="flex flex-wrap justify-between items-start gap-3 mb-5">
+              <div>
+                <a href="#" class="text-xs text-gray-400 dark:text-gray-500 inline-flex items-center gap-1 transition-colors duration-200 hover:text-gray-600 dark:hover:text-gray-300"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                  </svg> Volver a ventas</a>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mt-1">Nueva venta</h3>
+                <p class="text-xs text-gray-400 dark:text-gray-500">Escanea el QR o escribe el N° de serie de cada bicicleta</p>
+              </div>
+              <div class="text-right">
+                <p class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider">Total</p>
+                <p class="text-3xl font-semibold text-gray-900 dark:text-white tabular-nums">$23,400.00</p>
+                <p class="text-xs text-green-600">− $200.00 con cupón</p>
+              </div>
+            </div>
+
+            <div class="grid lg:grid-cols-5 gap-5">
+              <!-- Izquierda (3/5) -->
+              <div class="lg:col-span-3 space-y-4">
+                <!-- Bicicleta -->
+                <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-4 transition-all duration-200 hover:shadow-md">
+                  <p class="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Bicicleta</p>
+                  <div class="flex gap-2 mt-2">
+                    <div class="flex-1 relative"><input type="text" value="HE0EA2A00SA963753" maxlength="17" disabled class="w-full px-3 py-1.5 border border-green-400 dark:border-green-700 rounded text-sm font-mono uppercase bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 pr-14 transition-all duration-200 focus:ring-1 focus:ring-green-300"><span class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono text-green-500">17/17</span></div>
+                    <button disabled class="px-4 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded text-sm font-medium opacity-60 transition-all duration-200 hover:opacity-80 flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg> Buscar</button>
+                  </div>
+                  <div class="mt-3 border border-green-200 dark:border-green-700 rounded-lg p-3 bg-green-50 dark:bg-green-900/30 flex items-start gap-3 transition-all duration-200 hover:shadow-sm">
+                    <div class="w-9 h-9 rounded border border-gray-200 dark:border-gray-700 bg-red-500 shrink-0"></div>
+                    <div class="flex-1">
+                      <p class="text-sm font-semibold text-gray-900 dark:text-white">Yadea Ova</p>
+                      <p class="text-xs text-gray-400 dark:text-gray-500 font-mono">HE0EA2A00SA963753</p>
+                      <p class="text-xs text-gray-400 dark:text-gray-500">48V · Rojo</p>
+                      <p class="text-sm font-semibold text-gray-900 dark:text-white mt-1">$11,500.00</p>
+                    </div>
+                    <div class="shrink-0 flex flex-col items-end gap-1"><button disabled class="bg-green-600 text-white px-3 py-1 rounded text-xs font-semibold opacity-60 transition-all duration-200 hover:opacity-80 flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+                        </svg> Agregar</button><button disabled class="text-xs text-gray-400 dark:text-gray-500 transition-colors duration-200 hover:text-gray-600 dark:hover:text-gray-300">Cancelar</button></div>
+                  </div>
+                </div>
+                <!-- Accesorios -->
+                <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-4 transition-all duration-200 hover:shadow-md">
+                  <p class="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Accesorios</p>
+                  <div class="divide-y divide-white dark:divide-gray-800">
+                    <div class="flex items-center gap-2 py-2 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800 px-2 rounded">
+                      <div class="flex-1">
+                        <p class="text-sm text-gray-900 dark:text-white">Casco Pro</p>
+                        <div class="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500"><span>$250.00</span><span class="text-[10px] bg-white dark:bg-gray-700 px-1.5 rounded border border-gray-200 dark:border-gray-700">12 en stock</span></div>
+                      </div><button disabled class="bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-2 py-1 rounded text-xs font-medium opacity-60 transition-all duration-200 hover:opacity-80">+ Agregar</button>
+                    </div>
+                    <div class="flex items-center gap-2 py-2 opacity-50 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800 px-2 rounded">
+                      <div class="flex-1">
+                        <p class="text-sm text-gray-900 dark:text-white">Batería extra</p>
+                        <div class="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500"><span>$1,800.00</span><span class="text-[10px] bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-1.5 rounded border border-red-200 dark:border-red-700">Sin stock</span></div>
+                      </div><button disabled class="bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-2 py-1 rounded text-xs font-medium opacity-30">+ Agregar</button>
+                    </div>
+                    <div class="flex items-center gap-2 py-2 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800 px-2 rounded">
+                      <div class="flex-1">
+                        <p class="text-sm text-gray-900 dark:text-white">Candado U-Lock</p>
+                        <div class="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500"><span>$120.00</span><span class="text-[10px] bg-white dark:bg-gray-700 px-1.5 rounded border border-gray-200 dark:border-gray-700">5 en stock</span></div>
+                      </div><button disabled class="bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-2 py-1 rounded text-xs font-medium opacity-60 transition-all duration-200 hover:opacity-80">+ Agregar</button>
+                    </div>
+                  </div>
+                </div>
+                <!-- Cliente -->
+                <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-4 transition-all duration-200 hover:shadow-md">
+                  <div class="flex justify-between items-center">
+                    <p class="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Cliente</p><span class="text-[10px] font-semibold text-red-600 bg-red-50 dark:bg-red-900/30 px-2 py-0.5 rounded-full">Campos requeridos</span>
+                  </div>
+                  <div class="grid grid-cols-2 gap-2 mt-2">
+                    <div><label class="text-[10px] text-gray-400 dark:text-gray-500">Nombre *</label><input value="Juan" disabled class="w-full border border-gray-200 dark:border-gray-700 rounded px-2 py-1 text-sm bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 transition-all duration-200 focus:ring-1 focus:ring-gray-300"></div>
+                    <div><label class="text-[10px] text-gray-400 dark:text-gray-500">Primer apellido *</label><input value="Pérez" disabled class="w-full border border-gray-200 dark:border-gray-700 rounded px-2 py-1 text-sm bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 transition-all duration-200 focus:ring-1 focus:ring-gray-300"></div>
+                    <div><label class="text-[10px] text-gray-400 dark:text-gray-500">Segundo apellido</label><input value="López" disabled class="w-full border border-gray-200 dark:border-gray-700 rounded px-2 py-1 text-sm bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 transition-all duration-200 focus:ring-1 focus:ring-gray-300"></div>
+                    <div><label class="text-[10px] text-gray-400 dark:text-gray-500">Teléfono *</label><input value="555-1234" disabled class="w-full border border-gray-200 dark:border-gray-700 rounded px-2 py-1 text-sm bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 transition-all duration-200 focus:ring-1 focus:ring-gray-300"></div>
+                    <div><label class="text-[10px] text-gray-400 dark:text-gray-500">Correo</label><input value="juan@email.com" disabled class="w-full border border-gray-200 dark:border-gray-700 rounded px-2 py-1 text-sm bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 transition-all duration-200 focus:ring-1 focus:ring-gray-300"></div>
+                    <div><label class="text-[10px] text-gray-400 dark:text-gray-500">Dirección</label><input value="Av. Reforma 123" disabled class="w-full border border-gray-200 dark:border-gray-700 rounded px-2 py-1 text-sm bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 transition-all duration-200 focus:ring-1 focus:ring-gray-300"></div>
+                  </div>
+                </div>
+                <!-- Vendedor -->
+                <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-4 transition-all duration-200 hover:shadow-md">
+                  <p class="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Vendedor</p>
+                  <select disabled class="w-full border border-gray-200 dark:border-gray-700 rounded px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 mt-1 transition-all duration-200 focus:ring-1 focus:ring-gray-300">
+                    <option>— Sin especificar —</option>
+                    <option selected>Ana Martínez</option>
+                    <option>Carlos Gómez</option>
+                  </select>
+                </div>
+              </div>
+              <!-- Derecha (2/5) -->
+              <div class="lg:col-span-2 space-y-4">
+                <!-- Carrito -->
+                <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md">
+                  <div class="px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center"><span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Carrito</span><span class="text-[10px] font-semibold bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-1.5 py-0.5 rounded-full">4</span><span class="text-xs text-gray-400 dark:text-gray-500 transition-colors duration-200 hover:text-red-500">Vaciar</span></div>
+                  <div class="px-4 py-2 divide-y divide-white dark:divide-gray-800">
+                    <div class="flex items-center gap-2 py-2 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800 -mx-2 px-2 rounded">
+                      <div class="w-7 h-7 rounded border border-gray-200 dark:border-gray-700 bg-red-500 shrink-0"></div>
+                      <div class="flex-1">
+                        <p class="text-sm text-gray-900 dark:text-white">Yadea Ova</p>
+                        <p class="text-[10px] text-gray-400 dark:text-gray-500 font-mono">HE0EA2A00SA963753</p>
+                        <p class="text-xs text-gray-400 dark:text-gray-500">$11,500.00</p>
+                      </div>
+                      <div class="flex items-center gap-0.5"><span class="w-6 h-6 rounded-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-sm transition-colors duration-200 hover:bg-gray-200 dark:hover:bg-gray-600">−</span><span class="w-5 text-center text-sm font-medium text-gray-900 dark:text-white">1</span><span class="w-6 h-6 rounded-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-sm transition-colors duration-200 hover:bg-gray-200 dark:hover:bg-gray-600">+</span></div><span class="text-gray-400 dark:text-gray-500 transition-colors duration-200 hover:text-red-500">✕</span>
+                    </div>
+                    <div class="flex items-center gap-2 py-2 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800 -mx-2 px-2 rounded">
+                      <div class="w-7 h-7 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 flex items-center justify-center shrink-0"><svg class="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg></div>
+                      <div class="flex-1">
+                        <p class="text-sm text-gray-900 dark:text-white">Casco Pro</p>
+                        <p class="text-xs text-gray-400 dark:text-gray-500">$250.00 × 2</p>
+                      </div>
+                      <div class="flex items-center gap-0.5"><span class="w-6 h-6 rounded-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-sm transition-colors duration-200 hover:bg-gray-200 dark:hover:bg-gray-600">−</span><span class="w-5 text-center text-sm font-medium text-gray-900 dark:text-white">2</span><span class="w-6 h-6 rounded-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-sm transition-colors duration-200 hover:bg-gray-200 dark:hover:bg-gray-600">+</span></div><span class="text-gray-400 dark:text-gray-500 transition-colors duration-200 hover:text-red-500">✕</span>
+                    </div>
+                    <div class="flex items-center gap-2 py-2 opacity-50 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800 -mx-2 px-2 rounded">
+                      <div class="w-7 h-7 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 flex items-center justify-center shrink-0"><svg class="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg></div>
+                      <div class="flex-1">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Candado U-Lock</p>
+                        <p class="text-xs text-gray-400 dark:text-gray-500">$120.00 × 1</p>
+                      </div>
+                      <div class="flex items-center gap-0.5"><span class="w-6 h-6 rounded-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-sm transition-colors duration-200 hover:bg-gray-200 dark:hover:bg-gray-600">−</span><span class="w-5 text-center text-sm font-medium text-gray-500 dark:text-gray-400">1</span><span class="w-6 h-6 rounded-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-sm transition-colors duration-200 hover:bg-gray-200 dark:hover:bg-gray-600">+</span></div><span class="text-gray-400 dark:text-gray-500 transition-colors duration-200 hover:text-red-500">✕</span>
+                    </div>
+                    <div class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 space-y-1 text-xs text-gray-400 dark:text-gray-500">
+                      <div class="flex justify-between"><span>Subtotal</span><span class="tabular-nums">$12,420.00</span></div>
+                      <div class="flex justify-between text-green-600"><span>Descuento cupón</span><span class="tabular-nums">− $200.00</span></div>
+                      <div class="flex justify-between text-green-600"><span>Regalo</span><span class="tabular-nums">− $150.00</span></div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Cupón -->
+                <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-4 transition-all duration-200 hover:shadow-md">
+                  <p class="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase">Cupón</p>
+                  <div class="mt-1 flex items-center justify-between border border-green-200 dark:border-green-700 rounded-lg px-3 py-1.5 bg-green-50 dark:bg-green-900/30 transition-all duration-200 hover:bg-green-100 dark:hover:bg-green-900/50">
+                    <div>
+                      <p class="text-xs font-semibold text-green-700 dark:text-green-300 font-mono">DESCUENTO10</p>
+                      <p class="text-[10px] text-green-600 dark:text-green-400">10% de descuento</p>
+                    </div>
+                    <div class="flex items-center gap-2"><span class="text-sm font-bold text-green-700 dark:text-green-300">− $200.00</span><span class="text-gray-400 dark:text-gray-500 transition-colors duration-200 hover:text-red-500">✕</span></div>
+                  </div>
+                </div>
+                <!-- Pago -->
+                <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md">
+                  <div class="px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center"><span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Pago</span><span class="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1 transition-colors duration-200 hover:text-gray-600 dark:hover:text-gray-300"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+                      </svg> Dividir pago</span></div>
+                  <div class="px-4 py-2 space-y-3">
+                    <div class="flex items-center gap-2"><select disabled class="flex-1 border border-gray-200 dark:border-gray-700 rounded px-2 py-1.5 text-sm bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 transition-all duration-200 focus:ring-1 focus:ring-gray-300">
+                        <option selected>Efectivo</option>
+                        <option>Tarjeta</option>
+                        <option>Transferencia</option>
+                      </select>
+                      <div class="relative w-24"><span class="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400 dark:text-gray-500">$</span><input type="number" value="6200.00" disabled class="w-full pl-5 pr-2 py-1.5 border border-gray-200 dark:border-gray-700 rounded text-sm bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-right transition-all duration-200 focus:ring-1 focus:ring-gray-300"></div>
+                    </div>
+                    <div class="flex items-center gap-2"><select disabled class="flex-1 border border-gray-200 dark:border-gray-700 rounded px-2 py-1.5 text-sm bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 transition-all duration-200 focus:ring-1 focus:ring-gray-300">
+                        <option>Efectivo</option>
+                        <option selected>Tarjeta</option>
+                        <option>Transferencia</option>
+                      </select>
+                      <div class="relative w-24"><span class="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400 dark:text-gray-500">$</span><input type="number" value="5850.00" disabled class="w-full pl-5 pr-2 py-1.5 border border-gray-200 dark:border-gray-700 rounded text-sm bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-right transition-all duration-200 focus:ring-1 focus:ring-gray-300"></div><span class="text-gray-400 dark:text-gray-500 transition-colors duration-200 hover:text-red-500">✕</span>
+                    </div>
+                    <div class="pl-4 border-l-2 border-gray-200 dark:border-gray-700"><input type="text" value="****-1234" disabled placeholder="Folio / últimos 4 dígitos…" class="w-full border border-gray-200 dark:border-gray-700 rounded px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 transition-all duration-200 focus:ring-1 focus:ring-gray-300"></div>
+                    <div>
+                      <div class="h-1 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                        <div class="w-full h-full bg-green-500 rounded-full transition-all duration-1000"></div>
+                      </div>
+                      <div class="flex justify-between text-xs text-green-600 mt-1"><span>✓ Pago completo</span><span>$0.00 por asignar</span></div>
+                    </div>
+                  </div>
+                </div>
+                <button disabled class="w-full bg-gray-900 dark:bg-white text-white dark:text-gray-900 py-2.5 rounded-xl text-sm font-semibold opacity-60 transition-all duration-200 hover:opacity-80">Registrar venta · $12,020.00</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACTO -->
+  <section id="contacto" class="py-16 px-6 bg-white dark:bg-gray-900 border-y border-gray-200 dark:border-gray-900 shadow-sm">
+    <div class="max-w-5xl mx-auto grid md:grid-cols-2 gap-10 items-center">
+      <div class="rv opacity-0 translate-y-5 transition-all duration-700 ease-out">
+        <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Hablemos</p>
+        <h2 class="text-3xl md:text-4xl font-semibold text-gray-900 dark:text-white leading-tight tracking-tight">¿Listo para <em class="not-italic text-gray-500 dark:text-gray-400">digitalizar</em> tu operación?</h2>
+        <p class="text-sm text-gray-500 dark:text-gray-400 max-w-lg mt-3">Cuéntanos de qué se trata. Respondemos en menos de 24 horas con una demo personalizada, sin costo ni compromiso.</p>
+        <div class="space-y-2 mt-4">
+          <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 transition-all duration-200 hover:translate-x-1"><span class="w-5 h-5 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center"><svg class="w-3 h-3 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <polyline points="20 6 9 17 4 12" />
+              </svg></span>Demo personalizada sin costo</div>
+          <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 transition-all duration-200 hover:translate-x-1"><span class="w-5 h-5 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center"><svg class="w-3 h-3 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <polyline points="20 6 9 17 4 12" />
+              </svg></span>Respuesta en menos de 24 horas</div>
+          <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 transition-all duration-200 hover:translate-x-1"><span class="w-5 h-5 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center"><svg class="w-3 h-3 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <polyline points="20 6 9 17 4 12" />
+              </svg></span>Sin contratos ni compromisos</div>
         </div>
       </div>
-    </div>
-    <div class="footer-bottom">
-      <div class="footer-logo" style="font-size:1rem;">
-        <div class="footer-logo-mark" style="width:18px;height:18px;"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
-        ArrowK
+      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 text-center transition-all duration-300 hover:shadow-xl hover:-translate-y-1 rv opacity-0 translate-y-5 transition-all duration-700 delay-100 ease-out">
+        <div class="w-12 h-12 rounded-full bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 flex items-center justify-center mx-auto mb-3 transition-all duration-300 hover:scale-110"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="#16a34a" viewBox="0 0 16 16">
+            <path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.73.73 0 0 0-.529.247c-.182.198-.691.677-.691 1.654s.71 1.916.81 2.049c.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232" />
+          </svg></div>
+        <p class="text-sm font-semibold text-gray-900 dark:text-white">Escríbenos por WhatsApp</p>
+        <p class="text-sm text-gray-400 dark:text-gray-500 mb-4">Cuéntanos tu operación y te preparamos una demo personalizada.</p>
+        <a href="https://wa.me/5215511743162?text=Hola%2C%20me%20interesa%20conocer%20m%C3%A1s%20sobre%20ArrowK.%20%C2%BFPodr%C3%ADan%20darme%20informes%3F" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-6 py-2.5 rounded-full text-sm font-medium hover:bg-gray-800 dark:hover:bg-white transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-sm hover:shadow-md"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.73.73 0 0 0-.529.247c-.182.198-.691.677-.691 1.654s.71 1.916.81 2.049c.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232" />
+          </svg> Contactar por WhatsApp</a>
       </div>
-      <span class="footer-copy">© 2026 ArrowK · Un producto de CloudLabs · Ciudad de México</span>
-      <span class="footer-copy"><a href="/" style="color:var(--text-3);">← CloudLabs</a></span>
     </div>
-  </div>
-</footer>
+  </section>
 
-<!-- SCRIPTS -->
-<script>
-/* ── CURSOR ── */
-const cur = document.getElementById('cursor');
-const curRing = document.getElementById('cursorRing');
-if (cur && curRing) {
-  let mx=0,my=0,rx=0,ry=0;
-  document.addEventListener('mousemove',e=>{ mx=e.clientX;my=e.clientY;cur.style.left=mx+'px';cur.style.top=my+'px'; });
-  function animRing(){ rx+=(mx-rx)*.14;ry+=(my-ry)*.14;curRing.style.left=rx+'px';curRing.style.top=ry+'px';requestAnimationFrame(animRing); }
-  animRing();
+  <!-- FOOTER -->
+  <footer class="border-t border-gray-200 dark:border-gray-700 py-6 px-6 bg-white dark:bg-gray-900">
+    <div class="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-2"><img src="{{ asset('arrowk/favicon-arrowk.svg') }}" alt="ArrowK" class="h-8 w-auto dark:hidden"><img src="{{ asset('arrowk/favicon-arrowk-white.svg') }}" alt="ArrowK" class="h-8 w-auto hidden dark:block"></div>
+      <p class="text-xs text-gray-400 dark:text-gray-500">© {{ date('Y') }} ArrowK · CloudLabs · Ixtapaluca, Estado de México</p>
+      <div class="flex gap-4 text-xs text-gray-400 dark:text-gray-500">
+        <a href="mailto:cloudlabs342@gmail.com" class="transition-colors duration-200 hover:text-gray-700 dark:hover:text-gray-300">Correo</a>
+        <a href="https://wa.me/5511743162" class="transition-colors duration-200 hover:text-gray-700 dark:hover:text-gray-300">WhatsApp</a>
+        @auth
+        <a href="{{ url('/dashboard') }}" class="transition-colors duration-200 hover:text-gray-700 dark:hover:text-gray-300">Panel</a>
+        @else
+        <a href="{{ route('login') }}" class="transition-colors duration-200 hover:text-gray-700 dark:hover:text-gray-300">Iniciar sesión</a>
+        @endauth
+      </div>
+    </div>
+  </footer>
+
+  <!-- Alpine.js y scripts -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
+  <script>
+// Nav scroll
+window.addEventListener('scroll', () => {
+  const nav = document.getElementById('nav');
+  nav.classList.toggle('border-gray-200 dark:border-gray-700', window.scrollY > 20);
+  nav.classList.toggle('border-transparent', window.scrollY <= 20);
+}, { passive: true });
+
+// Mobile menu
+function toggleMenu() {
+  const m = document.getElementById('mob-menu');
+  const b = document.getElementById('burger');
+  const open = m.classList.contains('translate-y-0');
+  m.classList.toggle('translate-y-0', !open);
+  m.classList.toggle('pointer-events-auto', !open);
+  m.classList.toggle('-translate-y-full', open);
+  b.classList.toggle('open', !open);
+  document.body.style.overflow = open ? '' : 'hidden';
 }
 
-/* ── LOADER ── */
-const loaderEl = document.getElementById('loader');
-let loaderDismissed = false;
-function dismissLoader(){ loaderDismissed=true; loaderEl.classList.add('hidden'); }
-window.addEventListener('load',()=>setTimeout(dismissLoader,2700));
-window.addEventListener('pageshow',e=>{ if(e.persisted){ loaderEl.style.transition='none'; loaderEl.classList.add('hidden'); loaderDismissed=true; }});
-
-/* ── NAVBAR ── */
-const navEl = document.getElementById('navbar');
-window.addEventListener('scroll',()=>navEl.classList.toggle('scrolled',window.scrollY>60),{passive:true});
-
-/* ── MOBILE MENU ── */
-function toggleMenu(){
-  const m=document.getElementById('mobile-menu'),b=document.getElementById('hamburger');
-  const isOpen=m.classList.contains('open');
-  if(isOpen){ closeMenu(); }else{ m.classList.add('open');b.classList.add('open'); }
+function closeMenu() {
+  document.getElementById('mob-menu').classList.remove('translate-y-0');
+  document.getElementById('mob-menu').classList.add('-translate-y-full');
+  document.getElementById('mob-menu').classList.remove('pointer-events-auto');
+  document.getElementById('burger').classList.remove('open');
+  document.body.style.overflow = '';
 }
-function closeMenu(){ document.getElementById('mobile-menu').classList.remove('open');document.getElementById('hamburger').classList.remove('open'); }
-document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeMenu();closeModal('modal-contact');closeModal('modal-pricing'); }});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
 
-/* ── SMOOTH SCROLL ── */
-function smoothScroll(sel){ closeMenu();setTimeout(()=>document.querySelector(sel)?.scrollIntoView({behavior:'smooth'}),50); }
+// ---- FUNCIÓN PRINCIPAL DE PESTAÑAS ----
+function activateTab(tabId) {
+  // 1. Ocultar todos los paneles y resetear clases de animación
+  document.querySelectorAll('.tab-panel').forEach(p => {
+    p.style.display = 'none';
+    p.classList.remove('opacity-100', 'scale-100');
+    p.classList.add('opacity-0', 'scale-95');
+  });
 
-/* ── MODALS ── */
-function openModal(id){ closeMenu();const el=document.getElementById(id);if(!el)return;el.classList.add('open');document.body.style.overflow='hidden'; }
-function closeModal(id){ const el=document.getElementById(id);if(!el)return;el.classList.remove('open');document.body.style.overflow=''; }
-function handleBackdropClick(e,id){ if(e.target===e.currentTarget)closeModal(id); }
-function switchModal(from,to){ closeModal(from);setTimeout(()=>openModal(to),200); }
-
-/* ── TOAST ── */
-function showToast(title,msg,type='success'){
-  const t=document.getElementById('toast');
-  document.getElementById('toast-title').textContent=title;
-  document.getElementById('toast-msg').textContent=msg;
-  document.getElementById('toast-icon').className='toast-icon '+type;
-  t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),4200);
-}
-
-/* ── SCROLL REVEAL ── */
-const revObs = new IntersectionObserver(entries=>{
-  entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in');revObs.unobserve(e.target); }});
-},{threshold:.07,rootMargin:'0px 0px -28px 0px'});
-document.querySelectorAll('.rv,.rv-left,.rv-right').forEach(el=>revObs.observe(el));
-
-/* ── COUNTERS ── */
-function animCounter(el,target,suffix=''){
-  const dur=1600,start=performance.now();
-  const tick=now=>{ const p=Math.min((now-start)/dur,1),ease=1-(1-p)**3;el.textContent=Math.round(ease*target)+suffix;if(p<1)requestAnimationFrame(tick); };
-  requestAnimationFrame(tick);
-}
-const cntObs=new IntersectionObserver(entries=>{
-  entries.forEach(e=>{ if(e.isIntersecting){ const el=e.target;animCounter(el,+el.dataset.count,el.dataset.suffix||'');cntObs.unobserve(el); }});
-},{threshold:.5});
-document.querySelectorAll('[data-count]').forEach(el=>cntObs.observe(el));
-
-/* ── LIVE COUNTER ── */
-const liveEl=document.getElementById('live-counter');
-let liveCount=Math.floor(Math.random()*80)+120;
-liveEl.textContent=liveCount;
-setInterval(()=>{
-  if(Math.random()<.35){
-    liveCount+=Math.floor(Math.random()*3)+1;
-    liveEl.style.transform='scale(1.3)';
-    setTimeout(()=>{ liveEl.textContent=liveCount;liveEl.style.transform='scale(1)'; },150);
+  // 2. Mostrar y animar el panel seleccionado
+  const panel = document.getElementById('panel-' + tabId);
+  if (panel) {
+    panel.style.display = 'block';
+    // Forzar reflow para que la transición se active
+    panel.offsetHeight;
+    panel.classList.remove('opacity-0', 'scale-95');
+    panel.classList.add('opacity-100', 'scale-100');
   }
-},2800);
 
-/* ── DASHBOARD MOCKUP TABS ── */
-const tabs = {
-  dashboard:()=>`
-    <div class="m-ptitle">Dashboard General</div>
-    <div class="m-stats-row">
-      <div class="m-stat"><div class="m-stat-l">Ventas</div><div class="m-stat-v" style="color:var(--p2)">$284k</div><div class="m-stat-c" style="color:var(--green)">+18%</div></div>
-      <div class="m-stat"><div class="m-stat-l">Unidades</div><div class="m-stat-v" style="color:var(--blue)">142</div><div class="m-stat-c" style="color:var(--green)">+24</div></div>
-      <div class="m-stat"><div class="m-stat-l">Stock</div><div class="m-stat-v" style="color:var(--green)">63</div><div class="m-stat-c" style="color:var(--yellow)">3 bajos</div></div>
-    </div>
-    <div class="m-bars-wrap"><div class="m-bars-label">Ventas por mes</div><div class="m-bars"><div class="m-bar" style="height:38%"></div><div class="m-bar" style="height:52%"></div><div class="m-bar" style="height:45%"></div><div class="m-bar" style="height:68%"></div><div class="m-bar" style="height:58%"></div><div class="m-bar" style="height:82%"></div><div class="m-bar" style="height:70%"></div><div class="m-bar" style="height:100%"></div></div></div>
-    <div class="m-table-wrap"><div class="m-trow m-trow-head"><span>Producto</span><span>Estado</span></div><div class="m-trow"><span>E-Bike Pro 750W</span><span class="mbadge mbadge-g">Entregado</span></div><div class="m-trow"><span>City Rider S ×5</span><span class="mbadge mbadge-y">Pendiente</span></div><div class="m-trow"><span>Mountain E ×2</span><span class="mbadge mbadge-b">Preparado</span></div></div>`,
-  pedidos:()=>`
-    <div class="m-ptitle">Pedidos recientes</div>
-    <div class="m-stats-row">
-      <div class="m-stat"><div class="m-stat-l">Total</div><div class="m-stat-v">48</div></div>
-      <div class="m-stat"><div class="m-stat-l">Pendientes</div><div class="m-stat-v" style="color:var(--yellow)">12</div></div>
-      <div class="m-stat"><div class="m-stat-l">Entregados</div><div class="m-stat-v" style="color:var(--green)">36</div></div>
-    </div>
-    <div class="m-table-wrap"><div class="m-trow m-trow-head"><span>Pedido</span><span>Cliente</span><span>Status</span></div><div class="m-trow"><span>PED-048</span><span style="color:var(--text-3)">Dist. Norte</span><span class="mbadge mbadge-y">Solicitado</span></div><div class="m-trow"><span>PED-047</span><span style="color:var(--text-3)">Bici Express</span><span class="mbadge mbadge-b">Preparado</span></div><div class="m-trow"><span>PED-046</span><span style="color:var(--text-3)">VoltageMX</span><span class="mbadge mbadge-g">Entregado</span></div><div class="m-trow"><span>PED-045</span><span style="color:var(--text-3)">EcoRide Sur</span><span class="mbadge mbadge-g">Entregado</span></div></div>`,
-  inventario:()=>`
-    <div class="m-ptitle">Inventario</div>
-    <div class="m-stats-row">
-      <div class="m-stat"><div class="m-stat-l">Productos</div><div class="m-stat-v">24</div></div>
-      <div class="m-stat"><div class="m-stat-l">Stock bajo</div><div class="m-stat-v" style="color:var(--yellow)">3</div></div>
-      <div class="m-stat"><div class="m-stat-l">Valor total</div><div class="m-stat-v" style="color:var(--p2)">$1.2M</div></div>
-    </div>
-    <div class="m-table-wrap"><div class="m-trow m-trow-head"><span>Producto</span><span>Stock</span></div><div class="m-trow"><span>E-Bike Pro 750W</span><span style="color:var(--green)">12 uds.</span></div><div class="m-trow"><span>City Rider S</span><span style="color:var(--yellow)">3 uds.</span></div><div class="m-trow"><span>Mountain E</span><span style="color:var(--green)">8 uds.</span></div><div class="m-trow"><span>Cargo E 500W</span><span style="color:var(--red)">1 ud.</span></div></div>`,
-  clientes:()=>`
-    <div class="m-ptitle">Clientes</div>
-    <div class="m-stats-row">
-      <div class="m-stat"><div class="m-stat-l">Total</div><div class="m-stat-v">84</div></div>
-      <div class="m-stat"><div class="m-stat-l">Activos</div><div class="m-stat-v" style="color:var(--green)">67</div></div>
-      <div class="m-stat"><div class="m-stat-l">Nuevos</div><div class="m-stat-v" style="color:var(--blue)">+8</div></div>
-    </div>
-    <div class="m-table-wrap"><div class="m-trow m-trow-head"><span>Cliente</span><span>Pedidos</span></div><div class="m-trow"><span>Distribuidora Norte</span><span style="color:var(--p2)">12</span></div><div class="m-trow"><span>Bici Express</span><span style="color:var(--p2)">8</span></div><div class="m-trow"><span>VoltageMX</span><span style="color:var(--p2)">6</span></div><div class="m-trow"><span>EcoRide Sur</span><span style="color:var(--p2)">5</span></div></div>`,
-  garantias:()=>`
-    <div class="m-ptitle">Garantías</div>
-    <div class="m-stats-row">
-      <div class="m-stat"><div class="m-stat-l">Activas</div><div class="m-stat-v" style="color:var(--green)">38</div></div>
-      <div class="m-stat"><div class="m-stat-l">Por vencer</div><div class="m-stat-v" style="color:var(--yellow)">4</div></div>
-      <div class="m-stat"><div class="m-stat-l">Vencidas</div><div class="m-stat-v" style="color:var(--red)">2</div></div>
-    </div>
-    <div class="m-table-wrap"><div class="m-trow m-trow-head"><span>Serie</span><span>Producto</span><span>Estado</span></div><div class="m-trow"><span>EBK-00124</span><span style="color:var(--text-3)">E-Bike Pro</span><span class="mbadge mbadge-g">Activa</span></div><div class="m-trow"><span>EBK-00098</span><span style="color:var(--text-3)">City Rider</span><span class="mbadge mbadge-y">90 días</span></div><div class="m-trow"><span>EBK-00071</span><span style="color:var(--text-3)">Mountain E</span><span class="mbadge mbadge-g">Activa</span></div></div>`
-};
-
-const mockupMain=document.getElementById('mockup-main');
-function setTab(tabId){
-  document.querySelectorAll('.m-nav').forEach(n=>n.classList.remove('active'));
-  document.querySelector(`.m-nav[data-tab="${tabId}"]`)?.classList.add('active');
-  mockupMain.innerHTML=tabs[tabId]?tabs[tabId]():tabs.dashboard();
+  // 3. Actualizar estilos de pestañas (usando clases Tailwind)
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    const isActive = btn.dataset.tab === tabId;
+    // Remover todas las clases de estado
+    btn.classList.remove('bg-gray-900', 'text-white', 'border-gray-900', 'bg-gray-50', 'text-gray-500', 'border-gray-200', 'dark:bg-gray-700', 'dark:text-gray-400', 'dark:border-gray-700', 'dark:bg-white', 'dark:text-gray-900', 'dark:border-white');
+    // Añadir las clases según estado
+    if (isActive) {
+      btn.classList.add('bg-gray-900', 'text-white', 'border-gray-900', 'dark:bg-white', 'dark:text-gray-900', 'dark:border-white');
+    } else {
+      btn.classList.add('bg-gray-50', 'text-gray-500', 'border-gray-200', 'dark:bg-gray-700', 'dark:text-gray-400', 'dark:border-gray-700');
+    }
+  });
 }
-document.querySelectorAll('.m-nav').forEach(el=>{ el.addEventListener('click',()=>setTab(el.dataset.tab)); });
-setTab('dashboard');
 
-/* ── FORM SVGs ── */
-const SVG={
-  send:`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`,
-  spin:`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:spin_ .8s linear infinite"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>`,
-  check:`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
-  warning:`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,
-  error:`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`,
-};
+// 4. Asignar eventos a las pestañas
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const tabId = this.dataset.tab;
+    activateTab(tabId);
+  });
+});
 
-/* ── MODAL FORM ── */
-async function handleSubmit(){
-  const btn=document.getElementById('btn-submit');
-  const name=document.getElementById('f-name')?.value.trim()??'';
-  const company=document.getElementById('f-company')?.value.trim()??'';
-  const email=document.getElementById('f-email')?.value.trim()??'';
-  const role=document.getElementById('f-role')?.value??'';
-  const message=document.getElementById('f-message')?.value.trim()??'';
-  if(!name||!email){
-    btn.style.animation='shake_ .35s ease';
-    btn.innerHTML=`${SVG.warning} Nombre y correo requeridos`;
-    setTimeout(()=>{ btn.style.animation='';btn.innerHTML=`${SVG.send} Solicitar demo gratuita`; },2500);
-    return;
+// 5. Activar la primera pestaña por defecto (Pedidos)
+document.querySelector('.tab-btn.active')?.click();
+
+// Acordeones (sucursales)
+function toggleAcordeon(header) {
+  const container = header.parentElement;
+  const body = container.querySelector('div[style*="display: none;"]');
+  const arrow = header.querySelector('svg');
+  if (body) {
+    if (body.style.display === 'none') {
+      body.style.display = 'block';
+      if (arrow) arrow.style.transform = 'rotate(90deg)';
+    } else {
+      body.style.display = 'none';
+      if (arrow) arrow.style.transform = 'rotate(0deg)';
+    }
   }
-  btn.disabled=true; btn.innerHTML=`${SVG.spin} Enviando...`;
-  try {
-    const csrf=document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')??'';
-    const res=await fetch('/contact',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':csrf},body:JSON.stringify({name,company,email,role,message})});
-    const data=await res.json().catch(()=>({}));
-    if(res.ok){
-      btn.classList.add('sent'); btn.innerHTML=`${SVG.check} Enviado — te contactamos pronto`;
-      ['f-name','f-company','f-email','f-message'].forEach(id=>{ const el=document.getElementById(id);if(el)el.value=''; });
-      const r=document.getElementById('f-role');if(r)r.value='';
-      setTimeout(()=>closeModal('modal-contact'),2200);
-      showToast('¡Demo solicitada!','Te respondemos en menos de 24 h.');
-    }else{ btn.classList.add('error');btn.innerHTML=`${SVG.error} ${data.message??'Error. Intenta de nuevo.'}`; }
-  }catch{ btn.classList.add('error');btn.innerHTML=`${SVG.error} Sin conexión. Revisa tu red.`; }
-  btn.disabled=false;
-  setTimeout(()=>{ btn.classList.remove('sent','error');btn.innerHTML=`${SVG.send} Solicitar demo gratuita`; },4000);
 }
 
-/* ── MAIN FORM ── */
-async function handleSubmitMain(){
-  const btn=document.getElementById('btn-submit-main');
-  const name=document.getElementById('fc-name')?.value.trim()??'';
-  const company=document.getElementById('fc-company')?.value.trim()??'';
-  const email=document.getElementById('fc-email')?.value.trim()??'';
-  const service=document.getElementById('fc-service')?.value??'';
-  const message=document.getElementById('fc-message')?.value.trim()??'';
-  if(!name||!email){
-    btn.style.animation='shake_ .35s ease';
-    btn.innerHTML=`${SVG.warning} Nombre y correo requeridos`;
-    setTimeout(()=>{ btn.style.animation='';btn.innerHTML=`${SVG.send} Enviar mensaje`; },2500);
-    return;
-  }
-  btn.disabled=true; btn.innerHTML=`${SVG.spin} Enviando...`;
-  try {
-    const csrf=document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')??'';
-    const res=await fetch('/contact',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':csrf},body:JSON.stringify({name,company,email,service,message})});
-    const data=await res.json().catch(()=>({}));
-    if(res.ok){
-      btn.classList.add('sent'); btn.innerHTML=`${SVG.check} ¡Mensaje enviado!`;
-      ['fc-name','fc-company','fc-email','fc-message'].forEach(id=>{ const el=document.getElementById(id);if(el)el.value=''; });
-      const s=document.getElementById('fc-service');if(s)s.value='';
-      showToast('¡Mensaje enviado!','Te respondemos en menos de 24 h.');
-    }else{ btn.classList.add('error');btn.innerHTML=`${SVG.error} ${data.message??'Error. Intenta de nuevo.'}`; }
-  }catch{ btn.classList.add('error');btn.innerHTML=`${SVG.error} Sin conexión.`; }
-  btn.disabled=false;
-  setTimeout(()=>{ btn.classList.remove('sent','error');btn.innerHTML=`${SVG.send} Enviar mensaje`; },4000);
-}
+// Intersection Observer para animaciones al hacer scroll
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('opacity-100', 'translate-y-0');
+      e.target.classList.remove('opacity-0', 'translate-y-5');
+      obs.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.1, rootMargin: '0px 0px -24px 0px' });
 
-/* ── KEYFRAMES ── */
-const st=document.createElement('style');
-st.textContent=`
-@keyframes shake_{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
-@keyframes spin_{to{transform:rotate(360deg)}}
-`;
-document.head.appendChild(st);
-</script>
+document.querySelectorAll('.rv').forEach(el => {
+  el.classList.add('opacity-0', 'translate-y-5', 'transition', 'duration-700', 'ease-out');
+  obs.observe(el);
+});
+  </script>
+
+  <style>
+    /* Solo para el efecto de animación y el punto verde (si no está en Tailwind) */
+    .animate-pulse-slow {
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.3;
+      }
+    }
+
+    .scrollbar-hide::-webkit-scrollbar {
+      display: none;
+    }
+
+    .scrollbar-hide {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+
 </body>
+
 </html>

@@ -11,7 +11,7 @@ class UbicacionController extends Controller
     {
         // Si ya tiene ubicación no necesita estar aquí
         if (Auth::user()->tieneUbicacion()) {
-            return redirect()->route('dashboard');
+            return redirect()->route('stock.index');
         }
 
         return view('ubicacion.index');
@@ -37,7 +37,7 @@ class UbicacionController extends Controller
             'place_id'  => $data['place_id'] ?? null,
         ]);
 
-        return redirect()->route('dashboard')
+        return redirect()->route('stock.index')
             ->with('success', '¡Ubicación guardada! Bienvenido a ArrowK.');
     }
 }
