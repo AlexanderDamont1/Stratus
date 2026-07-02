@@ -68,7 +68,7 @@ class AuthenticatedSessionController extends Controller
         return redirect()->intended($this->dashboardPorRol($rol));
     }
 
-    private function dashboardPorRol(int $rol): string
+    public function dashboardPorRol(int $rol): string
     {
         return match ($rol) {
             0 => route('root.dashboard'),

@@ -8,51 +8,73 @@
 >
 
     {{-- ── TOPBAR ── --}}
-    <div class="sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-8 py-4 flex items-center justify-between gap-4 flex-wrap">
-        <div>
-            <h1 class="text-[17px] font-semibold tracking-tight text-gray-900 dark:text-gray-100">
-                Hola, {{ auth()->user()->negocio->nombre_negocio ?? auth()->user()->name ?? 'Admin' }}
-            </h1>
-            <p class="text-[11px] text-gray-400 dark:text-gray-400 mt-0.5" x-text="clock"></p>
-        </div>
-        <div class="flex items-center gap-3 flex-wrap">
-            <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700/50 rounded-xl p-1">
-                <template x-for="p in presets.filter(x=>x.key!=='custom')" :key="p.key">
+    <div class="sticky top-0 z-30 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 px-6 sm:px-8 py-4">
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-800 to-gray-600 dark:from-gray-200 dark:to-gray-400 flex items-center justify-center shrink-0 text-white dark:text-gray-900 font-semibold text-[14px] shadow-sm">
+                    {{ strtoupper(substr(auth()->user()->negocio->nombre_negocio ?? auth()->user()->name ?? 'A', 0, 1)) }}
+                </div>
+                <div class="min-w-0">
+                    <h1 class="text-[16px] font-semibold tracking-tight text-gray-900 dark:text-gray-100 truncate">
+                        {{ auth()->user()->negocio->nombre_negocio ?? auth()->user()->name ?? 'Admin' }}
+                    </h1>
+                    <div class="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <p class="text-[11px] text-gray-400 capitalize" x-text="todayLabel"></p>
+                        <span class="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
+                        <p class="text-[11px] text-gray-400 tabular-nums" x-text="clock"></p>
+                        <template x-if="!loading">
+                            <span class="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full"
+                                  :class="alertCount>0 ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400' : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400'">
+                                <span class="w-1.5 h-1.5 rounded-full" :class="alertCount>0 ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'"></span>
+                                <span x-text="alertCount>0 ? alertCount+' alertas' : 'Todo en orden'"></span>
+                            </span>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 flex-wrap">
+                <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700/50 rounded-xl p-1">
+                    <template x-for="p in presets.filter(x=>x.key!=='custom')" :key="p.key">
+                        <button
+                            class="text-[11px] font-medium px-3.5 py-1.5 rounded-lg transition-all duration-150"
+                            :class="periodo===p.key
+                                ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm ring-1 ring-gray-200 dark:ring-gray-600'
+                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'"
+                            @click="setPeriod(p.key)"
+                            x-text="p.label">
+                        </button>
+                    </template>
                     <button
-                        class="text-[11px] font-medium px-3.5 py-1.5 rounded-lg transition-all"
-                        :class="periodo===p.key
+                        class="text-[11px] font-medium px-3.5 py-1.5 rounded-lg transition-all duration-150"
+                        :class="periodo==='custom'
                             ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm ring-1 ring-gray-200 dark:ring-gray-600'
                             : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'"
-                        @click="setPeriod(p.key)"
-                        x-text="p.label">
+                        @click="setPeriod('custom')">
+                        Rango
                     </button>
-                </template>
-                <button
-                    class="text-[11px] font-medium px-3.5 py-1.5 rounded-lg transition-all"
-                    :class="periodo==='custom'
-                        ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm ring-1 ring-gray-200 dark:ring-gray-600'
-                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'"
-                    @click="setPeriod('custom')">
-                    Rango
+                </div>
+                <div x-show="periodo==='custom'" x-cloak
+                     x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-x-1"
+                     x-transition:enter-end="opacity-100 translate-x-0"
+                     class="flex items-center gap-2">
+                    <input type="date" x-model="customDesde" @change="fetchStats()"
+                           class="text-[11px] px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-400">
+                    <span class="text-gray-400">–</span>
+                    <input type="date" x-model="customHasta" @change="fetchStats()"
+                           class="text-[11px] px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-400">
+                </div>
+                <svg x-show="loading" x-cloak class="w-4 h-4 text-gray-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+                <button @click="enlaceOpen=true"
+                        class="inline-flex items-center gap-2 text-[11px] font-medium px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-500 hover:shadow-sm transition-all duration-150">
+                    <span class="w-1.5 h-1.5 rounded-full shrink-0"
+                          :class="enlaceEstado==='activo' ? 'bg-emerald-500' : enlaceCancelado ? 'bg-red-400' : 'bg-gray-400'"></span>
+                    <span x-text="enlaceEstado==='activo' ? enlaceGestor : enlaceCancelado ? 'Desconectado' : 'Enlace'"></span>
                 </button>
             </div>
-            <div x-show="periodo==='custom'" x-cloak class="flex items-center gap-2">
-                <input type="date" x-model="customDesde" @change="fetchStats()"
-                       class="text-[11px] px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-400">
-                <span class="text-gray-400">–</span>
-                <input type="date" x-model="customHasta" @change="fetchStats()"
-                       class="text-[11px] px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-400">
-            </div>
-            <svg x-show="loading" x-cloak class="w-4 h-4 text-gray-400 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-            </svg>
-            <button @click="enlaceOpen=true"
-                    class="inline-flex items-center gap-2 text-[11px] font-medium px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-500 transition-all">
-                <span class="w-1.5 h-1.5 rounded-full shrink-0"
-                      :class="enlaceEstado==='activo' ? 'bg-emerald-500' : enlaceCancelado ? 'bg-red-400' : 'bg-gray-400'"></span>
-                <span x-text="enlaceEstado==='activo' ? enlaceGestor : enlaceCancelado ? 'Desconectado' : 'Enlace'"></span>
-            </button>
         </div>
     </div>
 
@@ -80,200 +102,162 @@
     @endif
 
     {{-- ── MAIN GRID ── --}}
-    <div class="max-w-screen-2xl mx-auto px-6 py-6 grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-6">
+    <div class="max-w-screen-2xl mx-auto px-6 py-6 space-y-6">
 
-        {{-- ── LEFT COLUMN ── --}}
-        <div class="space-y-6">
-
-            {{-- KPIs principales --}}
+        {{-- Panel resumen --}}
+        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6 grid grid-cols-1 lg:grid-cols-[1fr_1px_1fr] gap-6">
             <div>
-                <div class="flex items-center justify-between mb-3">
-                    <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Panel general</p>
-                    <p class="text-[11px] text-gray-400" x-text="periodoLabel"></p>
-                </div>
-                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                    <template x-if="loading">
-                        <template x-for="i in 4" :key="i">
-                            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 animate-pulse">
-                                <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded w-2/3 mb-5"></div>
-                                <div class="h-8 bg-gray-200 dark:bg-gray-700 rounded w-4/5 mb-3"></div>
-                                <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-                            </div>
-                        </template>
-                    </template>
+                <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2">Ingresos totales</p>
+                <p class="text-[34px] font-semibold tracking-tight leading-none text-gray-900 dark:text-gray-100 mb-1"
+                   x-text="kpiData.ingresos ? fmt$(kpiData.ingresos) : '—'"></p>
+                <p class="text-[11px] text-gray-400" x-text="periodoLabel"></p>
+
+                <div class="grid grid-cols-3 gap-3 mt-5">
                     <template x-if="!loading">
-                        <template x-for="(k, ki) in kpis.slice(0,4)" :key="k.key">
-                            <div class="relative overflow-hidden rounded-2xl p-5 cursor-pointer transition-all shadow-sm hover:shadow-md border"
-                                 :class="kpiCardClass(ki)"
+                        <template x-for="(k, ki) in kpis.slice(0,3)" :key="'sumcard-'+k.key">
+                            <div class="cursor-pointer group transition-all duration-150 hover:bg-gray-50 dark:hover:bg-gray-700/30 rounded-lg p-2 -m-2"
                                  @click="openModal(k.modal)">
-                                <div class="absolute -right-4 -top-4 w-20 h-20 rounded-full opacity-[0.12]"
-                                     :class="kpiCircleClass(ki)"></div>
-                                <p class="text-[10px] font-semibold uppercase tracking-widest mb-3.5 relative z-10"
-                                   :class="kpiLabelClass(ki)" x-text="k.label"></p>
-                                <p class="font-semibold tracking-tight leading-none mb-2.5 relative z-10"
-                                   :class="[k.value && k.value.toString().length > 6 ? 'text-[22px]' : 'text-[28px]', kpiValueClass(ki)]"
-                                   x-text="k.value"></p>
-                                <p class="text-[11px] leading-snug relative z-10" :class="kpiSubClass(ki)" x-text="k.sub"></p>
+                                <div class="flex items-center justify-between mb-0.5">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-1.5 h-1.5 rounded-full" :class="kpiDotClass(ki)"></span>
+                                        <p class="text-[10px] text-gray-400 uppercase tracking-wide" x-text="k.label"></p>
+                                    </div>
+                                    <span x-show="k.trend !== undefined && k.trend !== null && k.trend !== 0"
+                                          class="text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
+                                          :class="k.trend > 0 ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30' : 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30'">
+                                        <span x-text="k.trend > 0 ? '↑' : '↓'"></span>
+                                        <span x-text="Math.abs(k.trend).toFixed(1) + '%'"></span>
+                                    </span>
+                                </div>
+                                <p class="text-[16px] font-semibold text-gray-900 dark:text-gray-100 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors" x-text="k.value"></p>
                             </div>
                         </template>
                     </template>
                 </div>
             </div>
 
-            {{-- Ingresos chart --}}
-            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm">
-                <div class="flex items-start justify-between px-6 py-5 border-b border-gray-100 dark:border-gray-700/60">
-                    <div>
-                        <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Ingresos</p>
-                        <p class="text-[11px] text-gray-400 mt-1" x-text="periodoLabel"></p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-[26px] font-semibold tracking-tight leading-none text-gray-900 dark:text-gray-100"
-                           x-text="kpiData.ingresos ? fmt$(kpiData.ingresos) : '—'"></p>
-                        <template x-if="kpiData.descuentos > 0">
-                            <p class="text-[10px] text-gray-400 mt-1" x-text="'– '+fmt$(kpiData.descuentos)+' en descuentos'"></p>
-                        </template>
-                    </div>
-                </div>
-                <div class="px-5 pb-5 pt-4">
-                    <div id="ingresos-chart-wrap" style="min-height:220px;"></div>
-                </div>
-            </div>
+            <div class="hidden lg:block bg-gray-100 dark:bg-gray-700"></div>
 
-            {{-- Ventas chart --}}
-            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm">
-                <div class="flex items-start justify-between px-6 py-5 border-b border-gray-100 dark:border-gray-700/60">
-                    <div>
-                        <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Ventas</p>
-                        <p class="text-[11px] text-gray-400 mt-1" x-text="periodoLabel"></p>
-                    </div>
-                    <p class="text-[26px] font-semibold tracking-tight leading-none text-gray-900 dark:text-gray-100"
-                       x-text="kpiData.ventas ?? '—'"></p>
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">Distribución (métodos de pago)</p>
+                    <span class="text-[10px] text-gray-400">Total: <span x-text="metodosPago.length"></span></span>
                 </div>
-                <div class="px-5 pb-5 pt-4">
-                    <div id="ventas-chart-wrap" style="min-height:220px;"></div>
+                <div class="flex h-3 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700 mb-4" x-show="metodosPago.length">
+                    <template x-for="(m,i) in metodosPago" :key="'segb-'+m.metodo">
+                        <div class="h-full transition-all duration-500" :style="{width: pctWidth(m.monto), background: COLORS[i%6]}"></div>
+                    </template>
                 </div>
-            </div>
-
-            {{-- Sucursales chart --}}
-            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm">
-                <div class="flex items-center justify-between px-6 py-5 border-b border-gray-100 dark:border-gray-700/60">
-                    <div>
-                        <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Ingresos por sucursal</p>
-                        <p class="text-[11px] text-gray-400 mt-1" x-text="periodoLabel"></p>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <div x-show="!loading && graficaSucursales.length > 0" x-cloak class="flex gap-4 flex-wrap justify-end">
-                            <template x-for="(s, i) in graficaSucursales" :key="s.nombre">
-                                <div class="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400">
-                                    <svg width="18" height="6" viewBox="0 0 18 6">
-                                        <line x1="0" y1="3" x2="18" y2="3"
-                                              :stroke="COLORS[i%6]" stroke-width="2"
-                                              :stroke-dasharray="i===0 ? 'none' : '4,3'"/>
-                                    </svg>
-                                    <span x-text="s.nombre"></span>
-                                </div>
-                            </template>
+                <div class="space-y-2">
+                    <template x-for="(m, i) in metodosPago.slice(0, 4)" :key="'lb-'+m.metodo">
+                        <div class="flex items-center gap-2 text-[11px]">
+                            <span class="w-2 h-2 rounded-full shrink-0" :style="{background: COLORS[i%6]}"></span>
+                            <span class="text-gray-500 dark:text-gray-400 capitalize flex-1 truncate" x-text="m.metodo.replace('_',' ')"></span>
+                            <span class="font-semibold text-gray-900 dark:text-gray-100" x-text="fmt$(m.monto)"></span>
                         </div>
-                        <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700/50 rounded-xl p-1 ml-2">
-                            <button class="text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-all"
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        {{-- Grid principal --}}
+        <div class="grid grid-cols-1 xl:grid-cols-[1fr_300px] gap-6">
+
+            {{-- Grid de tarjetas --}}
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 auto-rows-[300px]">
+
+                {{-- Ingresos --}}
+                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 flex flex-col cursor-pointer"
+                     @click="openChartModal('ingresos')">
+                    <div class="px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 shrink-0 flex items-center justify-between">
+                        <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Ingresos</p>
+                        <span class="text-[10px] text-gray-400" x-text="periodoLabel"></span>
+                    </div>
+                    <div class="px-4 pb-4 pt-3 flex-1 min-h-0">
+                        <div id="ingresos-chart-wrap" class="h-full"></div>
+                    </div>
+                </div>
+
+                {{-- Ventas --}}
+                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 flex flex-col cursor-pointer"
+                     @click="openChartModal('ventas')">
+                    <div class="px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 shrink-0 flex items-center justify-between">
+                        <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Ventas</p>
+                        <span class="text-[10px] text-gray-400" x-text="periodoLabel"></span>
+                    </div>
+                    <div class="px-4 pb-4 pt-3 flex-1 min-h-0">
+                        <div id="ventas-chart-wrap" class="h-full"></div>
+                    </div>
+                </div>
+
+                {{-- Sucursales --}}
+                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 flex flex-col cursor-pointer"
+                     @click="openChartModal('sucursales')">
+                    <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 shrink-0">
+                        <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Por sucursal</p>
+                        <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700/50 rounded-lg p-0.5" @click.stop>
+                            <button class="text-[9px] font-semibold px-1.5 py-0.5 rounded-md transition-all"
                                     :class="sucursalMetrica==='ingresos' ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400'"
                                     @click="sucursalMetrica='ingresos'; $nextTick(()=>_renderSucursalesChart())">$</button>
-                            <button class="text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-all"
+                            <button class="text-[9px] font-semibold px-1.5 py-0.5 rounded-md transition-all"
                                     :class="sucursalMetrica==='ventas' ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400'"
                                     @click="sucursalMetrica='ventas'; $nextTick(()=>_renderSucursalesChart())">#</button>
                         </div>
                     </div>
-                </div>
-                <div class="px-5 pb-5 pt-4" x-show="!loading && graficaSucursales.length > 0" x-cloak>
-                    <div id="sucursales-chart-wrap" style="min-height:220px;"></div>
-                </div>
-                <template x-if="!loading && graficaSucursales.length === 0">
-                    <div class="flex flex-col items-center py-10">
-                        <p class="text-[12px] text-gray-400">Sin datos en este periodo</p>
+                    <div class="px-4 pb-4 pt-3 flex-1 min-h-0" x-show="!loading && graficaSucursales.length > 0" x-cloak>
+                        <div id="sucursales-chart-wrap" class="h-full"></div>
                     </div>
-                </template>
-                <div class="px-5 pb-5 pt-4" x-show="loading" x-cloak>
-                    <div class="h-[220px] bg-gray-100 dark:bg-gray-700 rounded-xl animate-pulse"></div>
-                </div>
-            </div>
-
-            {{-- Bottom grid --}}
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-                {{-- Métodos de pago --}}
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 transition-all shadow-sm"
-                     @click="openModal('metodosPago')">
-                    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700/60">
-                        <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Métodos de pago</p>
-                        <span class="text-[11px] text-gray-400">Ver detalle →</span>
-                    </div>
-                    <div class="p-5" x-show="!loading">
-                        <template x-if="metodosPago.length === 0">
-                            <p class="text-center text-gray-400 text-[11px] py-3">Sin datos</p>
-                        </template>
-                        <template x-for="(m, i) in metodosPago.slice(0, 4)" :key="m.metodo">
-                            <div class="flex items-center gap-3 mb-3.5">
-                                <span class="text-[11px] text-gray-500 dark:text-gray-400 w-[100px] shrink-0 truncate capitalize" x-text="m.metodo.replace('_',' ')"></span>
-                                <div class="flex-1 h-[3px] bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                    <div class="h-full rounded-full transition-all duration-500 bg-gray-900 dark:bg-gray-300"
-                                         :style="{width: metodosPago[0].monto > 0 ? Math.round(m.monto/metodosPago[0].monto*100)+'%' : '0%', opacity: 1 - i*0.2}"></div>
-                                </div>
-                                <span class="text-[11px] font-medium text-gray-900 dark:text-gray-100 text-right min-w-[64px]" x-text="fmt$(m.monto)"></span>
-                            </div>
-                        </template>
-                        <div class="flex justify-between pt-3 mt-1 border-t border-gray-100 dark:border-gray-700">
-                            <span class="text-[11px] text-gray-400">Total cobrado</span>
-                            <span class="text-[13px] font-semibold text-gray-900 dark:text-gray-100" x-text="fmt$(metodosPago.reduce((s,m)=>s+m.monto,0))"></span>
+                    <template x-if="!loading && graficaSucursales.length === 0">
+                        <div class="flex-1 flex items-center justify-center">
+                            <p class="text-[12px] text-gray-400">Sin datos</p>
                         </div>
-                    </div>
+                    </template>
                 </div>
 
                 {{-- Clientes --}}
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 transition-all shadow-sm"
+                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all duration-200 flex flex-col"
                      @click="openModal('clientesTipo')">
-                    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700/60">
+                    <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 shrink-0">
                         <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Clientes</p>
-                        <span class="text-[11px] text-gray-400">Ver detalle →</span>
+                        <span class="text-[10px] text-gray-400">Ver →</span>
                     </div>
-                    <div class="p-5" x-show="!loading">
-                        <div class="flex items-baseline gap-1.5 mb-5">
-                            <p class="text-[32px] font-semibold tracking-tight leading-none text-gray-900 dark:text-gray-100" x-text="kpiData.clientes ?? '—'"></p>
+                    <div class="p-5 flex-1 overflow-y-auto" x-show="!loading">
+                        <div class="flex items-baseline gap-1.5 mb-4">
+                            <p class="text-[26px] font-semibold tracking-tight leading-none text-gray-900 dark:text-gray-100" x-text="kpiData.clientes ?? '—'"></p>
                             <p class="text-[11px] text-gray-400">únicos</p>
                         </div>
                         <template x-for="(c, i) in clientesTipo" :key="c.tipo">
                             <div class="flex items-center gap-3 mb-2.5">
-                                <span class="text-[11px] text-gray-500 dark:text-gray-400 w-[80px] shrink-0" x-text="c.tipo"></span>
+                                <span class="text-[11px] text-gray-500 dark:text-gray-400 w-[70px] shrink-0 capitalize" x-text="c.tipo"></span>
                                 <div class="flex-1 h-[3px] bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                    <div class="h-full rounded-full transition-all duration-500 bg-gray-900 dark:bg-gray-300"
+                                    <div class="h-full rounded-full transition-all duration-500 bg-blue-600 dark:bg-blue-400"
                                          :style="{width: kpiData.clientes > 0 ? Math.round(c.cnt/kpiData.clientes*100)+'%' : '0%', opacity: i===0 ? 1 : 0.35}"></div>
                                 </div>
-                                <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400 min-w-[28px] text-right" x-text="c.cnt"></span>
+                                <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400 min-w-[24px] text-right" x-text="c.cnt"></span>
                             </div>
                         </template>
                     </div>
                 </div>
 
-                {{-- Tops: modelo, config, accesorio, combo --}}
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 transition-all shadow-sm"
+                {{-- Modelos top --}}
+                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all duration-200 flex flex-col"
                      @click="openModal('topModelos')">
-                    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700/60">
-                        <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Modelos más vendidos</p>
-                        <span class="text-[11px] text-gray-400">Ver detalle →</span>
+                    <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 shrink-0">
+                        <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Modelos top</p>
+                        <span class="text-[10px] text-gray-400">Ver →</span>
                     </div>
-                    <div class="p-5" x-show="!loading">
+                    <div class="p-5 flex-1 overflow-y-auto" x-show="!loading">
                         <template x-if="!tops.modelo">
                             <p class="text-center text-gray-400 text-[11px] py-3">Sin ventas</p>
                         </template>
                         <template x-if="tops.modelo">
                             <div>
-                                <p class="text-[22px] font-semibold tracking-tight text-gray-900 dark:text-gray-100" x-text="tops.modelo.nombre"></p>
-                                <p class="text-[11px] text-gray-400 mt-1" x-text="tops.modelo.unidades + ' unidades vendidas'"></p>
+                                <p class="text-[18px] font-semibold tracking-tight text-gray-900 dark:text-gray-100" x-text="tops.modelo.nombre"></p>
+                                <p class="text-[11px] text-gray-400 mt-1" x-text="tops.modelo.unidades + ' unidades'"></p>
                                 <template x-if="tops.config">
                                     <div class="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-                                        <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Config. más vendida</p>
+                                        <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Config. top</p>
                                         <p class="text-[12px] font-medium text-gray-700 dark:text-gray-300" x-text="tops.config.config"></p>
-                                        <p class="text-[10px] text-gray-400" x-text="tops.config.unidades + ' veces'"></p>
                                     </div>
                                 </template>
                             </div>
@@ -282,279 +266,252 @@
                 </div>
 
                 {{-- Accesorios y combos --}}
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 transition-all shadow-sm"
+                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all duration-200 flex flex-col"
                      @click="openModal('topAccesorios')">
-                    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700/60">
+                    <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 shrink-0">
                         <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Accesorios y combos</p>
-                        <span class="text-[11px] text-gray-400">Ver detalle →</span>
+                        <span class="text-[10px] text-gray-400">Ver →</span>
                     </div>
-                    <div class="p-5" x-show="!loading">
+                    <div class="p-5 flex-1 overflow-y-auto" x-show="!loading">
                         <template x-if="tops.accesorio">
                             <div>
                                 <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Accesorio top</p>
-                                <p class="text-[18px] font-semibold text-gray-900 dark:text-gray-100" x-text="tops.accesorio.nombre"></p>
-                                <p class="text-[11px] text-gray-400" x-text="tops.accesorio.uds + ' unidades'"></p>
+                                <p class="text-[15px] font-semibold text-gray-900 dark:text-gray-100" x-text="tops.accesorio.nombre"></p>
                             </div>
                         </template>
                         <template x-if="tops.combo">
                             <div class="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-                                <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Combo más frecuente</p>
-                                <p class="text-[13px] font-medium text-gray-700 dark:text-gray-300" x-text="tops.combo.combo"></p>
-                                <p class="text-[10px] text-gray-400" x-text="tops.combo.uds + ' veces'"></p>
+                                <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Combo top</p>
+                                <p class="text-[12px] font-medium text-gray-700 dark:text-gray-300" x-text="tops.combo.combo"></p>
                             </div>
                         </template>
                         <template x-if="!tops.accesorio && !tops.combo">
-                            <p class="text-center text-gray-400 text-[11px] py-3">Sin ventas de accesorios</p>
+                            <p class="text-center text-gray-400 text-[11px] py-3">Sin datos</p>
                         </template>
                     </div>
                 </div>
 
                 {{-- Cupones --}}
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 transition-all shadow-sm"
+                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all duration-200 flex flex-col"
                      @click="openModal('cupones')">
-                    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700/60">
+                    <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 shrink-0">
                         <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Cupones</p>
-                        <span class="text-[11px] text-gray-400">Ver detalle →</span>
+                        <span class="text-[10px] text-gray-400">Ver →</span>
                     </div>
-                    <div class="p-5" x-show="!loading">
-                        <div class="flex items-baseline gap-1.5 mb-4">
-                            <p class="text-[28px] font-semibold tracking-tight text-gray-900 dark:text-gray-100" x-text="fmt$(kpiData.cupones_descuento ?? 0)"></p>
-                            <p class="text-[11px] text-gray-400">en descuentos</p>
-                        </div>
+                    <div class="p-5 flex-1 overflow-y-auto" x-show="!loading">
+                        <p class="text-[22px] font-semibold tracking-tight text-gray-900 dark:text-gray-100" x-text="fmt$(kpiData.cupones_descuento ?? 0)"></p>
+                        <p class="text-[11px] text-gray-400 mb-3">en descuentos</p>
                         <div class="flex justify-between text-[11px]">
-                            <span class="text-gray-400">Cupones usados</span>
+                            <span class="text-gray-400">Usados</span>
                             <span class="font-semibold text-gray-900 dark:text-gray-100" x-text="kpiData.cupones_usados ?? 0"></span>
                         </div>
-                        <template x-if="tops.cupon">
-                            <div class="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-                                <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Cupón más usado</p>
-                                <p class="text-[13px] font-medium text-gray-700 dark:text-gray-300" x-text="tops.cupon.codigo"></p>
-                                <p class="text-[10px] text-gray-400" x-text="tops.cupon.usos + ' usos'"></p>
-                            </div>
-                        </template>
                     </div>
                 </div>
 
-                {{-- Sucursales aporte --}}
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 transition-all shadow-sm"
-                     @click="openModal('sucursales')">
-                    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700/60">
-                        <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Aporte por sucursal</p>
-                        <span class="text-[11px] text-gray-400">Ver detalle →</span>
-                    </div>
-                    <div class="p-5" x-show="!loading">
-                        <template x-if="sucursales.length === 0">
-                            <p class="text-center text-gray-400 text-[11px]">Sin ventas</p>
-                        </template>
-                        <template x-for="(v, i) in sucursales" :key="v.id_usuario">
-                            <div class="flex items-center gap-3 mb-3.5">
-                                <span class="text-[11px] text-gray-500 dark:text-gray-400 w-[80px] shrink-0 truncate" x-text="v.nombre"></span>
-                                <div class="flex-1 h-[3px] bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                    <div class="h-full rounded-full transition-all duration-500 bg-gray-900 dark:bg-gray-300"
-                                         :style="{width: sucursales[0].ingresos_total > 0 ? Math.round(v.ingresos_total/sucursales[0].ingresos_total*100)+'%' : '0%', opacity: 1 - i*0.25}"></div>
-                                </div>
-                                <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400 text-right min-w-[64px]" x-text="fmt$(v.ingresos_total)"></span>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-
-            </div>
-
-            {{-- Inventario + Stock vendedor --}}
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                @php $maxStock = collect($stockVendedores)->max('total') ?: 1; @endphp
-
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 transition-all shadow-sm"
+                {{-- Inventario --}}
+                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all duration-200 flex flex-col"
                      @click="openModal('bicicletas')">
-                    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700/60">
-                        <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Inventario de bicicletas</p>
-                        <span class="text-[11px] text-gray-400">Ver detalle →</span>
+                    <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 shrink-0">
+                        <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Inventario</p>
+                        <span class="text-[10px] text-gray-400">Ver →</span>
                     </div>
-                    <div class="p-5 flex items-center gap-6">
-                        <canvas id="donut-chart" width="76" height="76" class="shrink-0"></canvas>
-                        <div class="flex-1 space-y-2.5">
+                    <div class="p-5 flex items-center gap-4 flex-1">
+                        <canvas id="donut-chart" width="64" height="64" class="shrink-0"></canvas>
+                        <div class="flex-1 space-y-2">
                             @foreach([
-                                ['color'=>'#111827','label'=>'En stock','key'=>'en_stock'],
+                                ['color'=>'#2563eb','label'=>'Stock','key'=>'en_stock'],
                                 ['color'=>'#6b7280','label'=>'Vendidas','key'=>'vendidas'],
-                                ['color'=>'#9ca3af','label'=>'En reparación','key'=>'en_reparacion'],
+                                ['color'=>'#9ca3af','label'=>'Reparación','key'=>'en_reparacion'],
                             ] as $row)
-                            <div class="flex items-center gap-2 text-[11px]">
+                            <div class="flex items-center gap-2 text-[10px]">
                                 <span class="w-2 h-2 rounded-sm shrink-0" style="background:{{ $row['color'] }}"></span>
                                 <span class="text-gray-500 dark:text-gray-400 flex-1">{{ $row['label'] }}</span>
                                 <span class="font-semibold text-gray-800 dark:text-gray-200">{{ $biciStats[$row['key']] }}</span>
                             </div>
                             @endforeach
-                            <div class="pt-2 border-t border-gray-100 dark:border-gray-700 flex justify-between">
-                                <span class="text-[10px] text-gray-400">Total</span>
-                                <span class="font-semibold text-[13px] text-gray-900 dark:text-gray-100">{{ $biciStats['total'] }}</span>
-                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm">
-                    <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700/60">
+                {{-- Aporte sucursal --}}
+                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all duration-200 flex flex-col"
+                     @click="openModal('sucursales')">
+                    <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 shrink-0">
+                        <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Aporte sucursal</p>
+                        <span class="text-[10px] text-gray-400">Ver →</span>
+                    </div>
+                    <div class="p-5 flex-1 overflow-y-auto" x-show="!loading">
+                        <template x-if="sucursales.length === 0">
+                            <p class="text-center text-gray-400 text-[11px]">Sin ventas</p>
+                        </template>
+                        <template x-for="(v, i) in sucursales" :key="v.id_usuario">
+                            <div class="flex items-center gap-3 mb-3">
+                                <span class="text-[11px] text-gray-500 dark:text-gray-400 w-[70px] shrink-0 truncate" x-text="v.nombre"></span>
+                                <div class="flex-1 h-[3px] bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                    <div class="h-full rounded-full transition-all duration-500"
+                                         :class="i === 0 ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-400 dark:bg-gray-500'"
+                                         :style="{width: sucursales[0].ingresos_total > 0 ? Math.round(v.ingresos_total/sucursales[0].ingresos_total*100)+'%' : '0%'}"></div>
+                                </div>
+                                <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400 text-right min-w-[54px]" x-text="fmt$(v.ingresos_total)"></span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                {{-- Stock por vendedor --}}
+                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 flex flex-col">
+                    @php $maxStock = collect($stockVendedores)->max('total') ?: 1; @endphp
+                    <div class="px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 shrink-0">
                         <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Stock por vendedor</p>
                     </div>
-                    <div class="p-5 space-y-3.5">
+                    <div class="p-5 space-y-3 flex-1 overflow-y-auto">
                         @foreach($stockVendedores as $i => $v)
                         <div class="flex items-center gap-3">
-                            <span class="text-[11px] text-gray-500 dark:text-gray-400 w-[100px] shrink-0 truncate">{{ $v['nombre'] }}</span>
+                            <span class="text-[11px] text-gray-500 dark:text-gray-400 w-[90px] shrink-0 truncate">{{ $v['nombre'] }}</span>
                             <div class="flex-1 h-[3px] bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                <div class="h-full rounded-full bg-gray-900 dark:bg-gray-300" style="width:{{ round($v['total']/$maxStock*100) }}%;opacity:{{ 1 - $i*0.15 }};"></div>
+                                <div class="h-full rounded-full bg-blue-600 dark:bg-blue-400 transition-all duration-500" style="width:{{ round($v['total']/$maxStock*100) }}%;opacity:{{ 1 - $i*0.15 }};"></div>
                             </div>
-                            <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400 text-right min-w-[24px]">{{ $v['total'] }}</span>
+                            <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400 text-right min-w-[20px]">{{ $v['total'] }}</span>
                         </div>
                         @endforeach
                     </div>
                 </div>
-            </div>
 
-            {{-- Actividad reciente --}}
-            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 shadow-sm">
-                <h3 class="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-4">Actividad reciente</h3>
-                <div class="space-y-4" x-show="!loading">
-                    <template x-if="pedidos.length || ots.length">
-                        <div>
-                            <template x-for="p in pedidos.slice(0,3)" :key="p.id">
-                                <div class="flex items-start gap-4 pb-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
-                                    <div class="w-2 h-2 mt-2 rounded-full bg-blue-500"></div>
-                                    <div class="flex-1">
-                                        <div class="text-sm font-medium text-gray-800 dark:text-gray-200" x-text="p.id"></div>
-                                        <div class="text-xs text-gray-500 dark:text-gray-400" x-text="p.cliente + ' · ' + p.fecha"></div>
-                                    </div>
-                                    <span class="text-sm font-medium text-gray-900 dark:text-gray-100" x-text="fmt$(p.monto)"></span>
+            </div>{{-- /grid tarjetas --}}
+
+            {{-- Sidebar --}}
+            <div class="space-y-6">
+
+                {{-- Alertas --}}
+                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm">
+                    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700/60">
+                        <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                            Alertas
+                        </p>
+                        <span class="text-[10px] text-gray-400" x-text="alertCount"></span>
+                    </div>
+                    <div x-show="!loading">
+                        <template x-if="!alertas.length">
+                            <div class="px-5 py-6 text-center text-[11px] text-gray-400">Sin alertas activas</div>
+                        </template>
+                        <template x-for="a in alertas" :key="a.id">
+                            <div class="flex items-start gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 last:border-0">
+                                <span class="w-2 h-2 rounded-full mt-1.5 shrink-0"
+                                      :class="{
+                                          'bg-red-500': a.prioridad === 'alta',
+                                          'bg-amber-500': a.prioridad === 'media',
+                                          'bg-blue-500': a.prioridad === 'baja'
+                                      }"></span>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-[12px] font-medium text-gray-800 dark:text-gray-200" x-text="a.mensaje"></p>
+                                    <p class="text-[10px] text-gray-400" x-text="a.detalle"></p>
                                 </div>
-                            </template>
-                            <template x-for="o in ots.slice(0,2)" :key="o.id">
-                                <div class="flex items-start gap-4 pb-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
-                                    <div class="w-2 h-2 mt-2 rounded-full bg-amber-500"></div>
-                                    <div class="flex-1">
-                                        <div class="text-sm font-medium text-gray-800 dark:text-gray-200" x-text="o.id"></div>
-                                        <div class="text-xs text-gray-500 dark:text-gray-400" x-text="o.tipo + ' — ' + o.modelo"></div>
-                                    </div>
-                                    <span class="text-xs text-gray-400" x-text="o.dias + 'd'"></span>
-                                </div>
-                            </template>
-                        </div>
-                    </template>
-                    <div x-show="!pedidos.length && !ots.length" class="text-sm text-gray-400 py-4 text-center">Sin actividad reciente</div>
-                </div>
-            </div>
-
-        </div>{{-- /LEFT --}}
-
-        {{-- ── RIGHT SIDEBAR ── --}}
-        <div class="space-y-6">
-
-            {{-- KPIs secundarios --}}
-            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 shadow-sm">
-                <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-4">Resumen del periodo</p>
-                <div class="space-y-4">
-                    <template x-if="loading">
-                        <template x-for="i in 3" :key="i">
-                            <div class="flex items-center justify-between animate-pulse">
-                                <div class="space-y-1.5">
-                                    <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
-                                    <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded w-28"></div>
-                                </div>
-                                <div class="h-5 bg-gray-200 dark:bg-gray-700 rounded w-14"></div>
                             </div>
                         </template>
-                    </template>
-                    <template x-if="!loading">
-                        <template x-for="k in kpis.slice(2)" :key="k.key">
-                            <div class="flex items-center justify-between cursor-pointer hover:opacity-60 transition-opacity py-0.5"
-                                 @click="openModal(k.modal)">
-                                <div>
-                                    <p class="text-[12px] font-medium text-gray-800 dark:text-gray-200" x-text="k.label"></p>
-                                    <p class="text-[10px] text-gray-400 mt-0.5" x-text="k.sub"></p>
+                    </div>
+                </div>
+
+                {{-- Acciones recientes --}}
+                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm">
+                    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700/60">
+                        <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Acciones recientes</p>
+                        <span class="text-[11px] text-gray-400 cursor-pointer hover:text-gray-600 dark:hover:text-gray-300 transition-colors" @click="openModal('pedidosList')">Ver todas →</span>
+                    </div>
+                    <div x-show="!loading">
+                        <template x-if="!pedidos.length && !ots.length">
+                            <div class="px-5 py-6 text-center text-[11px] text-gray-400">Sin actividad reciente</div>
+                        </template>
+                        <template x-for="(p, i) in pedidos.slice(0,5)" :key="'ract-p-'+p.id">
+                            <div class="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 last:border-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+                                 @click="openModal('pedidoItem', i)">
+                                <div class="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center shrink-0">
+                                    <svg class="w-3.5 h-3.5 text-blue-500" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4h12v2H4V4zm0 5h12v2H4V9zm0 5h8v2H4v-2z"/></svg>
                                 </div>
-                                <p class="text-[15px] font-semibold text-gray-900 dark:text-gray-100" x-text="k.value"></p>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-[12px] font-medium text-gray-800 dark:text-gray-200 truncate" x-text="p.cliente"></p>
+                                    <div class="flex items-center gap-2 mt-0.5">
+                                        <span class="text-[10px] text-gray-400" x-text="p.fecha_relativa || p.fecha"></span>
+                                        <span class="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
+                                        <span class="text-[9px] font-medium px-1.5 py-0.5 rounded-full"
+                                              :class="{
+                                                  'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400': p.estado === 'pendiente',
+                                                  'bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400': p.estado === 'proceso',
+                                                  'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400': p.estado === 'completado'
+                                              }"
+                                              x-text="p.estado"></span>
+                                    </div>
+                                </div>
+                                <p class="text-[12px] font-semibold text-gray-900 dark:text-gray-100 shrink-0" x-text="fmt$(p.monto)"></p>
                             </div>
                         </template>
-                    </template>
+                        <template x-for="o in ots.slice(0,2)" :key="'ract-o-'+o.id">
+                            <div class="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 last:border-0">
+                                <div class="w-8 h-8 rounded-full bg-amber-50 dark:bg-amber-950/40 flex items-center justify-center shrink-0">
+                                    <svg class="w-3.5 h-3.5 text-amber-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-[12px] font-medium text-gray-800 dark:text-gray-200 truncate" x-text="o.id"></p>
+                                    <p class="text-[10px] text-gray-400" x-text="o.tipo"></p>
+                                </div>
+                                <span class="text-[11px] text-gray-400" x-text="o.dias + 'd'"></span>
+                            </div>
+                        </template>
+                    </div>
                 </div>
-            </div>
 
-            {{-- Pedidos recientes --}}
-            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm">
-                <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700/60">
-                    <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Pedidos recientes</p>
-                    <span class="text-[11px] text-gray-400 cursor-pointer hover:text-gray-600 dark:hover:text-gray-300 transition-colors" @click="openModal('pedidosList')">Ver todos →</span>
-                </div>
-                <div x-show="!loading">
-                    <template x-if="pedidos.length === 0">
-                        <div class="px-5 py-6 text-center text-[11px] text-gray-400">Sin pedidos recientes</div>
-                    </template>
-                    <template x-for="(p, i) in pedidos.slice(0,5)" :key="p.id">
-                        <div class="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 last:border-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
-                             @click="openModal('pedidoItem', i)">
-                            <div class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
-                                <span class="text-[10px] font-semibold text-gray-500 dark:text-gray-400"
-                                      x-text="p.cliente.split(' ').filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase()"></span>
+                {{-- Personal --}}
+                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm">
+                    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700/60">
+                        <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Personal</p>
+                        <span class="text-[10px] text-gray-400">{{ count($personal) }}</span>
+                    </div>
+                    <div class="divide-y divide-gray-100 dark:divide-gray-700/60">
+                        @foreach($personal as $i => $p)
+                        @php $ini = strtoupper(implode('', array_map(fn($w)=>$w[0], array_slice(explode(' ',$p['nombre']),0,2)))); @endphp
+                        <div class="flex items-center gap-3 px-5 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+                             @click="openModal('personalItem', {{ $i }})">
+                            <div class="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-semibold shrink-0 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+                                {{ $ini }}
                             </div>
                             <div class="flex-1 min-w-0">
-                                <p class="text-[12px] font-medium text-gray-800 dark:text-gray-200 truncate" x-text="p.cliente"></p>
-                                <p class="text-[10px] text-gray-400 mt-0.5" x-text="p.fecha"></p>
+                                <p class="text-[11px] font-medium text-gray-800 dark:text-gray-200 truncate">{{ $p['nombre'] }}</p>
+                                <p class="text-[9px] text-gray-400 truncate">{{ $p['sucursal'] }}</p>
                             </div>
-                            <div class="text-right shrink-0">
-                                <p class="text-[12px] font-semibold text-gray-900 dark:text-gray-100" x-text="fmt$(p.monto)"></p>
-                                <p class="text-[9px] text-gray-400 capitalize mt-0.5" x-text="p.estado"></p>
-                            </div>
+                            <span class="w-1.5 h-1.5 rounded-full shrink-0 {{ $p['activo'] ? 'bg-emerald-500' : 'bg-gray-400' }}"></span>
                         </div>
-                    </template>
-                </div>
-            </div>
-
-            {{-- Personal --}}
-            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm">
-                <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700/60">
-                    <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Personal</p>
-                    <span class="text-[10px] text-gray-400">{{ count($personal) }} registrados</span>
-                </div>
-                <div class="divide-y divide-gray-100 dark:divide-gray-700/60">
-                    @foreach($personal as $i => $p)
-                    @php $ini = strtoupper(implode('', array_map(fn($w)=>$w[0], array_slice(explode(' ',$p['nombre']),0,2)))); @endphp
-                    <div class="flex items-center gap-3 px-5 py-3.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
-                         @click="openModal('personalItem', {{ $i }})">
-                        <div class="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
-                            {{ $ini }}
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-[12px] font-medium text-gray-800 dark:text-gray-200 truncate">{{ $p['nombre'] }}</p>
-                            <p class="text-[10px] text-gray-400 truncate mt-0.5">{{ $p['sucursal'] }}</p>
-                        </div>
-                        <span class="w-1.5 h-1.5 rounded-full shrink-0 {{ $p['activo'] ? 'bg-emerald-500' : 'bg-gray-400' }}"></span>
+                        @endforeach
                     </div>
-                    @endforeach
                 </div>
-            </div>
 
-            <p class="text-right text-[9px] text-gray-400 pb-2">
-                TTL · bicis 3600s · pedidos 3600s · stats event-driven
-            </p>
+                <p class="text-right text-[9px] text-gray-400 pb-2">
+                    TTL · bicis 3600s · pedidos 3600s · stats event-driven
+                </p>
 
-        </div>{{-- /RIGHT --}}
+            </div>{{-- /sidebar --}}
+
+        </div>{{-- /grid principal --}}
 
     </div>{{-- /MAIN GRID --}}
 
-    {{-- ── MODAL ── --}}
+    {{-- ── MODAL (mejorado para gráficas ampliadas) ── --}}
     <div x-show="modalOpen" x-cloak
          x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0"
          x-transition:enter-end="opacity-100"
          x-transition:leave="transition ease-in duration-150" x-transition:leave-end="opacity-0"
          class="fixed inset-0 bg-black/20 backdrop-blur-[2px] flex items-center justify-center z-50 px-4"
-         @click.self="modalOpen=false" @keydown.escape.window="modalOpen=false">
+         @click.self="closeModal()" @keydown.escape.window="closeModal()">
         <div x-show="modalOpen"
              x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2 scale-[.98]"
              x-transition:enter-end="opacity-100 translate-y-0 scale-100"
              x-transition:leave="transition ease-in duration-150" x-transition:leave-end="opacity-0 translate-y-2"
-             class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 w-full max-w-md max-h-[82vh] overflow-y-auto">
+             class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 w-full max-w-md max-h-[82vh] overflow-y-auto"
+             :class="isChartModal ? 'max-w-7xl' : 'max-w-md'">
             <div class="sticky top-0 bg-white dark:bg-gray-800 flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700 z-10">
                 <h3 class="text-[13px] font-semibold text-gray-900 dark:text-gray-100" x-html="modalTitle"></h3>
-                <button @click="modalOpen=false"
+                <button @click="closeModal()"
                         class="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -603,9 +560,28 @@ const KPI_ACCENTS = [
     { card: 'bg-amber-50 dark:bg-amber-950/30 border-amber-100 dark:border-amber-900/50 hover:border-amber-200', circle: 'bg-amber-400', label: 'text-amber-600 dark:text-amber-400', value: 'text-amber-900 dark:text-amber-100', sub: 'text-amber-400 dark:text-amber-500' },
 ];
 
+const KPI_CHIPS = [
+    { chip: 'bg-blue-50 dark:bg-blue-950/40',    dot: 'bg-blue-500' },
+    { chip: 'bg-emerald-50 dark:bg-emerald-950/40', dot: 'bg-emerald-500' },
+    { chip: 'bg-violet-50 dark:bg-violet-950/40',   dot: 'bg-violet-500' },
+    { chip: 'bg-amber-50 dark:bg-amber-950/40',     dot: 'bg-amber-500' },
+];
+
 const isDark  = () => document.documentElement.classList.contains('dark');
 const fmt$    = n  => '$' + Number(n).toLocaleString('es-MX', { maximumFractionDigits: 0 });
 const pct     = (a, b) => b > 0 ? Math.round(a / b * 100) : 0;
+
+function timeAgo(dateStr) {
+    if (!dateStr) return '';
+    const now = new Date();
+    const past = new Date(dateStr);
+    const diff = Math.floor((now - past) / 1000);
+    if (diff < 60) return 'hace ' + diff + 's';
+    if (diff < 3600) return 'hace ' + Math.floor(diff/60) + 'm';
+    if (diff < 86400) return 'hace ' + Math.floor(diff/3600) + 'h';
+    if (diff < 604800) return 'hace ' + Math.floor(diff/86400) + 'd';
+    return past.toLocaleDateString('es-MX');
+}
 
 function calcYTicks(maxVal, targetTicks = 4) {
     if (!maxVal || maxVal <= 0) return [0,1,2,3,4];
@@ -623,8 +599,9 @@ Chart.defaults.font.family = "'Figtree', ui-sans-serif, system-ui, sans-serif";
 
 function dashboard() {
     return {
-        // ── Estado ──────────────────────────────────────────────────────────
+        // ── Estado ──
         clock: '--:--',
+        todayLabel: new Date().toLocaleDateString('es-MX', { weekday:'long', day:'numeric', month:'short' }),
         periodo: 'today', customDesde: '', customHasta: '',
         presets: [{key:'today',label:'Hoy'},{key:'7d',label:'7 días'},{key:'30d',label:'30 días'},{key:'month',label:'Mes'},{key:'custom',label:'Rango'}],
         get periodoLabel() { return {today:'Hoy','7d':'Últimos 7 días','30d':'Últimos 30 días',month:'Este mes',custom:'Personalizado'}[this.periodo]||''; },
@@ -639,38 +616,94 @@ function dashboard() {
         // Modal
         modalOpen: false, modalLoading: false,
         modalTitle: '', modalContent: '',
+        isChartModal: false, // ← nuevo
+
         _modalPeriodoParams() {
             if (this.periodo === 'custom' && this.customDesde && this.customHasta)
                 return `&desde=${this.customDesde}&hasta=${this.customHasta}`;
             return `&periodo=${this.periodo}`;
         },
 
-        // Enlace
         enlaceEstado: SSR.enlace.estado, enlaceCancelado: SSR.enlace.cancelado,
         enlaceGestor: SSR.enlace.gestor, enlaceOpen: false,
 
-        // KPI helpers
         kpiCardClass(i)   { return KPI_ACCENTS[i]?.card   || 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'; },
         kpiCircleClass(i) { return KPI_ACCENTS[i]?.circle || 'bg-gray-300'; },
         kpiLabelClass(i)  { return KPI_ACCENTS[i]?.label  || 'text-gray-400'; },
         kpiValueClass(i)  { return KPI_ACCENTS[i]?.value  || 'text-gray-900 dark:text-gray-100'; },
         kpiSubClass(i)    { return KPI_ACCENTS[i]?.sub    || 'text-gray-400'; },
 
+        kpiChipClass(i) { return KPI_CHIPS[i]?.chip || 'bg-gray-100 dark:bg-gray-700'; },
+        kpiDotClass(i)  { return KPI_CHIPS[i]?.dot  || 'bg-gray-400'; },
+        pctWidth(monto) {
+            const t = this.metodosPago.reduce((s,m)=>s+m.monto,0);
+            return t > 0 ? Math.round(monto/t*100)+'%' : '0%';
+        },
+
         get kpis() {
             const d = this.kpiData;
             if (d.ventas === undefined) return [];
+            const calcTrend = (actual, anterior) => {
+                if (!anterior || anterior === 0) return 0;
+                return ((actual - anterior) / anterior) * 100;
+            };
+            const trendVentas    = calcTrend(d.ventas, d.ventas_anterior);
+            const trendIngresos  = calcTrend(d.ingresos, d.ingresos_anterior);
+            const trendTicket    = calcTrend(d.ticket, d.ticket_anterior);
+            const trendClientes  = calcTrend(d.clientes, d.clientes_anterior);
+
             return [
-                { key:'ventas',   label:'Ventas',      value: d.ventas,          sub: 'transacciones',                                              modal:'ventasKPI' },
-                { key:'ingresos', label:'Ingresos',     value: fmt$(d.ingresos),  sub: 'en el periodo',                                              modal:'ingresosKPI' },
-                { key:'ticket',   label:'Ticket prom.', value: fmt$(d.ticket),    sub: 'por venta',                                                  modal:'ticketKPI' },
-                { key:'clientes', label:'Clientes',     value: d.clientes,        sub: (d.clientes_nuevos??0)+' nuevos · '+(d.clientes_rec??0)+' rec.', modal:'clientesTipo' },
-                { key:'ots',      label:'OTs activas',  value: d.ots_activas,     sub: 'en taller ahora',                                            modal:'otsList' },
-                { key:'stock',    label:'En stock',     value: SSR.biciStats.en_stock, sub: 'bicicletas',                                            modal:'bicicletas' },
-                { key:'cupones',  label:'Cupones',      value: fmt$(d.cupones_descuento??0), sub: (d.cupones_usados??0)+' usos',                      modal:'cupones' },
+                { key:'ventas',   label:'Ventas',      value: d.ventas,          sub: 'transacciones',                                              modal:'ventasKPI',    trend: trendVentas },
+                { key:'ingresos', label:'Ingresos',     value: fmt$(d.ingresos),  sub: 'en el periodo',                                              modal:'ingresosKPI',  trend: trendIngresos },
+                { key:'ticket',   label:'Ticket prom.', value: fmt$(d.ticket),    sub: 'por venta',                                                  modal:'ticketKPI',    trend: trendTicket },
+                { key:'clientes', label:'Clientes',     value: d.clientes,        sub: (d.clientes_nuevos??0)+' nuevos · '+(d.clientes_rec??0)+' rec.', modal:'clientesTipo', trend: trendClientes },
+                { key:'ots',      label:'OTs activas',  value: d.ots_activas,     sub: 'en taller ahora',                                            modal:'otsList',      trend: 0 },
+                { key:'stock',    label:'En stock',     value: SSR.biciStats.en_stock, sub: 'bicicletas',                                            modal:'bicicletas',   trend: 0 },
+                { key:'cupones',  label:'Cupones',      value: fmt$(d.cupones_descuento??0), sub: (d.cupones_usados??0)+' usos',                      modal:'cupones',      trend: 0 },
             ];
         },
 
-        // ── Init ────────────────────────────────────────────────────────────
+        get alertas() {
+            const items = [];
+            if (SSR.piezasBajas && SSR.piezasBajas.length) {
+                SSR.piezasBajas.forEach(p => {
+                    items.push({
+                        id: 'inv-'+p.id,
+                        mensaje: 'Stock bajo: '+p.nombre,
+                        detalle: 'Quedan '+p.stock+' unidades',
+                        prioridad: p.stock < 3 ? 'alta' : 'media'
+                    });
+                });
+            }
+            if (this.pedidos && this.pedidos.length) {
+                const pendientes = this.pedidos.filter(p => p.estado === 'pendiente');
+                if (pendientes.length) {
+                    items.push({
+                        id: 'ped-pend',
+                        mensaje: pendientes.length + ' pedido(s) pendiente(s)',
+                        detalle: 'Requieren atención',
+                        prioridad: 'media'
+                    });
+                }
+            }
+            if (this.ots && this.ots.length) {
+                const criticas = this.ots.filter(o => o.dias > 3);
+                if (criticas.length) {
+                    items.push({
+                        id: 'ot-crit',
+                        mensaje: criticas.length + ' OT(s) con más de 3 días',
+                        detalle: 'Revisar taller',
+                        prioridad: 'alta'
+                    });
+                }
+            }
+            return items.slice(0, 5);
+        },
+        get alertCount() {
+            return this.alertas.length;
+        },
+
+        // ── Init ──
         init() {
             this._clockTick();
             this.fetchStats();
@@ -685,7 +718,7 @@ function dashboard() {
 
         setPeriod(p) { this.periodo = p; if (p !== 'custom') this.fetchStats(); },
 
-        // ── Fetch stats (lee de estadisticas_diarias vía backend) ───────────
+        // ── Fetch stats ──
         async fetchStats() {
             this.loading = true;
             try {
@@ -710,6 +743,11 @@ function dashboard() {
                 this.ventasPersonal    = data.ventas_personal   || [];
                 this.diasPeriodo       = data.periodo?.dias     || 1;
 
+                this.pedidos = this.pedidos.map(p => ({
+                    ...p,
+                    fecha_relativa: timeAgo(p.fecha)
+                }));
+
                 this.$nextTick(() => {
                     setTimeout(() => {
                         this._renderIngresosChart();
@@ -721,7 +759,6 @@ function dashboard() {
             finally    { this.loading = false; }
         },
 
-        // ── Fetch detalle (lazy — solo al abrir modal) ───────────────────────
         async fetchDetalle(tipo, extra = {}) {
             this.modalLoading = true;
             this.modalContent = '';
@@ -735,14 +772,14 @@ function dashboard() {
             finally    { this.modalLoading = false; }
         },
 
-        // ── SVG financiero ──────────────────────────────────────────────────
-        _buildFinancialSVG({ containerId, data, anterior, labels, isMoney, yTicks, multiSeries }) {
+        // ── Gráficas (con soporte para líneas en multiSeries) ──
+        _buildFinancialSVG({ containerId, data, anterior, labels, isMoney, yTicks, multiSeries, chartType = 'bar' }) {
             const container = document.getElementById(containerId);
             if (!container) return;
             container.innerHTML = '';
 
             const d0    = isDark();
-            const W     = 500, H = 180, PAD_B = 20, PAD_T = 10;
+            const W     = 500, H = 180, PAD_B = 25, PAD_T = 15;
             const plotH = H - PAD_B - PAD_T;
 
             const isMulti = Array.isArray(multiSeries) && multiSeries.length > 0;
@@ -754,10 +791,10 @@ function dashboard() {
             if (n < 2) return;
 
             const xOf = i => (i / (n - 1)) * W;
-            const yOf = v => PAD_T + plotH - Math.min(v / maxVal, 1) * plotH;
+            const barWidth = Math.min(24, W / n * 0.6);
 
             const yAxisDiv = document.createElement('div');
-            yAxisDiv.style.cssText = 'display:flex;flex-direction:column-reverse;justify-content:space-between;padding-bottom:20px;margin-right:8px;min-width:28px;flex-shrink:0;';
+            yAxisDiv.style.cssText = 'display:flex;flex-direction:column-reverse;justify-content:space-between;padding-bottom:25px;margin-right:8px;min-width:32px;flex-shrink:0;';
             ticks.forEach(t => {
                 const s = document.createElement('span');
                 s.textContent = isMoney ? (t >= 1000 ? Math.round(t/1000)+'k' : t) : t;
@@ -768,7 +805,7 @@ function dashboard() {
             const flex    = document.createElement('div');
             flex.style.cssText = 'display:flex;position:relative;';
             const svgWrap = document.createElement('div');
-            svgWrap.style.cssText = 'flex:1;position:relative;height:180px;';
+            svgWrap.style.cssText = 'flex:1;position:relative;aspect-ratio:500/180;width:100%;';
 
             const NS = 'http://www.w3.org/2000/svg';
             const el = (tag, attrs) => {
@@ -777,55 +814,111 @@ function dashboard() {
                 return e;
             };
 
-            const svg = el('svg', { viewBox:`0 0 ${W} ${H}`, preserveAspectRatio:'none',
-                style:'width:100%;height:100%;display:block;overflow:visible;' });
-            const defs = el('defs', {});
-
-            if (!isMulti) {
-                const patId  = containerId + '-pat';
-                const clipId = containerId + '-clip';
-                const pat = el('pattern', { id:patId, x:'0', y:'0', width:'3', height:'200', patternUnits:'userSpaceOnUse' });
-                pat.appendChild(el('line', { x1:'0',y1:'0',x2:'0',y2:'200',
-                    stroke: d0?'rgba(255,255,255,0.12)':'rgba(0,0,0,0.10)', 'stroke-width':'1.2' }));
-                defs.appendChild(pat);
-                const ptsFlat = data.map((v,i)=>`${xOf(i)},${yOf(v)}`).join(' L ');
-                const areaD   = `M ${xOf(0)},${H-PAD_B} L ${ptsFlat} L ${xOf(n-1)},${H-PAD_B} Z`;
-                const clip    = el('clipPath', { id:clipId });
-                clip.appendChild(el('path', { d:areaD }));
-                defs.appendChild(clip);
-                svg.appendChild(defs);
-                svg.appendChild(el('rect', { x:'0',y:'0',width:W,height:H,
-                    fill:`url(#${patId})`, 'clip-path':`url(#${clipId})` }));
-            } else {
-                svg.appendChild(defs);
-            }
+            const svg = el('svg', { viewBox:`0 0 ${W} ${H}`, style:'width:100%;height:100%;display:block;overflow:visible;' });
 
             ticks.slice(1).forEach(t => {
-                svg.appendChild(el('line', { x1:'0',y1:yOf(t),x2:W,y2:yOf(t),
-                    stroke: d0?'rgba(255,255,255,0.04)':'rgba(0,0,0,0.045)', 'stroke-width':'0.5' }));
+                svg.appendChild(el('line', { x1:'0', y1:PAD_T + plotH - Math.min(t/maxVal,1)*plotH,
+                                            x2:W, y2:PAD_T + plotH - Math.min(t/maxVal,1)*plotH,
+                                            stroke: d0?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.04)',
+                                            'stroke-width':'0.5' }));
             });
 
-            const seriesList  = isMulti ? multiSeries : [{ data, label:'', color: d0?'#e5e7eb':'#111827', dashed:false }];
-            const dotsBySeries = [];
+            const seriesList = isMulti ? multiSeries : [{ data, label:'', color: d0?'#94a3b8':'#1f2937', dashed:false }];
+            const barData = [];
 
-            seriesList.forEach((series, si) => {
-                const pts   = series.data;
-                const color = series.color || (isMulti ? COLORS[si%6] : (d0?'#e5e7eb':'#111827'));
-                const poly  = el('polyline', { points: pts.map((v,i)=>`${xOf(i)},${yOf(v)}`).join(' '),
-                    fill:'none', stroke:color, 'stroke-width':'2',
-                    'stroke-linejoin':'round', 'stroke-linecap':'round' });
-                if (series.dashed) poly.setAttribute('stroke-dasharray', '5,4');
-                svg.appendChild(poly);
-                const dot = el('circle', { cx:'0',cy:'0',r:'4.5',
-                    fill: d0?'#1f2937':'#ffffff', stroke:color, 'stroke-width':'2', opacity:'0' });
-                svg.appendChild(dot);
-                dotsBySeries.push({ dot, data:pts, color });
-            });
+            const defs = el('defs', {});
+            const glowId = containerId + '-glow';
+            const filter = el('filter', { id:glowId, x:'-10%', y:'-10%', width:'120%', height:'120%' });
+            filter.appendChild(el('feDropShadow', { dx:'0', dy:'2', stdDeviation:'3', 'flood-color': d0?'#94a3b8':'#0f172a', 'flood-opacity':'0.3' }));
+            defs.appendChild(filter);
 
-            const stepX = Math.max(1, Math.floor(n/6));
+            const gradId = containerId + '-grad';
+            const grad = el('linearGradient', { id: gradId, x1:'0', y1:'0', x2:'0', y2:'1' });
+            grad.appendChild(el('stop', { offset:'0%',   'stop-color': d0 ? '#a3e635' : '#111827', 'stop-opacity': '0.22' }));
+            grad.appendChild(el('stop', { offset:'100%', 'stop-color': d0 ? '#a3e635' : '#111827', 'stop-opacity': '0' }));
+            defs.appendChild(grad);
+            svg.appendChild(defs);
+
+            // Si es multiSeries y chartType === 'line' -> líneas
+            if (isMulti && chartType === 'line') {
+                seriesList.forEach((series, si) => {
+                    const color = series.color || COLORS[si % COLORS.length];
+                    const pts = series.data;
+                    const linePts = pts.map((v,i) => `${xOf(i)},${PAD_T + plotH - Math.min(v/maxVal,1)*plotH}`);
+
+                    const areaPath = `M${linePts[0]} L${linePts.slice(1).join(' L')} L${xOf(n-1)},${PAD_T+plotH} L${xOf(0)},${PAD_T+plotH} Z`;
+                    svg.appendChild(el('path', { d: areaPath, fill: color + '18', stroke: 'none' }));
+
+                    svg.appendChild(el('path', {
+                        d: `M${linePts.join(' L')}`,
+                        fill: 'none',
+                        stroke: color,
+                        'stroke-width': '2',
+                        'stroke-linejoin': 'round',
+                        'stroke-linecap': 'round'
+                    }));
+
+                    pts.forEach((v, i) => {
+                        const cx = xOf(i);
+                        const cy = PAD_T + plotH - Math.min(v/maxVal,1)*plotH;
+                        svg.appendChild(el('circle', {
+                            cx, cy, r: '2.5',
+                            fill: color,
+                            stroke: d0 ? '#1f2937' : '#ffffff',
+                            'stroke-width': '0.5'
+                        }));
+                    });
+
+                    pts.forEach((val, i) => {
+                        if (!barData[i]) barData[i] = { label: labels[i], values: [] };
+                        barData[i].values.push({ label: series.label, val, color });
+                    });
+                });
+            } else {
+                // Comportamiento original (barras + área para serie única)
+                if (!isMulti) {
+                    const pts = seriesList[0].data;
+                    const linePts = pts.map((v,i) => `${xOf(i)},${PAD_T + plotH - Math.min(v/maxVal,1)*plotH}`);
+                    const areaPath = `M0,${PAD_T+plotH} L${linePts.join(' L')} L${W},${PAD_T+plotH} Z`;
+                    svg.appendChild(el('path', { d: areaPath, fill:`url(#${gradId})`, stroke:'none' }));
+                    svg.appendChild(el('path', {
+                        d: `M${linePts.join(' L')}`, fill:'none',
+                        stroke: d0 ? '#e2e8f0' : '#111827', 'stroke-width':'2',
+                        'stroke-linejoin':'round', 'stroke-linecap':'round'
+                    }));
+                }
+
+                seriesList.forEach((series, si) => {
+                    const color = series.color || COLORS[si % COLORS.length];
+                    const pts = series.data;
+                    const isMain = !isMulti && si === 0;
+
+                    pts.forEach((val, i) => {
+                        const x = xOf(i) - barWidth/2 + (isMulti ? (si - (seriesList.length-1)/2) * (barWidth * 0.4) : 0);
+                        const y = PAD_T + plotH - Math.min(val / maxVal, 1) * plotH;
+                        const height = Math.min(val / maxVal, 1) * plotH;
+
+                        const rect = el('rect', {
+                            x, y,
+                            width: barWidth,
+                            height: height,
+                            rx: 2,
+                            ry: 2,
+                            fill: isMain ? (d0 ? '#e2e8f0' : '#1e293b') : color,
+                            opacity: isMain ? 0.16 : 0.75,
+                        });
+                        svg.appendChild(rect);
+                        if (!barData[i]) barData[i] = { label: labels[i], values: [] };
+                        barData[i].values.push({ label: series.label, val, color });
+                    });
+                });
+            }
+
+            // Etiquetas X
+            const stepX = Math.max(1, Math.floor(n / 6));
             labels.forEach((lbl, i) => {
                 if (i % stepX !== 0 && i !== n-1) return;
-                const t = el('text', { x:xOf(i), y:H-5,
+                const t = el('text', { x:xOf(i), y:H-3,
                     'text-anchor': i===0?'start':i===n-1?'end':'middle',
                     'font-size':'9.5', fill: d0?'rgba(107,114,128,0.9)':'rgba(107,114,128,0.8)',
                     'font-family':"'Figtree',ui-sans-serif" });
@@ -833,59 +926,55 @@ function dashboard() {
                 svg.appendChild(t);
             });
 
-            const vLine = el('line', { x1:'0',y1:PAD_T-4,x2:'0',y2:H-PAD_B,
-                stroke: d0?'rgba(148,163,184,0.5)':'rgba(17,24,39,0.25)', 'stroke-width':'1', opacity:'0' });
-            svg.appendChild(vLine);
-            svg.appendChild(el('rect', { x:'0',y:'0',width:W,height:H, fill:'transparent', style:'cursor:crosshair' }));
-
-            const tip    = document.createElement('div');
+            // Tooltip
+            const tip = document.createElement('div');
             const tipBg  = d0?'rgba(17,24,39,0.98)':'rgba(255,255,255,0.99)';
             const tipBdr = d0?'rgba(55,65,81,0.9)':'rgba(209,213,219,0.9)';
             tip.style.cssText = `position:absolute;pointer-events:none;z-index:20;background:${tipBg};border:0.5px solid ${tipBdr};border-radius:12px;padding:9px 13px;opacity:0;transition:opacity 0.08s ease;white-space:nowrap;font-family:'Figtree',ui-sans-serif;min-width:115px;box-shadow:0 4px 20px ${d0?'rgba(0,0,0,0.5)':'rgba(0,0,0,0.08)'};`;
-
             if (isMulti) {
                 tip.innerHTML = `<div style="font-size:10px;color:${d0?'#9ca3af':'#6b7280'};margin-bottom:6px;font-weight:500;" class="tip-d"></div><div class="tip-rows"></div>`;
             } else {
                 tip.innerHTML = `<div style="font-size:10px;color:${d0?'#9ca3af':'#6b7280'};margin-bottom:5px;font-weight:500;" class="tip-d"></div><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:17px;font-weight:600;color:${d0?'#f3f4f6':'#111827'};letter-spacing:-0.4px;line-height:1;" class="tip-v"></span><span style="font-size:11px;font-weight:600;border-radius:6px;padding:2px 7px;line-height:1.5;display:none;" class="tip-p"></span></div><div style="font-size:10px;color:${d0?'#6b7280':'#9ca3af'};margin-top:4px;" class="tip-ant"></div>`;
             }
-
             svgWrap.appendChild(svg);
             svgWrap.appendChild(tip);
 
-            const tdEl   = tip.querySelector('.tip-d');
-            const tvEl   = tip.querySelector('.tip-v');
-            const tpEl   = tip.querySelector('.tip-p');
-            const taEl   = tip.querySelector('.tip-ant');
+            const tdEl = tip.querySelector('.tip-d');
+            const tvEl = tip.querySelector('.tip-v');
+            const tpEl = tip.querySelector('.tip-p');
+            const taEl = tip.querySelector('.tip-ant');
             const trRows = tip.querySelector('.tip-rows');
 
-            function onMove(clientX) {
+            let highlightIndex = -1;
+
+            function updateTip(clientX) {
                 const rect = svg.getBoundingClientRect();
                 const mx   = (clientX - rect.left) / rect.width * W;
                 const ci   = Math.max(0, Math.min(n-1, Math.round(mx/W*(n-1))));
-                const cx   = xOf(ci);
+                if (ci === highlightIndex) return;
+                highlightIndex = ci;
 
-                vLine.setAttribute('x1',cx); vLine.setAttribute('x2',cx); vLine.setAttribute('opacity','1');
-                dotsBySeries.forEach(({dot, data:pts}) => {
-                    dot.setAttribute('cx',cx); dot.setAttribute('cy',yOf(pts[ci])); dot.setAttribute('opacity','1');
-                });
                 tdEl.textContent = labels[ci];
 
                 if (isMulti) {
-                    trRows.innerHTML = seriesList.map((s,si) => {
-                        const val  = s.data[ci];
-                        const disp = isMoney ? fmt$(Math.round(val)) : Math.round(val)+' ventas';
-                        return `<div style="display:flex;align-items:center;gap:8px;font-size:11px;margin-top:3px;"><span style="width:7px;height:7px;border-radius:50%;flex-shrink:0;background:${s.color};"></span><span style="color:${d0?'#9ca3af':'#6b7280'};flex:1;">${s.label}</span><span style="font-weight:600;color:${d0?'#f3f4f6':'#111827'};">${disp}</span></div>`;
-                    }).join('');
+                    const values = barData[ci]?.values || [];
+                    trRows.innerHTML = values.map(v => `
+                        <div style="display:flex;align-items:center;gap:8px;font-size:11px;margin-top:3px;">
+                            <span style="width:7px;height:7px;border-radius:50%;flex-shrink:0;background:${v.color};"></span>
+                            <span style="color:${d0?'#9ca3af':'#6b7280'};flex:1;">${v.label}</span>
+                            <span style="font-weight:600;color:${d0?'#f3f4f6':'#111827'};">${isMoney ? fmt$(Math.round(v.val)) : Math.round(v.val)+' ventas'}</span>
+                        </div>
+                    `).join('');
                 } else {
                     const val  = data[ci];
                     const prev = anterior && anterior.some(v=>v>0) ? (anterior[ci]??null) : (ci>0?data[ci-1]:null);
                     const prevLabel = anterior && anterior.some(v=>v>0) ? 'periodo ant.' : 'día ant.';
                     let deltaStr = null, deltaForzado = null;
                     if (prev !== null) {
-                        if      (prev===0 && val===0) {}
+                        if (prev===0 && val===0) {}
                         else if (prev===0 && val>0)   { deltaForzado = {text:'▲ nuevo',isPos:true}; }
-                        else if (prev>0  && val===0)  { deltaStr = '-100.0'; }
-                        else                           { deltaStr = ((val-prev)/prev*100).toFixed(1); }
+                        else if (prev>0 && val===0)  { deltaStr = '-100.0'; }
+                        else                         { deltaStr = ((val-prev)/prev*100).toFixed(1); }
                     }
                     tvEl.textContent = isMoney ? fmt$(Math.round(val)) : Math.round(val)+' ventas';
                     if (deltaForzado) {
@@ -901,8 +990,8 @@ function dashboard() {
                 }
 
                 const iw   = svgWrap.clientWidth;
-                const tx   = (cx/W)*iw;
-                const ty   = (yOf(dotsBySeries[0].data[ci])/H)*svgWrap.clientHeight;
+                const tx   = (xOf(ci)/W)*iw;
+                const ty   = (PAD_T + plotH - Math.min((barData[ci]?.values[0]?.val || 0) / maxVal, 1) * plotH) / H * svgWrap.clientHeight;
                 const tipW = tip.offsetWidth||128;
                 const tipH = tip.offsetHeight||60;
                 tip.style.left    = Math.min(tx+14, iw-tipW-6)+'px';
@@ -910,15 +999,15 @@ function dashboard() {
                 tip.style.opacity = '1';
             }
 
-            function onLeave() {
-                dotsBySeries.forEach(({dot})=>dot.setAttribute('opacity','0'));
-                vLine.setAttribute('opacity','0'); tip.style.opacity='0';
+            function clearTip() {
+                highlightIndex = -1;
+                tip.style.opacity = '0';
             }
 
-            svg.addEventListener('mousemove',  e => onMove(e.clientX));
-            svg.addEventListener('mouseleave', onLeave);
-            svg.addEventListener('touchmove',  e => { e.preventDefault(); onMove(e.touches[0].clientX); }, { passive:false });
-            svg.addEventListener('touchend',   onLeave);
+            svg.addEventListener('mousemove', e => updateTip(e.clientX));
+            svg.addEventListener('mouseleave', clearTip);
+            svg.addEventListener('touchmove', e => { e.preventDefault(); updateTip(e.touches[0].clientX); }, { passive:false });
+            svg.addEventListener('touchend', clearTip);
 
             flex.appendChild(yAxisDiv);
             flex.appendChild(svgWrap);
@@ -954,10 +1043,16 @@ function dashboard() {
                 color:  COLORS[i%6],
                 dashed: i !== 0,
             }));
-            this._buildFinancialSVG({ containerId:'sucursales-chart-wrap', data:null, anterior:null,
-                labels, isMoney: metrica==='ingresos',
+            this._buildFinancialSVG({
+                containerId: 'sucursales-chart-wrap',
+                data: null,
+                anterior: null,
+                labels,
+                isMoney: metrica === 'ingresos',
                 yTicks: calcYTicks(Math.max(...multiSeries.flatMap(s=>s.data), 1)),
-                multiSeries });
+                multiSeries,
+                chartType: 'line'
+            });
         },
 
         _donutInited: false,
@@ -970,7 +1065,7 @@ function dashboard() {
                 data: {
                     labels: ['En stock','Vendidas','En reparación'],
                     datasets: [{ data:[d.en_stock,d.vendidas,d.en_reparacion],
-                        backgroundColor:['#111827','#6b7280','#9ca3af'], borderWidth:0, hoverOffset:4 }]
+                        backgroundColor:['#2563eb','#6b7280','#9ca3af'], borderWidth:0, hoverOffset:4 }]
                 },
                 options: { responsive:false, cutout:'74%', animation:{duration:700},
                     plugins:{ legend:{display:false},
@@ -984,13 +1079,91 @@ function dashboard() {
             this._donutInited = true;
         },
 
-        // ── Modales ──────────────────────────────────────────────────────────
+        // ── NUEVOS MÉTODOS PARA MODAL DE GRÁFICAS ──
+        openChartModal(type) {
+            if (this.loading) return;
+            if (type === 'sucursales' && !this.graficaSucursales.length) return;
+            if (type !== 'sucursales' && !this.graficaDias.length) return;
+
+            this.isChartModal = true;
+            this.modalOpen = true;
+            this.modalLoading = false;
+            const titles = { ingresos: 'Ingresos - Detalle', ventas: 'Ventas - Detalle', sucursales: 'Por sucursal - Detalle' };
+            this.modalTitle = titles[type] || 'Gráfica';
+            this.modalContent = `<div id="modal-chart-wrap" style="width:100%;height:400px;"></div>`;
+            
+            this.$nextTick(() => {
+                setTimeout(() => {
+                    this._renderChartModal(type);
+                }, 50);
+            });
+        },
+
+        closeModal() {
+            this.modalOpen = false;
+            this.isChartModal = false;
+            this.modalLoading = false;
+            this.modalContent = '';
+        },
+
+        _renderChartModal(type) {
+            const container = document.getElementById('modal-chart-wrap');
+            if (!container) return;
+            const labels = this.graficaDias.map(d => d.label);
+            
+            if (type === 'ingresos') {
+                const data = this.graficaDias.map(d => d.ingresos);
+                const anterior = this.graficaAnterior.map(d => d.ingresos);
+                this._buildFinancialSVG({
+                    containerId: 'modal-chart-wrap',
+                    data, anterior, labels,
+                    isMoney: true,
+                    yTicks: calcYTicks(Math.max(...data, 1))
+                });
+            } else if (type === 'ventas') {
+                const data = this.graficaDias.map(d => d.ventas);
+                const anterior = this.graficaAnterior.map(d => d.ventas);
+                this._buildFinancialSVG({
+                    containerId: 'modal-chart-wrap',
+                    data, anterior, labels,
+                    isMoney: false,
+                    yTicks: calcYTicks(Math.max(...data, 1))
+                });
+            } else if (type === 'sucursales') {
+                const metrica = this.sucursalMetrica;
+                const multiSeries = this.graficaSucursales.map((s, i) => ({
+                    label: s.nombre,
+                    data: s[metrica] || [],
+                    color: COLORS[i % COLORS.length],
+                    dashed: i !== 0,
+                }));
+                this._buildFinancialSVG({
+                    containerId: 'modal-chart-wrap',
+                    data: null,
+                    anterior: null,
+                    labels,
+                    isMoney: metrica === 'ingresos',
+                    yTicks: calcYTicks(Math.max(...multiSeries.flatMap(s => s.data), 1)),
+                    multiSeries,
+                    chartType: 'line'
+                });
+            }
+        },
+
+        // ── Modales (locales y con fetch) ── (sin cambios, solo adaptamos closeModal)
         async openModal(type, idx = 0) {
+            // Si el modal ya está abierto como gráfica, lo cerramos primero
+            if (this.isChartModal) {
+                this.closeModal();
+                // Pequeño delay para evitar conflictos
+                await new Promise(r => setTimeout(r, 150));
+            }
+
             this.modalOpen    = true;
             this.modalLoading = true;
             this.modalContent = '';
+            this.isChartModal = false;
 
-            // Modales que NO necesitan fetch (datos ya en memoria)
             const localHandlers = {
                 ingresosKPI:  () => this._modalIngresosKPI(),
                 ventasKPI:    () => this._modalVentasKPI(),
@@ -1013,7 +1186,6 @@ function dashboard() {
                 return;
             }
 
-            // Modales que necesitan fetch lazy
             const fetchHandlers = {
                 topModelos:      () => this._modalTopModelosFetch(),
                 topAccesorios:   () => this._modalTopAccesoriosFetch(),
@@ -1029,7 +1201,7 @@ function dashboard() {
             }
         },
 
-        // ── Modales locales (sin fetch) ──────────────────────────────────────
+        // ── Modales locales ──
         _modalIngresosKPI() {
             const d = this.kpiData;
             const totalMonto = this.metodosPago.reduce((s,m)=>s+m.monto,0);
@@ -1174,7 +1346,7 @@ function dashboard() {
             };
         },
 
-        // ── Modales con fetch lazy ────────────────────────────────────────────
+        // ── Modales con fetch ──
         async _modalTopModelosFetch() {
             this.modalTitle = 'Modelos más vendidos';
             const data = await this.fetchDetalle('top_modelos');
@@ -1197,7 +1369,6 @@ function dashboard() {
                 </div>`;
             }
 
-            // Detalle del modelo top
             if (data[0]) {
                 const det = await this.fetchDetalle('detalle_modelo', { id_modelo: data[0].id_modelo });
                 if (det) {
@@ -1305,7 +1476,6 @@ function dashboard() {
             const suc    = this.sucursales.find(v => v.nombre === p.sucursal) || {};
             this.modalTitle = pNom;
 
-            // Buscar serie del personal para la gráfica
             const serie = this.ventasPersonal.find(s => s.nombre === pNom);
 
             let content = this._table([
@@ -1313,7 +1483,6 @@ function dashboard() {
                 ['Estado',   p.activo ? 'Activo' : 'Inactivo'],
             ]);
 
-            // Fetch detalle de vendedor de la sucursal
             const idUsuario = this.sucursales.find(v => v.nombre === p.sucursal)?.id_usuario;
             if (idUsuario) {
                 const det = await this.fetchDetalle('vendedor_detalle', { id_usuario: idUsuario });
@@ -1353,7 +1522,7 @@ function dashboard() {
             }
         },
 
-        // ── Helpers HTML ─────────────────────────────────────────────────────
+        // ── Helpers HTML ──
         _stats(items) {
             const cols = Math.min(items.length, 4);
             return `<div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:8px;margin-bottom:20px;">`
@@ -1373,7 +1542,7 @@ function dashboard() {
             return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><div style="width:80px;font-size:11px;color:#6b7280;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${label}</div><div style="flex:1;height:4px;background:rgba(0,0,0,0.06);border-radius:99px;"><div style="width:${p}%;height:100%;background:#111827;border-radius:99px;"></div></div><div style="font-size:11px;font-weight:500;color:#374151;text-align:right;min-width:52px;">${disp}</div></div>`;
         },
 
-        // ── Echo ─────────────────────────────────────────────────────────────
+        // ── Echo ──
         _listenEcho() {
             if (!window.Echo) return;
             window.Echo.private(`enlace-vendedor.{{ auth()->user()->id_usuario }}`)

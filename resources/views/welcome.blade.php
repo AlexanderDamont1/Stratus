@@ -55,68 +55,68 @@
 
   <!-- HERO -->
   <section class="min-h-screen flex items-center px-6 pt-24 pb-16 max-w-3xl mx-auto">
-  <div class="w-full">
-    <div class="inline-flex items-center gap-2 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border border-yellow-300 dark:border-yellow-700 rounded-full px-3 py-1 text-xs mb-7 transition-all duration-700 ease-out hover:scale-105 hover:rotate-1 hover:shadow-md">
-      <i class="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_0_3px_rgba(34,197,94,0.15)] animate-pulse"></i>
-      Face beta · Prueba gratis 15 días
+    <div class="w-full">
+      <div class="inline-flex items-center gap-2 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border border-yellow-300 dark:border-yellow-700 rounded-full px-3 py-1 text-xs mb-7 transition-all duration-700 ease-out hover:scale-105 hover:rotate-1 hover:shadow-md">
+        <i class="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_0_3px_rgba(34,197,94,0.15)] animate-pulse"></i>
+        Face beta · Prueba gratis 15 días
+      </div>
+      <h1 class="text-4xl md:text-5xl font-semibold text-gray-900 dark:text-white leading-[1.05] tracking-tight mb-4 transition-all duration-700 ease-out">
+        Tu negocio. <em class="not-italic text-gray-500 dark:text-gray-400">Sin caos.</em>
+      </h1>
+      <p class="text-base md:text-lg text-gray-500 dark:text-gray-400 leading-relaxed max-w-md mb-8 transition-all duration-700 delay-100 ease-out">
+        ArrowK centraliza pedidos, inventario, clientes y garantías.
+        Reemplaza WhatsApp y hojas de cálculo con una plataforma
+        diseñada para distribuidores de bicicletas eléctricas en México.
+      </p>
+      <div class="flex flex-wrap items-center gap-3 mb-10">
+        <a href="#contacto" class="inline-flex items-center gap-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-6 py-2.5 rounded-full text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-100 transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-sm hover:shadow-md">
+          Solicitar demo gratis
+          <svg class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5l7 7-7 7" />
+          </svg>
+        </a>
+        <a href="#plataforma" class="inline-flex items-center gap-2 px-5 py-2.5 border border-gray-200 dark:border-gray-700 rounded-full text-sm text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 transform hover:scale-105 active:scale-95">Ver plataforma</a>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-full text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 transition-all duration-200 hover:scale-105 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm">
+          <svg class="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+          </svg>POS
+        </div>
+        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-full text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 transition-all duration-200 hover:scale-105 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm">
+          <svg class="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" />
+          </svg>Inventario
+        </div>
+        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-full text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 transition-all duration-200 hover:scale-105 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm">
+          <svg class="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+          </svg>Clientes
+        </div>
+        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-full text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 transition-all duration-200 hover:scale-105 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm">
+          <svg class="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          </svg>Garantías
+        </div>
+        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-full text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 transition-all duration-200 hover:scale-105 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm">
+          <svg class="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
+            <rect x="9" y="3" width="6" height="4" rx="2" />
+          </svg>Reparaciones
+        </div>
+        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-full text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 transition-all duration-200 hover:scale-105 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm">
+          <svg class="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <rect x="3" y="3" width="7" height="7" />
+            <rect x="14" y="3" width="7" height="7" />
+            <rect x="14" y="14" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" />
+          </svg>Dashboard
+        </div>
+      </div>
     </div>
-    <h1 class="text-4xl md:text-5xl font-semibold text-gray-900 dark:text-white leading-[1.05] tracking-tight mb-4 transition-all duration-700 ease-out">
-      Tu negocio. <em class="not-italic text-gray-500 dark:text-gray-400">Sin caos.</em>
-    </h1>
-    <p class="text-base md:text-lg text-gray-500 dark:text-gray-400 leading-relaxed max-w-md mb-8 transition-all duration-700 delay-100 ease-out">
-      ArrowK centraliza pedidos, inventario, clientes y garantías.
-      Reemplaza WhatsApp y hojas de cálculo con una plataforma
-      diseñada para distribuidores de bicicletas eléctricas en México.
-    </p>
-    <div class="flex flex-wrap items-center gap-3 mb-10">
-      <a href="#contacto" class="inline-flex items-center gap-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-6 py-2.5 rounded-full text-sm font-medium hover:bg-gray-800 dark:hover:bg-gray-100 transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-sm hover:shadow-md">
-        Solicitar demo gratis
-        <svg class="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5l7 7-7 7" />
-        </svg>
-      </a>
-      <a href="#plataforma" class="inline-flex items-center gap-2 px-5 py-2.5 border border-gray-200 dark:border-gray-700 rounded-full text-sm text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 transform hover:scale-105 active:scale-95">Ver plataforma</a>
-    </div>
-    <div class="flex flex-wrap gap-2">
-      <div class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-full text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 transition-all duration-200 hover:scale-105 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm">
-        <svg class="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
-          <line x1="3" y1="6" x2="21" y2="6" />
-        </svg>POS
-      </div>
-      <div class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-full text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 transition-all duration-200 hover:scale-105 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm">
-        <svg class="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" />
-        </svg>Inventario
-      </div>
-      <div class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-full text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 transition-all duration-200 hover:scale-105 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm">
-        <svg class="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-          <circle cx="9" cy="7" r="4" />
-        </svg>Clientes
-      </div>
-      <div class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-full text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 transition-all duration-200 hover:scale-105 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm">
-        <svg class="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-        </svg>Garantías
-      </div>
-      <div class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-full text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 transition-all duration-200 hover:scale-105 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm">
-        <svg class="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
-          <rect x="9" y="3" width="6" height="4" rx="2" />
-        </svg>Reparaciones
-      </div>
-      <div class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-full text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 transition-all duration-200 hover:scale-105 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm">
-        <svg class="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-          <rect x="3" y="3" width="7" height="7" />
-          <rect x="14" y="3" width="7" height="7" />
-          <rect x="14" y="14" width="7" height="7" />
-          <rect x="3" y="14" width="7" height="7" />
-        </svg>Dashboard
-      </div>
-    </div>
-  </div>
-</section>
+  </section>
 
   <!-- PROBLEMA / SOLUCIÓN -->
   <section id="problema" class="py-16 px-6 bg-white dark:bg-gray-900">
@@ -966,7 +966,7 @@
           </div>
         </div>
 
-        
+
         <!-- ===== PANEL: SUCURSALES ===== -->
         <div id="panel-sucursales" class="tab-panel transition-all duration-300 ease-out opacity-0 scale-95 hidden border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm transition-all duration-300 hover:shadow-md">
           <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
@@ -1978,109 +1978,116 @@
   <!-- Alpine.js y scripts -->
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
   <script>
-// Nav scroll
-window.addEventListener('scroll', () => {
-  const nav = document.getElementById('nav');
-  nav.classList.toggle('border-gray-200 dark:border-gray-700', window.scrollY > 20);
-  nav.classList.toggle('border-transparent', window.scrollY <= 20);
-}, { passive: true });
+    // Nav scroll
+    window.addEventListener('scroll', () => {
+      const nav = document.getElementById('nav');
+      nav.classList.toggle('border-gray-200 dark:border-gray-700', window.scrollY > 20);
+      nav.classList.toggle('border-transparent', window.scrollY <= 20);
+    }, {
+      passive: true
+    });
 
-// Mobile menu
-function toggleMenu() {
-  const m = document.getElementById('mob-menu');
-  const b = document.getElementById('burger');
-  const open = m.classList.contains('translate-y-0');
-  m.classList.toggle('translate-y-0', !open);
-  m.classList.toggle('pointer-events-auto', !open);
-  m.classList.toggle('-translate-y-full', open);
-  b.classList.toggle('open', !open);
-  document.body.style.overflow = open ? '' : 'hidden';
-}
-
-function closeMenu() {
-  document.getElementById('mob-menu').classList.remove('translate-y-0');
-  document.getElementById('mob-menu').classList.add('-translate-y-full');
-  document.getElementById('mob-menu').classList.remove('pointer-events-auto');
-  document.getElementById('burger').classList.remove('open');
-  document.body.style.overflow = '';
-}
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
-
-// ---- FUNCIÓN PRINCIPAL DE PESTAÑAS ----
-function activateTab(tabId) {
-  // 1. Ocultar todos los paneles y resetear clases de animación
-  document.querySelectorAll('.tab-panel').forEach(p => {
-    p.style.display = 'none';
-    p.classList.remove('opacity-100', 'scale-100');
-    p.classList.add('opacity-0', 'scale-95');
-  });
-
-  // 2. Mostrar y animar el panel seleccionado
-  const panel = document.getElementById('panel-' + tabId);
-  if (panel) {
-    panel.style.display = 'block';
-    // Forzar reflow para que la transición se active
-    panel.offsetHeight;
-    panel.classList.remove('opacity-0', 'scale-95');
-    panel.classList.add('opacity-100', 'scale-100');
-  }
-
-  // 3. Actualizar estilos de pestañas (usando clases Tailwind)
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    const isActive = btn.dataset.tab === tabId;
-    // Remover todas las clases de estado
-    btn.classList.remove('bg-gray-900', 'text-white', 'border-gray-900', 'bg-gray-50', 'text-gray-500', 'border-gray-200', 'dark:bg-gray-700', 'dark:text-gray-400', 'dark:border-gray-700', 'dark:bg-white', 'dark:text-gray-900', 'dark:border-white');
-    // Añadir las clases según estado
-    if (isActive) {
-      btn.classList.add('bg-gray-900', 'text-white', 'border-gray-900', 'dark:bg-white', 'dark:text-gray-900', 'dark:border-white');
-    } else {
-      btn.classList.add('bg-gray-50', 'text-gray-500', 'border-gray-200', 'dark:bg-gray-700', 'dark:text-gray-400', 'dark:border-gray-700');
+    // Mobile menu
+    function toggleMenu() {
+      const m = document.getElementById('mob-menu');
+      const b = document.getElementById('burger');
+      const open = m.classList.contains('translate-y-0');
+      m.classList.toggle('translate-y-0', !open);
+      m.classList.toggle('pointer-events-auto', !open);
+      m.classList.toggle('-translate-y-full', open);
+      b.classList.toggle('open', !open);
+      document.body.style.overflow = open ? '' : 'hidden';
     }
-  });
-}
 
-// 4. Asignar eventos a las pestañas
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', function() {
-    const tabId = this.dataset.tab;
-    activateTab(tabId);
-  });
-});
-
-// 5. Activar la primera pestaña por defecto (Pedidos)
-document.querySelector('.tab-btn.active')?.click();
-
-// Acordeones (sucursales)
-function toggleAcordeon(header) {
-  const container = header.parentElement;
-  const body = container.querySelector('div[style*="display: none;"]');
-  const arrow = header.querySelector('svg');
-  if (body) {
-    if (body.style.display === 'none') {
-      body.style.display = 'block';
-      if (arrow) arrow.style.transform = 'rotate(90deg)';
-    } else {
-      body.style.display = 'none';
-      if (arrow) arrow.style.transform = 'rotate(0deg)';
+    function closeMenu() {
+      document.getElementById('mob-menu').classList.remove('translate-y-0');
+      document.getElementById('mob-menu').classList.add('-translate-y-full');
+      document.getElementById('mob-menu').classList.remove('pointer-events-auto');
+      document.getElementById('burger').classList.remove('open');
+      document.body.style.overflow = '';
     }
-  }
-}
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeMenu();
+    });
 
-// Intersection Observer para animaciones al hacer scroll
-const obs = new IntersectionObserver(entries => {
-  entries.forEach(e => {
-    if (e.isIntersecting) {
-      e.target.classList.add('opacity-100', 'translate-y-0');
-      e.target.classList.remove('opacity-0', 'translate-y-5');
-      obs.unobserve(e.target);
+    // ---- FUNCIÓN PRINCIPAL DE PESTAÑAS ----
+    function activateTab(tabId) {
+      // 1. Ocultar todos los paneles y resetear clases de animación
+      document.querySelectorAll('.tab-panel').forEach(p => {
+        p.style.display = 'none';
+        p.classList.remove('opacity-100', 'scale-100');
+        p.classList.add('opacity-0', 'scale-95');
+      });
+
+      // 2. Mostrar y animar el panel seleccionado
+      const panel = document.getElementById('panel-' + tabId);
+      if (panel) {
+        panel.style.display = 'block';
+        // Forzar reflow para que la transición se active
+        panel.offsetHeight;
+        panel.classList.remove('opacity-0', 'scale-95');
+        panel.classList.add('opacity-100', 'scale-100');
+      }
+
+      // 3. Actualizar estilos de pestañas (usando clases Tailwind)
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        const isActive = btn.dataset.tab === tabId;
+        // Remover todas las clases de estado
+        btn.classList.remove('bg-gray-900', 'text-white', 'border-gray-900', 'bg-gray-50', 'text-gray-500', 'border-gray-200', 'dark:bg-gray-700', 'dark:text-gray-400', 'dark:border-gray-700', 'dark:bg-white', 'dark:text-gray-900', 'dark:border-white');
+        // Añadir las clases según estado
+        if (isActive) {
+          btn.classList.add('bg-gray-900', 'text-white', 'border-gray-900', 'dark:bg-white', 'dark:text-gray-900', 'dark:border-white');
+        } else {
+          btn.classList.add('bg-gray-50', 'text-gray-500', 'border-gray-200', 'dark:bg-gray-700', 'dark:text-gray-400', 'dark:border-gray-700');
+        }
+      });
     }
-  });
-}, { threshold: 0.1, rootMargin: '0px 0px -24px 0px' });
 
-document.querySelectorAll('.rv').forEach(el => {
-  el.classList.add('opacity-0', 'translate-y-5', 'transition', 'duration-700', 'ease-out');
-  obs.observe(el);
-});
+    // 4. Asignar eventos a las pestañas
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const tabId = this.dataset.tab;
+        activateTab(tabId);
+      });
+    });
+
+    // 5. Activar la primera pestaña por defecto (Pedidos)
+    document.querySelector('.tab-btn.active')?.click();
+
+    // Acordeones (sucursales)
+    function toggleAcordeon(header) {
+      const container = header.parentElement;
+      const body = container.querySelector('div[style*="display: none;"]');
+      const arrow = header.querySelector('svg');
+      if (body) {
+        if (body.style.display === 'none') {
+          body.style.display = 'block';
+          if (arrow) arrow.style.transform = 'rotate(90deg)';
+        } else {
+          body.style.display = 'none';
+          if (arrow) arrow.style.transform = 'rotate(0deg)';
+        }
+      }
+    }
+
+    // Intersection Observer para animaciones al hacer scroll
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('opacity-100', 'translate-y-0');
+          e.target.classList.remove('opacity-0', 'translate-y-5');
+          obs.unobserve(e.target);
+        }
+      });
+    }, {
+      threshold: 0.1,
+      rootMargin: '0px 0px -24px 0px'
+    });
+
+    document.querySelectorAll('.rv').forEach(el => {
+      el.classList.add('opacity-0', 'translate-y-5', 'transition', 'duration-700', 'ease-out');
+      obs.observe(el);
+    });
   </script>
 
   <style>

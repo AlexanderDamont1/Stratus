@@ -1,101 +1,219 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Cotización de reparación</title>
-<style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:Arial,Helvetica,sans-serif;background:#f4f4f5;color:#333}
-  .wrap{max-width:580px;margin:32px auto;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08)}
-  .hd{background:#111;padding:28px 32px}
-  .hd h1{color:#fff;font-size:19px;font-weight:700}
-  .hd p{color:#888;font-size:12px;margin-top:4px}
-  .bd{padding:28px 32px}
-  .bd p{font-size:14px;line-height:1.65;margin-bottom:14px;color:#444}
-  .label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#999;margin:22px 0 8px}
-  .desc-box{background:#f8f8f8;border-left:3px solid #111;border-radius:0 8px 8px 0;padding:12px 16px;font-size:13px;color:#333;line-height:1.5}
-  table{width:100%;border-collapse:collapse;margin-bottom:6px}
-  th{font-size:11px;color:#aaa;font-weight:600;text-align:left;padding:5px 8px;border-bottom:1px solid #eee}
-  td{font-size:13px;color:#555;padding:8px 8px;border-bottom:1px solid #f2f2f2}
-  td.r{text-align:right}
-  .total td{font-weight:700;color:#111;font-size:14px;border-top:2px solid #eee;border-bottom:none;padding-top:12px}
-  .btns{display:flex;gap:12px;margin:28px 0 4px;flex-wrap:wrap}
-  .btn{display:inline-block;padding:13px 26px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none;text-align:center}
-  .btn-yes{background:#111;color:#fff}
-  .btn-no{background:#f0f0f0;color:#666}
-  .expires{font-size:11px;color:#f59e0b;margin-top:12px}
-  .ft{background:#fafafa;border-top:1px solid #eee;padding:18px 32px}
-  .ft p{font-size:11px;color:#bbb;line-height:1.5}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes" />
+  <title>Cotización de reparación</title>
+
+  <link rel="preconnect" href="https://fonts.bunny.net" />
+  <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+
+  <style>
+    .ExternalClass, .ReadMsgBody { width: 100%; background-color: #f4f6f9; }
+    body, table, td, p, a, div, span, h1, h2 {
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+      font-family: 'Figtree', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+    }
+    body { margin: 0; padding: 0; background-color: #f4f6f9; color: #374151; line-height: 1.6; }
+    .yshortcuts a { border-bottom: none !important; }
+
+    @media screen and (max-width: 560px) {
+      .wrap-padding { padding: 24px 16px !important; }
+      .bd-padding   { padding: 24px 24px 12px !important; }
+      .ft-padding   { padding: 16px 24px !important; }
+      h1            { font-size: 22px !important; }
+      .btn-cell {
+        display: block !important;
+        width: 100% !important;
+        padding: 0 0 10px !important;
+      }
+      .btn-link {
+        width: 100% !important;
+        display: block !important;
+        text-align: center !important;
+        box-sizing: border-box !important;
+      }
+      table.tabla-piezas th:nth-child(2),
+      table.tabla-piezas td:nth-child(2) { display: none !important; }
+    }
+  </style>
 </head>
-<body>
-<div class="wrap">
 
-  <div class="hd">
-    <h1>{{ $nombreNegocio }}</h1>
-    <p>Cotización · {{ $cotizacion->id_cotizacion }}</p>
-  </div>
+<body style="margin:0; padding:0; background:#f4f6f9;">
 
-  <div class="bd">
-    <p>Hola, <strong>{{ $nombreCliente }}</strong>.</p>
-    <p>
-      Nuestro técnico revisó tu vehículo. Te compartimos la cotización
-      con el trabajo necesario y los costos para que puedas decidir.
-    </p>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#f4f6f9" style="background-color:#f4f6f9; width:100%;">
+    <tr>
+      <td align="center" class="wrap-padding" style="padding:40px 20px;">
 
-    <div class="label">Trabajo a realizar</div>
-    <div class="desc-box">{{ $cotizacion->descripcion_trabajo }}</div>
+        <!--[if mso]>
+        <table width="580" cellpadding="0" cellspacing="0" border="0" align="center" style="width:580px;">
+        <tr><td>
+        <![endif]-->
 
-    @if(!empty($cotizacion->piezas_detalle))
-    <div class="label">Piezas / componentes</div>
-    <table>
-      <thead>
-        <tr><th>Pieza</th><th style="text-align:center">Cant.</th><th style="text-align:right">Subtotal</th></tr>
-      </thead>
-      <tbody>
-        @foreach($cotizacion->piezas_detalle as $p)
-        <tr>
-          <td>{{ $p['nombre'] }}</td>
-          <td style="text-align:center">{{ $p['cantidad'] }}</td>
-          <td class="r">${{ number_format($p['subtotal'], 2) }}</td>
-        </tr>
-        @endforeach
-      </tbody>
-    </table>
-    @endif
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" align="center" style="max-width:580px; width:100%; background:#ffffff; border-radius:16px; border-collapse:separate; box-shadow:0 1px 3px rgba(0,0,0,0.04); border:1px solid #f3f4f6;">
 
-    <div class="label">Resumen de costos</div>
-    <table>
-      <tbody>
-        @if($cotizacion->costo_mano_obra > 0)
-        <tr><td>Mano de obra</td><td class="r">${{ number_format($cotizacion->costo_mano_obra, 2) }}</td></tr>
-        @endif
-        @if($cotizacion->costo_piezas > 0)
-        <tr><td>Piezas</td><td class="r">${{ number_format($cotizacion->costo_piezas, 2) }}</td></tr>
-        @endif
-        <tr class="total"><td>Total estimado</td><td class="r">${{ number_format($cotizacion->costo_total, 2) }}</td></tr>
-      </tbody>
-    </table>
+          <!-- CUERPO -->
+          <tr>
+            <td class="bd-padding" style="padding:32px 32px 12px;">
 
-    <p style="margin-top:20px">¿Deseas que procedamos con la reparación?</p>
+              <!-- Badge sky -->
+              <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:18px;">
+                <tr>
+                  <td style="background:#e0f2fe; border-radius:20px; padding:6px 14px;">
+                    <span style="font-size:11.5px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; color:#075985;">Cotización pendiente</span>
+                  </td>
+                </tr>
+              </table>
 
-    <div class="btns">
-      <a href="{{ $urlResponder }}?r=1" class="btn btn-yes">✓ Sí, proceder</a>
-      <a href="{{ $urlResponder }}?r=0" class="btn btn-no">No por ahora</a>
-    </div>
+              <h1 style="font-size:24px; line-height:1.3; font-weight:500; color:#111827; margin:0 0 6px; letter-spacing:-0.01em;">
+                {{ $nombreNegocio }}
+              </h1>
+              <p style="font-size:13px; color:#9ca3af; margin:0 0 24px;">
+                Cotización &middot; {{ $cotizacion->id_cotizacion }}
+              </p>
 
-    <p class="expires">
-      ⏰ Este enlace expira el
-      {{ $cotizacion->expires_at?->setTimezone('America/Mexico_City')->format('d \d\e F \d\e Y, H:i') }} hrs.
-    </p>
-  </div>
+              <p style="font-size:14px; line-height:1.7; margin:0 0 14px; color:#374151;">
+                Hola, <strong style="color:#111827; font-weight:600;">{{ $nombreCliente }}</strong>.
+              </p>
+              <p style="font-size:14px; line-height:1.7; margin:0 0 24px; color:#374151;">
+                Nuestro técnico revisó tu vehículo. Te compartimos la cotización
+                con el trabajo necesario y los costos para que puedas decidir.
+              </p>
 
-  <div class="ft">
-    <p>Si no solicitaste este servicio, puedes ignorar este mensaje.</p>
-    <p>{{ $nombreNegocio }}</p>
-  </div>
+              <!-- Trabajo a realizar: tarjeta con icono circular -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:26px;">
+                <tr>
+                  <td style="border:1px solid #f3f4f6; border-radius:12px; padding:16px;">
+                    <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                      <tr>
+                        <td width="36" style="vertical-align:top;">
+                          <table cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td width="32" height="32" align="center" valign="middle" style="background:#f3f4f6; border-radius:50%; font-size:14px;">🔧</td>
+                            </tr>
+                          </table>
+                        </td>
+                        <td style="vertical-align:top; padding-left:10px;">
+                          <p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:#9ca3af; margin:0 0 4px;">Trabajo a realizar</p>
+                          <p style="font-size:13px; color:#374151; line-height:1.55; margin:0;">{{ $cotizacion->descripcion_trabajo }}</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
 
-</div>
+              @if(!empty($cotizacion->piezas_detalle))
+              <p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:#9ca3af; margin:0 0 10px;">Piezas / componentes</p>
+              <table class="tabla-piezas" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:8px;">
+                <thead>
+                  <tr>
+                    <th align="left" style="font-size:11px; color:#9ca3af; font-weight:600; padding:6px 0; border-bottom:1px solid #f3f4f6;">Pieza</th>
+                    <th align="center" style="font-size:11px; color:#9ca3af; font-weight:600; padding:6px 0; border-bottom:1px solid #f3f4f6;">Cant.</th>
+                    <th align="right" style="font-size:11px; color:#9ca3af; font-weight:600; padding:6px 0; border-bottom:1px solid #f3f4f6;">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @foreach($cotizacion->piezas_detalle as $p)
+                  <tr>
+                    <td style="font-size:13px; color:#374151; padding:10px 0; border-bottom:1px solid #f9fafb;">{{ $p['nombre'] }}</td>
+                    <td align="center" style="font-size:13px; color:#374151; padding:10px 0; border-bottom:1px solid #f9fafb;">{{ $p['cantidad'] }}</td>
+                    <td align="right" style="font-size:13px; color:#374151; padding:10px 0; border-bottom:1px solid #f9fafb;">${{ number_format($p['subtotal'], 2) }}</td>
+                  </tr>
+                  @endforeach
+                </tbody>
+              </table>
+              @endif
+
+              <p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:#9ca3af; margin:22px 0 10px;">Resumen de costos</p>
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:8px;">
+                <tbody>
+                  @if($cotizacion->costo_mano_obra > 0)
+                  <tr>
+                    <td style="font-size:13px; color:#374151; padding:8px 0; border-bottom:1px solid #f9fafb;">Mano de obra</td>
+                    <td align="right" style="font-size:13px; color:#374151; padding:8px 0; border-bottom:1px solid #f9fafb;">${{ number_format($cotizacion->costo_mano_obra, 2) }}</td>
+                  </tr>
+                  @endif
+                  @if($cotizacion->costo_piezas > 0)
+                  <tr>
+                    <td style="font-size:13px; color:#374151; padding:8px 0; border-bottom:1px solid #f9fafb;">Piezas</td>
+                    <td align="right" style="font-size:13px; color:#374151; padding:8px 0; border-bottom:1px solid #f9fafb;">${{ number_format($cotizacion->costo_piezas, 2) }}</td>
+                  </tr>
+                  @endif
+                  <tr>
+                    <td style="font-weight:600; color:#111827; font-size:15px; padding:14px 0 8px; border-top:1px solid #e5e7eb;">Total estimado</td>
+                    <td align="right" style="font-weight:600; color:#111827; font-size:15px; padding:14px 0 8px; border-top:1px solid #e5e7eb;">${{ number_format($cotizacion->costo_total, 2) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <p style="font-size:14px; line-height:1.7; margin:24px 0 0; color:#374151;">
+                ¿Deseas que procedamos con la reparación?
+              </p>
+
+              <!-- Botones -->
+              <table cellpadding="0" cellspacing="0" border="0" style="margin:22px 0 4px;">
+                <tr>
+                  <td class="btn-cell" style="padding:0 12px 0 0;">
+                    <a href="{{ $urlResponder }}?r=1" class="btn-link" target="_blank"
+                       style="display:inline-block; background:#111827; color:#ffffff; font-size:14px; font-weight:600; text-decoration:none; padding:13px 26px; border-radius:10px; text-align:center;">
+                      Sí, proceder
+                    </a>
+                  </td>
+                  <td class="btn-cell">
+                    <a href="{{ $urlResponder }}?r=0" class="btn-link" target="_blank"
+                       style="display:inline-block; background:#ffffff; color:#374151; font-size:14px; font-weight:600; text-decoration:none; padding:12px 25px; border-radius:10px; border:1px solid #d1d5db; text-align:center;">
+                      No por ahora
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Nota de expiración -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:22px;">
+                <tr>
+                  <td style="border-top:1px solid #f3f4f6; padding-top:16px;">
+                    <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                      <tr>
+                        <td width="28" style="vertical-align:top;">
+                          <table cellpadding="0" cellspacing="0" border="0">
+                            <tr><td width="24" height="24" align="center" valign="middle" style="background:#fffbeb; border-radius:50%; font-size:11px;">⏰</td></tr>
+                          </table>
+                        </td>
+                        <td style="vertical-align:top; padding-left:8px;">
+                          <p style="font-size:12px; color:#9ca3af; line-height:1.55; margin:0;">
+                            Este enlace expira el <strong style="color:#6b7280;">{{ $cotizacion->expires_at?->setTimezone('America/Mexico_City')->locale('es')->translatedFormat('d \d\e F \d\e Y, H:i') }} hrs.</strong>
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td class="ft-padding" style="padding:20px 32px; border-top:1px solid #f3f4f6;" align="center">
+              <p style="font-size:11.5px; color:#9ca3af; line-height:1.6; margin:0;">
+                Si no solicitaste este servicio, puedes ignorar este mensaje &middot; {{ $nombreNegocio }}
+              </p>
+            </td>
+          </tr>
+
+        </table>
+
+        <!--[if mso]>
+        </td></tr>
+        </table>
+        <![endif]-->
+
+      </td>
+    </tr>
+  </table>
+
 </body>
 </html>

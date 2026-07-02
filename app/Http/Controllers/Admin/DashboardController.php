@@ -12,6 +12,9 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
+    // ─── SWITCH PARA MOCK (cambia a true para ver datos falsos) ──────────
+    private $usarMock = true;   // ← Pon true para pruebas, false para reales
+
     // ─── VISTA PRINCIPAL ─────────────────────────────────────────────────────
     public function index(Request $request)
     {
@@ -69,16 +72,20 @@ class DashboardController extends Controller
         ));
     }
 
-    // ─── STATS (AJAX) — lee de estadisticas_diarias ───────────────────────────
+    // ─── STATS (AJAX) — con soporte para mock ──────────────────────────────
     public function stats(Request $request)
     {
+        if ($this->usarMock) {
+            return $this->mockStats($request);
+        }
+
+        // ─── CÓDIGO REAL (sin cambios) ──────────────────────────────────────
         $user      = auth()->user();
         $idNegocio = $user->id_negocio;
 
         [$desde, $hasta] = $this->resolvePeriod($request);
         $diasPeriodo     = max(1, $desde->diffInDays($hasta) + 1);
 
-        // ── Leer filas del periodo desde la tabla pre-calculada ───────────────
         $cached = CatalogService::getDashboardStats(
             $idNegocio,
             $desde->toDateString(),
@@ -86,11 +93,9 @@ class DashboardController extends Controller
         );
 
         $filas = $cached
-        ? collect($cached['filas'])->map(fn($f) => (object) $f)
-        : collect();
+            ? collect($cached['filas'])->map(fn($f) => (object) $f)
+            : collect();
 
-
-        // ── KPIs agregados (simple suma de filas) ─────────────────────────────
         $ventasCount     = $filas->sum('ventas_count');
         $ingresosTotal   = (float) $filas->sum('ingresos_total');
         $descuentosTotal = (float) $filas->sum('descuentos_total');
@@ -100,7 +105,6 @@ class DashboardController extends Controller
         $cuponesUsados   = $filas->sum('cupones_usados');
         $cuponesDescuento= (float) $filas->sum('cupones_descuento');
 
-        // ── Tops del periodo (el que más se repite en los días) ───────────────
         $modeloTop = $filas
             ->whereNotNull('modelo_top_nombre')
             ->groupBy('modelo_top_nombre')
@@ -136,7 +140,6 @@ class DashboardController extends Controller
             ->sortByDesc('usos')
             ->first();
 
-        // ── Métodos de pago agregados ─────────────────────────────────────────
         $metodosPago = $filas
             ->flatMap(fn($f) => $f->metodos_pago ?? [])
             ->groupBy('metodo')
@@ -148,7 +151,6 @@ class DashboardController extends Controller
             ->sortByDesc('monto')
             ->values();
 
-        // ── Horas pico agregadas ──────────────────────────────────────────────
         $horasPico = $filas
             ->flatMap(fn($f) => $f->horas_pico ?? [])
             ->groupBy('hora')
@@ -156,7 +158,6 @@ class DashboardController extends Controller
             ->sortBy('hora')
             ->values();
 
-        // ── Sucursales agregadas ──────────────────────────────────────────────
         $sucursalesAgregadas = $filas
             ->flatMap(fn($f) => $f->sucursal_data ?? [])
             ->groupBy('id_usuario')
@@ -172,12 +173,11 @@ class DashboardController extends Controller
                     'unidades_bicis'      => $g->sum('unidades_bicis'),
                     'unidades_accesorios' => $g->sum('unidades_accesorios'),
                     'descuentos_total'    => (float) $g->sum('descuentos_total'),
-                    'aporte_pct'          => 0, // se recalcula abajo
+                    'aporte_pct'          => 0,
                 ];
             })
             ->values();
 
-        // Recalcular aporte_pct con totales reales del periodo
         $sucursalesAgregadas = $sucursalesAgregadas->map(function ($s) use ($ventasCount) {
             $s['aporte_pct'] = $ventasCount > 0
                 ? round($s['ventas_count'] / $ventasCount * 100, 1)
@@ -185,13 +185,11 @@ class DashboardController extends Controller
             return $s;
         })->sortByDesc('ingresos_total')->values();
 
-        // ── Gráfica: granularidad hora (hoy) o día (resto) ───────────────────
         if ($diasPeriodo === 1) {
             $fechas = collect(range(0, 23))
                 ->map(fn($h) => str_pad($h, 2, '0', STR_PAD_LEFT) . ':00')
                 ->toArray();
 
-            // Para hoy: query en vivo por hora (son muy pocas filas)
             $graficaDias = collect(range(0, 23))->map(function ($hora) use ($idNegocio, $desde) {
                 $row = DB::table('ventas')
                     ->where('id_negocio', $idNegocio)
@@ -220,12 +218,10 @@ class DashboardController extends Controller
                 ];
             });
 
-            // Sucursales por hora
             $graficaSucursales = $this->sucursalesPorHora($idNegocio, $desde, $fechas);
             $ventasPersonal    = $this->personalPorHora($idNegocio, $desde, $fechas);
 
         } else {
-            // Gráfica desde estadisticas_diarias — sin queries a ventas
             $fechas = collect(range(0, $diasPeriodo - 1))
                 ->map(fn($i) => $desde->copy()->addDays($i)->toDateString())
                 ->toArray();
@@ -242,7 +238,6 @@ class DashboardController extends Controller
                 ];
             });
 
-            // Periodo anterior desde la tabla también
             $desdeAnt   = $desde->copy()->subDays($diasPeriodo);
             $hastaAnt   = $hasta->copy()->subDays($diasPeriodo);
             $filasAnt   = EstadisticaDiaria::where('id_negocio', $idNegocio)
@@ -262,12 +257,10 @@ class DashboardController extends Controller
                 ];
             });
 
-            // Sucursales por día desde sucursal_data
             $graficaSucursales = $this->sucursalesPorDia($filas, $fechas, $fmt);
             $ventasPersonal    = $this->personalPorDia($idNegocio, $desde, $hasta, $fechas, $fmt);
         }
 
-        // ── Pedidos y OTs (estos siguen en vivo, son pocos registros) ────────
         $pedidoStats      = CatalogService::getPedidoStats($idNegocio);
         $pedidosRecientes = CatalogService::getPedidosRecientesByNegocio($idNegocio, 6)
             ->map(fn($p) => [
@@ -285,7 +278,6 @@ class DashboardController extends Controller
 
         $otsActivas = $this->getOtsActivas($idNegocio);
 
-        // ── Ventas hoy (siempre en vivo) ──────────────────────────────────────
         $ventasHoy = (int) DB::table('ventas')
             ->where('id_negocio', $idNegocio)
             ->whereDate('created_at', Carbon::today())
@@ -333,9 +325,14 @@ class DashboardController extends Controller
         ]);
     }
 
-    // ─── DETALLE (AJAX — lazy, solo cuando abre modal) ───────────────────────
+    // ─── DETALLE (AJAX) — con soporte para mock ──────────────────────────
     public function detalle(Request $request)
     {
+        if ($this->usarMock) {
+            return $this->mockDetalle($request);
+        }
+
+        // ─── CÓDIGO REAL ──────────────────────────────────────────────────────
         $user      = auth()->user();
         $idNegocio = $user->id_negocio;
         $tipo      = $request->input('tipo');
@@ -490,7 +487,7 @@ class DashboardController extends Controller
         return response()->json(['tipo' => $tipo, 'data' => $data]);
     }
 
-    // ─── HELPERS PRIVADOS ─────────────────────────────────────────────────────
+    // ─── HELPERS PRIVADOS (sin cambios) ─────────────────────────────────────
 
     private function sucursalesPorDia($filas, array $fechas, string $fmt): \Illuminate\Support\Collection
     {
@@ -626,5 +623,267 @@ class DashboardController extends Controller
                 'dias'   => $ot->created_at ? (int)$ot->created_at->diffInDays(now()) : 0,
             ])
             ->toArray();
+    }
+
+    // ─── MÉTODOS DE MOCK ──────────────────────────────────────────────────────
+
+    private function mockStats(Request $request)
+    {
+        // Definir días del periodo (30 días por defecto)
+        $dias = 30;
+        $hoy = Carbon::today();
+
+        // ── Gráfica de días ──────────────────────────────────────────
+        $labels = [];
+        $ingresos = [];
+        $ventas = [];
+        for ($i = $dias - 1; $i >= 0; $i--) {
+            $fecha = $hoy->copy()->subDays($i);
+            $labels[] = $fecha->format('d/m');
+            $ingresos[] = rand(20000, 120000);
+            $ventas[] = rand(3, 18);
+        }
+
+        // ── Periodo anterior (mock) ──────────────────────────────────
+        $graficaAnterior = array_map(fn() => [
+            'ventas'   => rand(2, 16),
+            'ingresos' => rand(15000, 100000),
+        ], range(1, $dias));
+
+        // ── Sucursales para gráfica ──────────────────────────────────
+        $sucursalesNombres = ['CDMX Centro', 'Guadalajara', 'Monterrey', 'Querétaro', 'Puebla'];
+        $graficaSucursales = [];
+        foreach ($sucursalesNombres as $nombre) {
+            $graficaSucursales[] = [
+                'nombre'   => $nombre,
+                'ventas'   => array_map(fn() => rand(1, 12), range(1, $dias)),
+                'ingresos' => array_map(fn() => rand(10000, 60000), range(1, $dias)),
+            ];
+        }
+
+        // ── Ventas por personal (para modal) ────────────────────────
+        $ventasPersonal = [
+            [
+                'nombre'   => 'María López',
+                'ventas'   => array_map(fn() => rand(1, 9), range(1, $dias)),
+                'ingresos' => array_map(fn() => rand(5000, 40000), range(1, $dias)),
+            ],
+            [
+                'nombre'   => 'Carlos Ruiz',
+                'ventas'   => array_map(fn() => rand(1, 7), range(1, $dias)),
+                'ingresos' => array_map(fn() => rand(4000, 30000), range(1, $dias)),
+            ],
+            [
+                'nombre'   => 'Ana Torres',
+                'ventas'   => array_map(fn() => rand(0, 5), range(1, $dias)),
+                'ingresos' => array_map(fn() => rand(0, 20000), range(1, $dias)),
+            ],
+        ];
+
+        // ── KPIs ──────────────────────────────────────────────────────
+        $totalIngresos = array_sum($ingresos);
+        $totalVentas = array_sum($ventas);
+        $clientesNuevos = rand(5, 15);
+        $clientesRec = rand(8, 25);
+        $kpi = [
+            'ventas'            => $totalVentas,
+            'ingresos'          => $totalIngresos,
+            'ticket'            => $totalVentas > 0 ? round($totalIngresos / $totalVentas) : 0,
+            'clientes'          => $clientesNuevos + $clientesRec,
+            'clientes_nuevos'   => $clientesNuevos,
+            'clientes_rec'      => $clientesRec,
+            'ots_activas'       => rand(2, 7),
+            'ventas_hoy'        => rand(5, 20),
+            'descuentos'        => rand(500, 8000),
+            'cupones_usados'    => rand(1, 12),
+            'cupones_descuento' => rand(300, 5000),
+        ];
+
+        // ── Tops ──────────────────────────────────────────────────────
+        $tops = [
+            'modelo'    => ['nombre' => 'Trek FX 3', 'unidades' => rand(6, 22)],
+            'config'    => ['config' => 'Batería 48V 20Ah', 'unidades' => rand(4, 14)],
+            'accesorio' => ['nombre' => 'Candado U-lock', 'unidades' => rand(5, 18)],
+            'combo'     => ['combo' => 'Kit luces + candado', 'uds' => rand(3, 10)],
+            'cupon'     => ['codigo' => 'BIENVENIDA10', 'usos' => rand(2, 8)],
+        ];
+
+        // ── Sucursales (lista) ──────────────────────────────────────
+        $sucursales = [];
+        foreach ($sucursalesNombres as $nombre) {
+            $ing = rand(60000, 280000);
+            $vent = rand(12, 45);
+            $sucursales[] = [
+                'id_usuario'          => rand(1, 20),
+                'nombre'              => $nombre,
+                'ventas_count'        => $vent,
+                'ingresos_total'      => $ing,
+                'ticket_promedio'     => $vent > 0 ? round($ing / $vent) : 0,
+                'unidades_bicis'      => rand(5, 30),
+                'unidades_accesorios' => rand(8, 55),
+                'descuentos_total'    => rand(400, 7000),
+                'aporte_pct'          => rand(5, 35),
+            ];
+        }
+
+        // ── Pedidos recientes ────────────────────────────────────────
+        $pedidosRecientes = [];
+        $clientes = ['Juan Pérez', 'Ana García', 'Luis Martínez', 'Carla Torres', 'Roberto Cruz', 'Mónica Díaz'];
+        $estados = ['pendiente', 'proceso', 'completado', 'pendiente', 'proceso'];
+        for ($i = 0; $i < 8; $i++) {
+            $pedidosRecientes[] = [
+                'id'      => 'PED-' . str_pad($i+1, 4, '0', STR_PAD_LEFT),
+                'estado'  => $estados[$i % count($estados)],
+                'monto'   => rand(2000, 18000),
+                'cliente' => $clientes[$i % count($clientes)],
+                'items'   => rand(1, 5),
+                'fecha'   => now()->subDays($i)->diffForHumans(),
+            ];
+        }
+
+        // ── OTs activas ──────────────────────────────────────────────
+        $otsActivas = [];
+        $tiposOT = ['Mantenimiento', 'Reparación', 'Instalación', 'Diagnóstico'];
+        $modelosOT = ['Trek FX 3', 'Giant Escape', 'Specialized Rockhopper'];
+        for ($i = 0; $i < 4; $i++) {
+            $otsActivas[] = [
+                'id'     => 'OT-' . str_pad($i+1, 3, '0', STR_PAD_LEFT),
+                'tipo'   => $tiposOT[$i % count($tiposOT)],
+                'estado' => ['pendiente', 'en_proceso', 'diagnostico'][$i % 3],
+                'modelo' => $modelosOT[$i % count($modelosOT)],
+                'dias'   => rand(1, 5),
+            ];
+        }
+
+        // ── Métodos de pago ──────────────────────────────────────────
+        $metodosPago = [
+            ['metodo' => 'tarjeta_credito', 'monto' => rand(30000, 90000), 'usos' => rand(10, 30)],
+            ['metodo' => 'efectivo',        'monto' => rand(15000, 50000), 'usos' => rand(6, 18)],
+            ['metodo' => 'transferencia',   'monto' => rand(5000, 25000),  'usos' => rand(2, 10)],
+        ];
+
+        // ── Horas pico ────────────────────────────────────────────────
+        $horasPico = [
+            ['hora' => 10, 'cnt' => rand(3, 10)],
+            ['hora' => 14, 'cnt' => rand(4, 14)],
+            ['hora' => 18, 'cnt' => rand(2, 8)],
+        ];
+
+        // ── Clientes tipo ─────────────────────────────────────────────
+        $clientesTipo = [
+            ['tipo' => 'Nuevos',      'cnt' => $kpi['clientes_nuevos']],
+            ['tipo' => 'Recurrentes', 'cnt' => $kpi['clientes_rec']],
+        ];
+
+        // ── Armar gráfica de días ────────────────────────────────────
+        $graficaDias = [];
+        foreach ($labels as $idx => $label) {
+            $graficaDias[] = [
+                'label'    => $label,
+                'ventas'   => $ventas[$idx],
+                'ingresos' => $ingresos[$idx],
+            ];
+        }
+
+        // ── Respuesta final ──────────────────────────────────────────
+        return response()->json([
+            'ventas_personal'    => $ventasPersonal,
+            'periodo' => [
+                'desde' => $hoy->copy()->subDays($dias-1)->toDateString(),
+                'hasta' => $hoy->toDateString(),
+                'dias'  => $dias,
+            ],
+            'kpi' => $kpi,
+            'tops' => $tops,
+            'grafica'            => $graficaDias,
+            'grafica_anterior'   => $graficaAnterior,
+            'grafica_sucursales' => $graficaSucursales,
+            'sucursales'         => $sucursales,
+            'pedidos'            => ['recientes' => $pedidosRecientes, 'stats' => ['pendientes' => rand(2,5), 'proceso' => rand(1,4)]],
+            'ots'                => $otsActivas,
+            'metodos_pago'       => $metodosPago,
+            'horas_pico'         => $horasPico,
+            'clientes_tipo'      => $clientesTipo,
+        ]);
+    }
+
+    private function mockDetalle(Request $request)
+    {
+        $tipo = $request->input('tipo');
+        $data = [];
+
+        switch ($tipo) {
+            case 'top_modelos':
+                $data = [
+                    ['id_modelo' => 1, 'nombre' => 'Trek FX 3',     'unidades' => 15, 'ingresos' => 180000],
+                    ['id_modelo' => 2, 'nombre' => 'Giant Escape',  'unidades' => 11, 'ingresos' => 120000],
+                    ['id_modelo' => 3, 'nombre' => 'Specialized Rockhopper', 'unidades' => 8, 'ingresos' => 95000],
+                    ['id_modelo' => 4, 'nombre' => 'Cannondale Quick', 'unidades' => 6, 'ingresos' => 72000],
+                ];
+                break;
+
+            case 'detalle_modelo':
+                $data = [
+                    'colores' => [
+                        ['color' => 'Rojo',   'cnt' => rand(4,10)],
+                        ['color' => 'Negro',  'cnt' => rand(3,8)],
+                        ['color' => 'Blanco', 'cnt' => rand(2,6)],
+                    ],
+                    'voltajes' => [
+                        ['voltaje' => '24V', 'cnt' => rand(2,6)],
+                        ['voltaje' => '36V', 'cnt' => rand(4,12)],
+                        ['voltaje' => '48V', 'cnt' => rand(5,10)],
+                    ],
+                ];
+                break;
+
+            case 'top_accesorios':
+                $data = [
+                    ['nombre' => 'Candado U-lock',       'unidades' => 18, 'ingresos' => 54000],
+                    ['nombre' => 'Kit de luces LED',     'unidades' => 14, 'ingresos' => 42000],
+                    ['nombre' => 'Casco urbano',         'unidades' => 10, 'ingresos' => 30000],
+                    ['nombre' => 'Porta teléfono',       'unidades' => 8,  'ingresos' => 16000],
+                ];
+                break;
+
+            case 'combos':
+                $data = [
+                    ['combo' => 'Trek FX 3 + Kit luces',         'uds' => 7],
+                    ['combo' => 'Giant Escape + Candado U-lock', 'uds' => 5],
+                    ['combo' => 'Specialized + Casco',           'uds' => 4],
+                ];
+                break;
+
+            case 'clientes':
+                $data = [
+                    'top_clientes' => [
+                        ['nombre' => 'Juan Pérez',     'compras' => 8, 'total_gastado' => 45000],
+                        ['nombre' => 'Ana García',     'compras' => 6, 'total_gastado' => 32000],
+                        ['nombre' => 'Luis Martínez',  'compras' => 5, 'total_gastado' => 28000],
+                        ['nombre' => 'Carla Torres',   'compras' => 4, 'total_gastado' => 22000],
+                    ],
+                ];
+                break;
+
+            case 'cupones':
+                $data = [
+                    ['codigo' => 'BIENVENIDA10', 'nombre' => 'Bienvenida',   'usos' => 8, 'total_descuento' => 2400],
+                    ['codigo' => 'VERANO20',     'nombre' => 'Verano 20%',   'usos' => 5, 'total_descuento' => 1800],
+                    ['codigo' => 'FLASH15',      'nombre' => 'Flash 15%',    'usos' => 3, 'total_descuento' => 900],
+                ];
+                break;
+
+            case 'vendedor_detalle':
+                $data = [
+                    ['nombre' => 'María López', 'ventas' => 28, 'ingresos' => 96000],
+                    ['nombre' => 'Carlos Ruiz', 'ventas' => 19, 'ingresos' => 65000],
+                ];
+                break;
+
+            default:
+                $data = [];
+        }
+
+        return response()->json(['tipo' => $tipo, 'data' => $data]);
     }
 }

@@ -147,7 +147,17 @@ Route::prefix('registro/google')->group(function () {
 */
 
 Route::middleware('auth')->group(function () {
-    // Simplemente apuntas al método del controlador
+    Route::get('/dashboard', function () {
+        $usuario = Auth::user();
+
+        if (! $usuario->emailVerificado()) {
+            return redirect()->route('verificacion.pendiente');
+        }
+
+        $controller = app(AuthenticatedSessionController::class);
+        return redirect($controller->dashboardPorRol($usuario->id_rol));
+    })->name('dashboard');
+
     Route::get('/verificacion-pendiente', [AuthenticatedSessionController::class, 'verificacionPendiente'])->name('verificacion.pendiente');
 
     Route::post('/reenviar-verificacion', [EmailVerificationController::class, 'reenviar'])
