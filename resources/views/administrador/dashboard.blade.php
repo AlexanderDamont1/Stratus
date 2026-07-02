@@ -22,13 +22,6 @@
                         <p class="text-[11px] text-gray-400 capitalize" x-text="todayLabel"></p>
                         <span class="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
                         <p class="text-[11px] text-gray-400 tabular-nums" x-text="clock"></p>
-                        <template x-if="!loading">
-                            <span class="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full"
-                                  :class="alertCount>0 ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400' : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400'">
-                                <span class="w-1.5 h-1.5 rounded-full" :class="alertCount>0 ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'"></span>
-                                <span x-text="alertCount>0 ? alertCount+' alertas' : 'Todo en orden'"></span>
-                            </span>
-                        </template>
                     </div>
                 </div>
             </div>
@@ -160,68 +153,76 @@
             </div>
         </div>
 
+        {{-- Gráficas principales: a todo el ancho de la vista --}}
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+
+            {{-- Ingresos --}}
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 flex flex-col cursor-pointer"
+                 @click="openChartModal('ingresos')">
+                <div class="px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 shrink-0 flex items-center justify-between">
+                    <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Ingresos</p>
+                    <span class="text-[10px] text-gray-400" x-text="periodoLabel"></span>
+                </div>
+                <div class="px-4 pb-4 pt-3 h-[200px]">
+                    <div id="ingresos-chart-wrap" class="h-full"></div>
+                </div>
+            </div>
+
+            {{-- Ventas --}}
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 flex flex-col cursor-pointer"
+                 @click="openChartModal('ventas')">
+                <div class="px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 shrink-0 flex items-center justify-between">
+                    <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Ventas</p>
+                    <span class="text-[10px] text-gray-400" x-text="periodoLabel"></span>
+                </div>
+                <div class="px-4 pb-4 pt-3 h-[200px]">
+                    <div id="ventas-chart-wrap" class="h-full"></div>
+                </div>
+            </div>
+
+            {{-- Sucursales --}}
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 flex flex-col cursor-pointer"
+                 @click="openChartModal('sucursales')">
+                <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 shrink-0">
+                    <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Por sucursal</p>
+                    <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700/50 rounded-lg p-0.5" @click.stop>
+                        <button class="text-[9px] font-semibold px-1.5 py-0.5 rounded-md transition-all"
+                                :class="sucursalMetrica==='ingresos' ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400'"
+                                @click="sucursalMetrica='ingresos'; $nextTick(()=>_renderSucursalesChart())">$</button>
+                        <button class="text-[9px] font-semibold px-1.5 py-0.5 rounded-md transition-all"
+                                :class="sucursalMetrica==='ventas' ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400'"
+                                @click="sucursalMetrica='ventas'; $nextTick(()=>_renderSucursalesChart())">#</button>
+                    </div>
+                </div>
+                <div class="px-4 pb-4 pt-3 h-[200px]" x-show="!loading && graficaSucursales.length > 0" x-cloak>
+                    <div id="sucursales-chart-wrap" class="h-full"></div>
+                </div>
+                <template x-if="!loading && graficaSucursales.length === 0">
+                    <div class="h-[200px] flex items-center justify-center">
+                        <p class="text-[12px] text-gray-400">Sin datos</p>
+                    </div>
+                </template>
+            </div>
+
+        </div>{{-- /gráficas principales --}}
+
         {{-- Grid principal --}}
         <div class="grid grid-cols-1 xl:grid-cols-[1fr_300px] gap-6">
 
-            {{-- Grid de tarjetas --}}
-            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 auto-rows-[300px]">
-
-                {{-- Ingresos --}}
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 flex flex-col cursor-pointer"
-                     @click="openChartModal('ingresos')">
-                    <div class="px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 shrink-0 flex items-center justify-between">
-                        <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Ingresos</p>
-                        <span class="text-[10px] text-gray-400" x-text="periodoLabel"></span>
-                    </div>
-                    <div class="px-4 pb-4 pt-3 flex-1 min-h-0">
-                        <div id="ingresos-chart-wrap" class="h-full"></div>
-                    </div>
-                </div>
-
-                {{-- Ventas --}}
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 flex flex-col cursor-pointer"
-                     @click="openChartModal('ventas')">
-                    <div class="px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 shrink-0 flex items-center justify-between">
-                        <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Ventas</p>
-                        <span class="text-[10px] text-gray-400" x-text="periodoLabel"></span>
-                    </div>
-                    <div class="px-4 pb-4 pt-3 flex-1 min-h-0">
-                        <div id="ventas-chart-wrap" class="h-full"></div>
-                    </div>
-                </div>
-
-                {{-- Sucursales --}}
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 flex flex-col cursor-pointer"
-                     @click="openChartModal('sucursales')">
-                    <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 shrink-0">
-                        <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Por sucursal</p>
-                        <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700/50 rounded-lg p-0.5" @click.stop>
-                            <button class="text-[9px] font-semibold px-1.5 py-0.5 rounded-md transition-all"
-                                    :class="sucursalMetrica==='ingresos' ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400'"
-                                    @click="sucursalMetrica='ingresos'; $nextTick(()=>_renderSucursalesChart())">$</button>
-                            <button class="text-[9px] font-semibold px-1.5 py-0.5 rounded-md transition-all"
-                                    :class="sucursalMetrica==='ventas' ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400'"
-                                    @click="sucursalMetrica='ventas'; $nextTick(()=>_renderSucursalesChart())">#</button>
-                        </div>
-                    </div>
-                    <div class="px-4 pb-4 pt-3 flex-1 min-h-0" x-show="!loading && graficaSucursales.length > 0" x-cloak>
-                        <div id="sucursales-chart-wrap" class="h-full"></div>
-                    </div>
-                    <template x-if="!loading && graficaSucursales.length === 0">
-                        <div class="flex-1 flex items-center justify-center">
-                            <p class="text-[12px] text-gray-400">Sin datos</p>
-                        </div>
-                    </template>
-                </div>
+            {{-- Grid de tarjetas ── usamos CSS columns (masonry) en vez de CSS grid:
+                 con contenido de altura variable (listas de sucursales, vendedores, etc.)
+                 un grid normal deja huecos porque la fila entera toma la altura de la
+                 tarjeta más alta. Con columns, cada tarjeta fluye según su propia altura. --}}
+            <div class="columns-1 sm:columns-2 xl:columns-3 gap-6 [&>*]:mb-6">
 
                 {{-- Clientes --}}
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all duration-200 flex flex-col"
+                <div class="break-inside-avoid bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all duration-200"
                      @click="openModal('clientesTipo')">
-                    <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 shrink-0">
+                    <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60">
                         <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Clientes</p>
                         <span class="text-[10px] text-gray-400">Ver →</span>
                     </div>
-                    <div class="p-5 flex-1 overflow-y-auto" x-show="!loading">
+                    <div class="p-5" x-show="!loading">
                         <div class="flex items-baseline gap-1.5 mb-4">
                             <p class="text-[26px] font-semibold tracking-tight leading-none text-gray-900 dark:text-gray-100" x-text="kpiData.clientes ?? '—'"></p>
                             <p class="text-[11px] text-gray-400">únicos</p>
@@ -240,13 +241,13 @@
                 </div>
 
                 {{-- Modelos top --}}
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all duration-200 flex flex-col"
+                <div class="break-inside-avoid bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all duration-200"
                      @click="openModal('topModelos')">
-                    <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 shrink-0">
+                    <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60">
                         <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Modelos top</p>
                         <span class="text-[10px] text-gray-400">Ver →</span>
                     </div>
-                    <div class="p-5 flex-1 overflow-y-auto" x-show="!loading">
+                    <div class="p-5" x-show="!loading">
                         <template x-if="!tops.modelo">
                             <p class="text-center text-gray-400 text-[11px] py-3">Sin ventas</p>
                         </template>
@@ -266,13 +267,13 @@
                 </div>
 
                 {{-- Accesorios y combos --}}
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all duration-200 flex flex-col"
+                <div class="break-inside-avoid bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all duration-200"
                      @click="openModal('topAccesorios')">
-                    <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 shrink-0">
+                    <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60">
                         <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Accesorios y combos</p>
                         <span class="text-[10px] text-gray-400">Ver →</span>
                     </div>
-                    <div class="p-5 flex-1 overflow-y-auto" x-show="!loading">
+                    <div class="p-5" x-show="!loading">
                         <template x-if="tops.accesorio">
                             <div>
                                 <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Accesorio top</p>
@@ -292,13 +293,13 @@
                 </div>
 
                 {{-- Cupones --}}
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all duration-200 flex flex-col"
+                <div class="break-inside-avoid bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all duration-200"
                      @click="openModal('cupones')">
-                    <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 shrink-0">
+                    <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60">
                         <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Cupones</p>
                         <span class="text-[10px] text-gray-400">Ver →</span>
                     </div>
-                    <div class="p-5 flex-1 overflow-y-auto" x-show="!loading">
+                    <div class="p-5" x-show="!loading">
                         <p class="text-[22px] font-semibold tracking-tight text-gray-900 dark:text-gray-100" x-text="fmt$(kpiData.cupones_descuento ?? 0)"></p>
                         <p class="text-[11px] text-gray-400 mb-3">en descuentos</p>
                         <div class="flex justify-between text-[11px]">
@@ -309,13 +310,13 @@
                 </div>
 
                 {{-- Inventario --}}
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all duration-200 flex flex-col"
+                <div class="break-inside-avoid bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all duration-200"
                      @click="openModal('bicicletas')">
-                    <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 shrink-0">
+                    <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60">
                         <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Inventario</p>
                         <span class="text-[10px] text-gray-400">Ver →</span>
                     </div>
-                    <div class="p-5 flex items-center gap-4 flex-1">
+                    <div class="p-5 flex items-center gap-4">
                         <canvas id="donut-chart" width="64" height="64" class="shrink-0"></canvas>
                         <div class="flex-1 space-y-2">
                             @foreach([
@@ -334,13 +335,13 @@
                 </div>
 
                 {{-- Aporte sucursal --}}
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all duration-200 flex flex-col"
+                <div class="break-inside-avoid bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all duration-200"
                      @click="openModal('sucursales')">
-                    <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 shrink-0">
+                    <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60">
                         <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Aporte sucursal</p>
                         <span class="text-[10px] text-gray-400">Ver →</span>
                     </div>
-                    <div class="p-5 flex-1 overflow-y-auto" x-show="!loading">
+                    <div class="p-5" x-show="!loading">
                         <template x-if="sucursales.length === 0">
                             <p class="text-center text-gray-400 text-[11px]">Sin ventas</p>
                         </template>
@@ -359,12 +360,12 @@
                 </div>
 
                 {{-- Stock por vendedor --}}
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 flex flex-col">
+                <div class="break-inside-avoid bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200">
                     @php $maxStock = collect($stockVendedores)->max('total') ?: 1; @endphp
-                    <div class="px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 shrink-0">
+                    <div class="px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60">
                         <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Stock por vendedor</p>
                     </div>
-                    <div class="p-5 space-y-3 flex-1 overflow-y-auto">
+                    <div class="p-5 space-y-3">
                         @foreach($stockVendedores as $i => $v)
                         <div class="flex items-center gap-3">
                             <span class="text-[11px] text-gray-500 dark:text-gray-400 w-[90px] shrink-0 truncate">{{ $v['nombre'] }}</span>
@@ -381,38 +382,6 @@
 
             {{-- Sidebar --}}
             <div class="space-y-6">
-
-                {{-- Alertas --}}
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm">
-                    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700/60">
-                        <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
-                            <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                            </svg>
-                            Alertas
-                        </p>
-                        <span class="text-[10px] text-gray-400" x-text="alertCount"></span>
-                    </div>
-                    <div x-show="!loading">
-                        <template x-if="!alertas.length">
-                            <div class="px-5 py-6 text-center text-[11px] text-gray-400">Sin alertas activas</div>
-                        </template>
-                        <template x-for="a in alertas" :key="a.id">
-                            <div class="flex items-start gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 last:border-0">
-                                <span class="w-2 h-2 rounded-full mt-1.5 shrink-0"
-                                      :class="{
-                                          'bg-red-500': a.prioridad === 'alta',
-                                          'bg-amber-500': a.prioridad === 'media',
-                                          'bg-blue-500': a.prioridad === 'baja'
-                                      }"></span>
-                                <div class="flex-1 min-w-0">
-                                    <p class="text-[12px] font-medium text-gray-800 dark:text-gray-200" x-text="a.mensaje"></p>
-                                    <p class="text-[10px] text-gray-400" x-text="a.detalle"></p>
-                                </div>
-                            </div>
-                        </template>
-                    </div>
-                </div>
 
                 {{-- Acciones recientes --}}
                 <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm">
@@ -496,19 +465,19 @@
 
     </div>{{-- /MAIN GRID --}}
 
-    {{-- ── MODAL (mejorado para gráficas ampliadas) ── --}}
+    {{-- ── MODAL (tamaño dinámico + transición suave para gráficas) ── --}}
     <div x-show="modalOpen" x-cloak
-         x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0"
-         x-transition:enter-end="opacity-100"
-         x-transition:leave="transition ease-in duration-150" x-transition:leave-end="opacity-0"
-         class="fixed inset-0 bg-black/20 backdrop-blur-[2px] flex items-center justify-center z-50 px-4"
-         @click.self="closeModal()" @keydown.escape.window="closeModal()">
+        x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100"
+        x-transition:leave="transition ease-in duration-150" x-transition:leave-end="opacity-0"
+        class="fixed inset-0 bg-black/20 backdrop-blur-[2px] flex items-center justify-center z-50 px-4"
+        @click.self="closeModal()" @keydown.escape.window="closeModal()">
         <div x-show="modalOpen"
-             x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2 scale-[.98]"
-             x-transition:enter-end="opacity-100 translate-y-0 scale-100"
-             x-transition:leave="transition ease-in duration-150" x-transition:leave-end="opacity-0 translate-y-2"
-             class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 w-full max-w-md max-h-[82vh] overflow-y-auto"
-             :class="isChartModal ? 'max-w-7xl' : 'max-w-md'">
+            x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2 scale-[.98]"
+            x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+            x-transition:leave="transition ease-in duration-150" x-transition:leave-end="opacity-0 translate-y-2"
+            class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 w-full max-h-[85vh] overflow-y-auto transition-[max-width] duration-300 ease-in-out"
+            :class="isChartModal ? modalChartWidthClass : 'max-w-md'">
             <div class="sticky top-0 bg-white dark:bg-gray-800 flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700 z-10">
                 <h3 class="text-[13px] font-semibold text-gray-900 dark:text-gray-100" x-html="modalTitle"></h3>
                 <button @click="closeModal()"
@@ -616,7 +585,8 @@ function dashboard() {
         // Modal
         modalOpen: false, modalLoading: false,
         modalTitle: '', modalContent: '',
-        isChartModal: false, // ← nuevo
+        isChartModal: false,
+        modalChartWidthClass: 'max-w-3xl', // ← tamaño dinámico del modal de gráficas
 
         _modalPeriodoParams() {
             if (this.periodo === 'custom' && this.customDesde && this.customHasta)
@@ -661,46 +631,6 @@ function dashboard() {
                 { key:'stock',    label:'En stock',     value: SSR.biciStats.en_stock, sub: 'bicicletas',                                            modal:'bicicletas',   trend: 0 },
                 { key:'cupones',  label:'Cupones',      value: fmt$(d.cupones_descuento??0), sub: (d.cupones_usados??0)+' usos',                      modal:'cupones',      trend: 0 },
             ];
-        },
-
-        get alertas() {
-            const items = [];
-            if (SSR.piezasBajas && SSR.piezasBajas.length) {
-                SSR.piezasBajas.forEach(p => {
-                    items.push({
-                        id: 'inv-'+p.id,
-                        mensaje: 'Stock bajo: '+p.nombre,
-                        detalle: 'Quedan '+p.stock+' unidades',
-                        prioridad: p.stock < 3 ? 'alta' : 'media'
-                    });
-                });
-            }
-            if (this.pedidos && this.pedidos.length) {
-                const pendientes = this.pedidos.filter(p => p.estado === 'pendiente');
-                if (pendientes.length) {
-                    items.push({
-                        id: 'ped-pend',
-                        mensaje: pendientes.length + ' pedido(s) pendiente(s)',
-                        detalle: 'Requieren atención',
-                        prioridad: 'media'
-                    });
-                }
-            }
-            if (this.ots && this.ots.length) {
-                const criticas = this.ots.filter(o => o.dias > 3);
-                if (criticas.length) {
-                    items.push({
-                        id: 'ot-crit',
-                        mensaje: criticas.length + ' OT(s) con más de 3 días',
-                        detalle: 'Revisar taller',
-                        prioridad: 'alta'
-                    });
-                }
-            }
-            return items.slice(0, 5);
-        },
-        get alertCount() {
-            return this.alertas.length;
         },
 
         // ── Init ──
@@ -803,9 +733,9 @@ function dashboard() {
             });
 
             const flex    = document.createElement('div');
-            flex.style.cssText = 'display:flex;position:relative;';
+            flex.style.cssText = 'display:flex;position:relative;height:100%;';
             const svgWrap = document.createElement('div');
-            svgWrap.style.cssText = 'flex:1;position:relative;aspect-ratio:500/180;width:100%;';
+            svgWrap.style.cssText = 'flex:1;position:relative;width:100%;height:100%;';
 
             const NS = 'http://www.w3.org/2000/svg';
             const el = (tag, attrs) => {
@@ -814,7 +744,7 @@ function dashboard() {
                 return e;
             };
 
-            const svg = el('svg', { viewBox:`0 0 ${W} ${H}`, style:'width:100%;height:100%;display:block;overflow:visible;' });
+            const svg = el('svg', { viewBox:`0 0 ${W} ${H}`, preserveAspectRatio:'none', style:'width:100%;height:100%;display:block;overflow:visible;' });
 
             ticks.slice(1).forEach(t => {
                 svg.appendChild(el('line', { x1:'0', y1:PAD_T + plotH - Math.min(t/maxVal,1)*plotH,
@@ -1079,7 +1009,7 @@ function dashboard() {
             this._donutInited = true;
         },
 
-        // ── NUEVOS MÉTODOS PARA MODAL DE GRÁFICAS ──
+        // ── MÉTODOS PARA MODAL DE GRÁFICAS (tamaño dinámico) ──
         openChartModal(type) {
             if (this.loading) return;
             if (type === 'sucursales' && !this.graficaSucursales.length) return;
@@ -1090,13 +1020,32 @@ function dashboard() {
             this.modalLoading = false;
             const titles = { ingresos: 'Ingresos - Detalle', ventas: 'Ventas - Detalle', sucursales: 'Por sucursal - Detalle' };
             this.modalTitle = titles[type] || 'Gráfica';
-            this.modalContent = `<div id="modal-chart-wrap" style="width:100%;height:400px;"></div>`;
-            
+
+            // Calcula el ancho del modal según la cantidad de datos/series
+            this.modalChartWidthClass = this._chartModalSize(type);
+
+            this.modalContent = `<div id="modal-chart-wrap" style="width:100%;height:420px;"></div>`;
+
             this.$nextTick(() => {
                 setTimeout(() => {
                     this._renderChartModal(type);
                 }, 50);
             });
+        },
+
+        // Determina el tamaño del modal según el volumen de datos a graficar
+        _chartModalSize(type) {
+            const n = this.graficaDias.length || 0;
+            if (type === 'sucursales') {
+                const series = this.graficaSucursales.length;
+                if (series > 5 || n > 30) return 'max-w-6xl';
+                if (series > 2 || n > 14) return 'max-w-5xl';
+                return 'max-w-4xl';
+            }
+            if (n > 30) return 'max-w-6xl';
+            if (n > 14) return 'max-w-5xl';
+            if (n > 7)  return 'max-w-4xl';
+            return 'max-w-3xl';
         },
 
         closeModal() {
@@ -1150,12 +1099,11 @@ function dashboard() {
             }
         },
 
-        // ── Modales (locales y con fetch) ── (sin cambios, solo adaptamos closeModal)
+        // ── Modales (locales y con fetch) ──
         async openModal(type, idx = 0) {
             // Si el modal ya está abierto como gráfica, lo cerramos primero
             if (this.isChartModal) {
                 this.closeModal();
-                // Pequeño delay para evitar conflictos
                 await new Promise(r => setTimeout(r, 150));
             }
 
