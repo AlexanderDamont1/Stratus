@@ -109,7 +109,7 @@ class PersonalController extends Controller
                 ->first();
 
             if ($reg) {
-                $tieneVentas = \App\Models\VentaVendedor::where('id_personal', $reg->id_personal)->exists();
+                $tieneVentas = \App\Models\Venta::where('id_personal', $reg->id_personal)->exists();
                 $tieneVentas ? $reg->update(['activo' => false]) : $reg->delete();
             }
         }

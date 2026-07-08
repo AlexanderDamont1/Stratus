@@ -47,6 +47,12 @@ return new class extends Migration
             $table->string('cupon_top_codigo', 30)->nullable();
             $table->unsignedSmallInteger('cupon_top_usos')->default(0);
 
+            // ── Taller / Órdenes de trabajo ───────────────────────────────
+            $table->unsignedSmallInteger('ots_creadas')->default(0);
+            $table->unsignedSmallInteger('ots_cerradas')->default(0);
+            $table->decimal('ots_ingresos_total', 12, 2)->default(0);
+            $table->unsignedInteger('ots_tiempo_promedio_horas')->default(0);
+
             // ── JSONs ─────────────────────────────────────────────────────
             $table->json('sucursal_data')->nullable();  // ver estructura abajo
             $table->json('horas_pico')->nullable();     // [{hora:11, cnt:3}, ...]

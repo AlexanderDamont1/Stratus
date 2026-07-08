@@ -613,7 +613,7 @@ class VentaController extends Controller
             CatalogService::invalidateSeccion(null, $user->id_negocio);
             CatalogService::invalidateVentasByVendedor($user->id_negocio, $user->id_usuario);
             CatalogService::invalidateInventario($user->id_negocio, $user->id_usuario);
-            CatalogService::invalidateDashboardStats($user->id_negocio);
+           CatalogService::invalidateDashboardStats($user->id_negocio, now()->toDateString());
 
             // ── Broadcasts ────────────────────────────────────────────────
             foreach ($eventosBicicleta as $ev) {

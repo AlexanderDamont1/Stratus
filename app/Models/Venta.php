@@ -19,7 +19,7 @@ class Venta extends Model
         'id_negocio',
         'id_cliente',
         'id_usuario',
-      
+        'id_personal',
         'id_cupon',
         'descuento_total',
         'total',

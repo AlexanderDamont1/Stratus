@@ -7,8 +7,8 @@
     x-init="init()"
 >
 
-    {{-- ── TOPBAR ── --}}
-    <div class="sticky top-0 z-30 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 px-6 sm:px-8 py-4">
+    {{-- ── TOPBAR (solo escritorio) ── --}}
+    <div class="hidden lg:block sticky top-0 z-30 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 px-6 sm:px-8 py-4">
         <div class="flex items-center justify-between gap-4 flex-wrap">
             <div class="flex items-center gap-3 min-w-0">
                 <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-800 to-gray-600 dark:from-gray-200 dark:to-gray-400 flex items-center justify-center shrink-0 text-white dark:text-gray-900 font-semibold text-[14px] shadow-sm">
@@ -26,7 +26,8 @@
                 </div>
             </div>
 
-            <div class="flex items-center gap-3 flex-wrap">
+            <div class="hidden lg:flex items-center gap-3 flex-wrap">
+                {{-- Botones de periodo --}}
                 <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700/50 rounded-xl p-1">
                     <template x-for="p in presets.filter(x=>x.key!=='custom')" :key="p.key">
                         <button
@@ -47,6 +48,29 @@
                         Rango
                     </button>
                 </div>
+
+                <!-- NUEVO: Selector de sucursal -->
+                <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700/50 rounded-xl p-1">
+                    <button
+                        class="text-[11px] font-medium px-3.5 py-1.5 rounded-lg transition-all duration-150"
+                        :class="!sucursalSeleccionada
+                            ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm ring-1 ring-gray-200 dark:ring-gray-600'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'"
+                        @click="setSucursal(null)">
+                        Todas
+                    </button>
+                    <template x-for="s in sucursalesDisponibles" :key="'suc-sel-'+s.id_usuario">
+                        <button
+                            class="text-[11px] font-medium px-3.5 py-1.5 rounded-lg transition-all duration-150 max-w-[110px] truncate"
+                            :class="sucursalSeleccionada===s.id_usuario
+                                ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm ring-1 ring-gray-200 dark:ring-gray-600'
+                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'"
+                            @click="setSucursal(s.id_usuario)"
+                            x-text="s.nombre">
+                        </button>
+                    </template>
+                </div>
+
                 <div x-show="periodo==='custom'" x-cloak
                      x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-x-1"
                      x-transition:enter-end="opacity-100 translate-x-0"
@@ -94,15 +118,256 @@
     </div>
     @endif
 
-    {{-- ── MAIN GRID ── --}}
-    <div class="max-w-screen-2xl mx-auto px-6 py-6 space-y-6">
+    {{-- ══════════════════════════════════════════════════════════════ --}}
+    {{-- ═══════════════════  MOBILE HOME (estilo banca)  ═══════════════ --}}
+    {{-- ══════════════════════════════════════════════════════════════ --}}
+    <div class="lg:hidden pb-6">
+
+        {{-- Encabezado simple (reemplaza al topbar oculto en mobile) --}}
+        <div class="px-5 pt-5 pb-1 flex items-center justify-between">
+            <div>
+                <p class="text-[20px] font-semibold text-gray-900 dark:text-gray-100 tracking-tight">
+                    {{ auth()->user()->negocio->nombre_negocio ?? 'Panel' }}
+                </p>
+                <p class="text-[11px] text-gray-400 capitalize" x-text="todayLabel"></p>
+            </div>
+            <div class="w-10 h-10 rounded-full bg-gray-900 dark:bg-gray-100 flex items-center justify-center text-white dark:text-gray-900 font-semibold text-[14px] shrink-0">
+                {{ strtoupper(substr(auth()->user()->negocio->nombre_negocio ?? 'A', 0, 1)) }}
+            </div>
+        </div>
+
+        {{-- selector de periodo integrado en la tarjeta --}}
+        <div class="flex gap-1.5 mt-3 overflow-x-auto no-scrollbar">
+            <template x-for="p in presets.filter(x=>x.key!=='custom')" :key="'mp-'+p.key">
+                <button
+                    class="shrink-0 text-[10.5px] font-medium px-3 py-1.5 rounded-full transition-all"
+                    :class="periodo===p.key
+                        ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
+                        : 'bg-gray-50 dark:bg-gray-700/50 text-gray-400'"
+                    @click="setPeriod(p.key)"
+                    x-text="p.label">
+                </button>
+            </template>
+            <button
+                class="shrink-0 text-[10.5px] font-medium px-3 py-1.5 rounded-full transition-all"
+                :class="periodo==='custom'
+                    ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
+                    : 'bg-gray-50 dark:bg-gray-700/50 text-gray-400'"
+                @click="setPeriod('custom')">
+                Rango
+            </button>
+        </div>
+        <div x-show="periodo==='custom'" x-cloak class="flex items-center gap-2 mt-2">
+            <input type="date" x-model="customDesde" @change="fetchStats()"
+                   class="flex-1 text-[11px] px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-400">
+            <span class="text-gray-400">–</span>
+            <input type="date" x-model="customHasta" @change="fetchStats()"
+                   class="flex-1 text-[11px] px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-400">
+        </div>
+
+        {{-- HERO — Ingresos totales, estilo Revnu (tarjeta blanca) --}}
+        <div class="mx-4 mt-3 rounded-3xl bg-gradient-to-br from-gray-900 to-gray-800 dark:from-gray-100 dark:to-gray-200 p-6 relative overflow-hidden shadow-xl">
+            <div class="flex items-center justify-between mb-1">
+                <p class="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-[0.12em]">Ingresos totales</p>
+                <p class="text-[10px] text-gray-400 dark:text-gray-500 shrink-0" x-text="periodoLabel"></p>
+            </div>
+            <div class="flex items-end gap-2">
+                <p class="text-[34px] font-bold tracking-tight leading-none text-white dark:text-gray-900"
+                x-text="kpiData.ingresos ? fmt$(kpiData.ingresos) : '$0.00'"></p>
+                <span x-show="kpis[1]?.trend"
+                    class="text-[9px] font-semibold px-1.5 py-0.5 rounded-full mb-1"
+                    :class="kpis[1]?.trend > 0 ? 'text-emerald-300 bg-emerald-900/40 dark:text-emerald-700 dark:bg-emerald-100/60' : 'text-red-300 bg-red-900/40 dark:text-red-700 dark:bg-red-100/60'"
+                    x-text="(kpis[1]?.trend > 0 ? '↑' : '↓') + ' ' + Math.abs(kpis[1]?.trend||0).toFixed(1) + '%'"></span>
+            </div>
+
+            {{-- sparkline --}}
+            <div class="relative h-[64px] mt-4">
+                <canvas id="ingresos-chart-mobile"></canvas>
+                <div id="ingresos-chart-mobile-empty" class="hidden absolute inset-0 flex flex-col items-center justify-center gap-1.5">
+                    <svg class="w-7 h-7 text-gray-200 dark:text-gray-800" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <path d="M14 2v6h6"/>
+                        <path d="M9 15l-1.5 1.5M15 15l1.5 1.5M7.5 16.5L9 15M16.5 16.5L15 15"/>
+                    </svg>
+                    <p class="text-[10px] text-gray-200 dark:text-gray-800 font-medium">Aún no hay datos</p>
+                </div>
+            </div>
+
+            {{-- Stats row — sin clientes, solo ventas y ticket --}}
+            <div class="flex items-center gap-4 mt-4 pt-4 border-t border-white/10 dark:border-gray-900/10">
+                <div class="flex-1 text-center">
+                    <p class="text-[15px] font-semibold text-white dark:text-gray-900" x-text="kpis[0]?.value ?? '0'"></p>
+                    <p class="text-[9px] text-gray-400 dark:text-gray-600 mt-0.5">Ventas</p>
+                </div>
+                <div class="w-px h-8 bg-white/10 dark:bg-gray-900/10"></div>
+                <div class="flex-1 text-center">
+                    <p class="text-[15px] font-semibold text-white dark:text-gray-900" x-text="kpis[2]?.value ?? '$0.00'"></p>
+                    <p class="text-[9px] text-gray-400 dark:text-gray-600 mt-0.5">Ticket prom.</p>
+                </div>
+            </div>
+        </div>
+
+        
+        {{-- Movimientos — feed de ventas estilo banca ("+monto Sucursal") --}}
+        <div class="mx-4 mt-4 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm">
+            <div class="flex items-center justify-between px-5 py-4">
+                <p class="text-[14px] font-semibold text-gray-900 dark:text-gray-100">Ingresos Recientes</p>
+                <a href="{{ url('/admin/movimientos') }}" class="text-[11px] font-medium text-gray-400">Ver todos →</a>
+            </div>
+
+            <template x-if="feedVentas.length === 0">
+                <div class="flex flex-col items-center justify-center gap-2 py-8">
+                    <svg class="w-9 h-9 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <path d="M14 2v6h6"/>
+                        <path d="M9 15l-1.5 1.5M15 15l1.5 1.5M7.5 16.5L9 15M16.5 16.5L15 15"/>
+                        <path d="M9 11h.01M15 11h.01"/>
+                    </svg>
+                    <p class="text-gray-100 dark:text-gray-800 text-[11px] font-medium">Aún no hay datos para mostrar</p>
+                </div>
+            </template>
+
+            <template x-for="v in feedVentas.slice(0,8)" :key="'fv-'+v.id_venta">
+                <div :class="{'animate-new-feed': v.animate}"
+                     class="feed-item-enter flex items-center gap-3 px-5 py-3.5 border-t border-gray-50 dark:border-gray-700/60">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-emerald-50 dark:bg-emerald-950/30">
+                        <svg class="w-4.5 h-4.5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-[12.5px] font-medium text-gray-800 dark:text-gray-200 truncate" x-text="v.sucursal"></p>
+                        <p class="text-[10px] text-gray-400 truncate" x-text="v.hora + ' · ' + v.relativo"></p>
+                    </div>
+                    <span class="text-[13px] font-semibold text-gray-900 dark:text-gray-100 shrink-0" x-text="fmt$(v.monto)"></span>
+                </div>
+            </template>
+        </div>
+
+        {{-- Aporte por sucursal — barra tipo banca --}}
+        <div class="mx-4 mt-4 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-5 shadow-sm"
+             @click="openModal('sucursales')">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Sucursales</p>
+                <span class="text-[10px] text-gray-400">Ver →</span>
+            </div>
+            <template x-if="sucursales.length === 0">
+                <p class="text-center text-gray-400 text-[11px] py-2">Sin ventas</p>
+            </template>
+            <template x-for="(v,i) in sucursales.slice(0,3)" :key="'msuc-'+v.id_usuario">
+                <div class="flex items-center gap-3 mb-3 last:mb-0">
+                    <span class="text-[11px] text-gray-500 dark:text-gray-400 w-[70px] shrink-0 truncate" x-text="v.nombre"></span>
+                    <div class="flex-1 h-[6px] bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full transition-all duration-500"
+                             :class="i===0 ? 'bg-gray-900 dark:bg-gray-100' : 'bg-gray-300 dark:bg-gray-600'"
+                             :style="{width: sucursales[0]?.ingresos_total > 0 ? Math.round(v.ingresos_total/sucursales[0].ingresos_total*100)+'%' : '0%'}"></div>
+                    </div>
+                    <span class="text-[11px] font-medium text-gray-700 dark:text-gray-300 min-w-[54px] text-right" x-text="fmt$(v.ingresos_total)"></span>
+                </div>
+            </template>
+        </div>
+
+        {{-- Inventario resumido --}}
+        <div class="mx-4 mt-4 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm"
+             @click="openModal('bicicletas')">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-gray-50 dark:border-gray-700/60">
+                <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Inventario</p>
+                <span class="text-[10px] text-gray-400">Ver →</span>
+            </div>
+            <div class="p-5 flex items-center gap-4">
+                <canvas id="donut-chart-mobile" width="56" height="56" class="shrink-0"></canvas>
+                <div class="flex-1 space-y-2">
+                    @foreach([
+                        ['color'=>'#10b981','label'=>'Stock','key'=>'en_stock'],
+                        ['color'=>'#4c23bb','label'=>'Vendidas','key'=>'vendidas'],
+                        ['color'=>'#ef4444','label'=>'Reparación','key'=>'en_reparacion'],
+                    ] as $row)
+                    <div class="flex items-center gap-2 text-[10px]">
+                        <span class="w-2 h-2 rounded-sm shrink-0" style="background:{{ $row['color'] }}"></span>
+                        <span class="text-gray-500 dark:text-gray-400 flex-1">{{ $row['label'] }}</span>
+                        <span class="font-semibold text-gray-800 dark:text-gray-200">{{ $biciStats[$row['key']] }}</span>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+
+        {{-- Actividad reciente (movimientos de inventario/bicicletas) --}}
+        <div class="mx-4 mt-4 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-gray-50 dark:border-gray-700/60">
+                <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Actividad reciente</p>
+                <a href="{{ url('/admin/movimientos') }}" class="text-[11px] text-gray-400">Ver todas →</a>
+            </div>
+            <template x-if="feedMovimientos.length === 0">
+                <p class="text-center text-gray-400 text-[11px] py-6">Sin movimientos aún</p>
+            </template>
+            <template x-for="m in feedMovimientos.slice(0,5)" :key="'mract-'+m.id_movimiento">
+                <div :class="{'animate-new-feed': m.animate}"
+                     class="feed-item-enter flex items-center gap-3 px-5 py-3.5 border-b border-gray-50 dark:border-gray-700/60 last:border-0"
+                     @click="window.location.href = '{{ route('admin.movimientos.index') }}?serie=' + m.num_serie">
+                    <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 bg-white dark:bg-gray-800 border-2"
+                         :class="{
+                            'border-emerald-500': m.tipo_movimiento === 'entrada_stock',
+                            'border-blue-500': m.tipo_movimiento === 'transferencia_sucursal',
+                            'border-amber-500': m.tipo_movimiento === 'venta',
+                            'border-purple-500': m.tipo_movimiento === 'mantenimiento',
+                            'border-gray-400': m.tipo_movimiento === 'ajuste'
+                         }">
+                        <div class="w-4 h-4"
+                             :class="{
+                                'text-emerald-600': m.tipo_movimiento === 'entrada_stock',
+                                'text-blue-600': m.tipo_movimiento === 'transferencia_sucursal',
+                                'text-amber-600': m.tipo_movimiento === 'venta',
+                                'text-purple-600': m.tipo_movimiento === 'mantenimiento',
+                                'text-gray-500': m.tipo_movimiento === 'ajuste'
+                             }"
+                             x-html="iconoTipoMovSVG(m.tipo_movimiento)"></div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-[12px] font-medium text-gray-800 dark:text-gray-200 truncate" x-text="labelTipoMov(m.tipo_movimiento)"></p>
+                        <p class="text-[10px] text-gray-400 truncate" x-text="m.num_serie"></p>
+                    </div>
+                    <span class="text-[10px] text-gray-400 shrink-0" x-text="m.relativo"></span>
+                </div>
+            </template>
+        </div>
+
+        {{-- Personal --}}
+        <div class="mx-4 mt-4 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-gray-50 dark:border-gray-700/60">
+                <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Personal</p>
+                <span class="text-[10px] text-gray-400">{{ count($personal) }}</span>
+            </div>
+            <div class="divide-y divide-gray-50 dark:divide-gray-700/60">
+                @foreach($personal as $i => $p)
+                @php $ini = strtoupper(implode('', array_map(fn($w)=>$w[0], array_slice(explode(' ',$p['nombre']),0,2)))); @endphp
+                <div class="flex items-center gap-3 px-5 py-3"
+                     @click="openModal('personalItem', {{ $i }})">
+                    <div class="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-semibold shrink-0 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+                        {{ $ini }}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-[11px] font-medium text-gray-800 dark:text-gray-200 truncate">{{ $p['nombre'] }}</p>
+                        <p class="text-[9px] text-gray-400 truncate">{{ $p['sucursal'] }}</p>
+                    </div>
+                    <span class="w-1.5 h-1.5 rounded-full shrink-0 {{ $p['activo'] ? 'bg-emerald-500' : 'bg-gray-400' }}"></span>
+                </div>
+                @endforeach
+            </div>
+        </div>
+
+    </div>
+    {{-- ══════════════ ESCRITORIO ══════════════ --}}
+
+    {{-- ── MAIN GRID (solo escritorio) ── --}}
+    <div class="hidden lg:block max-w-screen-2xl mx-auto px-6 py-6 space-y-6">
 
         {{-- Panel resumen --}}
         <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6 grid grid-cols-1 lg:grid-cols-[1fr_1px_1fr] gap-6">
             <div>
                 <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2">Ingresos totales</p>
                 <p class="text-[34px] font-semibold tracking-tight leading-none text-gray-900 dark:text-gray-100 mb-1"
-                   x-text="kpiData.ingresos ? fmt$(kpiData.ingresos) : '—'"></p>
+                   x-text="kpiData.ingresos ? fmt$(kpiData.ingresos) : '$0.00'"></p>
                 <p class="text-[11px] text-gray-400" x-text="periodoLabel"></p>
 
                 <div class="grid grid-cols-3 gap-3 mt-5">
@@ -163,8 +428,16 @@
                     <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Ingresos</p>
                     <span class="text-[10px] text-gray-400" x-text="periodoLabel"></span>
                 </div>
-                <div class="px-4 pb-4 pt-3 h-[200px]">
-                    <div id="ingresos-chart-wrap" class="h-full"></div>
+                <div class="px-4 pb-4 pt-3 h-[200px] relative">
+                    <canvas id="ingresos-chart-wrap"></canvas>
+                    <div id="ingresos-chart-wrap-empty" class="hidden absolute inset-0 flex flex-col items-center justify-center gap-2">
+                        <svg class="w-9 h-9 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <path d="M14 2v6h6"/>
+                            <path d="M9 15l-1.5 1.5M15 15l1.5 1.5M7.5 16.5L9 15M16.5 16.5L15 15"/>
+                        </svg>
+                        <p class="text-gray-700 dark:text-gray-300 text-[11px] font-medium">Aún no hay datos para mostrar</p>
+                    </div>
                 </div>
             </div>
 
@@ -175,8 +448,16 @@
                     <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Ventas</p>
                     <span class="text-[10px] text-gray-400" x-text="periodoLabel"></span>
                 </div>
-                <div class="px-4 pb-4 pt-3 h-[200px]">
-                    <div id="ventas-chart-wrap" class="h-full"></div>
+                <div class="px-4 pb-4 pt-3 h-[200px] relative">
+                    <canvas id="ventas-chart-wrap"></canvas>
+                    <div id="ventas-chart-wrap-empty" class="hidden absolute inset-0 flex flex-col items-center justify-center gap-2">
+                        <svg class="w-9 h-9 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <path d="M14 2v6h6"/>
+                            <path d="M9 15l-1.5 1.5M15 15l1.5 1.5M7.5 16.5L9 15M16.5 16.5L15 15"/>
+                        </svg>
+                        <p class="text-gray-700 dark:text-gray-300 text-[11px] font-medium">Aún no hay datos para mostrar</p>
+                    </div>
                 </div>
             </div>
 
@@ -194,14 +475,17 @@
                                 @click="sucursalMetrica='ventas'; $nextTick(()=>_renderSucursalesChart())">#</button>
                     </div>
                 </div>
-                <div class="px-4 pb-4 pt-3 h-[200px]" x-show="!loading && graficaSucursales.length > 0" x-cloak>
-                    <div id="sucursales-chart-wrap" class="h-full"></div>
-                </div>
-                <template x-if="!loading && graficaSucursales.length === 0">
-                    <div class="h-[200px] flex items-center justify-center">
-                        <p class="text-[12px] text-gray-400">Sin datos</p>
+                <div class="px-4 pb-4 pt-3 h-[200px] relative">
+                    <canvas id="sucursales-chart-wrap"></canvas>
+                    <div id="sucursales-chart-wrap-empty" class="hidden absolute inset-0 flex flex-col items-center justify-center gap-2">
+                        <svg class="w-9 h-9 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <path d="M14 2v6h6"/>
+                            <path d="M9 15l-1.5 1.5M15 15l1.5 1.5M7.5 16.5L9 15M16.5 16.5L15 15"/>
+                        </svg>
+                        <p class="text-gray-700 dark:text-gray-300 text-[11px] font-medium">Aún no hay datos para mostrar</p>
                     </div>
-                </template>
+                </div>
             </div>
 
         </div>{{-- /gráficas principales --}}
@@ -209,10 +493,7 @@
         {{-- Grid principal --}}
         <div class="grid grid-cols-1 xl:grid-cols-[1fr_300px] gap-6">
 
-            {{-- Grid de tarjetas ── usamos CSS columns (masonry) en vez de CSS grid:
-                 con contenido de altura variable (listas de sucursales, vendedores, etc.)
-                 un grid normal deja huecos porque la fila entera toma la altura de la
-                 tarjeta más alta. Con columns, cada tarjeta fluye según su propia altura. --}}
+            {{-- Grid de tarjetas --}}
             <div class="columns-1 sm:columns-2 xl:columns-3 gap-6 [&>*]:mb-6">
 
                 {{-- Clientes --}}
@@ -320,9 +601,9 @@
                         <canvas id="donut-chart" width="64" height="64" class="shrink-0"></canvas>
                         <div class="flex-1 space-y-2">
                             @foreach([
-                                ['color'=>'#2563eb','label'=>'Stock','key'=>'en_stock'],
-                                ['color'=>'#6b7280','label'=>'Vendidas','key'=>'vendidas'],
-                                ['color'=>'#9ca3af','label'=>'Reparación','key'=>'en_reparacion'],
+                                ['color'=>'#10b981','label'=>'Stock','key'=>'en_stock'],
+                                ['color'=>'#4c23bb','label'=>'Vendidas','key'=>'vendidas'],
+                                ['color'=>'#ef4444','label'=>'Reparación','key'=>'en_reparacion'],
                             ] as $row)
                             <div class="flex items-center gap-2 text-[10px]">
                                 <span class="w-2 h-2 rounded-sm shrink-0" style="background:{{ $row['color'] }}"></span>
@@ -378,6 +659,50 @@
                     </div>
                 </div>
 
+                <!-- NUEVO: Rotación de inventario -->
+                <div class="break-inside-avoid bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all duration-200"
+                     @click="openModal('rotacionInventario')">
+                    <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60">
+                        <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Sin movimiento</p>
+                        <span class="text-[10px] text-gray-400">45+ días</span>
+                    </div>
+                    <div class="p-5" x-show="!loading">
+                        <p class="text-[26px] font-semibold tracking-tight text-gray-900 dark:text-gray-100" x-text="rotacionInventario.total_estancadas"></p>
+                        <p class="text-[11px] text-gray-400 mt-1">bicicletas estancadas</p>
+                        <template x-if="rotacionInventario.por_modelo?.[0]">
+                            <div class="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                                <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Modelo más estancado</p>
+                                <p class="text-[12px] font-medium text-gray-700 dark:text-gray-300" x-text="rotacionInventario.por_modelo[0].modelo + ' (' + rotacionInventario.por_modelo[0].cantidad + ')'"></p>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- NUEVO: Margen / rentabilidad -->
+                <div class="break-inside-avoid bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all duration-200"
+                     x-show="!sucursalSeleccionada"
+                     @click="openModal('margenSucursales')">
+                    <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60">
+                        <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Margen por sucursal</p>
+                        <span class="text-[10px] text-gray-400">Ver →</span>
+                    </div>
+                    <div class="p-5" x-show="!loading">
+                        <template x-if="margenSucursales.length === 0">
+                            <p class="text-center text-gray-400 text-[11px] py-3">Sin datos</p>
+                        </template>
+                        <template x-for="(m,i) in margenSucursales.slice(0,3)" :key="'marg-'+m.id_usuario">
+                            <div class="flex items-center gap-3 mb-3 last:mb-0">
+                                <span class="text-[11px] text-gray-500 dark:text-gray-400 w-[70px] shrink-0 truncate" x-text="m.nombre"></span>
+                                <div class="flex-1 h-[3px] bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                    <div class="h-full rounded-full bg-emerald-500" :style="{width: margenSucursales[0]?.margen > 0 ? Math.round(m.margen/margenSucursales[0].margen*100)+'%' : '0%'}"></div>
+                                </div>
+                                <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400 min-w-[54px] text-right" x-text="fmt$(m.margen)"></span>
+                            </div>
+                        </template>
+                        <p class="text-[9px] text-gray-400 mt-2 italic">* Gastos aún no capturados — margen = ingresos</p>
+                    </div>
+                </div>
+
             </div>{{-- /grid tarjetas --}}
 
             {{-- Sidebar --}}
@@ -387,48 +712,61 @@
                 <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm">
                     <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700/60">
                         <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Acciones recientes</p>
-                        <span class="text-[11px] text-gray-400 cursor-pointer hover:text-gray-600 dark:hover:text-gray-300 transition-colors" @click="openModal('pedidosList')">Ver todas →</span>
+                        <a href="{{ url('/admin/movimientos') }}" 
+                        class="text-[11px] text-gray-400 cursor-pointer hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                        Ver todas →
+                        </a>
                     </div>
-                    <div x-show="!loading">
-                        <template x-if="!pedidos.length && !ots.length">
-                            <div class="px-5 py-6 text-center text-[11px] text-gray-400">Sin actividad reciente</div>
-                        </template>
-                        <template x-for="(p, i) in pedidos.slice(0,5)" :key="'ract-p-'+p.id">
-                            <div class="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 last:border-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
-                                 @click="openModal('pedidoItem', i)">
-                                <div class="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center shrink-0">
-                                    <svg class="w-3.5 h-3.5 text-blue-500" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4h12v2H4V4zm0 5h12v2H4V9zm0 5h8v2H4v-2z"/></svg>
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="text-[12px] font-medium text-gray-800 dark:text-gray-200 truncate" x-text="p.cliente"></p>
-                                    <div class="flex items-center gap-2 mt-0.5">
-                                        <span class="text-[10px] text-gray-400" x-text="p.fecha_relativa || p.fecha"></span>
-                                        <span class="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
-                                        <span class="text-[9px] font-medium px-1.5 py-0.5 rounded-full"
-                                              :class="{
-                                                  'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400': p.estado === 'pendiente',
-                                                  'bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400': p.estado === 'proceso',
-                                                  'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400': p.estado === 'completado'
-                                              }"
-                                              x-text="p.estado"></span>
-                                    </div>
-                                </div>
-                                <p class="text-[12px] font-semibold text-gray-900 dark:text-gray-100 shrink-0" x-text="fmt$(p.monto)"></p>
+
+                    {{-- Feed de movimientos con colores estilo garantías --}}
+                    <template x-for="m in feedMovimientos.slice(0,6)" :key="'ract-m-'+m.id_movimiento">
+                        <div :class="{'animate-new-feed': m.animate}"
+                            class="feed-item-enter flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 last:border-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+                            @click="window.location.href = '{{ route('admin.movimientos.index') }}?serie=' + m.num_serie">
+
+                            {{-- Círculo con borde de color según tipo --}}
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-white dark:bg-gray-800 border-2"
+                                :class="{
+                                    'border-emerald-500': m.tipo_movimiento === 'entrada_stock',
+                                    'border-blue-500': m.tipo_movimiento === 'transferencia_sucursal',
+                                    'border-amber-500': m.tipo_movimiento === 'venta',
+                                    'border-purple-500': m.tipo_movimiento === 'mantenimiento',
+                                    'border-gray-400': m.tipo_movimiento === 'ajuste'
+                                }">
+                                <div class="w-4 h-4 flex items-center justify-center"
+                                    :class="{
+                                        'text-emerald-600 dark:text-emerald-400': m.tipo_movimiento === 'entrada_stock',
+                                        'text-blue-600 dark:text-blue-400': m.tipo_movimiento === 'transferencia_sucursal',
+                                        'text-amber-600 dark:text-amber-400': m.tipo_movimiento === 'venta',
+                                        'text-purple-600 dark:text-purple-400': m.tipo_movimiento === 'mantenimiento',
+                                        'text-gray-500 dark:text-gray-400': m.tipo_movimiento === 'ajuste'
+                                    }"
+                                    x-html="iconoTipoMovSVG(m.tipo_movimiento)"></div>
                             </div>
-                        </template>
-                        <template x-for="o in ots.slice(0,2)" :key="'ract-o-'+o.id">
-                            <div class="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60 last:border-0">
-                                <div class="w-8 h-8 rounded-full bg-amber-50 dark:bg-amber-950/40 flex items-center justify-center shrink-0">
-                                    <svg class="w-3.5 h-3.5 text-amber-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>
+
+                            {{-- Contenido: número de serie + badge de tipo --}}
+                            <div class="flex-1 min-w-0">
+                                <p class="text-[12px] font-medium text-gray-800 dark:text-gray-200 truncate" x-text="m.num_serie"></p>
+                                <div class="flex items-center gap-2 mt-0.5">
+                                    <span class="text-[9px] font-medium px-2 py-0.5 rounded-full"
+                                        :class="{
+                                            'bg-emerald-100 text-emerald-800 dark:bg-emerald-800/30 dark:text-emerald-400': m.tipo_movimiento === 'entrada_stock',
+                                            'bg-blue-100 text-blue-800 dark:bg-blue-800/30 dark:text-blue-400': m.tipo_movimiento === 'transferencia_sucursal',
+                                            'bg-amber-100 text-amber-800 dark:bg-amber-800/30 dark:text-amber-400': m.tipo_movimiento === 'venta',
+                                            'bg-purple-100 text-purple-800 dark:bg-purple-800/30 dark:text-purple-400': m.tipo_movimiento === 'mantenimiento',
+                                            'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300': m.tipo_movimiento === 'ajuste'
+                                        }"
+                                        x-text="labelTipoMov(m.tipo_movimiento)">
+                                    </span>
+                                    <span x-show="m.destino" class="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></span>
+                                    <span x-show="m.destino" class="text-[10px] text-gray-400" x-text="m.destino"></span>
                                 </div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="text-[12px] font-medium text-gray-800 dark:text-gray-200 truncate" x-text="o.id"></p>
-                                    <p class="text-[10px] text-gray-400" x-text="o.tipo"></p>
-                                </div>
-                                <span class="text-[11px] text-gray-400" x-text="o.dias + 'd'"></span>
                             </div>
-                        </template>
-                    </div>
+
+                            {{-- Tiempo relativo --}}
+                            <span class="text-[10px] text-gray-400 shrink-0" x-text="m.relativo"></span>
+                        </div>
+                    </template>
                 </div>
 
                 {{-- Personal --}}
@@ -502,12 +840,38 @@
 
 {{-- ── SCRIPTS ── --}}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+
+<style>
+/* Animación de entrada para el feed de movimientos en vivo */
+@keyframes slideInHighlight {
+    0%   { opacity: 0; transform: translateX(-8px); background-color: rgba(34,197,94,0.3); }
+    30%  { opacity: 1; transform: translateX(0);    background-color: rgba(34,197,94,0.5); }
+    100% { background-color: transparent; }
+}
+.animate-new-feed {
+    animation: slideInHighlight 1.2s ease-in-out;
+    border-left: 3px solid #10b981;
+}
+.feed-item-enter {
+    border-left: 3px solid transparent;
+    transition: all 0.2s;
+}
+
+/* Selector de periodo mobile — sin scrollbar visible */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
+
 <script>
 const SSR = {
     biciStats:       @json($biciStats),
     stockVendedores: @json($stockVendedores),
     piezasBajas:     @json($piezasBajas),
     personal:        @json($personal),
+    movimientosRecientes: @json($movimientosRecientes ?? []),
+    feedVentasRecientes:  @json($feedVentasRecientes ?? []),
+    // NUEVO: lista de sucursales para el selector
+    sucursalesDisponibles: @json($sucursalesDisponibles ?? []),
     enlace: {
         estado:       '{{ in_array($enlace->estado ?? "", ["pendiente","activo"]) ? $enlace->estado : "" }}',
         cancelado:    {{ ($enlace->estado ?? '') === 'cancelado' ? 'true' : 'false' }},
@@ -536,7 +900,7 @@ const KPI_CHIPS = [
     { chip: 'bg-amber-50 dark:bg-amber-950/40',     dot: 'bg-amber-500' },
 ];
 
-const isDark  = () => document.documentElement.classList.contains('dark');
+const isDark  = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
 const fmt$    = n  => '$' + Number(n).toLocaleString('es-MX', { maximumFractionDigits: 0 });
 const pct     = (a, b) => b > 0 ? Math.round(a / b * 100) : 0;
 
@@ -582,11 +946,37 @@ function dashboard() {
         sucursales: [], pedidos: [], ots: [], metodosPago: [],
         clientesTipo: [], horasPico: [], ventasPersonal: [],
 
+        // ── NUEVAS PROPIEDADES ──
+        sucursalSeleccionada: null, // null = "Todas"
+        sucursalesDisponibles: SSR.sucursalesDisponibles,
+        rotacionInventario: { total_estancadas: 0, dias_umbral: 45, bicicletas: [], por_modelo: [] },
+        margenSucursales: [],
+
+        // ── Feed en vivo de movimientos de bicicletas ──
+        feedMovimientos: [],
+        _canalMovimientos: null,
+
+        // ── Feed en vivo de ventas (estilo banca) ──
+        feedVentas: [],
+        _canalVentas: null,
+
+        // ── Charts.js instances (gráficas principales) ──
+        _charts: {},
+        _destroyChart(id) {
+            if (this._charts[id]) { this._charts[id].destroy(); delete this._charts[id]; }
+        },
+        _toggleEmpty(containerId, show) {
+            const empty  = document.getElementById(containerId + '-empty');
+            const canvas = document.getElementById(containerId);
+            if (empty)  empty.classList.toggle('hidden', !show);
+            if (canvas) canvas.classList.toggle('hidden', show);
+        },
+
         // Modal
         modalOpen: false, modalLoading: false,
         modalTitle: '', modalContent: '',
         isChartModal: false,
-        modalChartWidthClass: 'max-w-3xl', // ← tamaño dinámico del modal de gráficas
+        modalChartWidthClass: 'max-w-3xl',
 
         _modalPeriodoParams() {
             if (this.periodo === 'custom' && this.customDesde && this.customHasta)
@@ -633,12 +1023,48 @@ function dashboard() {
             ];
         },
 
+        // ── NUEVO MÉTODO: setSucursal ──
+        setSucursal(idUsuario) {
+            this.sucursalSeleccionada = idUsuario;
+            this.fetchStats();
+        },
+
         // ── Init ──
         init() {
             this._clockTick();
             this.fetchStats();
-            this.$nextTick(() => this._initDonut());
+            this.$nextTick(() => { this._initDonut(); this._initDonutMobile(); });
             this._listenEcho();
+            this._watchDarkMode();
+
+            // Precargar feed con movimientos ya existentes en la BD
+            this.feedMovimientos = SSR.movimientosRecientes.map(item => ({
+                ...item,
+                id_movimiento: item.id ?? crypto.randomUUID(),
+                animate: false,
+                relativo: this.formatRelativo(item.fecha_movimiento),
+            }));
+
+            this._listenMovimientos();
+
+            // Precargar feed de ventas (estilo banca)
+            this.feedVentas = SSR.feedVentasRecientes.map(v => ({
+                ...v,
+                animate: false,
+                relativo: this.formatRelativo(v.fecha),
+            }));
+            this._listenVentas();
+
+            setInterval(() => {
+                this.feedMovimientos = this.feedMovimientos.map(m => ({
+                    ...m,
+                    relativo: this.formatRelativo(m.fecha_movimiento)
+                }));
+                this.feedVentas = this.feedVentas.map(v => ({
+                    ...v,
+                    relativo: this.formatRelativo(v.fecha)
+                }));
+            }, 10000);
         },
 
         _clockTick() {
@@ -646,15 +1072,35 @@ function dashboard() {
             setTimeout(() => this._clockTick(), 30000);
         },
 
+        _watchDarkMode() {
+            const target = document.documentElement;
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((m) => {
+                    if (m.attributeName === 'class') {
+                        // Reconstruir todas las gráficas con los colores correctos
+                        this._renderIngresosChart();
+                        this._renderVentasChart();
+                        this._renderSucursalesChart();
+                    }
+                });
+            });
+            observer.observe(target, { attributes: true, attributeFilter: ['class'] });
+        },
+
         setPeriod(p) { this.periodo = p; if (p !== 'custom') this.fetchStats(); },
 
-        // ── Fetch stats ──
+        // ── Fetch stats (MODIFICADO) ──
         async fetchStats() {
             this.loading = true;
             try {
                 let url = SSR.statsUrl + '?periodo=' + this.periodo;
                 if (this.periodo === 'custom' && this.customDesde && this.customHasta)
                     url = SSR.statsUrl + '?desde=' + this.customDesde + '&hasta=' + this.customHasta;
+
+                // Añadir filtro de sucursal si está seleccionada
+                if (this.sucursalSeleccionada) {
+                    url += '&id_sucursal=' + this.sucursalSeleccionada;
+                }
 
                 const res  = await fetch(url, { headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': SSR.csrfToken } });
                 const data = await res.json();
@@ -672,6 +1118,10 @@ function dashboard() {
                 this.horasPico         = data.horas_pico        || [];
                 this.ventasPersonal    = data.ventas_personal   || [];
                 this.diasPeriodo       = data.periodo?.dias     || 1;
+
+                // Nuevos campos
+                this.rotacionInventario = data.rotacion_inventario || { total_estancadas: 0, dias_umbral: 45, bicicletas: [], por_modelo: [] };
+                this.margenSucursales   = data.margen_sucursales || [];
 
                 this.pedidos = this.pedidos.map(p => ({
                     ...p,
@@ -702,10 +1152,82 @@ function dashboard() {
             finally    { this.modalLoading = false; }
         },
 
-        // ── Gráficas (con soporte para líneas en multiSeries) ──
+        // ── Sparkline con Chart.js (hero mobile) ──
+        _buildSparkline(containerId, data) {
+            const canvas = document.getElementById(containerId);
+            if (!canvas) return;
+            this._destroyChart(containerId);
+
+            const hasData = data && data.some(v => v > 0);
+            this._toggleEmpty(containerId, !hasData);
+            if (!hasData) return;
+
+        
+        const isDarkMode = isDark();
+
+            this._charts[containerId] = new Chart(canvas, {
+                type: 'line',
+                data: {
+                    labels: data.map((_, i) => i),
+                    datasets: [{
+                        data,
+                        borderColor: isDarkMode ? '#000000' : '#ffffff',
+                        backgroundColor: isDarkMode ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.20)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2.5,
+                        pointRadius: 0,
+                        pointHoverRadius: 4,
+                        pointHoverBackgroundColor: isDarkMode ? '#000000' : '#ffffff',
+                        pointHoverBorderColor: isDarkMode ? '#ffffff' : '#000000',
+                        pointHoverBorderWidth: 2,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            displayColors: false,
+                            callbacks: { title: () => '', label: (ctx) => fmt$(ctx.parsed.y) }
+                        }
+                    },
+                    scales: { x: { display: false }, y: { display: false } },
+                    interaction: { intersect: false, mode: 'index' }
+                }
+            });
+        },
+
+   
+        _renderEmptyState(container) {
+            container.innerHTML = `
+                <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:${isDark()?'#4b5563':'#d1d5db'};">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <path d="M14 2v6h6"/>
+                        <path d="M9 15l-1.5 1.5M15 15l1.5 1.5M7.5 16.5L9 15M16.5 16.5L15 15"/>
+                        <path d="M9 11h.01M15 11h.01"/>
+                    </svg>
+                    <p style="font-size:11px;color:${isDark()?'#ffffff':'#000000'};font-weight:500;">Aún no hay datos para mostrar</p>
+                </div>`;
+        },
+
         _buildFinancialSVG({ containerId, data, anterior, labels, isMoney, yTicks, multiSeries, chartType = 'bar' }) {
             const container = document.getElementById(containerId);
             if (!container) return;
+
+            const isMulti0 = Array.isArray(multiSeries) && multiSeries.length > 0;
+            const hasData  = isMulti0
+                ? multiSeries.some(s => (s.data || []).some(v => v > 0))
+                : (data || []).some(v => v > 0);
+
+            if (!hasData) {
+                container.innerHTML = '';
+                this._renderEmptyState(container);
+                return;
+            }
+
             container.innerHTML = '';
 
             const d0    = isDark();
@@ -944,44 +1466,137 @@ function dashboard() {
             container.appendChild(flex);
         },
 
+        // ── Gráficas principales (dashboard) con Chart.js sobre <canvas> ──
         _renderIngresosChart() {
-            const labels   = this.graficaDias.map(d => d.label);
-            const data     = this.graficaDias.map(d => d.ingresos);
-            const anterior = this.graficaAnterior.map(d => d.ingresos);
+            const labels = this.graficaDias.map(d => d.label);
+            const data   = this.graficaDias.map(d => d.ingresos);
             if (!labels.length) return;
-            this._buildFinancialSVG({ containerId:'ingresos-chart-wrap', data, anterior, labels, isMoney:true,
-                yTicks: calcYTicks(Math.max(...data, 1)) });
+
+            const containerId = 'ingresos-chart-wrap';
+            const canvas = document.getElementById(containerId);
+            if (canvas) {
+                this._destroyChart(containerId);
+                const hasData = data.some(v => v > 0);
+                this._toggleEmpty(containerId, !hasData);
+                if (hasData) {
+                    const d0 = isDark();
+                    const tick = '#9ca3af';
+                    const grid = d0 ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+                    this._charts[containerId] = new Chart(canvas, {
+                        type: 'line',
+                        data: { labels, datasets: [{
+                            data,
+                            borderColor: d0 ? '#3987e5' : '#2a78d6',
+                            backgroundColor: d0 ? 'rgba(57,135,229,0.12)' : 'rgba(42,120,214,0.10)',
+                            fill: true, tension: 0.35, borderWidth: 2,
+                            pointRadius: 0, pointHoverRadius: 5,
+                            pointHoverBackgroundColor: d0 ? '#3987e5' : '#2a78d6',
+                            pointHoverBorderColor: d0 ? '#1f2937' : '#ffffff',
+                            pointHoverBorderWidth: 2,
+                        }]},
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            plugins: { legend: { display: false }, tooltip: {
+                                callbacks: { label: (ctx) => fmt$(ctx.parsed.y) }
+                            }},
+                            scales: {
+                                x: { grid: { display: false }, ticks: { color: tick, font: { size: 10 } } },
+                                y: { grid: { color: grid }, border: { display: false },
+                                    ticks: { color: tick, font: { size: 10 }, maxTicksLimit: 4,
+                                            callback: v => v >= 1000 ? Math.round(v/1000)+'k' : v } }
+                            }
+                        }
+                    });
+                }
+            }
+
+            if (document.getElementById('ingresos-chart-mobile')) {
+                this._buildSparkline('ingresos-chart-mobile', data);
+            }
         },
 
         _renderVentasChart() {
-            const labels   = this.graficaDias.map(d => d.label);
-            const data     = this.graficaDias.map(d => d.ventas);
-            const anterior = this.graficaAnterior.map(d => d.ventas);
+            const labels = this.graficaDias.map(d => d.label);
+            const data   = this.graficaDias.map(d => d.ventas);
             if (!labels.length) return;
-            this._buildFinancialSVG({ containerId:'ventas-chart-wrap', data, anterior, labels, isMoney:false,
-                yTicks: calcYTicks(Math.max(...data, 1)) });
+
+            const containerId = 'ventas-chart-wrap';
+            const canvas = document.getElementById(containerId);
+            if (!canvas) return;
+
+            this._destroyChart(containerId);
+            const hasData = data.some(v => v > 0);
+            this._toggleEmpty(containerId, !hasData);
+            if (!hasData) return;
+
+            const d0   = isDark();
+            const tick = '#9ca3af';
+            const grid = d0 ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+
+            this._charts[containerId] = new Chart(canvas, {
+                type: 'bar',
+                data: { labels, datasets: [{
+                    data,
+                    backgroundColor: d0 ? '#199e70' : '#1baf7a',
+                    borderRadius: 4,
+                    maxBarThickness: 22,
+                }]},
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: {
+                        callbacks: { label: (ctx) => ctx.parsed.y + ' ventas' }
+                    }},
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: tick, font: { size: 10 } } },
+                        y: { grid: { color: grid }, border: { display: false },
+                            ticks: { color: tick, font: { size: 10 }, maxTicksLimit: 4 } }
+                    }
+                }
+            });
         },
 
         _renderSucursalesChart() {
-            const wrap = document.getElementById('sucursales-chart-wrap');
-            if (!wrap || !this.graficaSucursales.length) return;
+            const containerId = 'sucursales-chart-wrap';
+            const canvas = document.getElementById(containerId);
+            if (!canvas) return;
+
+            this._destroyChart(containerId);
+
+            const hasData = this.graficaSucursales.length > 0;
+            this._toggleEmpty(containerId, !hasData);
+            if (!hasData) return;
+
             const labels  = this.graficaDias.map(d => d.label);
             const metrica = this.sucursalMetrica;
-            const multiSeries = this.graficaSucursales.map((s, i) => ({
-                label:  s.nombre,
-                data:   s[metrica] || [],
-                color:  COLORS[i%6],
-                dashed: i !== 0,
+            const d0      = isDark();
+            const tick    = '#9ca3af';
+            const grid    = d0 ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+
+            const datasets = this.graficaSucursales.map((s, i) => ({
+                label: s.nombre,
+                data: s[metrica] || [],
+                borderColor: COLORS[i % COLORS.length],
+                backgroundColor: 'transparent',
+                borderDash: i === 0 ? [] : [4, 3],
+                tension: 0.3, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4,
             }));
-            this._buildFinancialSVG({
-                containerId: 'sucursales-chart-wrap',
-                data: null,
-                anterior: null,
-                labels,
-                isMoney: metrica === 'ingresos',
-                yTicks: calcYTicks(Math.max(...multiSeries.flatMap(s=>s.data), 1)),
-                multiSeries,
-                chartType: 'line'
+
+            this._charts[containerId] = new Chart(canvas, {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: {
+                        callbacks: { label: (ctx) => ctx.dataset.label + ': ' +
+                            (metrica === 'ingresos' ? fmt$(ctx.parsed.y) : ctx.parsed.y + ' ventas') }
+                    }},
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: tick, font: { size: 10 } } },
+                        y: { grid: { color: grid }, border: { display: false },
+                            ticks: { color: tick, font: { size: 10 }, maxTicksLimit: 4,
+                                    callback: v => metrica === 'ingresos' && v >= 1000 ? Math.round(v/1000)+'k' : v } }
+                    }
+                }
             });
         },
 
@@ -995,18 +1610,42 @@ function dashboard() {
                 data: {
                     labels: ['En stock','Vendidas','En reparación'],
                     datasets: [{ data:[d.en_stock,d.vendidas,d.en_reparacion],
-                        backgroundColor:['#2563eb','#6b7280','#9ca3af'], borderWidth:0, hoverOffset:4 }]
+                        backgroundColor: ['#10b981', '#4c23bb', '#ef4444'], borderWidth:0, hoverOffset:4 }]
                 },
                 options: { responsive:false, cutout:'74%', animation:{duration:700},
                     plugins:{ legend:{display:false},
                         tooltip:{ backgroundColor: isDark()?'rgba(17,24,39,0.97)':'rgba(255,255,255,0.99)',
-                            borderColor: isDark()?'rgba(55,65,81,0.8)':'rgba(226,232,240,0.9)',
+                            borderColor: isDark()?'rgba(9, 219, 54, 0.8)':'rgba(226,232,240,0.9)',
                             borderWidth:1, padding:{x:10,y:8}, cornerRadius:12, displayColors:false,
                             titleFont:{size:11,weight:'600'}, bodyFont:{size:10},
                             titleColor: isDark()?'#f3f4f6':'#111827', bodyColor: isDark()?'#9ca3af':'#6b7280',
                             callbacks:{label:l=>`  ${l.label}: ${l.parsed}`} }} }
             });
             this._donutInited = true;
+        },
+
+        _donutMobileInited: false,
+        _initDonutMobile() {
+            if (this._donutMobileInited) return;
+            const c = document.getElementById('donut-chart-mobile'); if (!c) return;
+            const d = SSR.biciStats;
+            new Chart(c, {
+                type: 'doughnut',
+                data: {
+                    labels: ['En stock','Vendidas','En reparación'],
+                    datasets: [{ data:[d.en_stock,d.vendidas,d.en_reparacion],
+                        backgroundColor: ['#10b981', '#4c23bb', '#ef4444'], borderWidth:0, hoverOffset:4 }]
+                },
+                options: { responsive:false, cutout:'74%', animation:{duration:700},
+                    plugins:{ legend:{display:false},
+                        tooltip:{ backgroundColor: isDark()?'rgba(17,24,39,0.97)':'rgba(255,255,255,0.99)',
+                            borderColor: isDark()?'rgba(9, 219, 54, 0.8)':'rgba(226,232,240,0.9)',
+                            borderWidth:1, padding:{x:10,y:8}, cornerRadius:12, displayColors:false,
+                            titleFont:{size:11,weight:'600'}, bodyFont:{size:10},
+                            titleColor: isDark()?'#f3f4f6':'#111827', bodyColor: isDark()?'#9ca3af':'#6b7280',
+                            callbacks:{label:l=>`  ${l.label}: ${l.parsed}`} }} }
+            });
+            this._donutMobileInited = true;
         },
 
         // ── MÉTODOS PARA MODAL DE GRÁFICAS (tamaño dinámico) ──
@@ -1059,7 +1698,7 @@ function dashboard() {
             const container = document.getElementById('modal-chart-wrap');
             if (!container) return;
             const labels = this.graficaDias.map(d => d.label);
-            
+
             if (type === 'ingresos') {
                 const data = this.graficaDias.map(d => d.ingresos);
                 const anterior = this.graficaAnterior.map(d => d.ingresos);
@@ -1124,6 +1763,9 @@ function dashboard() {
                 otsList:      () => this._modalOtsList(),
                 sucursales:   () => this._modalSucursales(),
                 sucursalDetalle: () => this._modalSucursalDetalle(idx),
+                // NUEVOS HANDLERS
+                rotacionInventario: () => this._modalRotacionInventario(),
+                margenSucursales:   () => this._modalMargenSucursales(),
             };
 
             if (localHandlers[type]) {
@@ -1291,6 +1933,44 @@ function dashboard() {
                     ['Descuentos',     fmt$(v.descuentos_total)],
                     ['Vendedor top',   v.vendedor_top?.nombre ?? '—'],
                 ]),
+            };
+        },
+
+        // ── NUEVOS MODALES ──
+        _modalRotacionInventario() {
+            const r = this.rotacionInventario;
+            return {
+                title: `Bicicletas sin movimiento (${r.dias_umbral}+ días)`,
+                content: this._stats([
+                    {v: r.total_estancadas, l:'Total estancadas'},
+                ]) + this._sec('Por modelo')
+                + (r.por_modelo?.length
+                    ? r.por_modelo.map(m => this._bar(m.modelo, m.cantidad, r.por_modelo[0]?.cantidad||1,'')).join('')
+                    : '<p style="color:#9ca3af;text-align:center;">Sin datos</p>')
+                + this._sec('Detalle')
+                + r.bicicletas.slice(0, 20).map(b => `
+                    <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid rgba(0,0,0,0.05);">
+                        <div style="flex:1;font-size:12px;color:#1f2937;">
+                            <strong>${b.num_serie}</strong> — ${b.modelo}
+                            <div style="font-size:10px;color:#9ca3af;">${b.color} · ${b.voltaje}V</div>
+                        </div>
+                        <span style="font-size:11px;font-weight:600;color:#dc2626;">${b.dias}d</span>
+                    </div>`).join(''),
+            };
+        },
+
+        _modalMargenSucursales() {
+            return {
+                title: 'Margen por sucursal',
+                content: this.margenSucursales.map(m => `
+                    <div style="border:1px solid rgba(0,0,0,0.07);border-radius:14px;padding:12px;margin-bottom:10px;">
+                        <div style="font-size:13px;font-weight:600;color:#111827;margin-bottom:8px;">${m.nombre}</div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;">
+                            <div><div style="font-size:14px;font-weight:600;color:#111827;">${fmt$(m.ingresos)}</div><div style="font-size:9px;color:#9ca3af;">Ingresos</div></div>
+                            <div><div style="font-size:14px;font-weight:600;color:#dc2626;">${fmt$(m.gastos)}</div><div style="font-size:9px;color:#9ca3af;">Gastos</div></div>
+                            <div><div style="font-size:14px;font-weight:600;color:#16a34a;">${fmt$(m.margen)}</div><div style="font-size:9px;color:#9ca3af;">Margen</div></div>
+                        </div>
+                    </div>`).join('') + '<p style="font-size:10px;color:#9ca3af;font-style:italic;margin-top:8px;">* Gastos pendientes de captura — margen actual = ingresos totales</p>',
             };
         },
 
@@ -1490,7 +2170,7 @@ function dashboard() {
             return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><div style="width:80px;font-size:11px;color:#6b7280;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${label}</div><div style="flex:1;height:4px;background:rgba(0,0,0,0.06);border-radius:99px;"><div style="width:${p}%;height:100%;background:#111827;border-radius:99px;"></div></div><div style="font-size:11px;font-weight:500;color:#374151;text-align:right;min-width:52px;">${disp}</div></div>`;
         },
 
-        // ── Echo ──
+        // ── Echo (enlace vendedor) ──
         _listenEcho() {
             if (!window.Echo) return;
             window.Echo.private(`enlace-vendedor.{{ auth()->user()->id_usuario }}`)
@@ -1498,6 +2178,92 @@ function dashboard() {
                     if (action==='aceptado')  { this.enlaceCancelado=false; this.enlaceEstado='activo';  this.enlaceGestor=enlace.gestor; }
                     if (action==='cancelado') { this.enlaceCancelado=true;  this.enlaceEstado='';        this.enlaceGestor=''; }
                 });
+        },
+
+        // ── Echo (feed de movimientos de bicicletas, canal público) ──
+        _listenMovimientos() {
+            if (!window.Echo) return;
+            if (this._canalMovimientos) {
+                window.Echo.leaveChannel(`movimientos.{{ auth()->user()->id_negocio }}`);
+            }
+            this._canalMovimientos = window.Echo.channel(`movimientos.{{ auth()->user()->id_negocio }}`);
+
+            this._canalMovimientos.listen('.movimiento.nuevo', (e) => {
+                const nuevo = {
+                    ...e,
+                    id_movimiento: e.id ?? Date.now() + Math.random(),
+                    animate: true,
+                    relativo: this.formatRelativo(e.fecha_movimiento),
+                };
+                const yaExiste = this.feedMovimientos.some(m => m.id_movimiento === nuevo.id_movimiento);
+                if (!yaExiste) {
+                    this.feedMovimientos.unshift(nuevo);
+                    if (this.feedMovimientos.length > 20) this.feedMovimientos.pop();
+                    setTimeout(() => {
+                        const m = this.feedMovimientos.find(x => x.id_movimiento === nuevo.id_movimiento);
+                        if (m) m.animate = false;
+                    }, 1200);
+                }
+            });
+        },
+
+        
+        _listenVentas() {
+            if (!window.Echo) return;
+
+            if (this._canalVentas) {
+                window.Echo.leave(`negocio.{{ auth()->user()->id_negocio }}`);
+            }
+
+            this._canalVentas = window.Echo.private(`negocio.{{ auth()->user()->id_negocio }}`);
+
+            this._canalVentas.listen('.venta.registrada', (e) => {
+                const nueva = {
+                    id_venta: crypto.randomUUID(),
+                    monto:    e.total,
+                    sucursal: e.nombre_vendedor,
+                    hora:     e.hora,
+                    fecha:    new Date().toISOString(),
+                    animate:  true,
+                    relativo: 'ahora',
+                };
+                this.feedVentas.unshift(nueva);
+                if (this.feedVentas.length > 20) this.feedVentas.pop();
+                setTimeout(() => {
+                    const v = this.feedVentas.find(x => x.id_venta === nueva.id_venta);
+                    if (v) v.animate = false;
+                }, 1200);
+            });
+        },
+
+        formatRelativo(fecha) {
+            const diff = Math.floor((Date.now() - new Date(fecha)) / 1000);
+            if (diff < 60)    return 'ahora';
+            if (diff < 3600)  return Math.floor(diff/60) + 'm';
+            if (diff < 86400) return Math.floor(diff/3600) + 'h';
+            return Math.floor(diff/86400) + 'd';
+        },
+
+        labelTipoMov(tipo) {
+            const m = {
+                entrada_stock:          'Entrada stock',
+                transferencia_sucursal: 'Transferencia',
+                venta:                  'Venta',
+                mantenimiento:          'Mantenimiento',
+                ajuste:                 'Ajuste',
+            };
+            return m[tipo] ?? tipo;
+        },
+
+        iconoTipoMovSVG(tipo) {
+            const svgs = {
+                entrada_stock: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-3.5 h-3.5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>`,
+                transferencia_sucursal: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-3.5 h-3.5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>`,
+                venta: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-3.5 h-3.5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.5 6M17 13l1.5 6M9 21h6M12 17v4"/></svg>`,
+                mantenimiento: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-3.5 h-3.5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`,
+                ajuste: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-3.5 h-3.5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>`,
+            };
+            return svgs[tipo] || `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-3.5 h-3.5"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/></svg>`;
         },
     };
 }

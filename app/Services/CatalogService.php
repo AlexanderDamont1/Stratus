@@ -19,6 +19,7 @@ use App\Models\BicicletaMovimiento;
 use App\Models\PiezaCatalogo;
 use App\Models\PiezaMovimiento;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Pagination\LengthAwarePaginator;
 use App\Models\BicicletaGarantia;
 use App\Models\GarantiaReclamo;
@@ -53,7 +54,7 @@ class CatalogService
 
     public static function getVersion(?string $idNegocio = null): int
     {
-        return (int) Cache::get(self::getVersionKey($idNegocio), 1);
+        return (int) Cache::get(self::getVersionKey($idNegocio), 0);
     }
 
     public static function incrementVersion(?string $idNegocio = null): void
@@ -1461,16 +1462,281 @@ class CatalogService
     {
         $version = self::getVersion($idNegocio);
 
-        // Invalida cualquier rango que contenga esta fecha
-        // Como las keys incluyen desde/hasta, la forma más limpia
-        // es incrementar la versión del tenant — eso borra todo el cache
-        // del negocio incluyendo los rangos del dashboard
+       
         Cache::forget(self::key("dashboard:stats:{$idNegocio}:{$fecha}:{$fecha}") . ":v{$version}");
-
-        // Los periodos variables (7d, 30d) se invalidan solos porque
-        // usan la versión del tenant que se incrementa aquí:
         self::incrementVersion($idNegocio);
-}
+    }
+   
+    public static function getGraficaHoyPorHora(string $idNegocio, string $fecha): \Illuminate\Support\Collection
+    {
+        return self::remember(
+            "dashboard:grafica_hora:{$idNegocio}:{$fecha}",
+            60, // 1 minuto — "hoy" cambia rápido pero no necesitas tiempo real exacto
+            fn() => collect(range(0, 23))->map(function ($hora) use ($idNegocio, $fecha) {
+                $row = \Illuminate\Support\Facades\DB::table('ventas')
+                    ->where('id_negocio', $idNegocio)
+                    ->whereDate('created_at', $fecha)
+                    ->whereRaw('HOUR(created_at) = ?', [$hora])
+                    ->selectRaw('COUNT(*) as ventas, COALESCE(SUM(total),0) as ingresos')
+                    ->first();
+                return [
+                    'label'    => str_pad($hora, 2, '0', STR_PAD_LEFT) . ':00',
+                    'ventas'   => (int)   $row->ventas,
+                    'ingresos' => (float) $row->ingresos,
+                ];
+            }),
+            $idNegocio
+        );
+    }
+
+    public static function getSucursalesPorHora(string $idNegocio, string $fecha): array
+    {
+        return self::remember(
+            "dashboard:sucursales_hora:{$idNegocio}:{$fecha}",
+            60,
+            function () use ($idNegocio, $fecha) {
+                $raw = DB::table('ventas as v')
+                    ->join('usuarios as u', 'v.id_usuario', '=', 'u.id_usuario')
+                    ->where('v.id_negocio', $idNegocio)
+                    ->whereDate('v.created_at', $fecha)
+                    ->selectRaw('u.nombre_usuario, HOUR(v.created_at) as hora, COUNT(*) as ventas, COALESCE(SUM(v.total),0) as ingresos')
+                    ->groupBy('u.nombre_usuario', 'hora')
+                    ->orderBy('hora')
+                    ->get();
+
+                $map = [];
+                foreach ($raw as $row) {
+                    $key = str_pad($row->hora, 2, '0', STR_PAD_LEFT) . ':00';
+                    $map[$row->nombre_usuario][$key] = [
+                        'ventas'   => (int)   $row->ventas,
+                        'ingresos' => (float) $row->ingresos,
+                    ];
+                }
+                return $map;
+            },
+            $idNegocio
+        );
+    }
+
+    public static function getPersonalPorHora(string $idNegocio, string $fecha): array
+    {
+        return self::remember(
+            "dashboard:personal_hora:{$idNegocio}:{$fecha}",
+            60,
+            function () use ($idNegocio, $fecha) {
+                $raw = DB::table('ventas as v')
+                    ->join('personal as p', 'v.id_personal', '=', 'p.id_personal')
+                    ->where('v.id_negocio', $idNegocio)
+                    ->whereDate('v.created_at', $fecha)
+                    ->selectRaw('p.nombre, HOUR(v.created_at) as hora, COUNT(*) as ventas, COALESCE(SUM(v.total),0) as ingresos')
+                    ->groupBy('p.id_personal', 'p.nombre', 'hora')
+                    ->orderBy('hora')
+                    ->get();
+
+                $map = [];
+                foreach ($raw as $row) {
+                    $key = str_pad($row->hora, 2, '0', STR_PAD_LEFT) . ':00';
+                    $map[$row->nombre][$key] = [
+                        'ventas'   => (int)   $row->ventas,
+                        'ingresos' => (float) $row->ingresos,
+                    ];
+                }
+                return $map;
+            },
+            $idNegocio
+        );
+    }
+
+    public static function getFilasHistoricas(string $idNegocio, string $desde, string $hasta): \Illuminate\Support\Collection
+    {
+        // Rango histórico puro (no incluye hoy) → TTL largo, casi nunca cambia
+        return self::remember(
+            "dashboard:filas_historicas:{$idNegocio}:{$desde}:{$hasta}",
+            3600,
+            fn() => \App\Models\EstadisticaDiaria::where('id_negocio', $idNegocio)
+                ->whereBetween('fecha', [$desde, $hasta])
+                ->orderBy('fecha')
+                ->get()
+                ->keyBy(fn($f) => $f->fecha->toDateString()),
+            $idNegocio
+        );
+    }
+
+    public static function getVentasHoy(string $idNegocio, ?string $idSucursal = null): int
+    {
+        $key = $idSucursal
+            ? "dashboard:ventas_hoy:{$idNegocio}:{$idSucursal}:" . now()->toDateString()
+            : "dashboard:ventas_hoy:{$idNegocio}:" . now()->toDateString();
+
+        return self::remember(
+            $key,
+            30,
+            fn() => (int) DB::table('ventas')
+                ->where('id_negocio', $idNegocio)
+                ->when($idSucursal, fn($q) => $q->where('id_usuario', $idSucursal))
+                ->whereDate('created_at', now())
+                ->count(),
+            $idNegocio
+        );
+    }
+
+    public static function getOtsActivas(string $idNegocio, ?string $idSucursal = null): array
+    {
+        $key = $idSucursal
+            ? "dashboard:ots_activas:{$idNegocio}:{$idSucursal}"
+            : "dashboard:ots_activas:{$idNegocio}";
+
+        return self::remember(
+            $key,
+            60,
+            fn() => \App\Models\Reparaciones::where('id_negocio', $idNegocio)
+                ->when($idSucursal, fn($q) => $q->where('id_usuario', $idSucursal))
+                ->whereIn('estado', ['recibida', 'diagnostico', 'cotizacion_enviada', 'en_proceso'])
+                ->with('bicicleta.modelo')
+                ->orderByDesc('created_at')
+                ->limit(8)
+                ->get()
+                ->map(fn($ot) => [
+                    'id'     => $ot->id_reparacion,
+                    'tipo'   => $ot->tipo ?? '—',
+                    'estado' => $ot->estado,
+                    'modelo' => $ot->bicicleta?->modelo?->nombre_modelo ?? $ot->unidad_descripcion ?? '—',
+                    'dias'   => $ot->created_at?->diffInDays(now()) ?? 0,
+                ])
+                ->toArray(),
+            $idNegocio
+        );
+    }
+
+    public static function getFeedVentasRecientes(string $idNegocio, int $limit = 15, ?string $idSucursal = null): \Illuminate\Support\Collection
+    {
+        $key = $idSucursal
+            ? "dashboard:feed_ventas:{$idNegocio}:{$idSucursal}:limit{$limit}"
+            : "dashboard:feed_ventas:{$idNegocio}:limit{$limit}";
+
+        return self::remember(
+            $key,
+            30,
+            fn() => \App\Models\Venta::with('usuario:id_usuario,nombre_usuario')
+                ->where('id_negocio', $idNegocio)
+                ->when($idSucursal, fn($q) => $q->where('id_usuario', $idSucursal))
+                ->latest('created_at')
+                ->limit($limit)
+                ->get(['id_venta', 'id_usuario', 'total', 'created_at'])
+                ->map(fn ($v) => [
+                    'id_venta' => $v->id_venta,
+                    'monto'    => (float) $v->total,
+                    'sucursal' => $v->usuario->nombre_usuario ?? 'Sucursal',
+                    'hora'     => $v->created_at->format('H:i'),
+                    'fecha'    => $v->created_at->toIso8601String(),
+                ]),
+            $idNegocio
+        );
+    }
+
+    public static function getTopModelosPorSucursal(string $idNegocio, string $desde, string $hasta, string $idSucursal): array
+    {
+        return self::remember(
+            "dashboard:top_modelos_suc:{$idNegocio}:{$idSucursal}:{$desde}:{$hasta}",
+            (($hasta >= now()->toDateString()) ? 300 : 3600),
+            fn() => DB::table('detalle_venta as dv')
+                ->join('ventas as v',    'dv.id_venta',  '=', 'v.id_venta')
+                ->join('bicicletas as b','dv.num_serie',  '=', 'b.num_serie')
+                ->join('modelos as m',   'b.id_modelo',   '=', 'm.id_modelo')
+                ->where('v.id_negocio', $idNegocio)
+                ->where('v.id_usuario', $idSucursal)
+                ->whereBetween('v.created_at', ["{$desde} 00:00:00", "{$hasta} 23:59:59"])
+                ->whereNotNull('dv.num_serie')
+                ->selectRaw('m.id_modelo, m.nombre_modelo, COUNT(*) as unidades, COALESCE(SUM(dv.precio_unitario * dv.cantidad),0) as ingresos')
+                ->groupBy('m.id_modelo', 'm.nombre_modelo')
+                ->orderByDesc('unidades')
+                ->limit(8)
+                ->get()
+                ->map(fn($r) => [
+                    'id_modelo' => $r->id_modelo,
+                    'nombre'    => $r->nombre_modelo,
+                    'unidades'  => (int)   $r->unidades,
+                    'ingresos'  => (float) $r->ingresos,
+                ])
+                ->toArray(),
+            $idNegocio
+        );
+    }
+
+    public static function getBicicletasSinMovimiento(string $idNegocio, int $diasUmbral = 45, ?string $idSucursal = null): array
+    {
+        $key = $idSucursal
+            ? "dashboard:rotacion_inventario:{$idNegocio}:{$idSucursal}:{$diasUmbral}"
+            : "dashboard:rotacion_inventario:{$idNegocio}:{$diasUmbral}";
+
+        return self::remember(
+            $key,
+            3600,
+            function () use ($idNegocio, $diasUmbral, $idSucursal) {
+                $fechaLimite = now()->subDays($diasUmbral);
+
+                $bicis = Bicicleta::where('id_negocio', $idNegocio)
+                    ->where('status', 1)
+                    ->when($idSucursal, fn($q) => $q->where('id_usuario', $idSucursal))
+                    ->where('created_at', '<=', $fechaLimite)
+                    ->with(['modelo', 'color', 'voltaje'])
+                    ->orderBy('created_at')
+                    ->get();
+
+                return [
+                    'total_estancadas' => $bicis->count(),
+                    'dias_umbral'      => $diasUmbral,
+                    'bicicletas'       => $bicis->map(fn($b) => [
+                        'num_serie' => $b->num_serie,
+                        'modelo'    => $b->modelo?->nombre_modelo ?? '—',
+                        'color'     => $b->color?->color ?? '—',
+                        'voltaje'   => $b->voltaje?->voltaje ?? '—',
+                        'dias'      => $b->created_at->diffInDays(now()),
+                    ])->toArray(),
+                    'por_modelo' => $bicis->groupBy(fn($b) => $b->modelo?->nombre_modelo ?? 'Sin modelo')
+                        ->map(fn($grupo, $nombre) => [
+                            'modelo'        => $nombre,
+                            'cantidad'      => $grupo->count(),
+                            'dias_promedio' => round($grupo->avg(fn($b) => $b->created_at->diffInDays(now()))),
+                        ])
+                        ->sortByDesc('cantidad')
+                        ->values()
+                        ->toArray(),
+                ];
+            },
+            $idNegocio
+        );
+    }
+
+    public static function getMargenPorSucursal(string $idNegocio, string $desde, string $hasta): array
+    {
+        return self::remember(
+            "dashboard:margen_sucursal:{$idNegocio}:{$desde}:{$hasta}",
+            3600,
+            function () use ($idNegocio, $desde, $hasta) {
+                $ingresos = DB::table('ventas as v')
+                    ->join('usuarios as u', 'v.id_usuario', '=', 'u.id_usuario')
+                    ->where('v.id_negocio', $idNegocio)
+                    ->whereBetween('v.created_at', ["{$desde} 00:00:00", "{$hasta} 23:59:59"])
+                    ->selectRaw('u.id_usuario, u.nombre_usuario, SUM(v.total) as ingresos')
+                    ->groupBy('u.id_usuario', 'u.nombre_usuario')
+                    ->get();
+
+                // TODO: enchufar aquí la query de gastos_sucursal cuando esté confirmada
+                return $ingresos->map(fn($r) => [
+                    'id_usuario'    => $r->id_usuario,
+                    'nombre'        => $r->nombre_usuario,
+                    'ingresos'      => (float) $r->ingresos,
+                    'gastos'        => 0.0,
+                    'margen'        => (float) $r->ingresos,
+                    'margen_pct'    => 100.0,
+                    'limite_gasto'  => null,
+                    'excede_limite' => false,
+                ])->sortByDesc('margen')->values()->toArray();
+            },
+            $idNegocio
+        );
+    }
 
     
 }

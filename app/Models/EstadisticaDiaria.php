@@ -38,6 +38,10 @@ class EstadisticaDiaria extends Model
         'sucursal_data',
         'horas_pico',
         'metodos_pago',
+        'ots_creadas',
+        'ots_cerradas',
+        'ots_ingresos_total',
+        'ots_tiempo_promedio_horas',
     ];
 
     protected $casts = [

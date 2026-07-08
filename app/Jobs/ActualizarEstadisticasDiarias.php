@@ -102,11 +102,9 @@ class ActualizarEstadisticasDiarias implements ShouldQueue
         $comboTop = DB::table('detalle_venta as dv1')
             ->join('detalle_venta as dv2', 'dv1.id_venta', '=', 'dv2.id_venta')
             ->join('ventas as v',          'dv1.id_venta', '=', 'v.id_venta')
-            ->join('modelos as m',         function ($j) {
-                $j->join('bicicletas as b', 'dv1.num_serie', '=', 'b.num_serie')
-                  ->on('b.id_modelo', '=', 'm.id_modelo');
-            })
-            ->join('productos as p', 'dv2.id_producto', '=', 'p.id_producto')
+            ->join('bicicletas as b',      'dv1.num_serie', '=', 'b.num_serie')
+            ->join('modelos as m',         'b.id_modelo',   '=', 'm.id_modelo')
+            ->join('productos as p',       'dv2.id_producto', '=', 'p.id_producto')
             ->where('v.id_negocio', $idNegocio)
             ->whereBetween('v.created_at', [$desdeTs, $hastaTs])
             ->whereNotNull('dv1.num_serie')   // dv1 = bici
@@ -262,7 +260,28 @@ class ActualizarEstadisticasDiarias implements ShouldQueue
             ];
         })->values()->toArray();
 
-        
+        // ── Taller: OTs creadas y entregadas en el día (usa entregada_at real) ──
+        $otsCreadas = DB::table('reparaciones')
+            ->where('id_negocio', $idNegocio)
+            ->whereBetween('created_at', [$desdeTs, $hastaTs])
+            ->count();
+
+        $otsEntregadasHoy = DB::table('reparaciones')
+            ->where('id_negocio', $idNegocio)
+            ->whereBetween('entregada_at', [$desdeTs, $hastaTs])
+            ->get(['id_reparacion', 'costo_total', 'created_at', 'entregada_at']);
+
+        $otsCerradas      = $otsEntregadasHoy->count();
+        $otsIngresosTotal = (float) $otsEntregadasHoy->sum('costo_total');
+
+        $otsTiempoPromedioHoras = $otsEntregadasHoy->isNotEmpty()
+            ? (int) round(
+                $otsEntregadasHoy->avg(fn($ot) =>
+                    Carbon::parse($ot->created_at)->diffInHours(Carbon::parse($ot->entregada_at))
+                )
+            )
+            : 0;
+
         $existente = EstadisticaDiaria::where('id_negocio', $idNegocio)
             ->where('fecha', $this->fecha)
             ->first();
@@ -290,6 +309,10 @@ class ActualizarEstadisticasDiarias implements ShouldQueue
             'sucursal_data'        => $sucursalData,
             'horas_pico'           => $horasPico,
             'metodos_pago'         => $metodosPago,
+            'ots_creadas'               => $otsCreadas,
+            'ots_cerradas'              => $otsCerradas,
+            'ots_ingresos_total'        => $otsIngresosTotal,
+            'ots_tiempo_promedio_horas' => $otsTiempoPromedioHoras,
         ];
 
         if ($existente) {
@@ -307,7 +330,7 @@ class ActualizarEstadisticasDiarias implements ShouldQueue
             'fecha'      => $this->fecha,
             'ventas'     => $ventasCount,
         ]);
-        \App\Services\CatalogService::invalidateDashboardStats($idNegocio);
+        \App\Services\CatalogService::invalidateDashboardStats($idNegocio, $this->fecha);
     }
 
     public function failed(\Throwable $e): void
