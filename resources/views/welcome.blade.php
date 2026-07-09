@@ -54,8 +54,12 @@
   </div>
 
   <!-- HERO -->
-  <section class="min-h-screen flex items-center px-6 pt-24 pb-16 max-w-3xl mx-auto">
-    <div class="w-full">
+  <!-- HERO COMPLETO -->
+<section class="min-h-screen flex items-center px-6 pt-24 pb-16 max-w-6xl mx-auto">
+  <div class="w-full grid lg:grid-cols-2 gap-12 items-center">
+
+    <!-- ========== COLUMNA IZQUIERDA: TEXTO ========== -->
+    <div>
       <div class="inline-flex items-center gap-2 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border border-yellow-300 dark:border-yellow-700 rounded-full px-3 py-1 text-xs mb-7 transition-all duration-700 ease-out hover:scale-105 hover:rotate-1 hover:shadow-md">
         <i class="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_0_3px_rgba(34,197,94,0.15)] animate-pulse"></i>
         Face beta · Prueba gratis 15 días
@@ -116,7 +120,149 @@
         </div>
       </div>
     </div>
-  </section>
+
+    <!-- ========== COLUMNA DERECHA: PANEL DE SATISFACCIÓN ========== -->
+    <div class="hidden lg:flex justify-center">
+      <div class="relative w-full max-w-md">
+        <!-- Fondo decorativo -->
+        <div class="absolute -inset-4 bg-gradient-to-br from-yellow-50/50 to-gray-50/50 dark:from-yellow-900/10 dark:to-gray-800/30 rounded-3xl -rotate-2 -z-10"></div>
+
+        <div class="border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-xl rotate-1 hover:rotate-0 transition-transform duration-500 bg-white dark:bg-gray-900">
+          <!-- Cabecera estilo navegador -->
+          <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
+            <div class="flex gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-red-400"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-yellow-400"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-green-400"></span>
+            </div>
+            <span class="text-[10px] text-gray-400 dark:text-gray-500 font-mono">app.arrowk.mx/reputacion</span>
+            <span class="ml-auto text-[9px] px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full font-medium flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> 150+ reseñas
+            </span>
+          </div>
+
+          <!-- Cuerpo del panel -->
+          <div class="p-4 bg-white dark:bg-gray-900">
+            <!-- Título -->
+            <div class="flex justify-between items-center mb-4">
+              <span class="text-sm font-semibold text-gray-900 dark:text-white">⭐ Lo que opinan tus clientes</span>
+              <span class="text-[10px] text-gray-400 dark:text-gray-500">Actualizado hoy</span>
+            </div>
+
+            <!-- 4 métricas de satisfacción -->
+            <div class="grid grid-cols-2 gap-2.5 mb-4">
+              <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-2.5 text-center transition-all hover:scale-[1.02] hover:shadow-sm">
+                <div class="flex items-center justify-center gap-0.5 text-amber-400 text-sm">
+                  <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+                </div>
+                <span class="text-lg font-bold text-gray-900 dark:text-white">4.9</span>
+                <span class="text-[9px] text-gray-400 dark:text-gray-500">/ 5.0</span>
+                <div class="text-[9px] font-medium text-gray-500 dark:text-gray-400">Calificación</div>
+              </div>
+              <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-2.5 text-center transition-all hover:scale-[1.02] hover:shadow-sm">
+                <span class="text-lg font-bold text-green-600 dark:text-green-400">98%</span>
+                <div class="text-[9px] text-gray-400 dark:text-gray-500 mt-0.5 flex items-center justify-center gap-1">
+                  <svg class="w-3 h-3 text-green-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                  +4% vs mes pasado
+                </div>
+                <span class="text-[9px] font-medium text-gray-500 dark:text-gray-400">Satisfacción</span>
+              </div>
+              <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-2.5 text-center transition-all hover:scale-[1.02] hover:shadow-sm">
+                <span class="text-lg font-bold text-blue-600 dark:text-blue-400">73%</span>
+                <div class="text-[9px] text-gray-400 dark:text-gray-500 mt-0.5">Clientes que repiten</div>
+                <span class="text-[9px] font-medium text-gray-500 dark:text-gray-400">Recompra</span>
+              </div>
+              <div class="bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-2.5 text-center transition-all hover:scale-[1.02] hover:shadow-sm">
+                <span class="text-lg font-bold text-purple-600 dark:text-purple-400">82</span>
+                <div class="text-[9px] text-gray-400 dark:text-gray-500 mt-0.5 flex items-center justify-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-purple-400"></span> Excelente
+                </div>
+                <span class="text-[9px] font-medium text-gray-500 dark:text-gray-400">NPS®</span>
+              </div>
+            </div>
+
+            <!-- Distribución de reseñas por estrellas -->
+            <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 mb-4">
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-[10px] font-medium text-gray-600 dark:text-gray-300">Distribución de reseñas</span>
+                <span class="text-[9px] text-gray-400 dark:text-gray-500">Basado en 150 opiniones</span>
+              </div>
+              <div class="space-y-1.5">
+                <div class="flex items-center gap-2">
+                  <span class="text-[10px] text-amber-400 w-5">★ 5</span>
+                  <div class="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div class="h-full bg-amber-400 rounded-full" style="width: 89%"></div>
+                  </div>
+                  <span class="text-[9px] text-gray-400 w-8 text-right">89%</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-[10px] text-gray-400 w-5">★ 4</span>
+                  <div class="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div class="h-full bg-amber-300 rounded-full" style="width: 8%"></div>
+                  </div>
+                  <span class="text-[9px] text-gray-400 w-8 text-right">8%</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-[10px] text-gray-400 w-5">★ 3</span>
+                  <div class="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div class="h-full bg-amber-200 rounded-full" style="width: 2%"></div>
+                  </div>
+                  <span class="text-[9px] text-gray-400 w-8 text-right">2%</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-[10px] text-gray-400 w-5">★ 2</span>
+                  <div class="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div class="h-full bg-gray-400 rounded-full" style="width: 0.5%"></div>
+                  </div>
+                  <span class="text-[9px] text-gray-400 w-8 text-right">&lt;1%</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-[10px] text-gray-400 w-5">★ 1</span>
+                  <div class="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div class="h-full bg-gray-400 rounded-full" style="width: 0.5%"></div>
+                  </div>
+                  <span class="text-[9px] text-gray-400 w-8 text-right">&lt;1%</span>
+                </div>
+              </div>
+              <div class="mt-2 pt-2 border-t border-gray-200/50 dark:border-gray-700/50 flex justify-between text-[9px] text-gray-500 dark:text-gray-400">
+                <span>⭐ "¡La mejor plataforma para mi negocio!"</span>
+                <span class="text-green-500 font-medium">Ver todas →</span>
+              </div>
+            </div>
+
+            <!-- Testimonios en tiempo real -->
+            <div class="flex flex-col gap-1.5 border-t border-gray-100 dark:border-gray-800 pt-3">
+              <div class="flex items-start gap-2 text-[10px] text-gray-500 dark:text-gray-400">
+                <div class="flex text-[8px] text-amber-400 mt-0.5">★★★★★</div>
+                <p class="text-gray-700 dark:text-gray-300 leading-tight">"ArrowK transformó nuestro control de inventario. ¡Clientes felices!"</p>
+                <span class="text-[9px] text-gray-400 whitespace-nowrap">— Carlos R.</span>
+              </div>
+              <div class="flex items-start gap-2 text-[10px] text-gray-500 dark:text-gray-400">
+                <div class="flex text-[8px] text-amber-400 mt-0.5">★★★★★</div>
+                <p class="text-gray-700 dark:text-gray-300 leading-tight">"Las garantías ya no son un caos. Mis técnicos aman la interfaz."</p>
+                <span class="text-[9px] text-gray-400 whitespace-nowrap">— Laura M.</span>
+              </div>
+              <div class="flex items-start gap-2 text-[10px] text-gray-500 dark:text-gray-400 bg-yellow-50/50 dark:bg-yellow-900/10 p-1.5 rounded-lg border border-yellow-100 dark:border-yellow-900/30">
+                <div class="flex text-[8px] text-amber-400 mt-0.5">★★★★★</div>
+                <p class="text-gray-700 dark:text-gray-300 leading-tight">"Pedidos más rápidos y clientes que regresan. ¡100% recomendado!"</p>
+                <span class="text-[9px] text-gray-400 whitespace-nowrap">— Miguel G.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Badge flotante de confianza -->
+        <div class="absolute -bottom-2 -right-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 shadow-lg flex items-center gap-2">
+          <svg class="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+          </svg>
+          <span class="text-[10px] font-medium text-gray-600 dark:text-gray-300">Confianza del 98% · 150+ reseñas</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
 
   <!-- PROBLEMA / SOLUCIÓN -->
   <section id="problema" class="py-16 px-6 bg-white dark:bg-gray-900">

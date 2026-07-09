@@ -353,7 +353,7 @@
                     </div>
 
                     {{-- ===== DESKTOP ===== --}}
-                    <div x-show="filas.length > 0" class="hidden md:block flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700/60" style="max-height: calc(100vh);">
+                    <div x-show="filas.length > 0" class="hidden md:block flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700/60" style="max-height: calc(100vh - 220px);">
                         <template x-for="(fila, idx) in filas" :key="fila._uid">
                             <div class="group px-4 py-2.5 hover:bg-gray-50/70 dark:hover:bg-gray-700/20 transition-colors duration-100">
 
@@ -371,7 +371,7 @@
                                             x-model="fila.num_serie"
                                             @input="fila.num_serie = $event.target.value.toUpperCase(); validarSerie(idx)"
                                             maxlength="17"
-                                            placeholder="ABC12345678901234"
+                                            placeholder="X3P9L2N8T4R6W7Q5Z"
                                             class="w-full border rounded-lg px-4 py-2 text-sm tracking-widest font-mono focus:outline-none focus:ring-1 transition bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-300 dark:placeholder-gray-600"
                                             :class="{
                                                 'border-emerald-300 focus:ring-emerald-300 dark:border-emerald-700': fila.num_serie.length === 17 && !fila.error,
@@ -382,18 +382,20 @@
                                     </div>
 
                                     {{-- Color (con anillo si está seleccionado) --}}
-                                    <template x-if="fila.id_color && filaColores(idx).find(c => String(c.id_color) === fila.id_color)">
-                                        <span class="w-2.5 h-2.5 rounded-sm border border-black/10 dark:border-white/10 shrink-0 inline-block transition duration-150"
-                                              :class="{ 'ring-2 ring-offset-1 ring-gray-400 dark:ring-gray-300': fila.id_color }"
-                                              :title="nombreColor(fila)"
-                                              :style="'background:' + parsearColor((filaColores(idx).find(c => String(c.id_color) === fila.id_color) || {color:''}).color).hexes[0]"></span>
-                                    </template>
+                                    <span class="w-4 h-4 rounded-sm shrink-0 inline-block transition duration-150"
+                                        :class="{
+                                            'border border-black/10 dark:border-white/10': fila.id_color && filaColores(idx).find(c => String(c.id_color) === fila.id_color),
+                                            'border-2 border-dashed border-gray-300 dark:border-gray-500': !fila.id_color || !filaColores(idx).find(c => String(c.id_color) === fila.id_color)
+                                        }"
+                                        :style="fila.id_color && filaColores(idx).find(c => String(c.id_color) === fila.id_color) ? 'background:' + parsearColor((filaColores(idx).find(c => String(c.id_color) === fila.id_color) || {color:''}).color).hexes[0] : ''"
+                                        :title="fila.id_color && filaColores(idx).find(c => String(c.id_color) === fila.id_color) ? nombreColor(fila) : 'Sin color'">
+                                    </span>
 
                                     {{-- Voltaje (con color ámbar si está seleccionado) --}}
                                     <i class="shrink-0 transition duration-150"
                                        :class="fila.id_voltaje ? 'text-amber-500' : 'text-gray-400 dark:text-gray-500'"
                                        :title="nombreVoltaje(fila)">
-                                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                             <path d="M11.983 1.907a.75.75 0 00-1.292-.657L4.5 9.75a.75.75 0 00.6 1.207h4.043l-1.556 6.222a.75.75 0 001.32.638l6.5-8.5a.75.75 0 00-.598-1.207h-3.858l1.032-4.203a.75.75 0 00-.001-.001z"/>
                                         </svg>
                                     </i>
@@ -413,6 +415,14 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                         </svg>
                                     </button>
+
+                                    <span x-show="fila.num_serie.length === 17 && !fila.error"
+                                        x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-50" x-transition:enter-end="opacity-100 scale-100"
+                                        class="text-emerald-500 shrink-0 w-5 h-5 flex items-center justify-center">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                                        </svg>
+                                    </span>
                                 </div>
 
                                 <div x-show="fila.error"
@@ -424,31 +434,106 @@
                                     <span x-text="fila.error"></span>
                                 </div>
 
-                                {{-- Override individual DESKTOP --}}
+                                {{-- Override individual DESKTOP (pickers con teleport para escapar del overflow) --}}
                                 <div x-show="fila.expanded"
                                      x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
                                      x-transition:leave="transition ease-in duration-150" x-transition:leave-end="opacity-0"
                                      class="mt-2 ml-[26px] pt-2 border-t border-gray-100 dark:border-gray-700">
                                     <div class="grid grid-cols-4 gap-1.5 max-w-xl">
-                                        <select x-model="fila.id_marca" @change="onFilaMarca(idx)"
-                                            class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-2.5 py-1.5 text-xs bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-400 transition">
-                                            <option value="">Marca</option>
-                                            <template x-for="m in catalogo" :key="m.id_marca">
-                                                <option :value="String(m.id_marca)" x-text="m.nombre_marca"></option>
-                                            </template>
-                                        </select>
-                                        <select x-model="fila.id_modelo" @change="onFilaModelo(idx)" :disabled="!filaModelos(idx).length"
-                                            class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-2.5 py-1.5 text-xs bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-400 transition disabled:opacity-40 disabled:cursor-not-allowed">
-                                            <option value="">Modelo</option>
-                                            <template x-for="mo in filaModelos(idx)" :key="mo.id_modelo">
-                                                <option :value="String(mo.id_modelo)" x-text="mo.nombre_modelo"></option>
-                                            </template>
-                                        </select>
 
-                                        {{-- COLOR PICKER — override desktop (z-50) --}}
-                                        <div x-data="{ abiertoColor: false }" @click.outside="abiertoColor = false" class="relative">
+                                        {{-- MARCA PICKER — override desktop (teleport) --}}
+                                        <div x-data="{ abiertoMarca: false, coords: {top:0,left:0,width:0} }" @click.outside="abiertoMarca = false" class="relative">
                                             <button type="button"
-                                                @click="abiertoColor = !abiertoColor"
+                                                @click="
+                                                    const r = $el.getBoundingClientRect();
+                                                    coords = { top: r.bottom + 4, left: r.left, width: r.width };
+                                                    abiertoMarca = !abiertoMarca
+                                                "
+                                                class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-2.5 py-1.5 text-xs bg-white dark:bg-gray-700 text-left flex items-center gap-1.5 transition focus:outline-none focus:ring-1 focus:ring-gray-400">
+                                                <span class="flex-1 truncate" :class="fila.id_marca ? 'text-gray-800 dark:text-white' : 'text-gray-400'"
+                                                      x-text="fila.id_marca ? ((catalogo.find(m => String(m.id_marca) === fila.id_marca) || {}).nombre_marca || 'Marca') : 'Marca'"></span>
+                                                <svg class="w-3 h-3 text-gray-400 shrink-0 transition-transform duration-150 ml-auto" :class="abiertoMarca ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                                </svg>
+                                            </button>
+                                            <template x-teleport="body">
+                                                <div x-show="abiertoMarca" x-cloak
+                                                     x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+                                                     x-transition:leave="transition ease-in duration-100" x-transition:leave-end="opacity-0"
+                                                     @click.outside="abiertoMarca = false"
+                                                     :style="`position: fixed; top:${coords.top}px; left:${coords.left}px; width:${Math.max(coords.width,160)}px;`"
+                                                     class="z-[9999] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden">
+                                                    <div class="max-h-48 overflow-y-auto p-1">
+                                                        <template x-for="m in catalogo" :key="m.id_marca">
+                                                            <button type="button"
+                                                                @click="fila.id_marca = String(m.id_marca); onFilaMarca(idx); abiertoMarca = false"
+                                                                class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition text-left"
+                                                                :class="String(m.id_marca) === fila.id_marca ? 'bg-gray-50 dark:bg-gray-700/50' : ''">
+                                                                <span class="text-xs text-gray-800 dark:text-gray-200 truncate" x-text="m.nombre_marca"></span>
+                                                                <template x-if="String(m.id_marca) === fila.id_marca">
+                                                                    <svg class="w-3 h-3 text-gray-900 dark:text-white ml-auto shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                                                                    </svg>
+                                                                </template>
+                                                            </button>
+                                                        </template>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                        </div>
+
+                                        {{-- MODELO PICKER — override desktop (teleport) --}}
+                                        <div x-data="{ abiertoModelo: false, coords: {top:0,left:0,width:0} }" @click.outside="abiertoModelo = false" class="relative">
+                                            <button type="button"
+                                                @click="
+                                                    if (!filaModelos(idx).length) return;
+                                                    const r = $el.getBoundingClientRect();
+                                                    coords = { top: r.bottom + 4, left: r.left, width: r.width };
+                                                    abiertoModelo = !abiertoModelo
+                                                "
+                                                :disabled="!filaModelos(idx).length"
+                                                class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-2.5 py-1.5 text-xs bg-white dark:bg-gray-700 text-left flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed transition focus:outline-none focus:ring-1 focus:ring-gray-400">
+                                                <span class="flex-1 truncate" :class="fila.id_modelo ? 'text-gray-800 dark:text-white' : 'text-gray-400'"
+                                                      x-text="fila.id_modelo ? ((filaModelos(idx).find(mo => String(mo.id_modelo) === fila.id_modelo) || {}).nombre_modelo || 'Modelo') : 'Modelo'"></span>
+                                                <svg class="w-3 h-3 text-gray-400 shrink-0 transition-transform duration-150 ml-auto" :class="abiertoModelo ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                                </svg>
+                                            </button>
+                                            <template x-teleport="body">
+                                                <div x-show="abiertoModelo" x-cloak
+                                                     x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+                                                     x-transition:leave="transition ease-in duration-100" x-transition:leave-end="opacity-0"
+                                                     @click.outside="abiertoModelo = false"
+                                                     :style="`position: fixed; top:${coords.top}px; left:${coords.left}px; width:${Math.max(coords.width,160)}px;`"
+                                                     class="z-[9999] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden">
+                                                    <div class="max-h-48 overflow-y-auto p-1">
+                                                        <template x-for="mo in filaModelos(idx)" :key="mo.id_modelo">
+                                                            <button type="button"
+                                                                @click="fila.id_modelo = String(mo.id_modelo); onFilaModelo(idx); abiertoModelo = false"
+                                                                class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition text-left"
+                                                                :class="String(mo.id_modelo) === fila.id_modelo ? 'bg-gray-50 dark:bg-gray-700/50' : ''">
+                                                                <span class="text-xs text-gray-800 dark:text-gray-200 truncate" x-text="mo.nombre_modelo"></span>
+                                                                <template x-if="String(mo.id_modelo) === fila.id_modelo">
+                                                                    <svg class="w-3 h-3 text-gray-900 dark:text-white ml-auto shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                                                                    </svg>
+                                                                </template>
+                                                            </button>
+                                                        </template>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                        </div>
+
+                                        {{-- COLOR PICKER — override desktop (teleport) --}}
+                                        <div x-data="{ abiertoColor: false, coords: {top:0,left:0,width:0} }" @click.outside="abiertoColor = false" class="relative">
+                                            <button type="button"
+                                                @click="
+                                                    if (!filaColores(idx).length) return;
+                                                    const r = $el.getBoundingClientRect();
+                                                    coords = { top: r.bottom + 4, left: r.left, width: r.width };
+                                                    abiertoColor = !abiertoColor
+                                                "
                                                 :disabled="!filaColores(idx).length"
                                                 class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-2.5 py-1.5 text-xs bg-white dark:bg-gray-700 text-left flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed transition focus:outline-none focus:ring-1 focus:ring-gray-400">
                                                 <template x-if="!fila.id_color">
@@ -476,42 +561,51 @@
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                                 </svg>
                                             </button>
-                                            <div x-show="abiertoColor" x-cloak
-                                                 x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
-                                                 x-transition:leave="transition ease-in duration-100" x-transition:leave-end="opacity-0"
-                                                 class="absolute z-50 mt-1 w-full min-w-[160px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden">
-                                                <div class="max-h-40 overflow-y-auto p-1">
-                                                    <template x-for="c in filaColores(idx)" :key="c.id_color">
-                                                        <button type="button"
-                                                            @click="fila.id_color = String(c.id_color); abiertoColor = false"
-                                                            class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition text-left"
-                                                            :class="String(c.id_color) === fila.id_color ? 'bg-gray-50 dark:bg-gray-700/50' : ''">
-                                                            <template x-if="parsearColor(c.color).hexes.length >= 2">
-                                                                <span class="w-4 h-4 rounded-sm border border-black/10 overflow-hidden relative inline-flex shrink-0">
-                                                                    <span class="absolute left-0 top-0 w-1/2 h-full" :style="'background:' + parsearColor(c.color).hexes[0]"></span>
-                                                                    <span class="absolute right-0 top-0 w-1/2 h-full" :style="'background:' + parsearColor(c.color).hexes[1]"></span>
-                                                                </span>
-                                                            </template>
-                                                            <template x-if="parsearColor(c.color).hexes.length < 2">
-                                                                <span class="w-4 h-4 rounded-sm border border-black/10 shrink-0 inline-block"
-                                                                      :style="'background:' + parsearColor(c.color).hexes[0]"></span>
-                                                            </template>
-                                                            <span class="text-xs text-gray-800 dark:text-gray-200 truncate" x-text="parsearColor(c.color).nombre"></span>
-                                                            <template x-if="String(c.id_color) === fila.id_color">
-                                                                <svg class="w-3 h-3 text-gray-900 dark:text-white ml-auto shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
-                                                                </svg>
-                                                            </template>
-                                                        </button>
-                                                    </template>
+                                            <template x-teleport="body">
+                                                <div x-show="abiertoColor" x-cloak
+                                                     x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+                                                     x-transition:leave="transition ease-in duration-100" x-transition:leave-end="opacity-0"
+                                                     @click.outside="abiertoColor = false"
+                                                     :style="`position: fixed; top:${coords.top}px; left:${coords.left}px; width:${Math.max(coords.width,160)}px;`"
+                                                     class="z-[9999] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden">
+                                                    <div class="max-h-40 overflow-y-auto p-1">
+                                                        <template x-for="c in filaColores(idx)" :key="c.id_color">
+                                                            <button type="button"
+                                                                @click="fila.id_color = String(c.id_color); abiertoColor = false"
+                                                                class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition text-left"
+                                                                :class="String(c.id_color) === fila.id_color ? 'bg-gray-50 dark:bg-gray-700/50' : ''">
+                                                                <template x-if="parsearColor(c.color).hexes.length >= 2">
+                                                                    <span class="w-4 h-4 rounded-sm border border-black/10 overflow-hidden relative inline-flex shrink-0">
+                                                                        <span class="absolute left-0 top-0 w-1/2 h-full" :style="'background:' + parsearColor(c.color).hexes[0]"></span>
+                                                                        <span class="absolute right-0 top-0 w-1/2 h-full" :style="'background:' + parsearColor(c.color).hexes[1]"></span>
+                                                                    </span>
+                                                                </template>
+                                                                <template x-if="parsearColor(c.color).hexes.length < 2">
+                                                                    <span class="w-4 h-4 rounded-sm border border-black/10 shrink-0 inline-block"
+                                                                          :style="'background:' + parsearColor(c.color).hexes[0]"></span>
+                                                                </template>
+                                                                <span class="text-xs text-gray-800 dark:text-gray-200 truncate" x-text="parsearColor(c.color).nombre"></span>
+                                                                <template x-if="String(c.id_color) === fila.id_color">
+                                                                    <svg class="w-3 h-3 text-gray-900 dark:text-white ml-auto shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                                                                    </svg>
+                                                                </template>
+                                                            </button>
+                                                        </template>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            </template>
                                         </div>
 
-                                        {{-- VOLTAJE PICKER — override desktop (z-50) --}}
-                                        <div x-data="{ abiertoVoltaje: false }" @click.outside="abiertoVoltaje = false" class="relative">
+                                        {{-- VOLTAJE PICKER — override desktop (teleport) --}}
+                                        <div x-data="{ abiertoVoltaje: false, coords: {top:0,left:0,width:0} }" @click.outside="abiertoVoltaje = false" class="relative">
                                             <button type="button"
-                                                @click="abiertoVoltaje = !abiertoVoltaje"
+                                                @click="
+                                                    if (!filaVoltajes(idx).length) return;
+                                                    const r = $el.getBoundingClientRect();
+                                                    coords = { top: r.bottom + 4, left: r.left, width: r.width };
+                                                    abiertoVoltaje = !abiertoVoltaje
+                                                "
                                                 :disabled="!filaVoltajes(idx).length"
                                                 class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-2.5 py-1.5 text-xs bg-white dark:bg-gray-700 text-left flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed transition focus:outline-none focus:ring-1 focus:ring-gray-400">
                                                 <template x-if="!fila.id_voltaje">
@@ -525,26 +619,30 @@
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                                 </svg>
                                             </button>
-                                            <div x-show="abiertoVoltaje" x-cloak
-                                                 x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
-                                                 x-transition:leave="transition ease-in duration-100" x-transition:leave-end="opacity-0"
-                                                 class="absolute z-50 mt-1 w-full min-w-[160px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden">
-                                                <div class="max-h-40 overflow-y-auto p-1">
-                                                    <template x-for="v in filaVoltajes(idx)" :key="v.id_voltaje">
-                                                        <button type="button"
-                                                            @click="fila.id_voltaje = String(v.id_voltaje); abiertoVoltaje = false"
-                                                            class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition text-left"
-                                                            :class="String(v.id_voltaje) === fila.id_voltaje ? 'bg-gray-50 dark:bg-gray-700/50' : ''">
-                                                            <span class="text-xs text-gray-800 dark:text-gray-200" x-text="v.voltaje"></span>
-                                                            <template x-if="String(v.id_voltaje) === fila.id_voltaje">
-                                                                <svg class="w-3 h-3 text-gray-900 dark:text-white ml-auto shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
-                                                                </svg>
-                                                            </template>
-                                                        </button>
-                                                    </template>
+                                            <template x-teleport="body">
+                                                <div x-show="abiertoVoltaje" x-cloak
+                                                     x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+                                                     x-transition:leave="transition ease-in duration-100" x-transition:leave-end="opacity-0"
+                                                     @click.outside="abiertoVoltaje = false"
+                                                     :style="`position: fixed; top:${coords.top}px; left:${coords.left}px; width:${Math.max(coords.width,160)}px;`"
+                                                     class="z-[9999] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden">
+                                                    <div class="max-h-40 overflow-y-auto p-1">
+                                                        <template x-for="v in filaVoltajes(idx)" :key="v.id_voltaje">
+                                                            <button type="button"
+                                                                @click="fila.id_voltaje = String(v.id_voltaje); abiertoVoltaje = false"
+                                                                class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition text-left"
+                                                                :class="String(v.id_voltaje) === fila.id_voltaje ? 'bg-gray-50 dark:bg-gray-700/50' : ''">
+                                                                <span class="text-xs text-gray-800 dark:text-gray-200" x-text="v.voltaje"></span>
+                                                                <template x-if="String(v.id_voltaje) === fila.id_voltaje">
+                                                                    <svg class="w-3 h-3 text-gray-900 dark:text-white ml-auto shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                                                                    </svg>
+                                                                </template>
+                                                            </button>
+                                                        </template>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            </template>
                                         </div>
                                     </div>
                                 </div>
@@ -565,8 +663,8 @@
                                     <div class="flex-1 space-y-1.5">
                                         <input type="text"
                                             x-model="fila.num_serie"
-                                            @input="fila.num_serie = $event.target.value.toUpperCase(); validarSerie(idx)"
-                                            maxlength="17" placeholder="ABC12345678901234"
+                                            @input="fila.num_serie = $event.target.value.toUpperCase().slice(0, 17);validarSerie(idx)"
+                                            maxlength="17" placeholder="X3P9L2N8T4R6W7Q5Z"
                                             class="w-full border rounded-lg px-3 py-2 text-xs tracking-widest font-mono focus:outline-none focus:ring-1 transition bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-300 dark:placeholder-gray-600"
                                             :class="{
                                                 'border-emerald-300 focus:ring-emerald-300 dark:border-emerald-700': fila.num_serie.length === 17 && !fila.error,
@@ -590,16 +688,15 @@
                                             <span x-text="fila.error"></span>
                                         </div>
                                         <div class="flex items-center gap-2 pt-0.5">
-                                            <i class="shrink-0 text-gray-400 dark:text-gray-500" :title="nombreMarca(fila) + ' ' + nombreModelo(fila)">
-                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 17.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5zm14 0a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM5 15l4-7h5l4 7M9 8h6M12 8v7"/></svg>
-                                            </i>
                                             {{-- Color --}}
-                                            <template x-if="fila.id_color && filaColores(idx).find(c => String(c.id_color) === fila.id_color)">
-                                                <span class="w-2.5 h-2.5 rounded-sm border border-black/10 dark:border-white/10 shrink-0 inline-block transition duration-150"
-                                                      :class="{ 'ring-2 ring-offset-1 ring-gray-400 dark:ring-gray-300': fila.id_color }"
-                                                      :title="nombreColor(fila)"
-                                                      :style="'background:' + parsearColor((filaColores(idx).find(c => String(c.id_color) === fila.id_color) || {color:''}).color).hexes[0]"></span>
-                                            </template>
+                                            <span class="w-3.5 h-3.5 rounded-sm shrink-0 inline-block transition duration-150"
+                                                :class="{
+                                                    'border border-black/10 dark:border-white/10': fila.id_color && filaColores(idx).find(c => String(c.id_color) === fila.id_color),
+                                                    'border-2 border-dashed border-gray-300 dark:border-gray-500': !fila.id_color || !filaColores(idx).find(c => String(c.id_color) === fila.id_color)
+                                                }"
+                                                :style="fila.id_color && filaColores(idx).find(c => String(c.id_color) === fila.id_color) ? 'background:' + parsearColor((filaColores(idx).find(c => String(c.id_color) === fila.id_color) || {color:''}).color).hexes[0] : ''"
+                                                :title="fila.id_color && filaColores(idx).find(c => String(c.id_color) === fila.id_color) ? nombreColor(fila) : 'Sin color'">
+                                            </span>
                                             {{-- Voltaje --}}
                                             <i class="shrink-0 transition duration-150"
                                                :class="fila.id_voltaje ? 'text-amber-500' : 'text-gray-400 dark:text-gray-500'"
@@ -617,32 +714,117 @@
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                                 </svg>
                                             </button>
+
+                                           
+                                            <span x-show="fila.num_serie.length === 17 && !fila.error"
+                                                x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-50" x-transition:enter-end="opacity-100 scale-100"
+                                                class="text-emerald-500 shrink-0 w-5 h-5 flex items-center justify-center">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                                                </svg>
+                                            </span>
                                         </div>
 
-                                        {{-- Override individual MÓVIL --}}
+                                        {{-- Override individual MÓVIL (pickers con teleport) --}}
                                         <div x-show="fila.expanded"
                                              x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
                                              x-transition:leave="transition ease-in duration-150" x-transition:leave-end="opacity-0"
                                              class="pt-2 border-t border-gray-100 dark:border-gray-700 space-y-2">
-                                            <select x-model="fila.id_marca" @change="onFilaMarca(idx)"
-                                                class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-1.5 text-xs bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-400 transition">
-                                                <option value="">Marca</option>
-                                                <template x-for="m in catalogo" :key="m.id_marca">
-                                                    <option :value="String(m.id_marca)" x-text="m.nombre_marca"></option>
+
+                                            {{-- MARCA PICKER — override móvil (teleport) --}}
+                                            <div x-data="{ abiertoMarca: false, coords: {top:0,left:0,width:0} }" @click.outside="abiertoMarca = false" class="relative">
+                                                <button type="button"
+                                                    @click="
+                                                        const r = $el.getBoundingClientRect();
+                                                        coords = { top: r.bottom + 4, left: r.left, width: r.width };
+                                                        abiertoMarca = !abiertoMarca
+                                                    "
+                                                    class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-1.5 text-xs bg-white dark:bg-gray-700 text-left flex items-center gap-1.5 transition focus:outline-none focus:ring-1 focus:ring-gray-400">
+                                                    <span class="flex-1 truncate" :class="fila.id_marca ? 'text-gray-800 dark:text-white' : 'text-gray-400'"
+                                                          x-text="fila.id_marca ? ((catalogo.find(m => String(m.id_marca) === fila.id_marca) || {}).nombre_marca || 'Marca') : 'Marca'"></span>
+                                                    <svg class="w-3 h-3 text-gray-400 shrink-0 transition-transform duration-150 ml-auto" :class="abiertoMarca ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                                    </svg>
+                                                </button>
+                                                <template x-teleport="body">
+                                                    <div x-show="abiertoMarca" x-cloak
+                                                         x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+                                                         x-transition:leave="transition ease-in duration-100" x-transition:leave-end="opacity-0"
+                                                         @click.outside="abiertoMarca = false"
+                                                         :style="`position: fixed; top:${coords.top}px; left:${coords.left}px; width:${Math.max(coords.width,160)}px;`"
+                                                         class="z-[9999] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden">
+                                                        <div class="max-h-48 overflow-y-auto p-1">
+                                                            <template x-for="m in catalogo" :key="m.id_marca">
+                                                                <button type="button"
+                                                                    @click="fila.id_marca = String(m.id_marca); onFilaMarca(idx); abiertoMarca = false"
+                                                                    class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition text-left"
+                                                                    :class="String(m.id_marca) === fila.id_marca ? 'bg-gray-50 dark:bg-gray-700/50' : ''">
+                                                                    <span class="text-xs text-gray-800 dark:text-gray-200 truncate" x-text="m.nombre_marca"></span>
+                                                                    <template x-if="String(m.id_marca) === fila.id_marca">
+                                                                        <svg class="w-3 h-3 text-gray-900 dark:text-white ml-auto shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                                                                        </svg>
+                                                                    </template>
+                                                                </button>
+                                                            </template>
+                                                        </div>
+                                                    </div>
                                                 </template>
-                                            </select>
-                                            <select x-model="fila.id_modelo" @change="onFilaModelo(idx)" :disabled="!filaModelos(idx).length"
-                                                class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-1.5 text-xs bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-400 transition disabled:opacity-40 disabled:cursor-not-allowed">
-                                                <option value="">Modelo</option>
-                                                <template x-for="mo in filaModelos(idx)" :key="mo.id_modelo">
-                                                    <option :value="String(mo.id_modelo)" x-text="mo.nombre_modelo"></option>
+                                            </div>
+
+                                            {{-- MODELO PICKER — override móvil (teleport) --}}
+                                            <div x-data="{ abiertoModelo: false, coords: {top:0,left:0,width:0} }" @click.outside="abiertoModelo = false" class="relative">
+                                                <button type="button"
+                                                    @click="
+                                                        if (!filaModelos(idx).length) return;
+                                                        const r = $el.getBoundingClientRect();
+                                                        coords = { top: r.bottom + 4, left: r.left, width: r.width };
+                                                        abiertoModelo = !abiertoModelo
+                                                    "
+                                                    :disabled="!filaModelos(idx).length"
+                                                    class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-1.5 text-xs bg-white dark:bg-gray-700 text-left flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed transition focus:outline-none focus:ring-1 focus:ring-gray-400">
+                                                    <span class="flex-1 truncate" :class="fila.id_modelo ? 'text-gray-800 dark:text-white' : 'text-gray-400'"
+                                                          x-text="fila.id_modelo ? ((filaModelos(idx).find(mo => String(mo.id_modelo) === fila.id_modelo) || {}).nombre_modelo || 'Modelo') : 'Modelo'"></span>
+                                                    <svg class="w-3 h-3 text-gray-400 shrink-0 transition-transform duration-150 ml-auto" :class="abiertoModelo ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                                    </svg>
+                                                </button>
+                                                <template x-teleport="body">
+                                                    <div x-show="abiertoModelo" x-cloak
+                                                         x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+                                                         x-transition:leave="transition ease-in duration-100" x-transition:leave-end="opacity-0"
+                                                         @click.outside="abiertoModelo = false"
+                                                         :style="`position: fixed; top:${coords.top}px; left:${coords.left}px; width:${Math.max(coords.width,160)}px;`"
+                                                         class="z-[9999] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden">
+                                                        <div class="max-h-48 overflow-y-auto p-1">
+                                                            <template x-for="mo in filaModelos(idx)" :key="mo.id_modelo">
+                                                                <button type="button"
+                                                                    @click="fila.id_modelo = String(mo.id_modelo); onFilaModelo(idx); abiertoModelo = false"
+                                                                    class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition text-left"
+                                                                    :class="String(mo.id_modelo) === fila.id_modelo ? 'bg-gray-50 dark:bg-gray-700/50' : ''">
+                                                                    <span class="text-xs text-gray-800 dark:text-gray-200 truncate" x-text="mo.nombre_modelo"></span>
+                                                                    <template x-if="String(mo.id_modelo) === fila.id_modelo">
+                                                                        <svg class="w-3 h-3 text-gray-900 dark:text-white ml-auto shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                                                                        </svg>
+                                                                    </template>
+                                                                </button>
+                                                            </template>
+                                                        </div>
+                                                    </div>
                                                 </template>
-                                            </select>
+                                            </div>
+
                                             <div class="grid grid-cols-2 gap-1.5">
-                                                {{-- COLOR PICKER — override móvil --}}
-                                                <div x-data="{ abiertoColor: false }" @click.outside="abiertoColor = false" class="relative">
+                                                {{-- COLOR PICKER — override móvil (teleport) --}}
+                                                <div x-data="{ abiertoColor: false, coords: {top:0,left:0,width:0} }" @click.outside="abiertoColor = false" class="relative">
                                                     <button type="button"
-                                                        @click="abiertoColor = !abiertoColor"
+                                                        @click="
+                                                            if (!filaColores(idx).length) return;
+                                                            const r = $el.getBoundingClientRect();
+                                                            coords = { top: r.bottom + 4, left: r.left, width: r.width };
+                                                            abiertoColor = !abiertoColor
+                                                        "
                                                         :disabled="!filaColores(idx).length"
                                                         class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-1.5 text-xs bg-white dark:bg-gray-700 text-left flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed transition focus:outline-none focus:ring-1 focus:ring-gray-400">
                                                         <template x-if="!fila.id_color">
@@ -670,42 +852,51 @@
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                                         </svg>
                                                     </button>
-                                                    <div x-show="abiertoColor" x-cloak
-                                                         x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
-                                                         x-transition:leave="transition ease-in duration-100" x-transition:leave-end="opacity-0"
-                                                         class="absolute z-50 mt-1 w-full min-w-[160px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden">
-                                                        <div class="max-h-40 overflow-y-auto p-1">
-                                                            <template x-for="c in filaColores(idx)" :key="c.id_color">
-                                                                <button type="button"
-                                                                    @click="fila.id_color = String(c.id_color); abiertoColor = false"
-                                                                    class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition text-left"
-                                                                    :class="String(c.id_color) === fila.id_color ? 'bg-gray-50 dark:bg-gray-700/50' : ''">
-                                                                    <template x-if="parsearColor(c.color).hexes.length >= 2">
-                                                                        <span class="w-4 h-4 rounded-sm border border-black/10 overflow-hidden relative inline-flex shrink-0">
-                                                                            <span class="absolute left-0 top-0 w-1/2 h-full" :style="'background:' + parsearColor(c.color).hexes[0]"></span>
-                                                                            <span class="absolute right-0 top-0 w-1/2 h-full" :style="'background:' + parsearColor(c.color).hexes[1]"></span>
-                                                                        </span>
-                                                                    </template>
-                                                                    <template x-if="parsearColor(c.color).hexes.length < 2">
-                                                                        <span class="w-4 h-4 rounded-sm border border-black/10 shrink-0 inline-block"
-                                                                              :style="'background:' + parsearColor(c.color).hexes[0]"></span>
-                                                                    </template>
-                                                                    <span class="text-xs text-gray-800 dark:text-gray-200 truncate" x-text="parsearColor(c.color).nombre"></span>
-                                                                    <template x-if="String(c.id_color) === fila.id_color">
-                                                                        <svg class="w-3 h-3 text-gray-900 dark:text-white ml-auto shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
-                                                                        </svg>
-                                                                    </template>
-                                                                </button>
-                                                            </template>
+                                                    <template x-teleport="body">
+                                                        <div x-show="abiertoColor" x-cloak
+                                                             x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+                                                             x-transition:leave="transition ease-in duration-100" x-transition:leave-end="opacity-0"
+                                                             @click.outside="abiertoColor = false"
+                                                             :style="`position: fixed; top:${coords.top}px; left:${coords.left}px; width:${Math.max(coords.width,160)}px;`"
+                                                             class="z-[9999] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden">
+                                                            <div class="max-h-40 overflow-y-auto p-1">
+                                                                <template x-for="c in filaColores(idx)" :key="c.id_color">
+                                                                    <button type="button"
+                                                                        @click="fila.id_color = String(c.id_color); abiertoColor = false"
+                                                                        class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition text-left"
+                                                                        :class="String(c.id_color) === fila.id_color ? 'bg-gray-50 dark:bg-gray-700/50' : ''">
+                                                                        <template x-if="parsearColor(c.color).hexes.length >= 2">
+                                                                            <span class="w-4 h-4 rounded-sm border border-black/10 overflow-hidden relative inline-flex shrink-0">
+                                                                                <span class="absolute left-0 top-0 w-1/2 h-full" :style="'background:' + parsearColor(c.color).hexes[0]"></span>
+                                                                                <span class="absolute right-0 top-0 w-1/2 h-full" :style="'background:' + parsearColor(c.color).hexes[1]"></span>
+                                                                            </span>
+                                                                        </template>
+                                                                        <template x-if="parsearColor(c.color).hexes.length < 2">
+                                                                            <span class="w-4 h-4 rounded-sm border border-black/10 shrink-0 inline-block"
+                                                                                  :style="'background:' + parsearColor(c.color).hexes[0]"></span>
+                                                                        </template>
+                                                                        <span class="text-xs text-gray-800 dark:text-gray-200 truncate" x-text="parsearColor(c.color).nombre"></span>
+                                                                        <template x-if="String(c.id_color) === fila.id_color">
+                                                                            <svg class="w-3 h-3 text-gray-900 dark:text-white ml-auto shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                                                                            </svg>
+                                                                        </template>
+                                                                    </button>
+                                                                </template>
+                                                            </div>
                                                         </div>
-                                                    </div>
+                                                    </template>
                                                 </div>
 
-                                                {{-- VOLTAJE PICKER — override móvil --}}
-                                                <div x-data="{ abiertoVoltaje: false }" @click.outside="abiertoVoltaje = false" class="relative">
+                                                {{-- VOLTAJE PICKER — override móvil (teleport) --}}
+                                                <div x-data="{ abiertoVoltaje: false, coords: {top:0,left:0,width:0} }" @click.outside="abiertoVoltaje = false" class="relative">
                                                     <button type="button"
-                                                        @click="abiertoVoltaje = !abiertoVoltaje"
+                                                        @click="
+                                                            if (!filaVoltajes(idx).length) return;
+                                                            const r = $el.getBoundingClientRect();
+                                                            coords = { top: r.bottom + 4, left: r.left, width: r.width };
+                                                            abiertoVoltaje = !abiertoVoltaje
+                                                        "
                                                         :disabled="!filaVoltajes(idx).length"
                                                         class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-1.5 text-xs bg-white dark:bg-gray-700 text-left flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed transition focus:outline-none focus:ring-1 focus:ring-gray-400">
                                                         <template x-if="!fila.id_voltaje">
@@ -719,26 +910,30 @@
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                                         </svg>
                                                     </button>
-                                                    <div x-show="abiertoVoltaje" x-cloak
-                                                         x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
-                                                         x-transition:leave="transition ease-in duration-100" x-transition:leave-end="opacity-0"
-                                                         class="absolute z-50 mt-1 w-full min-w-[160px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden">
-                                                        <div class="max-h-40 overflow-y-auto p-1">
-                                                            <template x-for="v in filaVoltajes(idx)" :key="v.id_voltaje">
-                                                                <button type="button"
-                                                                    @click="fila.id_voltaje = String(v.id_voltaje); abiertoVoltaje = false"
-                                                                    class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition text-left"
-                                                                    :class="String(v.id_voltaje) === fila.id_voltaje ? 'bg-gray-50 dark:bg-gray-700/50' : ''">
-                                                                    <span class="text-xs text-gray-800 dark:text-gray-200" x-text="v.voltaje"></span>
-                                                                    <template x-if="String(v.id_voltaje) === fila.id_voltaje">
-                                                                        <svg class="w-3 h-3 text-gray-900 dark:text-white ml-auto shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
-                                                                        </svg>
-                                                                    </template>
-                                                                </button>
-                                                            </template>
+                                                    <template x-teleport="body">
+                                                        <div x-show="abiertoVoltaje" x-cloak
+                                                             x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+                                                             x-transition:leave="transition ease-in duration-100" x-transition:leave-end="opacity-0"
+                                                             @click.outside="abiertoVoltaje = false"
+                                                             :style="`position: fixed; top:${coords.top}px; left:${coords.left}px; width:${Math.max(coords.width,160)}px;`"
+                                                             class="z-[9999] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden">
+                                                            <div class="max-h-40 overflow-y-auto p-1">
+                                                                <template x-for="v in filaVoltajes(idx)" :key="v.id_voltaje">
+                                                                    <button type="button"
+                                                                        @click="fila.id_voltaje = String(v.id_voltaje); abiertoVoltaje = false"
+                                                                        class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition text-left"
+                                                                        :class="String(v.id_voltaje) === fila.id_voltaje ? 'bg-gray-50 dark:bg-gray-700/50' : ''">
+                                                                        <span class="text-xs text-gray-800 dark:text-gray-200" x-text="v.voltaje"></span>
+                                                                        <template x-if="String(v.id_voltaje) === fila.id_voltaje">
+                                                                            <svg class="w-3 h-3 text-gray-900 dark:text-white ml-auto shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                                                                            </svg>
+                                                                        </template>
+                                                                    </button>
+                                                                </template>
+                                                            </div>
                                                         </div>
-                                                    </div>
+                                                    </template>
                                                 </div>
                                             </div>
                                         </div>

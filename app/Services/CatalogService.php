@@ -859,6 +859,8 @@ class CatalogService
         Cache::forget(self::key("producto:{$idProducto}") . ":v{$globalV}");
         Cache::forget(self::key('productos') . ":v{$globalV}");
         Cache::forget(self::key("productos:negocio:{$idNegocio}") . ":v{$tenantV}");
+
+        self::incrementVersion($idNegocio);
     }
 
     // ─── CATÁLOGO COMPLETO ───────────────────────────────────────────────────
@@ -948,8 +950,12 @@ class CatalogService
         return self::remember(
             "inventario:negocio:{$idNegocio}",
             self::CACHE_TTL['productos'],
-            fn() => Inventario::with(['productoModelo.producto', 'sucursal'])
+            fn() => Inventario::with([
+                    'productoModelo.producto:id_producto,nombre_producto,precio',
+                    'sucursal:id_usuario,nombre_usuario',
+                ])
                 ->where('id_negocio', $idNegocio)
+                ->select('id_inventario', 'id_producto_modelo', 'id_producto', 'id_negocio', 'id_usuario', 'cantidad', 'stock_minimo')
                 ->orderBy('id_usuario')
                 ->get(),
             $idNegocio
@@ -961,9 +967,10 @@ class CatalogService
         return self::remember(
             "inventario:sucursal:{$idNegocio}:{$idUsuario}",
             self::CACHE_TTL['productos'],
-            fn() => Inventario::with(['productoModelo.producto'])
+            fn() => Inventario::with(['productoModelo.producto:id_producto,nombre_producto,precio'])
                 ->where('id_negocio', $idNegocio)
                 ->where('id_usuario', $idUsuario)
+                ->select('id_inventario', 'id_producto_modelo', 'id_producto', 'id_negocio', 'id_usuario', 'cantidad', 'stock_minimo')
                 ->get(),
             $idNegocio
         );
@@ -1282,7 +1289,7 @@ class CatalogService
     {
         return self::remember(
             "garantias:index:negocio:{$idNegocio}:page:{$page}",
-            300,
+            900,
             function () use ($idNegocio, $page) {
                 $garantiaSub = BicicletaGarantia::selectRaw("
                         num_serie,
@@ -1308,11 +1315,19 @@ class CatalogService
                     ->latest()
                     ->first();
 
+                $statsGarantias = BicicletaGarantia::where('id_negocio', $idNegocio)
+                    ->selectRaw("
+                        COUNT(*) as consultas,
+                        SUM(estado = 'vigente') as activas,
+                        SUM(id_reemplazada_por IS NOT NULL) as reemplazos
+                    ")
+                    ->first();
+
                 $stats = [
-                    'activas'    => BicicletaGarantia::where('id_negocio', $idNegocio)->where('estado', 'vigente')->count(),
-                    'consultas'  => BicicletaGarantia::where('id_negocio', $idNegocio)->count(),
+                    'activas'    => (int) $statsGarantias->activas,
+                    'consultas'  => (int) $statsGarantias->consultas,
                     'reclamos'   => GarantiaReclamo::where('id_negocio', $idNegocio)->count(),
-                    'reemplazos' => BicicletaGarantia::where('id_negocio', $idNegocio)->whereNotNull('id_reemplazada_por')->count(),
+                    'reemplazos' => (int) $statsGarantias->reemplazos,
                 ];
 
                 return compact('bicicletas', 'ultimaGarantia', 'stats');

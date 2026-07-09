@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 use Illuminate\View\View;
 use App\Events\SessionTokenUpdated;
 use App\Models\Usuario;
+use Illuminate\Support\Facades\RateLimiter;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -25,11 +26,24 @@ class AuthenticatedSessionController extends Controller
             'password' => ['required', 'string'],
         ]);
 
+        $throttleKey = Str::lower($request->input('correo')) . '|' . $request->ip();
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $segundos = RateLimiter::availableIn($throttleKey);
+
+            return back()->withErrors([
+                'correo' => "Demasiados intentos fallidos. Intenta de nuevo en {$segundos} segundos.",
+            ])->onlyInput('correo');
+        }
+
         if (! Auth::attempt($request->only('correo', 'password'), $request->boolean('remember'))) {
+            RateLimiter::hit($throttleKey, 300); 
             return back()->withErrors([
                 'correo' => __('Las credenciales proporcionadas no coinciden con nuestros registros.'),
             ])->onlyInput('correo');
         }
+
+        RateLimiter::clear($throttleKey); // login exitoso, resetea el contador
 
         $request->session()->regenerate();
 
@@ -50,7 +64,6 @@ class AuthenticatedSessionController extends Controller
         $allowedRoles = [0, 1, 2, 5, 44];
 
         if (! in_array($rol, $allowedRoles)) {
-            // Cerrar sesión por rol no autorizado
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
@@ -60,7 +73,6 @@ class AuthenticatedSessionController extends Controller
             ]);
         }
 
-        // Redirigir según el rol
         if ($rol === 44) {
             return redirect()->route('rol44.dashboard');
         }
