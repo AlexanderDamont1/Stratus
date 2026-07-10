@@ -79,7 +79,7 @@ class ReparacionService
     public static function crear(array $datos, string $idNegocio, string $idUsuario): Reparaciones
     {
         if (!empty($datos['num_serie'])) {
-            $bici = CatalogService::getBicicletaBySerie($datos['num_serie']);
+            $bici = CatalogService::getBicicletaBySerie($datos['num_serie'], $idNegocio);
 
             if (!$bici) {
                 abort(422, 'El número de serie no está registrado en el sistema.');
@@ -410,7 +410,7 @@ class ReparacionService
 
         if ($nuevoEstado === 'lista' && !$rep->notificacion_enviada) {
             // nombre correcto del Job
-            \App\Jobs\NotificarOtLista::dispatch($rep->id_reparacion, $idNegocio)
+            \App\Jobs\NotificarOtLista::dispatch($rep, $idNegocio)
                 ->onQueue('emails');
 
             $rep->update([

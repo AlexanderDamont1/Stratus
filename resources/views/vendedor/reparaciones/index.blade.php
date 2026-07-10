@@ -827,12 +827,26 @@ function mantIndex() {
 
         async seleccionar(id) {
             if (this.seleccionada === id) return;
-            this.seleccionada    = id;
+            this.seleccionada     = id;
+            this.busquedaPieza    = '';
+            this.resultadosPiezas = [];
+            await this.cargarDetalle(id);
+        },
+
+        // Recarga el detalle de la OT ya abierta (tras avanzar estado, guardar
+        // diagnóstico, cotizar o resolver). A diferencia de seleccionar(), esta
+        // SIEMPRE vuelve a pedir los datos aunque el id ya esté seleccionado —
+        // por eso el panel dejaba de reflejar el estado nuevo: seleccionar()
+        // se saltaba la recarga porque el id "ya estaba seleccionado".
+        async recargarDetalle() {
+            if (!this.seleccionada) return;
+            await this.cargarDetalle(this.seleccionada);
+        },
+
+        async cargarDetalle(id) {
             this.detalle         = null;
             this.cargandoDetalle = true;
             this.formDiag        = { diagnostico: '', costoManoObra: '', piezas: [] };
-            this.busquedaPieza   = '';
-            this.resultadosPiezas = [];
             try {
                 const res  = await fetch(`{{ url('sucursal/reparaciones') }}/${id}`, {
                     headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
@@ -928,7 +942,7 @@ function mantIndex() {
                 const data = await res.json();
                 if (!data.ok) { this.flash(data.mensaje ?? 'Error', 'error'); return; }
                 this.flash('Diagnóstico guardado.');
-                await this.seleccionar(this.detalle.id_reparacion);
+                await this.recargarDetalle();
                 await this.cargarItems();
             } catch { this.flash('Error de conexión', 'error'); }
             finally  { this.guardandoDiag = false; }
@@ -958,7 +972,7 @@ function mantIndex() {
                 this.modalCotizacion = false;
                 if (!data.ok) { this.flash(data.mensaje ?? 'Error', 'error'); return; }
                 this.flash('Cotización enviada al cliente.');
-                await this.seleccionar(this.detalle.id_reparacion);
+                await this.recargarDetalle();
                 await this.cargarItems();
             } catch { this.flash('Error de conexión', 'error'); }
             finally  { this.enviandoCot = false; }
@@ -1002,7 +1016,7 @@ function mantIndex() {
                 this.modalResolver = false;
                 if (!data.ok) { this.flash(data.mensaje ?? 'Error', 'error'); return; }
                 this.flash('Decisión registrada.');
-                await this.seleccionar(this.detalle.id_reparacion);
+                await this.recargarDetalle();
                 await this.cargarItems();
             } catch { this.flash('Error de conexión', 'error'); }
             finally  { this.resolviendo = false; }
@@ -1025,7 +1039,7 @@ function mantIndex() {
                 const data = await res.json();
                 if (!data.ok) { this.flash(data.mensaje ?? 'Error', 'error'); return; }
                 this.flash(data.mensaje);
-                await this.seleccionar(id);
+                await this.recargarDetalle();
                 await this.cargarItems();
             } catch { this.flash('Error de conexión', 'error'); }
             finally  { this.avanzando = false; }

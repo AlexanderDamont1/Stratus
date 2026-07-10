@@ -161,16 +161,10 @@ class Reparaciones extends Model
     {
         static::creating(function (self $model) {
             if (empty($model->id_reparacion)) {
-                $ultimo = static::where('id_negocio', $model->id_negocio)
-                    ->orderByDesc('id_reparacion')
-                    ->lockForUpdate()
-                    ->value('id_reparacion');
-
-                $num = $ultimo
-                    ? (int) substr($ultimo, strrpos($ultimo, '-') + 1) + 1
-                    : 1;
-
-                $model->id_reparacion = 'REP-' . str_pad($num, 5, '0', STR_PAD_LEFT);
+                $model->id_reparacion = 'REP'
+                    . now()->format('Ymd')
+                    . strtoupper(substr(str_shuffle('ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 0, 3))
+                    . random_int(1000, 9999);
             }
 
             if (is_null($model->recibida_at)) {
