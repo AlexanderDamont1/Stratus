@@ -630,7 +630,7 @@
                 },
 
                 async guardarComponentes() {
-                    const invalidos = this.componentes.filter(c => !c.clave.trim() || !c.nombre.trim() || c.duracion < 0);
+                    const invalidos = this.componentes.filter(c => !c.clave.trim() || !c.nombre.trim() || c.duracion === null || c.duracion < 0);
                     if (invalidos.length) {
                         this.flash('Revisa que todos los componentes tengan clave, nombre y duración válida.', 'error');
                         return;
@@ -646,12 +646,14 @@
                                 'Accept':           'application/json',
                             },
                             body: JSON.stringify({
-                                id_marca_garantia: this.idMarcaGarantia,
-                                componentes:       this.componentes,
+                                id_marca:     '{{ $marca->id_marca }}',
+                                componentes:  this.componentes,
                             }),
                         });
                         const data = await res.json();
                         if (!data.ok) { this.flash(data.mensaje ?? 'Error.', 'error'); return; }
+                        // La config pudo haberse creado apenas ahora (alta manual sin PDF previo)
+                        if (data.id_marca_garantia) this.idMarcaGarantia = data.id_marca_garantia;
                         this.componentesDirty = false; // ← reset dirty tras guardar exitoso
                         this.flash('Componentes guardados correctamente.');
                     } catch { this.flash('Error de conexión.', 'error'); }

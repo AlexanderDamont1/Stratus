@@ -107,14 +107,14 @@ class GarantiaService
     ): BicicletaGarantia {
         return DB::transaction(function () use ($idReclamo, $numSerieNuevoComponente, $notas) {
             $reclamo = GarantiaReclamo::with([
-                'bicicletaGarantia.garantiaDef.marcaGarantiaConfig', // eager load hasta la config de marca
+                'bicicletaGarantia.garantiaDef.marcaGarantia', // eager load hasta la config de marca
             ])->findOrFail($idReclamo);
 
             $garantiaAnterior = $reclamo->bicicletaGarantia;
             $def              = $garantiaAnterior->garantiaDef;
 
             // ── Política: ahora viene de la marca, no del negocio ────────────
-            $marcaConfig = $def?->marcaGarantiaConfig;
+            $marcaConfig = $def?->marcaGarantia;
             $politica    = $marcaConfig?->politicaEfectiva()  ?? 'mini';
             $miniDias    = $marcaConfig?->miniDiasEfectivos() ?? 7;
             // ────────────────────────────────────────────────────────────────

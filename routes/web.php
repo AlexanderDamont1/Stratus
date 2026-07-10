@@ -509,7 +509,7 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
             Route::get('/buscar', [GarantiaController::class, 'buscar'])->name('buscar');
             Route::get('/bici/{numSerie}', [GarantiaController::class, 'show'])->name('show');
             Route::post('/reclamo', [GarantiaController::class, 'reclamo'])->name('reclamo');
-            Route::patch('/reclamo/{id}/estado', [GarantiaController::class, 'estado'])->name('estado');
+            Route::get('/reclamo/{id}/ia', [GarantiaController::class, 'estadoIA'])->name('reclamo.ia');
         });
 
         Route::prefix('sucursal/ventas')->name('ventas.')->group(function () {

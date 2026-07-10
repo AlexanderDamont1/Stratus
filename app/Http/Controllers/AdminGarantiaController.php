@@ -11,6 +11,7 @@ use App\Models\MarcaGarantiaConfig;
 use App\Services\CatalogService;
 use App\Services\GarantiaService;
 use App\Services\PdfGarantiaService;
+use App\Services\ReparacionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -46,7 +47,7 @@ class AdminGarantiaController extends Controller
 
         $query = GarantiaReclamo::with([
             'bicicletaGarantia.garantiaDef',
-            'mantenimiento',
+            'reparacion',
         ])->where('id_negocio', $user->id_negocio);
 
         if ($request->filled('estado')) {
@@ -201,7 +202,7 @@ class AdminGarantiaController extends Controller
         if ($user->id_rol != 1) abort(403);
 
         $request->validate([
-            'id_marca_garantia'            => 'required|string',
+            'id_marca'                     => 'required|string',
             'componentes'                  => 'required|array|min:1',
             'componentes.*.clave'          => 'required|string|max:60',
             'componentes.*.nombre'         => 'required|string|max:120',
@@ -212,9 +213,15 @@ class AdminGarantiaController extends Controller
             'componentes.*.excluido'       => 'boolean',
         ]);
 
-        $config = MarcaGarantiaConfig::where('id_marca_garantia', $request->id_marca_garantia)
-            ->where('id_negocio', $user->id_negocio)
-            ->firstOrFail();
+        $marca = CatalogService::getMarcaById($request->id_marca);
+        if (!$marca || $marca->id_negocio !== $user->id_negocio) abort(404);
+
+        // Puede no existir aún si el admin agrega componentes manualmente sin
+        // haber subido un PDF antes — se crea igual que en subirPdf().
+        $config = MarcaGarantiaConfig::firstOrCreate([
+            'id_marca'   => $request->id_marca,
+            'id_negocio' => $user->id_negocio,
+        ]);
 
         DB::transaction(function () use ($request, $config) {
             foreach ($request->componentes as $comp) {
@@ -239,7 +246,11 @@ class AdminGarantiaController extends Controller
             $config->update(['estado_procesamiento' => 'completado']);
         });
 
-        return response()->json(['ok' => true, 'mensaje' => 'Componentes guardados correctamente.']);
+        return response()->json([
+            'ok'                => true,
+            'mensaje'           => 'Componentes guardados correctamente.',
+            'id_marca_garantia' => $config->id_marca_garantia,
+        ]);
     }
 
     // ─── POST: guardar política de reemplazo POR MARCA ────────────────────
@@ -280,14 +291,18 @@ class AdminGarantiaController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    // ─── PATCH: estado de reclamo ─────────────────────────────────────────
+    // ─── PATCH: decisión del admin sobre el reclamo (aprobar / rechazar) ──
+    //
+    // Ya no se elige un "estado" libre — el admin aprueba o rechaza, y eso
+    // se traduce en un avance de la OT vinculada (en_revision → recibida o
+    // cancelada). De ahí en adelante la OT sigue su flujo normal.
     public function estadoReclamo(Request $request, string $id)
     {
         $user = auth()->user();
         if ($user->id_rol != 1) abort(403);
 
         $request->validate([
-            'estado'    => 'required|string|max:40',
+            'decision'  => 'required|in:aprobar,rechazar',
             'resultado' => 'nullable|string|max:1000',
         ]);
 
@@ -295,12 +310,44 @@ class AdminGarantiaController extends Controller
             ->where('id_negocio', $user->id_negocio)
             ->firstOrFail();
 
+        if (!$reclamo->id_reparacion) {
+            return response()->json([
+                'ok'      => false,
+                'mensaje' => 'Este reclamo no tiene una orden de trabajo vinculada.',
+            ], 422);
+        }
+
+        $nuevoEstadoOt = $request->decision === 'aprobar' ? 'recibida' : 'cancelada';
+
+        try {
+            ReparacionService::avanzarEstado(
+                $reclamo->id_reparacion,
+                $nuevoEstadoOt,
+                $user->id_usuario,
+                $user->id_negocio,
+                $request->resultado,
+            );
+        } catch (\Throwable $e) {
+            Log::error('Error al decidir reclamo de garantía', ['error' => $e->getMessage()]);
+            return response()->json([
+                'ok'      => false,
+                'mensaje' => 'No se pudo actualizar la OT: ' . $e->getMessage(),
+            ], 422);
+        }
+
         $reclamo->update([
-            'estado'    => $request->estado,
+            'estado'    => $request->decision === 'aprobar' ? 'aprobado' : 'rechazado',
             'resultado' => $request->resultado,
         ]);
 
-        return response()->json(['ok' => true, 'mensaje' => 'Estado actualizado.']);
+        CatalogService::invalidateGarantiasIndex($user->id_negocio);
+
+        return response()->json([
+            'ok'      => true,
+            'mensaje' => $request->decision === 'aprobar'
+                ? 'Reclamo aprobado. La OT sigue el flujo normal de reparación.'
+                : 'Reclamo rechazado.',
+        ]);
     }
 
     // ─── POST: procesar reemplazo ─────────────────────────────────────────
@@ -314,14 +361,17 @@ class AdminGarantiaController extends Controller
             'notas'                      => 'nullable|string|max:1000',
         ]);
 
-        $reclamo = GarantiaReclamo::where('id_reclamo', $id)
+        $reclamo = GarantiaReclamo::with('reparacion')
+            ->where('id_reclamo', $id)
             ->where('id_negocio', $user->id_negocio)
             ->firstOrFail();
 
-        if ($reclamo->estado !== 'aprobado') {
+        $estadoOt = $reclamo->reparacion?->estado;
+
+        if (!$estadoOt || in_array($estadoOt, ['en_revision', 'cancelada'])) {
             return response()->json([
                 'ok'      => false,
-                'mensaje' => 'El reclamo debe estar aprobado antes de procesar el reemplazo.',
+                'mensaje' => 'La OT debe estar aprobada (fuera de revisión) antes de procesar el reemplazo.',
             ], 422);
         }
 

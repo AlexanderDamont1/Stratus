@@ -95,7 +95,9 @@ class CajaService
             $snapshot     = self::calcularSnapshot($sesion, 'cierre');
             $montoSistema = $snapshot['totales']['total_sistema'];
             $declarado    = $montoDeclarado ?? $montoSistema;
-            $diferencia   = round($montoSistema - $declarado, 2);
+            // declarado (dinero real contado) - sistema (teórico) — así un faltante
+            // (menos dinero real del esperado) da negativo y un sobrante da positivo.
+            $diferencia   = round($declarado - $montoSistema, 2);
 
             $sesion->update([
                 'id_usuario_cierre'      => $idUsuario,
@@ -391,27 +393,59 @@ class CajaService
         CajaSesion $sesion,
         string $idUsuario
     ): void {
+        self::_cerrarSesionSistema(
+            $sesion,
+            $idUsuario,
+            'Cierre automático por apertura de nueva sesión'
+        );
+    }
+
+    /**
+     * Cierre forzado "por el sistema" (sin declarante): usado tanto al abrir
+     * una nueva sesión sobre una ya olvidada, como por el cierre automático
+     * de fin de día. Sin monto declarado no hay nada que comparar, así que
+     * diferencia queda null (no se le puede achacar un faltante/sobrante a
+     * nadie que nunca contó el dinero).
+     */
+    private static function _cerrarSesionSistema(
+        CajaSesion $sesion,
+        ?string $idUsuarioCierre,
+        string $notas
+    ): CajaCorte {
         $snapshot     = self::calcularSnapshot($sesion, 'cierre');
         $montoSistema = $snapshot['totales']['total_sistema'];
 
         $sesion->update([
-            'id_usuario_cierre'      => $idUsuario,
+            'id_usuario_cierre'      => $idUsuarioCierre,
             'monto_cierre_sistema'   => $montoSistema,
             'monto_cierre_declarado' => null,
             'diferencia'             => null,
             'estado'                 => 'auto_cerrada',
             'motivo_cierre'          => 'sistema',
-            'notas_cierre'           => 'Cierre automático por apertura de nueva sesión',
+            'notas_cierre'           => $notas,
             'cerrada_at'             => now(),
         ]);
 
-        CajaCorte::create([
+        return CajaCorte::create([
             'id_corte'   => self::generarId('COR'),
             'id_sesion'  => $sesion->id_sesion,
             'id_negocio' => $sesion->id_negocio,
-            'id_usuario' => $idUsuario,
+            'id_usuario' => $idUsuarioCierre ?? $sesion->id_usuario_apertura,
             'snapshot'   => $snapshot,
         ]);
+    }
+
+    /**
+     * Cierre automático de fin de día (11pm) para sesiones que nadie cerró.
+     * Lo dispara el comando programado cajas:cerrar-vencidas.
+     */
+    public static function cerrarSesionFinDeDia(CajaSesion $sesion): CajaCorte
+    {
+        return self::_cerrarSesionSistema(
+            $sesion,
+            null,
+            'Cierre automático — fin de día (11:00 pm), nadie cerró la sesión manualmente.'
+        );
     }
 
     public static function registrarGasto(

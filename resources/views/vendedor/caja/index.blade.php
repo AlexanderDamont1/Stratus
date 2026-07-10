@@ -255,6 +255,7 @@
                             <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Cierre</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Fondo</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Sistema</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Declarado</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Diferencia</th>
                             <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Estado</th>
                             <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Acciones</th>
@@ -268,6 +269,9 @@
                             <td class="px-4 py-3 text-xs font-medium text-gray-400">{{ $ses->cerrada_at?->format('d/m/Y H:i') ?? '—' }}</td>
                             <td class="px-4 py-3 text-xs font-medium text-gray-900 dark:text-white">${{ number_format($ses->fondo_inicial, 2) }}</td>
                             <td class="px-4 py-3 text-xs font-medium text-gray-900 dark:text-white">${{ number_format($ses->monto_cierre_sistema ?? 0, 2) }}</td>
+                            <td class="px-4 py-3 text-xs font-medium text-gray-900 dark:text-white">
+                                {{ $ses->monto_cierre_declarado !== null ? '$'.number_format($ses->monto_cierre_declarado, 2) : '—' }}
+                            </td>
                             <td class="px-4 py-3 text-xs font-medium {{ (($ses->diferencia ?? 0) < 0) ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400' }}">
                                 @if($ses->diferencia !== null)
                                     {{ $ses->diferencia >= 0 ? '+' : '' }}${{ number_format($ses->diferencia, 2) }}
@@ -305,27 +309,60 @@
             <div class="block md:hidden divide-y divide-gray-200 dark:divide-gray-700">
                 @foreach($historial as $ses)
                 @php $corteRec = $ses->cortes()->orderByDesc('created_at')->first(); @endphp
-                <div class="px-4 py-3">
-                    <div class="flex items-center justify-between mb-1">
-                        <span class="text-xs font-medium text-gray-900 dark:text-white">{{ $ses->abierta_at?->format('d/m/Y H:i') }}</span>
-                        @if($ses->estado === 'abierta')
-                            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-400">Abierta</span>
-                        @elseif($ses->estado === 'auto_cerrada')
-                            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">Auto</span>
-                        @else
-                            <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-700 dark:bg-red-800/30 dark:text-red-400">Cerrada</span>
-                        @endif
+                <div class="px-4 py-4 space-y-3">
+                    {{-- Fecha + estado --}}
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="min-w-0">
+                            <p class="text-xs font-semibold text-gray-900 dark:text-white">{{ $ses->abierta_at?->format('d/m/Y H:i') }}</p>
+                            <p class="text-[11px] text-gray-400 mt-0.5">
+                                {{ $ses->cerrada_at ? 'Cerró ' . $ses->cerrada_at->format('d/m/Y H:i') : 'Sesión en curso' }}
+                            </p>
+                        </div>
+                        <div class="shrink-0">
+                            @if($ses->estado === 'abierta')
+                                <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-400">Abierta</span>
+                            @elseif($ses->estado === 'auto_cerrada')
+                                <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">Auto</span>
+                            @else
+                                <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-700 dark:bg-red-800/30 dark:text-red-400">Cerrada</span>
+                            @endif
+                        </div>
                     </div>
-                    <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                        <span>Sistema: <span class="font-medium text-gray-900 dark:text-white">${{ number_format($ses->monto_cierre_sistema ?? 0, 2) }}</span></span>
-                        <span class="font-medium {{ (($ses->diferencia ?? 0) < 0) ? 'text-red-500' : 'text-green-500' }}">
-                            @if($ses->diferencia !== null){{ $ses->diferencia >= 0 ? '+' : '' }}${{ number_format($ses->diferencia, 2) }}@endif
-                        </span>
-                        @if($corteRec)
-                        <a href="{{ route('caja.corte.pdf', $corteRec->id_corte) }}" target="_blank"
-                            class="text-red-500 dark:text-red-400 font-semibold">PDF</a>
-                        @endif
+
+                    {{-- Montos --}}
+                    <div class="grid grid-cols-3 gap-2">
+                        <div class="bg-gray-50 dark:bg-gray-900 rounded-lg px-2.5 py-2">
+                            <p class="text-[9px] text-gray-400 uppercase tracking-wide mb-0.5">Sistema</p>
+                            <p class="text-xs font-semibold text-gray-900 dark:text-white truncate">
+                                ${{ number_format($ses->monto_cierre_sistema ?? 0, 2) }}
+                            </p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-gray-900 rounded-lg px-2.5 py-2">
+                            <p class="text-[9px] text-gray-400 uppercase tracking-wide mb-0.5">Declarado</p>
+                            <p class="text-xs font-semibold text-gray-900 dark:text-white truncate">
+                                {{ $ses->monto_cierre_declarado !== null ? '$'.number_format($ses->monto_cierre_declarado, 2) : '—' }}
+                            </p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-gray-900 rounded-lg px-2.5 py-2">
+                            <p class="text-[9px] text-gray-400 uppercase tracking-wide mb-0.5">Diferencia</p>
+                            <p class="text-xs font-semibold truncate {{ (($ses->diferencia ?? 0) < 0) ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400' }}">
+                                @if($ses->diferencia !== null)
+                                    {{ $ses->diferencia >= 0 ? '+' : '' }}${{ number_format($ses->diferencia, 2) }}
+                                @else
+                                    —
+                                @endif
+                            </p>
+                        </div>
                     </div>
+
+                    {{-- PDF --}}
+                    @if($corteRec)
+                    <a href="{{ route('caja.corte.pdf', $corteRec->id_corte) }}" target="_blank"
+                       class="flex items-center justify-center gap-1.5 w-full py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        Ver PDF
+                    </a>
+                    @endif
                 </div>
                 @endforeach
             </div>

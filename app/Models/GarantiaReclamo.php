@@ -19,17 +19,22 @@ class GarantiaReclamo extends Model
         'id_reclamo',
         'id_negocio',
         'id_mantenimiento',
+        'id_reparacion',
         'id_bicicleta_garantia',
         'num_serie',
         'clave_componente',
         'estado',
         'motivo_reclamo',
+        'kilometraje',
         'resultado',
+        'ia_sugerencia',
+        'ia_razonamiento',
         'requiere_reemplazo',
     ];
 
     protected $casts = [
         'requiere_reemplazo' => 'boolean',
+        'kilometraje'        => 'integer',
     ];
 
     protected function idPrefix(): string { return 'GRC'; }
@@ -37,6 +42,11 @@ class GarantiaReclamo extends Model
     public function mantenimiento()
     {
         return $this->belongsTo(Mantenimiento::class, 'id_mantenimiento', 'id_mantenimiento');
+    }
+
+    public function reparacion()
+    {
+        return $this->belongsTo(Reparaciones::class, 'id_reparacion', 'id_reparacion');
     }
 
     public function bicicletaGarantia()

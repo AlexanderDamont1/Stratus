@@ -225,7 +225,7 @@
                 </div>
               </div>
               <div class="mt-2 pt-2 border-t border-gray-200/50 dark:border-gray-700/50 flex justify-between text-[9px] text-gray-500 dark:text-gray-400">
-                <span>⭐ "¡La mejor plataforma para mi negocio!"</span>
+                <span>⭐ "Porfin un sistema con una Red Nacion de Robo"</span>
                 <span class="text-green-500 font-medium">Ver todas →</span>
               </div>
             </div>
@@ -234,7 +234,7 @@
             <div class="flex flex-col gap-1.5 border-t border-gray-100 dark:border-gray-800 pt-3">
               <div class="flex items-start gap-2 text-[10px] text-gray-500 dark:text-gray-400">
                 <div class="flex text-[8px] text-amber-400 mt-0.5">★★★★★</div>
-                <p class="text-gray-700 dark:text-gray-300 leading-tight">"ArrowK transformó nuestro control de inventario. ¡Clientes felices!"</p>
+                <p class="text-gray-700 dark:text-gray-300 leading-tight">"ArrowK muy facil de usar"</p>
                 <span class="text-[9px] text-gray-400 whitespace-nowrap">— Carlos R.</span>
               </div>
               <div class="flex items-start gap-2 text-[10px] text-gray-500 dark:text-gray-400">

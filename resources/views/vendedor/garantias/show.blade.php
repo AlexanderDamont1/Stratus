@@ -1,10 +1,8 @@
 {{-- resources/views/vendedor/garantias/show.blade.php --}}
 <x-app-layout>
-<div class="mx-auto space-y-6" x-data="garantiaShow()">
+<div class="mx-auto space-y-6" x-data="garantiaShow()" x-init="init()">
 
-    {{-- Flash --}}
-    <x-flash-messages />
-
+    
 
     {{-- Header --}}
     <div class="flex items-start justify-between gap-4">
@@ -32,22 +30,38 @@
         <div class="flex items-center gap-3 mt-1 shrink-0">
             <div class="flex items-center gap-1.5">
                 <span class="w-2 h-2 rounded-full bg-green-500"></span>
-                <span class="text-[10px] text-gray-500 dark:text-gray-400">Vigente</span>
+                <span class="text-[12px] text-gray-500 dark:text-gray-400">Vigente</span>
             </div>
             <div class="flex items-center gap-1.5">
                 <span class="w-2 h-2 rounded-full bg-yellow-500"></span>
-                <span class="text-[10px] text-gray-500 dark:text-gray-400">Por vencer</span>
+                <span class="text-[12px] text-gray-500 dark:text-gray-400">Por vencer</span>
             </div>
             <div class="flex items-center gap-1.5">
                 <span class="w-2 h-2 rounded-full bg-red-500"></span>
-                <span class="text-[10px] text-gray-500 dark:text-gray-400">Expirada</span>
+                <span class="text-[12px] text-gray-500 dark:text-gray-400">Expirada</span>
             </div>
         </div>
         @endif
     </div>
 
+    {{-- Flash --}}
+    <x-flash-messages />
+
+    {{-- Flash propio (para mensajes generados en JS) --}}
+    <div x-show="flashVisible" x-cloak
+         x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 -translate-y-2"
+         x-transition:leave="transition ease-in duration-200" x-transition:leave-end="opacity-0 -translate-y-2"
+         class="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+        <div class="flex items-center gap-3 rounded-xl px-4 py-3 shadow-xl min-w-[280px] pointer-events-auto"
+             :class="flashTipo === 'error'
+                 ? 'bg-red-100 dark:bg-red-800/30 ring-1 ring-red-200 dark:ring-red-700'
+                 : 'bg-white dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700'">
+            <p class="text-sm font-medium text-gray-900 dark:text-white" x-text="flashMsg"></p>
+        </div>
+    </div>
+
     {{-- ══════════════════════════════════════════════════════
-         MAPA VISUAL INTERACTIVO
+         COMPONENTES CON GARANTÍA
     ══════════════════════════════════════════════════════ --}}
     @if($garantias->isEmpty())
         <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-10 text-center">
@@ -57,210 +71,40 @@
             <p class="text-sm text-gray-500 dark:text-gray-400">Esta bicicleta no tiene garantías configuradas para su marca.</p>
         </div>
     @else
-
-    {{-- Pasar datos de garantías a JS --}}
-    @php
-        $garantiasJs = $garantias->keyBy('clave');
-    @endphp
-
     <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+        <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+            <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Componentes ({{ $garantias->count() }})
+            </p>
+        </div>
+        <div class="divide-y divide-gray-100 dark:divide-gray-700">
+            <template x-for="g in componentes" :key="g.id">
+                <button type="button" @click="abrirDetalle(g)"
+                        class="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors duration-150
+                               hover:bg-gray-50 dark:hover:bg-gray-700/40">
+                    <span class="w-2 h-2 rounded-full shrink-0" :class="dotClass(g)"></span>
 
-        {{-- Layout: imagen izquierda + lista derecha --}}
-        <div class="flex flex-col lg:flex-row">
+                    <span class="text-sm font-medium text-gray-800 dark:text-gray-200 w-24 sm:w-40 shrink-0 truncate"
+                          x-text="g.nombre"></span>
 
-            {{-- ── Panel izquierdo: imagen con puntos ── --}}
-            <div class="relative lg:w-3/5 bg-gray-50 dark:bg-gray-900/50 flex items-center justify-center p-6 min-h-[320px]">
+                    <div class="flex-1 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full transition-all duration-500" :class="barClass(g)"
+                             :style="'width: ' + g.porcentaje_vida + '%'"></div>
+                    </div>
 
-                {{-- Imagen placeholder de bici eléctrica (SVG inline) --}}
-                <div class="relative w-full max-w-[520px]" id="mapa-bici">
+                    <span class="text-xs font-medium text-gray-500 dark:text-gray-400 w-12 text-right shrink-0"
+                          x-text="g.dias_restantes > 0 ? g.dias_restantes + 'd' : 'Exp.'"></span>
 
-                    {{-- Imagen real del scooter eléctrico --}}
-                    <img
-                        src="{{ asset('storage/evobike.png') }}"
-                        alt="Moto eléctrica"
-                        class="w-full h-auto select-none pointer-events-none"
-                        style="filter: drop-shadow(0 4px 24px rgba(0,0,0,0.12));"
-                        draggable="false"
-                    />
+                    <span class="hidden sm:inline-block text-[12px] font-semibold px-2 py-0.5 rounded-full shrink-0 w-20 text-center"
+                          :class="badgeClass(g)" x-text="estadoLabelComponente(g)"></span>
 
-                    {{-- ── PUNTOS INTERACTIVOS ──
-                         Posiciones en % relativas al SVG (viewBox 520x280)
-                         top = y/280*100, left = x/520*100
-                    --}}
-                    @php
-                    // Mapa de posiciones por clave de componente
-                    // [top%, left%] — relativos al contenedor de la imagen del scooter
-                    $posicionesDefault = [
-                        // Tracción
-                        'motor'            => [78, 20],   // hub rueda trasera
-                        'bateria'          => [65, 45],   // cuerpo central
-                        'bateria_litio'    => [65, 45],
-                        'bateria_plomo'    => [65, 45],
-                        'controlador'      => [75, 50],   // bajo el cuerpo
-                        'cargador'         => [68, 60],   // lateral derecho
-
-                        // Estructura
-                        'marco'            => [60, 45],
-                        'horquilla'        => [50, 70],   // horquilla delantera
-                        'suspension'       => [50, 70],
-                        'amortiguador'     => [50, 70],
-
-                        // Controles
-                        'manubrio'         => [30, 68],
-                        'mango'            => [30, 68],
-                        'freno'            => [30, 68],
-                        'sistema_electrico'=> [35, 72],
-                        'tablero'          => [25, 62],
-
-                        // Iluminación
-                        'faro'             => [65, 85],
-                        'luces'            => [65, 85],
-
-                        // Ruedas
-                        'rueda'            => [78, 80],
-                        'llanta'           => [78, 80],
-                        'neumatico'        => [78, 80],
-
-                        // Pedales
-                        'pedales'          => [80, 50],
-                    ];
-
-                    // Para cada garantía, encontrar su posición
-                    // Si la clave no está en el mapa, distribuir en fila superior
-                    $usadas = [];
-                    $fallbackPositions = [
-                        [8, 20],[8, 35],[8, 50],[8, 65],[8, 80],
-                        [92, 20],[92, 35],[92, 50],[92, 65],[92, 80],
-                    ];
-                    $fallbackIdx = 0;
-                    @endphp
-
-                    @foreach($garantias as $g)
-                    @php
-                        $clave = $g['clave'];
-                        // Buscar posición: clave exacta → substring match → fallback
-                        $pos = null;
-                        if (isset($posicionesDefault[$clave])) {
-                            $pos = $posicionesDefault[$clave];
-                        } else {
-                            foreach ($posicionesDefault as $k => $p) {
-                                if (str_contains($clave, $k) || str_contains($k, $clave)) {
-                                    $pos = $p;
-                                    break;
-                                }
-                            }
-                        }
-                        if (!$pos) {
-                            $pos = $fallbackPositions[$fallbackIdx % count($fallbackPositions)];
-                            $fallbackIdx++;
-                        }
-
-                        $dotColor = match($g['color_mapa']) {
-                            'green'  => 'bg-green-500 ring-green-200 dark:ring-green-900 shadow-green-500/40',
-                            'yellow' => 'bg-yellow-500 ring-yellow-200 dark:ring-yellow-900 shadow-yellow-500/40',
-                            default  => 'bg-red-500 ring-red-200 dark:ring-red-900 shadow-red-500/40',
-                        };
-                        $pulseColor = match($g['color_mapa']) {
-                            'green'  => 'bg-green-400',
-                            'yellow' => 'bg-yellow-400',
-                            default  => 'bg-red-400',
-                        };
-                    @endphp
-
-                    <button
-                        type="button"
-                        @click="abrirDetalle({{ json_encode($g) }})"
-                        style="top: {{ $pos[0] }}%; left: {{ $pos[1] }}%; transform: translate(-50%, -50%);"
-                        class="absolute z-10 group focus:outline-none"
-                        title="{{ $g['nombre'] }}">
-
-                        {{-- Anillo de pulso animado --}}
-                        <span class="absolute inset-0 rounded-full {{ $pulseColor }} opacity-30 animate-ping"></span>
-
-                        {{-- Punto principal --}}
-                        <span class="relative flex items-center justify-center w-5 h-5 rounded-full
-                                     {{ $dotColor }} ring-2 shadow-md
-                                     transition-all duration-200 group-hover:scale-125 group-hover:ring-4">
+                    <template x-if="g.reclamo_activo">
+                        <span class="text-[12px] font-semibold text-amber-600 dark:text-amber-400 shrink-0 whitespace-nowrap">
+                            Reclamo en curso
                         </span>
-
-                        {{-- Tooltip --}}
-                        <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1
-                                     bg-gray-900 dark:bg-gray-700 text-white text-[10px] font-medium
-                                     rounded-md whitespace-nowrap opacity-0 pointer-events-none
-                                     group-hover:opacity-100 transition-opacity duration-150 z-20
-                                     shadow-lg">
-                            {{ $g['nombre'] }}
-                            <span class="block text-[9px] font-normal opacity-70 text-center">
-                                @if($g['dias_restantes'] > 0)
-                                    {{ $g['dias_restantes'] }}d restantes
-                                @else
-                                    Expirada
-                                @endif
-                            </span>
-                        </span>
-                    </button>
-                    @endforeach
-
-                </div>{{-- /mapa-bici --}}
-            </div>
-
-            {{-- ── Panel derecho: lista de componentes ── --}}
-            <div class="lg:w-2/5 border-t lg:border-t-0 lg:border-l border-gray-100 dark:border-gray-700">
-                <div class="p-4 border-b border-gray-100 dark:border-gray-700">
-                    <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Componentes ({{ $garantias->count() }})
-                    </p>
-                </div>
-
-                <div class="divide-y divide-gray-100 dark:divide-gray-700 overflow-y-auto max-h-[400px]">
-                    @foreach($garantias as $g)
-                    @php
-                        $barColor = match($g['color_mapa']) {
-                            'green'  => 'bg-green-500',
-                            'yellow' => 'bg-yellow-500',
-                            default  => 'bg-red-500',
-                        };
-                        $textColor = match($g['color_mapa']) {
-                            'green'  => 'text-green-600 dark:text-green-400',
-                            'yellow' => 'text-yellow-600 dark:text-yellow-400',
-                            default  => 'text-red-600 dark:text-red-400',
-                        };
-                        $badgeBg = match($g['color_mapa']) {
-                            'green'  => 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300',
-                            'yellow' => 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300',
-                            default  => 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300',
-                        };
-                    @endphp
-                    <button type="button"
-                            @click="abrirDetalle({{ json_encode($g) }})"
-                            class="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50
-                                   transition-colors duration-150 group">
-                        <div class="flex items-center justify-between gap-2 mb-1.5">
-                            <span class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
-                                {{ $g['nombre'] }}
-                            </span>
-                            <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 {{ $badgeBg }}">
-                                @if($g['dias_restantes'] > 0)
-                                    {{ $g['dias_restantes'] }}d
-                                @else
-                                    Exp.
-                                @endif
-                            </span>
-                        </div>
-
-                        {{-- Barra de vida --}}
-                        <div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1">
-                            <div class="h-1 rounded-full transition-all duration-500 {{ $barColor }}"
-                                 style="width: {{ $g['porcentaje_vida'] }}%"></div>
-                        </div>
-
-                        <p class="text-[10px] text-gray-400 mt-1">
-                            Hasta {{ $g['fecha_expiracion'] }}
-                        </p>
-                    </button>
-                    @endforeach
-                </div>
-            </div>
+                    </template>
+                </button>
+            </template>
         </div>
     </div>
     @endif
@@ -271,48 +115,59 @@
     <div>
         <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Historial de reclamos</p>
 
-        @if($reclamos->isEmpty())
+        <template x-if="reclamos.length === 0">
             <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 text-center">
                 <p class="text-sm text-gray-400">Sin reclamos registrados para esta bicicleta.</p>
             </div>
-        @else
+        </template>
+
         <div class="space-y-2">
-            @foreach($reclamos as $r)
-            @php
-                $estadoColor = match($r->estado) {
-                    'pendiente'      => 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300',
-                    'en_diagnostico' => 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
-                    'aprobado'       => 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
-                    'en_reparacion'  => 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300',
-                    'finalizado'     => 'bg-gray-100 dark:bg-gray-700 text-gray-500',
-                    'rechazado'      => 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
-                    default          => 'bg-gray-100 dark:bg-gray-700 text-gray-500',
-                };
-            @endphp
-            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
-                <div class="flex items-start justify-between gap-3">
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-gray-800 dark:text-gray-200">
-                            {{ $r->bicicletaGarantia->garantiaDef->nombre_componente ?? $r->clave_componente }}
-                        </p>
-                        <p class="text-xs text-gray-400 mt-0.5 line-clamp-2">{{ $r->motivo_reclamo }}</p>
-                        @if($r->resultado)
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">{{ $r->resultado }}</p>
-                        @endif
-                    </div>
-                    <div class="flex flex-col items-end gap-1.5 shrink-0">
-                        <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full {{ $estadoColor }}">
-                            {{ ucfirst(str_replace('_', ' ', $r->estado)) }}
-                        </span>
-                        <span class="text-[10px] text-gray-400">
-                            {{ $r->created_at->format('d/m/Y') }}
-                        </span>
+            <template x-for="r in reclamos" :key="r.id_reclamo">
+                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-800 dark:text-gray-200" x-text="r.componente"></p>
+                            <p class="text-xs text-gray-400 mt-0.5 line-clamp-2" x-text="r.motivo"></p>
+
+                            <template x-if="r.kilometraje !== null && r.kilometraje !== undefined">
+                                <p class="text-[12px] text-gray-400 mt-1">
+                                    Kilometraje: <span x-text="Number(r.kilometraje).toLocaleString('es-MX')"></span> km
+                                </p>
+                            </template>
+
+                            {{-- Respuesta de la IA --}}
+                            <template x-if="r.ia_sugerencia">
+                                <p class="text-xs mt-1.5" :class="iaColorClass(r.ia_sugerencia)">
+                                    <span class="font-semibold">Respuesta de la IA:</span>
+                                    <span x-text="r.ia_razonamiento"></span>
+                                </p>
+                            </template>
+                            <template x-if="!r.ia_sugerencia && r._analizando">
+                                <p class="text-[12px] text-gray-400 mt-1.5 flex items-center gap-1.5">
+                                    <svg class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                    </svg>
+                                    Analizando con IA...
+                                </p>
+                            </template>
+
+                            <template x-if="r.resultado">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1" x-text="r.resultado"></p>
+                            </template>
+                        </div>
+                        <div class="flex flex-col items-end gap-1.5 shrink-0">
+                            <span class="text-[12px] font-semibold px-2 py-0.5 rounded-full" :class="estadoColorReclamo(r)"
+                                  x-text="estadoLabelReclamo(r)"></span>
+                            <template x-if="r.id_reparacion">
+                                <span class="text-[12px] text-gray-400 font-mono" x-text="r.id_reparacion"></span>
+                            </template>
+                            <span class="text-[12px] text-gray-400" x-text="r.created_at"></span>
+                        </div>
                     </div>
                 </div>
-            </div>
-            @endforeach
+            </template>
         </div>
-        @endif
     </div>
 
     {{-- ══════════════════════════════════════════════════════
@@ -423,15 +278,23 @@
                     <p class="text-xs text-gray-400 mb-1.5">Incluye:</p>
                     <div class="flex flex-wrap gap-1">
                         <template x-for="pieza in (componenteActivo?.incluye ?? [])">
-                            <span class="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700
+                            <span class="text-[12px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700
                                          text-gray-600 dark:text-gray-300 capitalize"
                                   x-text="pieza"></span>
                         </template>
                     </div>
                 </div>
 
+                {{-- Ya existe un reclamo activo para este componente --}}
+                <div x-show="componenteActivo?.reclamo_activo"
+                     class="border-t border-gray-100 dark:border-gray-700 pt-4">
+                    <p class="text-xs text-center text-amber-600 dark:text-amber-400 font-medium">
+                        Ya existe un reclamo activo para este componente. No se puede abrir otro hasta que se resuelva.
+                    </p>
+                </div>
+
                 {{-- Formulario de reclamo --}}
-                <div x-show="componenteActivo?.estado_visual === 'vigente' || componenteActivo?.estado_visual === 'por_vencer'">
+                <div x-show="!componenteActivo?.reclamo_activo && (componenteActivo?.estado_visual === 'vigente' || componenteActivo?.estado_visual === 'por_vencer')">
                     <div class="border-t border-gray-100 dark:border-gray-700 pt-4">
                         <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
                             Abrir reclamo de garantía
@@ -445,6 +308,19 @@
                                    focus:outline-none focus:ring-1 focus:ring-gray-400 resize-none">
                         </textarea>
 
+                        <div class="mt-2">
+                            <label class="block text-[12px] text-gray-400 mb-1">
+                                Kilometraje actual <span class="font-normal">(opcional, revisa el odómetro)</span>
+                            </label>
+                            <input type="number" x-model="kilometraje" min="0" max="999999" placeholder="Ej. 850"
+                                   class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm
+                                          bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono
+                                          focus:outline-none focus:ring-1 focus:ring-gray-400">
+                            <p class="text-[12px] text-gray-400 mt-1">
+                                Ayuda al admin a decidir: una unidad con mucho uso en poco tiempo es una señal a considerar.
+                            </p>
+                        </div>
+
                         <button
                             @click="abrirReclamo()"
                             :disabled="enviandoReclamo || !motivoReclamo.trim()"
@@ -456,13 +332,13 @@
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                             </svg>
-                            <span x-text="enviandoReclamo ? 'Registrando...' : 'Registrar reclamo'"></span>
+                            <span x-text="enviandoReclamo ? 'Procesando el reclamo...' : 'Registrar reclamo'"></span>
                         </button>
                     </div>
                 </div>
 
                 {{-- Garantía no vigente --}}
-                <div x-show="!['vigente','por_vencer'].includes(componenteActivo?.estado_visual)"
+                <div x-show="!componenteActivo?.reclamo_activo && !['vigente','por_vencer'].includes(componenteActivo?.estado_visual)"
                      class="border-t border-gray-100 dark:border-gray-700 pt-4">
                     <p class="text-xs text-center text-gray-400">
                         Este componente no tiene garantía activa. No se puede abrir un reclamo.
@@ -475,14 +351,26 @@
     <script>
     function garantiaShow() {
         return {
+            componentes:      @json($garantias->values()),
+            reclamos:         @json($reclamos->values()),
+
             detalleModal:     false,
             componenteActivo: null,
             motivoReclamo:    '',
+            kilometraje:      '',
             enviandoReclamo:  false,
             flashVisible:     false,
             flashMsg:         '',
             flashTipo:        'success',
             flashTimer:       null,
+
+            init() {
+                // Reanuda el sondeo de IA para reclamos que quedaron sin respuesta
+                // (por ejemplo si el vendedor recargó la página mientras esperaba).
+                this.reclamos
+                    .filter(r => !r.ia_sugerencia && r.ot_estado === 'en_revision')
+                    .forEach(r => this.pollIA(r.id_reclamo));
+            },
 
             flash(msg, tipo = 'success') {
                 this.flashMsg     = msg;
@@ -493,9 +381,48 @@
                     tipo === 'error' ? 4000 : 3000);
             },
 
+            dotClass(g) {
+                return { green: 'bg-green-500', yellow: 'bg-yellow-500' }[g.color_mapa] ?? 'bg-red-500';
+            },
+            badgeClass(g) {
+                return {
+                    green:  'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300',
+                    yellow: 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300',
+                }[g.color_mapa] ?? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300';
+            },
+            barClass(g) {
+                return { green: 'bg-green-500', yellow: 'bg-yellow-500' }[g.color_mapa] ?? 'bg-red-500';
+            },
+            estadoLabelComponente(g) {
+                return { green: 'Vigente', yellow: 'Por vencer' }[g.color_mapa] ?? 'Expirada';
+            },
+            iaColorClass(sugerencia) {
+                return {
+                    cubre:    'text-green-600 dark:text-green-400',
+                    no_cubre: 'text-red-500 dark:text-red-400',
+                    revisar:  'text-amber-600 dark:text-amber-400',
+                }[sugerencia] ?? 'text-gray-500 dark:text-gray-400';
+            },
+            capitalize(s) {
+                return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+            },
+            estadoLabelReclamo(r) {
+                if (r.ot_estado === 'en_revision') return 'En revisión';
+                if (r.ot_estado === 'cancelada' && r.reclamo_estado === 'rechazado') return 'Rechazado';
+                if (!r.ot_estado) return this.capitalize((r.reclamo_estado || '').replace('_', ' '));
+                return 'OT: ' + this.capitalize(r.ot_estado.replace('_', ' '));
+            },
+            estadoColorReclamo(r) {
+                if (r.ot_estado === 'en_revision') return 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300';
+                if (r.ot_estado === 'entregada')   return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
+                if (r.ot_estado === 'cancelada')   return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300';
+                return 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300';
+            },
+
             abrirDetalle(componente) {
                 this.componenteActivo = componente;
                 this.motivoReclamo    = '';
+                this.kilometraje      = '';
                 this.detalleModal     = true;
             },
 
@@ -516,21 +443,63 @@
                             num_serie:             '{{ $bici->num_serie }}',
                             id_bicicleta_garantia: this.componenteActivo.id,
                             motivo_reclamo:        this.motivoReclamo.trim(),
+                            kilometraje:           this.kilometraje !== '' ? parseInt(this.kilometraje) : null,
                         }),
                     });
                     const data = await res.json();
 
                     if (!data.ok) { this.flash(data.mensaje, 'error'); return; }
 
+                    // Marca el componente como con reclamo activo, sin recargar.
+                    const comp = this.componentes.find(c => c.id === this.componenteActivo.id);
+                    if (comp) comp.reclamo_activo = true;
+
+                    // Inserta el reclamo nuevo al historial y arranca el sondeo de IA.
+                    const nuevo = { ...data.reclamo, _analizando: true };
+                    this.reclamos.unshift(nuevo);
+                    this.pollIA(nuevo.id_reclamo);
+
                     this.detalleModal = false;
                     this.flash(data.mensaje);
-                    setTimeout(() => window.location.reload(), 1200);
 
                 } catch {
                     this.flash('Error de conexión.', 'error');
                 } finally {
                     this.enviandoReclamo = false;
                 }
+            },
+
+            // Sondea /reclamo/{id}/ia cada 2.5s (máx. ~12 intentos) hasta que la
+            // opinión de IA esté lista, y actualiza la tarjeta en vivo.
+            pollIA(idReclamo, intento = 0) {
+                if (intento >= 12) {
+                    const r = this.reclamos.find(x => x.id_reclamo === idReclamo);
+                    if (r) r._analizando = false;
+                    return;
+                }
+
+                setTimeout(async () => {
+                    try {
+                        const res = await fetch(`/sucursal/garantias/reclamo/${idReclamo}/ia`, {
+                            headers: { 'Accept': 'application/json' },
+                        });
+                        const data = await res.json();
+
+                        const r = this.reclamos.find(x => x.id_reclamo === idReclamo);
+                        if (!r) return;
+
+                        if (data.ok && data.listo) {
+                            r.ia_sugerencia   = data.ia_sugerencia;
+                            r.ia_razonamiento = data.ia_razonamiento;
+                            r._analizando     = false;
+                            return;
+                        }
+
+                        this.pollIA(idReclamo, intento + 1);
+                    } catch {
+                        this.pollIA(idReclamo, intento + 1);
+                    }
+                }, 2500);
             },
         }
     }

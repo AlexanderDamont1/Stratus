@@ -76,8 +76,17 @@ class ReparacionService
 
     // ── Crear ─────────────────────────────────────────────────────────────────
 
-    public static function crear(array $datos, string $idNegocio, string $idUsuario): Reparaciones
-    {
+    /**
+     * @param string|null $estadoInicial Normalmente null → 'recibida'. Se usa
+     *        'en_revision' cuando la OT nace de un reclamo de garantía y
+     *        necesita aprobación del admin antes de entrar al flujo normal.
+     */
+    public static function crear(
+        array $datos,
+        string $idNegocio,
+        string $idUsuario,
+        ?string $estadoInicial = null
+    ): Reparaciones {
         if (!empty($datos['num_serie'])) {
             $bici = CatalogService::getBicicletaBySerie($datos['num_serie'], $idNegocio);
 
@@ -90,7 +99,9 @@ class ReparacionService
             }
         }
 
-        return DB::transaction(function () use ($datos, $idNegocio, $idUsuario) {
+        $estadoInicial = $estadoInicial ?? 'recibida';
+
+        return DB::transaction(function () use ($datos, $idNegocio, $idUsuario, $estadoInicial) {
 
             $rep = Reparaciones::create([
                 'id_negocio'          => $idNegocio,
@@ -105,7 +116,7 @@ class ReparacionService
                 'tipo'                => $datos['tipo'],
                 'problema_reportado'  => $datos['problema_reportado'],
                 'notas_internas'      => $datos['notas_internas'] ?? null,
-                'estado'              => 'recibida',
+                'estado'              => $estadoInicial,
                 'costo_reparacion'    => in_array($datos['tipo'], ['reparacion', 'mantenimiento'])
                                             ? ($datos['costo_reparacion'] ?? 0)
                                             : 0,
@@ -114,9 +125,11 @@ class ReparacionService
             ReparacionHistorial::create([
                 'id_reparacion'   => $rep->id_reparacion,
                 'estado_anterior' => null,
-                'estado_nuevo'    => 'recibida',
+                'estado_nuevo'    => $estadoInicial,
                 'id_usuario'      => $idUsuario,
-                'nota'            => 'OT creada',
+                'nota'            => $estadoInicial === 'en_revision'
+                    ? 'OT creada automáticamente desde un reclamo de garantía — pendiente de aprobación.'
+                    : 'OT creada',
             ]);
 
             self::invalidar($idNegocio);
@@ -465,6 +478,9 @@ class ReparacionService
     private static function validarTransicion(string $actual, string $nuevo): void
     {
         $permitidas = [
+            // Solo alcanzable al crear una OT desde un reclamo de garantía.
+            // El admin aprueba (→ recibida, entra al flujo normal) o rechaza (→ cancelada).
+            'en_revision'        => ['recibida', 'cancelada'],
             'recibida'           => ['diagnostico', 'cancelada'],
             'diagnostico'        => ['cotizacion_enviada', 'en_proceso', 'cancelada'],
             'cotizacion_enviada' => ['en_proceso', 'cancelada'],

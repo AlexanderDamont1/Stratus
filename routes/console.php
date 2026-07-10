@@ -9,3 +9,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('negocios:sincronizar-status')->hourly();
+Schedule::command('cajas:cerrar-vencidas')->dailyAt('23:00');
