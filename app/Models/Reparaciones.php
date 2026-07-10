@@ -36,6 +36,7 @@ class Reparaciones extends Model
         'costo_mano_obra',
         'costo_piezas',
         'costo_total',
+        'id_venta',
         'piezas_usadas',
         'notificacion_enviada',
         'notificacion_enviada_at',
@@ -98,6 +99,11 @@ class Reparaciones extends Model
     {
         return $this->hasOne(Cotizacion::class, 'id_reparacion', 'id_reparacion')
                     ->latest();
+    }
+
+    public function venta(): BelongsTo
+    {
+        return $this->belongsTo(Venta::class, 'id_venta', 'id_venta');
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

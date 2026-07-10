@@ -288,11 +288,19 @@ class DashboardController extends Controller
             $filasIndex = $filas->keyBy(fn($f) => \Carbon\Carbon::parse($f->fecha)->toDateString());
 
             $graficaDias = collect($fechas)->map(function ($fecha) use ($filasIndex, $fmt) {
-                $fila = $filasIndex[$fecha] ?? null;
+                $fila             = $filasIndex[$fecha] ?? null;
+                $ingresos         = (float) ($fila?->ingresos_total     ?? 0);
+                $reparacion       = (float) ($fila?->ots_ingresos_total ?? 0);
+                $ventasCount      = (int)   ($fila?->ventas_count       ?? 0);
+                $ventasReparacion = (int)   ($fila?->ots_cerradas       ?? 0);
                 return [
-                    'label'    => Carbon::parse($fecha)->translatedFormat($fmt),
-                    'ventas'   => (int)   ($fila?->ventas_count   ?? 0),
-                    'ingresos' => (float) ($fila?->ingresos_total ?? 0),
+                    'label'               => Carbon::parse($fecha)->translatedFormat($fmt),
+                    'ventas'              => $ventasCount,
+                    'ingresos'            => $ingresos,
+                    'ingresos_reparacion' => $reparacion,
+                    'ingresos_venta'      => max(0, $ingresos - $reparacion),
+                    'ventas_reparacion'   => $ventasReparacion,
+                    'ventas_venta'        => max(0, $ventasCount - $ventasReparacion),
                 ];
             });
 
@@ -345,8 +353,10 @@ class DashboardController extends Controller
                 'fecha'   => $p->created_at?->diffForHumans() ?? '—',
             ]);
 
-        $otsActivas = CatalogService::getOtsActivas($idNegocio, $idSucursal);
-        $ventasHoy  = CatalogService::getVentasHoy($idNegocio, $idSucursal);
+        $otsActivas  = CatalogService::getOtsActivas($idNegocio, $idSucursal);
+        $ventasHoy   = CatalogService::getVentasHoy($idNegocio, $idSucursal);
+        $otsIngresos       = CatalogService::getOtsIngresos($idNegocio, $desde->toDateString(), $hasta->toDateString(), $idSucursal);
+        $ingresosPorOrigen = CatalogService::getIngresosPorOrigen($idNegocio, $desde->toDateString(), $hasta->toDateString(), $idSucursal);
 
         // ── Nuevos indicadores ──────────────────────────────────────────────────
         $rotacionInventario = CatalogService::getBicicletasSinMovimiento($idNegocio, 45, $idSucursal);
@@ -375,6 +385,8 @@ class DashboardController extends Controller
                 'descuentos'       => $descuentosTotal,
                 'cupones_usados'   => $cuponesUsados,
                 'cupones_descuento'=> $cuponesDescuento,
+                'ots_ingresos'     => $otsIngresos['total'],
+                'ots_entregadas'   => $otsIngresos['count'],
             ],
             'tops' => [
                 'modelo'    => $modeloTop,
@@ -389,6 +401,8 @@ class DashboardController extends Controller
             'sucursales'         => $sucursalesAgregadas,
             'pedidos'            => ['recientes' => $pedidosRecientes, 'stats' => $pedidoStats],
             'ots'                => $otsActivas,
+            'ots_ingresos_por_tipo' => $otsIngresos['por_tipo'],
+            'ingresos_por_origen'   => $ingresosPorOrigen,
             'metodos_pago'       => $metodosPago,
             'horas_pico'         => $horasPico,
             'clientes_tipo'      => [

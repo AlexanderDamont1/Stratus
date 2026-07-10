@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Sucursal;
 
 use App\Http\Controllers\Controller;
+use App\Services\CatalogService;
 use App\Services\ReparacionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -193,6 +194,68 @@ class ReparacionController extends Controller
             'ok'      => true,
             'estado'  => $rep->estado,
             'mensaje' => 'Cotización resuelta.',
+        ]);
+    }
+
+    // ── Cobro ─────────────────────────────────────────────────────────────────
+
+    public function cobrarForm(string $id)
+    {
+        $user = Auth::user();
+        $rep  = ReparacionService::get($id, $user->id_negocio);
+
+        abort_if(!$rep, 404);
+        abort_if($rep->estado !== 'lista', 422, 'La OT debe estar lista para poder cobrarse.');
+        abort_if($rep->id_venta, 422, 'Esta OT ya fue cobrada.');
+        abort_if((float) $rep->costo_total <= 0, 422, 'Esta OT no tiene costo por cobrar.');
+
+        $config         = CatalogService::getConfigNegocio($user->id_negocio);
+        $metodosActivos = $config['metodos_pago'] ?? ['efectivo'];
+
+        $todasOpciones = \App\Models\NegocioConfig::where('clave', 'metodos_pago')
+            ->where('activo', true)
+            ->value('opciones');
+
+        $opcionesMap = collect($todasOpciones ?? [])->keyBy('value');
+
+        $metodos = collect($metodosActivos)->map(function ($value) use ($opcionesMap) {
+            $opcion = $opcionesMap[$value] ?? null;
+            return [
+                'value'               => $value,
+                'label'               => $opcion['label']               ?? $value,
+                'es_efectivo'         => $opcion['es_efectivo']         ?? false,
+                'requiere_referencia' => $opcion['requiere_referencia'] ?? false,
+            ];
+        })->values();
+
+        return view('vendedor.reparaciones.cobrar', compact('rep', 'metodos'));
+    }
+
+    public function cobrar(Request $request, string $id)
+    {
+        $validated = $request->validate([
+            'pagos'              => 'required|array|min:1',
+            'pagos.*.metodo'     => 'required|string|max:40',
+            'pagos.*.monto'      => 'required|numeric|min:0.01',
+            'pagos.*.referencia' => 'nullable|string|max:20',
+        ]);
+
+        $user = Auth::user();
+        $rep  = ReparacionService::get($id, $user->id_negocio);
+
+        abort_if(!$rep, 404);
+
+        $rep = ReparacionService::cobrar(
+            $rep,
+            $validated['pagos'],
+            $user->id_usuario,
+            $user->id_negocio
+        );
+
+        return response()->json([
+            'ok'       => true,
+            'id_venta' => $rep->id_venta,
+            'mensaje'  => 'Cobro registrado. OT entregada.',
         ]);
     }
 

@@ -248,6 +248,8 @@
                                 $colorRaw  = $detalle->bicicleta->color->color ?? '';
                                 $colorInfo = parsearColor($colorRaw);
                                 $esBici    = ($detalle->producto->tipo ?? '') === '2';
+                                $esPieza   = !is_null($detalle->id_pieza);
+                                $esServicio = !$detalle->id_producto && !$detalle->id_pieza;
                                 $esGratis  = $detalle->precio_unitario == 0;
                             @endphp
                             <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
@@ -255,7 +257,7 @@
                                 <td class="px-4 py-3 align-top">
                                     <div class="flex items-center gap-2">
                                         <p class="font-medium text-gray-900 dark:text-white">
-                                            {{ $detalle->producto->nombre_producto ?? '—' }}
+                                            {{ $detalle->nombre }}
                                         </p>
                                         @if($esGratis && !$esBici)
                                             <span class="px-1.5 py-0.5 text-[9px] font-bold rounded-full
@@ -265,10 +267,18 @@
                                         @endif
                                     </div>
                                     <span class="inline-block mt-1 px-2 py-0.5 text-[10px] font-semibold rounded-full
-                                        {{ $esBici
-                                            ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-800/30 dark:text-indigo-400'
-                                            : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400' }}">
-                                        {{ $esBici ? 'Bicicleta' : 'Accesorio' }}
+                                        {{ match(true) {
+                                            $esBici     => 'bg-indigo-100 text-indigo-700 dark:bg-indigo-800/30 dark:text-indigo-400',
+                                            $esPieza    => 'bg-teal-100 text-teal-700 dark:bg-teal-800/30 dark:text-teal-400',
+                                            $esServicio => 'bg-purple-100 text-purple-700 dark:bg-purple-800/30 dark:text-purple-400',
+                                            default     => 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
+                                        } }}">
+                                        {{ match(true) {
+                                            $esBici     => 'Bicicleta',
+                                            $esPieza    => 'Pieza',
+                                            $esServicio => 'Servicio',
+                                            default     => 'Accesorio',
+                                        } }}
                                     </span>
                                 </td>
 

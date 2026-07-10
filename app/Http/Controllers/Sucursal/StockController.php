@@ -31,7 +31,26 @@ class StockController extends Controller
             return response()->json(['ok' => true, 'data' => $items, 'categorias' => $categorias]);
         }
 
-        return view('vendedor.stock_piezas.index', compact('items', 'categorias'));
+        $config         = CatalogService::getConfigNegocio($user->id_negocio);
+        $metodosActivos = $config['metodos_pago'] ?? ['efectivo'];
+
+        $todasOpciones = \App\Models\NegocioConfig::where('clave', 'metodos_pago')
+            ->where('activo', true)
+            ->value('opciones');
+
+        $opcionesMap = collect($todasOpciones ?? [])->keyBy('value');
+
+        $metodos = collect($metodosActivos)->map(function ($value) use ($opcionesMap) {
+            $opcion = $opcionesMap[$value] ?? null;
+            return [
+                'value'               => $value,
+                'label'               => $opcion['label']               ?? $value,
+                'es_efectivo'         => $opcion['es_efectivo']         ?? false,
+                'requiere_referencia' => $opcion['requiere_referencia'] ?? false,
+            ];
+        })->values();
+
+        return view('vendedor.stock_piezas.index', compact('items', 'categorias', 'metodos'));
     }
 
     // ── Crear ─────────────────────────────────────────────────────────────────
@@ -157,6 +176,40 @@ class StockController extends Controller
         );
 
         return response()->json(['ok' => true, 'data' => $piezas]);
+    }
+
+    // ── Venta directa de pieza suelta (sin OT) ─────────────────────────────────
+
+    public function vender(Request $request, string $id)
+    {
+        $validated = $request->validate([
+            'cantidad'           => 'required|integer|min:1',
+            'cliente_nombre'     => 'nullable|string|max:120',
+            'cliente_telefono'   => 'nullable|string|max:20',
+            'pagos'              => 'required|array|min:1',
+            'pagos.*.metodo'     => 'required|string|max:40',
+            'pagos.*.monto'      => 'required|numeric|min:0.01',
+            'pagos.*.referencia' => 'nullable|string|max:20',
+        ]);
+
+        $user  = Auth::user();
+        $pieza = PiezaCatalogo::where('id_negocio', $user->id_negocio)->findOrFail($id);
+
+        $venta = StockService::venderSuelta(
+            pieza:            $pieza,
+            cantidad:         (int) $validated['cantidad'],
+            clienteNombre:    $validated['cliente_nombre']   ?? null,
+            clienteTelefono:  $validated['cliente_telefono'] ?? null,
+            pagos:            $validated['pagos'],
+            idUsuario:        $user->id_usuario,
+            idNegocio:        $user->id_negocio,
+        );
+
+        return response()->json([
+            'ok'       => true,
+            'id_venta' => $venta->id_venta,
+            'mensaje'  => "Venta {$venta->id_venta} registrada correctamente.",
+        ], 201);
     }
 
     // ── Modelos para selector ─────────────────────────────────────────────────

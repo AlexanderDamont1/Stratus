@@ -59,12 +59,25 @@ class CajaMovimiento extends Model
     public function getLabelTipoAttribute(): string
     {
         return match($this->tipo) {
-            'venta'          => 'Venta',
+            'venta'          => $this->labelVenta(),
             'ingreso_manual' => 'Ingreso',
             'retiro'         => 'Retiro',
             'ajuste'         => 'Ajuste',
             'apertura'       => 'Apertura',
             default          => ucfirst($this->tipo),
         };
+    }
+
+    /**
+     * "Venta" es genérico para el ledger de caja (todo ingreso por venta usa
+     * tipo='venta'), pero el comprobante debe reflejar el concepto real:
+     * cobro de OT (Reparación/Mantenimiento/Garantía), venta de pieza suelta,
+     * o venta normal de mostrador. Depende de $this->venta (y, si aplica,
+     * $this->venta->reparacion) — cárgalos con with('venta.reparacion') antes
+     * de listar varios movimientos para evitar N+1.
+     */
+    private function labelVenta(): string
+    {
+        return $this->venta?->label_origen ?? 'Venta';
     }
 }

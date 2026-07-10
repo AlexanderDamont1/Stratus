@@ -64,6 +64,17 @@
                                 <span class="font-mono text-[10px] text-gray-400 dark:text-gray-500 shrink-0">
                                     {{ $venta->id_venta }}
                                 </span>
+                                @if($venta->origen === 'reparacion')
+                                    <span class="text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0
+                                                 bg-purple-100 dark:bg-purple-800/30 text-purple-700 dark:text-purple-400">
+                                        OT {{ $venta->id_reparacion }}
+                                    </span>
+                                @elseif($venta->origen === 'pieza_suelta')
+                                    <span class="text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0
+                                                 bg-teal-100 dark:bg-teal-800/30 text-teal-700 dark:text-teal-400">
+                                        Pieza
+                                    </span>
+                                @endif
                             </div>
                             <div class="flex items-center gap-2 mt-0.5">
                                 <span class="text-xs text-gray-400 dark:text-gray-500">{{ $venta->cliente->telefono }}</span>
@@ -142,9 +153,22 @@
                             {{ $iniciales }}
                         </div>
                         <div class="flex-1 min-w-0">
-                            <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                                {{ $venta->cliente->nombre_cliente }} {{ $venta->cliente->apellido1 }}
-                            </p>
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                                    {{ $venta->cliente->nombre_cliente }} {{ $venta->cliente->apellido1 }}
+                                </p>
+                                @if($venta->origen === 'reparacion')
+                                    <span class="text-[9px] font-medium px-1.5 py-0.5 rounded-full shrink-0
+                                                 bg-purple-100 dark:bg-purple-800/30 text-purple-700 dark:text-purple-400">
+                                        OT
+                                    </span>
+                                @elseif($venta->origen === 'pieza_suelta')
+                                    <span class="text-[9px] font-medium px-1.5 py-0.5 rounded-full shrink-0
+                                                 bg-teal-100 dark:bg-teal-800/30 text-teal-700 dark:text-teal-400">
+                                        Pieza
+                                    </span>
+                                @endif
+                            </div>
                             <p class="text-xs text-gray-400 mt-0.5">
                                 {{ $venta->created_at->format('d/m/Y') }} · {{ $venta->detalles->count() }} prod.
                             </p>

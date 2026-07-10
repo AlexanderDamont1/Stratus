@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\Cliente;
 use App\Models\PiezaCatalogo;
 use App\Models\PiezaMovimiento;
+use App\Models\Venta;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
@@ -172,6 +174,87 @@ class StockService
         );
     }
 
+    // ── Venta directa de pieza suelta (sin OT) ─────────────────────────────────
+
+    /**
+     * Vende N unidades de una pieza del catálogo directamente a un cliente de
+     * mostrador, sin que exista una OT de por medio. Crea la Venta (origen
+     * 'pieza_suelta') con el mismo mecanismo de pago dividido + caja que usa
+     * el cobro de OTs, y descuenta el stock de la pieza.
+     *
+     * @param array $pagos [['metodo','monto','referencia'?], ...]
+     */
+    public static function venderSuelta(
+        PiezaCatalogo $pieza,
+        int           $cantidad,
+        ?string       $clienteNombre,
+        ?string       $clienteTelefono,
+        array         $pagos,
+        string        $idUsuario,
+        string        $idNegocio
+    ): Venta {
+        if ($cantidad <= 0) abort(422, 'La cantidad debe ser mayor a 0.');
+        if ($cantidad > $pieza->stock_actual) abort(422, 'No hay stock suficiente de esta pieza.');
+
+        $cliente = Cliente::firstOrCreate(
+            [
+                'id_negocio' => $idNegocio,
+                'telefono'   => $clienteTelefono ?: 'mostrador',
+            ],
+            [
+                'nombre_cliente' => $clienteNombre ?: 'Cliente de mostrador',
+                'apellido1'      => '',
+            ]
+        );
+
+        $total = round((float) $pieza->precio_venta * $cantidad, 2);
+
+        $venta = VentaService::crearVentaConPagos([
+            'id_cliente' => $cliente->id_cliente,
+            'total'      => $total,
+            'origen'     => 'pieza_suelta',
+            'lineas'     => [[
+                'id_pieza'        => $pieza->id_pieza,
+                'precio_unitario' => (float) $pieza->precio_venta,
+                'cantidad'        => $cantidad,
+            ]],
+        ], $pagos, $idUsuario, $idNegocio);
+
+        self::registrarSalidaPorVenta($pieza, $cantidad, $venta->id_venta, $idNegocio, $idUsuario);
+
+        CatalogService::invalidatePiezas($idNegocio);
+
+        return $venta;
+    }
+
+    // ── Salida por venta directa (llamado desde venderSuelta) ─────────────────
+
+    public static function registrarSalidaPorVenta(
+        PiezaCatalogo $pieza,
+        int           $cantidad,
+        string        $idVenta,
+        string        $idNegocio,
+        string        $idUsuario
+    ): void {
+        $stockAntes = $pieza->stock_actual;
+
+        PiezaCatalogo::where('id_pieza', $pieza->id_pieza)
+            ->decrement('stock_actual', $cantidad);
+
+        $pieza->refresh();
+
+        self::registrarMovimiento(
+            pieza: $pieza,
+            idNegocio: $idNegocio,
+            idUsuario: $idUsuario,
+            tipo: 'salida',
+            cantidad: $cantidad,
+            stockAntes: $stockAntes,
+            nota: "Venta directa {$idVenta}",
+            idVenta: $idVenta,
+        );
+    }
+
     // ── Privado: registrar movimiento ─────────────────────────────────────────
 
     private static function registrarMovimiento(
@@ -183,12 +266,14 @@ class StockService
         int           $stockAntes,
         ?string       $nota = null,
         ?string       $idReparacion = null,
+        ?string       $idVenta = null,
     ): PiezaMovimiento {
         return PiezaMovimiento::create([
             'id_pieza'      => $pieza->id_pieza,
             'id_negocio'    => $idNegocio,
             'id_usuario'    => $idUsuario,
             'id_reparacion' => $idReparacion,
+            'id_venta'      => $idVenta,
             'tipo'          => $tipo,
             'cantidad'      => $cantidad,
             'stock_antes'   => $stockAntes,

@@ -25,6 +25,8 @@ class Venta extends Model
         'total',
         'comision_porcentaje',
         'comision_monto',
+        'origen',
+        'id_reparacion',
     ];
 
     protected $casts = [
@@ -43,4 +45,23 @@ class Venta extends Model
     public function detalles() { return $this->hasMany(DetalleVenta::class, 'id_venta', 'id_venta'); }
     public function pagos()    { return $this->hasMany(VentaPago::class,    'id_venta', 'id_venta'); }
     public function personal() { return $this->belongsTo(Personal::class, 'id_personal', 'id_personal'); }
+    public function reparacion() { return $this->belongsTo(Reparaciones::class, 'id_reparacion', 'id_reparacion'); }
+
+    /**
+     * Concepto real de la venta para mostrar en caja/comprobantes — 'venta'
+     * es el tipo genérico del ledger de caja, esto da el texto real que ve
+     * el usuario (Reparación/Mantenimiento/Garantía/Venta de pieza/Venta).
+     */
+    public function getLabelOrigenAttribute(): string
+    {
+        return match ($this->origen) {
+            'pieza_suelta' => 'Venta de pieza',
+            'reparacion'   => match ($this->reparacion?->tipo) {
+                'mantenimiento' => 'Mantenimiento',
+                'garantia'      => 'Garantía',
+                default         => 'Reparación',
+            },
+            default => 'Venta',
+        };
+    }
 }

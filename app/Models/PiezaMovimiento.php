@@ -19,6 +19,7 @@ class PiezaMovimiento extends Model
         'id_negocio',
         'id_usuario',
         'id_reparacion',
+        'id_venta',
         'tipo',
         'cantidad',
         'stock_antes',

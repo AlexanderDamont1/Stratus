@@ -22,15 +22,17 @@ class CotizacionNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        $subject = $this->tipoOt === 'mantenimiento'
-            ? "Sugerencia de piezas para tu mantenimiento — {$this->cotizacion->id_cotizacion}"
-            : "Cotización de reparación lista — {$this->cotizacion->id_cotizacion}";
+        $subject = match ($this->tipoOt) {
+            'mantenimiento' => "Sugerencia de piezas para tu mantenimiento — {$this->cotizacion->id_cotizacion}",
+            'garantia'      => "Cotización de tu reclamo de garantía — {$this->cotizacion->id_cotizacion}",
+            default         => "Cotización de reparación lista — {$this->cotizacion->id_cotizacion}",
+        };
 
         $nombreVista = "emails.cotizacion-{$this->tipoOt}";
         $urlBase = route('cotizacion.responder', ['token' => $this->cotizacion->token]);
         $urlResponder = route('cotizacion.show', $this->cotizacion->token);
     return (new MailMessage)
-        ->subject("Cotización de servicio — {$this->nombreNegocio}")
+        ->subject($subject)
         ->greeting("Hola, {$this->nombreCliente}")
         ->line("Tu cotización está lista. Total: $" . number_format($this->cotizacion->costo_total, 2))
         ->action('Ver cotización', $urlResponder)

@@ -6,8 +6,11 @@ use App\Models\Reparaciones;
 use App\Models\ReparacionPieza;
 use App\Models\ReparacionHistorial;
 use App\Models\Cotizacion;
+use App\Models\Cliente;
 use App\Models\PiezaCatalogo;
 use App\Services\StockService;
+use App\Services\VentaService;
+use App\Services\BicicletaMovimientoService;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -134,6 +137,18 @@ class ReparacionService
 
             self::invalidar($idNegocio);
 
+            // Aparece en Tracking/Movimientos: la unidad entró al taller.
+            // Solo si tiene num_serie (unidades sin registrar no generan movimiento).
+            if (!empty($rep->num_serie)) {
+                app(BicicletaMovimientoService::class)->ingresoOt(
+                    $rep->num_serie,
+                    $idNegocio,
+                    $rep->tipo,
+                    $rep->id_reparacion,
+                    $rep->problema_reportado,
+                );
+            }
+
             return $rep;
         });
     }
@@ -216,6 +231,7 @@ class ReparacionService
         ReparacionPieza::where('id_reparacion', $rep->id_reparacion)->delete();
 
         $totalPiezas = 0;
+        $esGarantia  = $rep->tipo === 'garantia';
 
         foreach ($piezas as $p) {
             $subtotal     = ($p['precio_unitario'] ?? 0) * ($p['cantidad'] ?? 1);
@@ -228,7 +244,7 @@ class ReparacionService
                 'cantidad'         => $p['cantidad'] ?? 1,
                 'precio_unitario'  => $p['precio_unitario'] ?? 0,
                 'subtotal'         => $subtotal,
-                'es_garantia'      => false,
+                'es_garantia'      => $esGarantia,
                 'stock_descontado' => false,
             ]);
         }
@@ -406,6 +422,88 @@ class ReparacionService
         });
     }
 
+    // ── Cobro ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Cobra el total de la OT (piezas + mano de obra + costo base) con pago
+     * (posiblemente dividido) y, si todo sale bien, avanza el estado a
+     * 'entregada' en el mismo paso — el vendedor ya no puede "entregar sin
+     * cobrar" una OT con costo pendiente.
+     *
+     * @param array $pagos [['metodo','monto','referencia'?], ...]
+     */
+    public static function cobrar(
+        Reparaciones $rep,
+        array        $pagos,
+        string       $idUsuario,
+        string       $idNegocio
+    ): Reparaciones {
+        abort_if($rep->estado !== 'lista', 422, 'La OT debe estar lista para poder cobrarse.');
+        abort_if(!empty($rep->id_venta), 422, 'Esta OT ya fue cobrada.');
+        abort_if((float) $rep->costo_total <= 0, 422, 'Esta OT no tiene costo por cobrar.');
+
+        $idCliente = $rep->id_cliente;
+        if (!$idCliente) {
+            $cliente = Cliente::firstOrCreate(
+                [
+                    'id_negocio' => $idNegocio,
+                    'telefono'   => $rep->cliente_telefono ?: 'sin teléfono',
+                ],
+                [
+                    'nombre_cliente' => $rep->cliente_nombre ?: 'Cliente',
+                    'apellido1'      => '',
+                    'correo'         => $rep->cliente_email,
+                ]
+            );
+            $idCliente = $cliente->id_cliente;
+        }
+
+        $lineas = [];
+
+        foreach ($rep->piezas as $p) {
+            $lineas[] = [
+                'id_pieza'        => $p->id_pieza,
+                'concepto'        => $p->id_pieza ? null : ($p->descripcion ?? 'Pieza'),
+                'precio_unitario' => (float) $p->precio_unitario,
+                'cantidad'        => $p->cantidad,
+            ];
+        }
+
+        if ((float) $rep->costo_mano_obra > 0) {
+            $lineas[] = [
+                'concepto'        => 'Mano de obra',
+                'precio_unitario' => (float) $rep->costo_mano_obra,
+                'cantidad'        => 1,
+            ];
+        }
+
+        if ((float) $rep->costo_reparacion > 0) {
+            $lineas[] = [
+                'concepto'        => $rep->tipo === 'mantenimiento' ? 'Costo de mantenimiento' : 'Costo base',
+                'precio_unitario' => (float) $rep->costo_reparacion,
+                'cantidad'        => 1,
+            ];
+        }
+
+        $venta = VentaService::crearVentaConPagos([
+            'id_cliente'    => $idCliente,
+            'total'         => (float) $rep->costo_total,
+            'origen'        => 'reparacion',
+            'id_reparacion' => $rep->id_reparacion,
+            'lineas'        => $lineas,
+        ], $pagos, $idUsuario, $idNegocio);
+
+        $rep->update(['id_venta' => $venta->id_venta]);
+
+        return self::avanzarEstado(
+            $rep->id_reparacion,
+            'entregada',
+            $idUsuario,
+            $idNegocio,
+            "Cobrada y entregada — venta {$venta->id_venta}"
+        );
+    }
+
     // ── Avanzar estado simple ─────────────────────────────────────────────────
 
     public static function avanzarEstado(
@@ -434,6 +532,16 @@ class ReparacionService
 
         if ($nuevoEstado === 'entregada') {
             self::descontarStock($rep, $idNegocio);
+
+            // Aparece en Tracking/Movimientos: la unidad salió de vuelta al cliente.
+            if (!empty($rep->num_serie)) {
+                app(BicicletaMovimientoService::class)->entregaOt(
+                    $rep->num_serie,
+                    $idNegocio,
+                    $rep->tipo,
+                    $rep->id_reparacion,
+                );
+            }
         }
 
         self::invalidar($idNegocio);

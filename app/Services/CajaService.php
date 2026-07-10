@@ -241,16 +241,32 @@ class CajaService
 
         $pagos = VentaPago::where('id_venta', $venta->id_venta)->get();
 
+        // VentaPago solo guarda 'metodo' (ej. 'efectivo') — el label legible
+        // y si cuenta como efectivo viven en la config de métodos de pago del
+        // negocio, hay que resolverlos aquí (antes se leían de propiedades
+        // que VentaPago nunca tuvo y siempre quedaban null/false).
+        $opcionesMap = collect(
+            \App\Models\NegocioConfig::where('clave', 'metodos_pago')
+                ->where('activo', true)
+                ->value('opciones') ?? []
+        )->keyBy('value');
+
+        // Mismo texto que verá el usuario en el corte: "Reparación VEN..." /
+        // "Mantenimiento VEN..." / "Venta de pieza VEN..." / "Venta VEN..."
+        $concepto = $venta->label_origen . ' ' . $venta->id_venta;
+
         foreach ($pagos as $pago) {
+            $opcion = $opcionesMap[$pago->metodo] ?? [];
+
             self::_registrarMovimiento($sesion, $idUsuario, [
                 'tipo'         => 'venta',
                 'monto'        => $pago->monto,
                 'es_entrada'   => true,
                 'id_venta'     => $venta->id_venta,
                 'metodo'       => $pago->metodo,
-                'metodo_label' => $pago->label,
-                'es_efectivo'  => $pago->es_efectivo,
-                'concepto'     => 'Venta ' . $venta->id_venta,
+                'metodo_label' => $opcion['label'] ?? ucfirst($pago->metodo),
+                'es_efectivo'  => (bool) ($opcion['es_efectivo'] ?? false),
+                'concepto'     => $concepto,
                 'referencia'   => $pago->referencia,
             ]);
         }
@@ -272,7 +288,12 @@ class CajaService
 
     public static function calcularSnapshot(CajaSesion $sesion, string $tipo): array
     {
-        $movimientos = CajaMovimiento::where('id_sesion', $sesion->id_sesion)->get();
+        // with('venta.reparacion'): label_tipo necesita el origen de la venta
+        // (y el tipo de OT si aplica) para mostrar "Reparación"/"Mantenimiento"/
+        // "Venta de pieza" en vez de "Venta" genérico — sin esto sería N+1.
+        $movimientos = CajaMovimiento::where('id_sesion', $sesion->id_sesion)
+            ->with('venta.reparacion')
+            ->get();
 
         $ventasTotal   = $movimientos->where('tipo', 'venta')->where('es_entrada', true)->sum('monto');
         $ingresosTotal = $movimientos->where('tipo', 'ingreso_manual')->where('es_entrada', true)->sum('monto');

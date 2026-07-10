@@ -174,7 +174,9 @@
                                             'border-blue-500': mov.tipo_movimiento === 'transferencia_sucursal',
                                             'border-yellow-500': mov.tipo_movimiento === 'venta',
                                             'border-purple-500': mov.tipo_movimiento === 'mantenimiento',
-                                            'border-gray-400': mov.tipo_movimiento === 'ajuste'
+                                            'border-gray-400': mov.tipo_movimiento === 'ajuste',
+                                            'border-orange-500': mov.tipo_movimiento === 'ingreso_ot',
+                                            'border-teal-500': mov.tipo_movimiento === 'entrega_ot'
                                         }">
                                         <div x-html="iconoTipoSVG(mov.tipo_movimiento)" class="w-5 h-5"></div>
                                     </div>
@@ -190,7 +192,9 @@
                                                     'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400': mov.tipo_movimiento === 'transferencia_sucursal',
                                                     'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400': mov.tipo_movimiento === 'venta',
                                                     'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400': mov.tipo_movimiento === 'mantenimiento',
-                                                    'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300': mov.tipo_movimiento === 'ajuste'
+                                                    'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300': mov.tipo_movimiento === 'ajuste',
+                                                    'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400': mov.tipo_movimiento === 'ingreso_ot',
+                                                    'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400': mov.tipo_movimiento === 'entrega_ot'
                                                 }"
                                                 x-text="labelTipo(mov.tipo_movimiento)">
                                             </span>
@@ -423,6 +427,8 @@
                         venta:                  'Venta',
                         mantenimiento:          'Mantenimiento',
                         ajuste:                 'Ajuste',
+                        ingreso_ot:             'Ingreso a taller',
+                        entrega_ot:             'Entrega a cliente',
                     };
                     return m[tipo] ?? tipo;
                 },
@@ -434,6 +440,8 @@
                         venta: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.5 6M17 13l1.5 6M9 21h6M12 17v4" /></svg>`,
                         mantenimiento: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>`,
                         ajuste: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>`,
+                        ingreso_ot: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>`,
+                        entrega_ot: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
                     };
                     return svgs[tipo] || `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-5 h-5"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"/></svg>`;
                 },

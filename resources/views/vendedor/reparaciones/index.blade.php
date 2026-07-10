@@ -338,18 +338,53 @@
                                 </div>
                             </template>
 
-                            {{-- ── Piezas de la OT ── --}}
-                            <div x-show="detalle?.piezas?.length > 0">
-                                <p class="text-xs text-gray-400 mb-2 font-medium">Piezas</p>
-                                <div class="space-y-1.5">
+                            {{-- ── Piezas y costos ── --}}
+                            <div x-show="detalle?.piezas?.length > 0 || detalle?.costo_mano_obra > 0 || detalle?.costo_reparacion > 0">
+                                <p class="text-xs text-gray-400 mb-2 font-medium">Piezas y costos</p>
+
+                                <div x-show="detalle?.piezas?.length > 0" class="space-y-1.5 mb-2">
                                     <template x-for="(p, idx) in detalle.piezas" :key="p.id_reparacion_pieza ?? idx">
                                         <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2">
-                                            <span class="text-xs text-gray-700 dark:text-gray-300 truncate"
-                                                  x-text="(p.pieza?.nombre ?? p.descripcion ?? '—') + ' × ' + p.cantidad"></span>
+                                            <span class="text-xs text-gray-700 dark:text-gray-300 truncate flex items-center gap-1.5">
+                                                <span x-text="(p.pieza?.nombre ?? p.descripcion ?? '—') + ' × ' + p.cantidad"></span>
+                                                <span x-show="p.es_garantia"
+                                                      class="text-[9px] font-medium px-1.5 py-0.5 rounded-full shrink-0
+                                                             bg-purple-100 dark:bg-purple-800/30 text-purple-700 dark:text-purple-400">
+                                                    Garantía
+                                                </span>
+                                            </span>
                                             <span class="text-xs font-medium text-gray-600 dark:text-gray-400 shrink-0 ml-2"
                                                   x-text="'$'+Number(p.subtotal).toLocaleString('es-MX')"></span>
                                         </div>
                                     </template>
+                                </div>
+
+                                <div class="space-y-1 border-t border-gray-100 dark:border-gray-700 pt-2">
+                                    <div x-show="detalle?.costo_mano_obra > 0" class="flex items-center justify-between text-xs">
+                                        <span class="text-gray-400">Mano de obra</span>
+                                        <span class="text-gray-600 dark:text-gray-300 font-medium"
+                                              x-text="'$'+Number(detalle.costo_mano_obra).toLocaleString('es-MX')"></span>
+                                    </div>
+                                    <div x-show="detalle?.costo_piezas > 0" class="flex items-center justify-between text-xs">
+                                        <span class="text-gray-400">Piezas</span>
+                                        <span class="text-gray-600 dark:text-gray-300 font-medium"
+                                              x-text="'$'+Number(detalle.costo_piezas).toLocaleString('es-MX')"></span>
+                                    </div>
+                                    <div x-show="detalle?.costo_reparacion > 0 && detalle?.tipo !== 'garantia'"
+                                         class="flex items-center justify-between text-xs">
+                                        <span class="text-gray-400"
+                                              x-text="detalle?.tipo === 'mantenimiento' ? 'Costo de mantenimiento' : 'Costo base'"></span>
+                                        <span class="text-gray-600 dark:text-gray-300 font-medium"
+                                              x-text="'$'+Number(detalle.costo_reparacion).toLocaleString('es-MX')"></span>
+                                    </div>
+                                    <div class="flex items-center justify-between text-xs pt-1.5 mt-1 border-t border-gray-100 dark:border-gray-700">
+                                        <span class="text-gray-500 dark:text-gray-400 font-medium">Total</span>
+                                        <span class="text-gray-800 dark:text-gray-200 font-semibold"
+                                              x-text="detalle?.costo_total > 0 ? '$'+Number(detalle.costo_total).toLocaleString('es-MX') : 'Por cotizar'"></span>
+                                    </div>
+                                    <p x-show="detalle?.id_venta" class="text-[10px] text-green-600 dark:text-green-400 pt-1">
+                                        ✓ Cobrada — venta <span x-text="detalle?.id_venta" class="font-mono"></span>
+                                    </p>
                                 </div>
                             </div>
 
@@ -538,29 +573,26 @@
                                                 </div>
                                             </div>
 
-                                            <button @click="guardarDiagnostico()"
-                                                    :disabled="guardandoDiag || !formDiag.diagnostico.trim()"
+                                            <button @click="piezasConDatos().length > 0 ? guardarYCotizar() : guardarDiagnostico()"
+                                                    :disabled="guardandoDiag || enviandoCot || !formDiag.diagnostico.trim()"
                                                     class="w-full text-xs font-semibold py-2 rounded-lg
                                                            bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300
                                                            hover:bg-gray-300 dark:hover:bg-gray-500 transition disabled:opacity-40">
-                                                <span x-text="guardandoDiag ? 'Guardando...' : 'Guardar diagnóstico'"></span>
+                                                <span x-text="(guardandoDiag || enviandoCot)
+                                                    ? 'Guardando...'
+                                                    : (piezasConDatos().length > 0 ? 'Añadir reparación y enviar cotización' : 'Guardar diagnóstico')"></span>
                                             </button>
+                                            <p x-show="piezasConDatos().length > 0" class="text-[10px] text-gray-400 mt-1.5">
+                                                Se agregaron piezas — al guardar se enviará la cotización al cliente por correo.
+                                            </p>
                                         </div>
 
-                                        <div x-show="detalle?.diagnostico" class="flex gap-2 flex-wrap">
-                                            <template x-if="detalle.cliente_email || detalle.cliente?.correo">
-                                                <button @click="abrirModalCotizacion()"
-                                                        class="flex items-center gap-1.5 bg-gray-900 dark:bg-white dark:text-gray-900
-                                                               text-white px-4 py-2.5 rounded-xl text-sm font-semibold
-                                                               hover:opacity-90 transition active:scale-[.98]">
-                                                    Enviar cotización por email
-                                                </button>
-                                            </template>
-                                            <template x-if="!(detalle.cliente_email || detalle.cliente?.correo)">
+                                        <div x-show="detalle?.diagnostico && detalle.estado === 'diagnostico'" class="flex gap-2 flex-wrap items-center">
+                                            <template x-if="piezasConDatos().length > 0 && !(detalle.cliente_email || detalle.cliente?.correo)">
                                                 <div class="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400
                                                             bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700
                                                             rounded-xl px-3 py-2">
-                                                    ⚠ Sin email — el cliente no puede recibir cotización.
+                                                    ⚠ Piezas guardadas, pero el cliente no tiene correo — no se puede enviar cotización.
                                                 </div>
                                             </template>
                                             <button @click="avanzarEstado(detalle.id_reparacion, 'en_proceso')"
@@ -568,7 +600,7 @@
                                                     class="flex items-center gap-1.5 border border-gray-200 dark:border-gray-600
                                                            text-gray-600 dark:text-gray-400 px-4 py-2.5 rounded-xl text-sm font-medium
                                                            hover:bg-gray-50 dark:hover:bg-gray-700 transition disabled:opacity-40">
-                                                Iniciar sin cotizar
+                                                Continuar
                                             </button>
                                         </div>
                                     </div>
@@ -611,8 +643,16 @@
                                     </button>
                                 </template>
 
-                                {{-- lista → entregar --}}
-                                <template x-if="detalle.estado === 'lista'">
+                                {{-- lista → cobrar (si hay costo) o entregar directo (si es $0) --}}
+                                <template x-if="detalle.estado === 'lista' && detalle.costo_total > 0">
+                                    <a :href="'{{ url('sucursal/reparaciones') }}/'+detalle.id_reparacion+'/cobrar'"
+                                       class="inline-flex items-center gap-1.5 bg-gray-900 dark:bg-white dark:text-gray-900
+                                              text-white px-4 py-2.5 rounded-xl text-sm font-semibold
+                                              hover:opacity-90 transition active:scale-[.98]">
+                                        Cobrar y entregar
+                                    </a>
+                                </template>
+                                <template x-if="detalle.estado === 'lista' && !(detalle.costo_total > 0)">
                                     <button @click="avanzarEstado(detalle.id_reparacion, 'entregada')"
                                             :disabled="avanzando"
                                             class="flex items-center gap-1.5 bg-gray-900 dark:bg-white dark:text-gray-900
@@ -622,7 +662,7 @@
                                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                                         </svg>
-                                        Entregar y cobrar
+                                        Entregar (sin cobro)
                                     </button>
                                 </template>
 
@@ -639,48 +679,6 @@
                         </div>
                     </div>
                 </template>
-            </div>
-        </div>
-    </div>
-
-    {{-- ══════════════════════════════════════════════
-         MODAL: Enviar cotización
-    ══════════════════════════════════════════════ --}}
-    <div x-show="modalCotizacion" x-cloak
-         x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0"
-         x-transition:leave="transition duration-100" x-transition:leave-end="opacity-0"
-         class="fixed inset-0 bg-black/50 backdrop-blur-[1px] flex items-center justify-center z-50 px-4"
-         @click.self="modalCotizacion = false">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6"
-             x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0 scale-95"
-             x-transition:leave="transition duration-100" x-transition:leave-end="opacity-0 scale-95">
-            <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-1">Enviar cotización al cliente</h3>
-            <p class="text-xs text-gray-400 mb-4">
-                El cliente recibirá un email con el desglose y un link para aceptar o rechazar.
-                El link expira en 12 horas.
-            </p>
-            <div>
-                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
-                    Descripción del trabajo <span class="text-red-400">*</span>
-                </label>
-                <textarea x-model="formCot.descripcion" rows="3"
-                          placeholder="Ej: Se reemplazará el motor trasero y se revisará el sistema de frenos..."
-                          class="w-full text-sm border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5
-                                 bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                                 focus:outline-none focus:ring-1 focus:ring-gray-400 resize-none"></textarea>
-            </div>
-            <div class="flex justify-end gap-2 mt-5">
-                <button type="button" @click="modalCotizacion = false"
-                        class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300
-                               hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">
-                    Cancelar
-                </button>
-                <button type="button" @click="enviarCotizacion()"
-                        :disabled="enviandoCot || !formCot.descripcion.trim()"
-                        class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2
-                               rounded-lg text-sm font-semibold hover:opacity-90 transition disabled:opacity-40">
-                    <span x-text="enviandoCot ? 'Enviando...' : 'Enviar cotización'"></span>
-                </button>
             </div>
         </div>
     </div>
@@ -764,11 +762,9 @@ function mantIndex() {
         resultadosPiezas: [],
 
         // ── Modales ──
-        modalCotizacion: false,
         modalResolver:   false,
         enviandoCot:     false,
         resolviendo:     false,
-        formCot: { descripcion: '' },
         formRes: { decision: '', nota: '', piezasAceptadas: [] },
         opcionesResolucion: [
             { val: 'aceptar',            label: 'Aceptar todo',       desc: 'Proceder con todo lo cotizado' },
@@ -795,7 +791,13 @@ function mantIndex() {
             { val: 'entregada',          label: 'Entregada' },
         ],
 
-        init() { this.cargarItems(); },
+        init() {
+            this.cargarItems();
+            if (new URLSearchParams(window.location.search).get('cobrado') === '1') {
+                this.flash('Cobro registrado. OT entregada.');
+                history.replaceState(null, '', window.location.pathname);
+            }
+        },
 
         async cargarItems() {
             this.cargando = true;
@@ -903,20 +905,31 @@ function mantIndex() {
         },
 
         seleccionarPiezaCatalogo(rp) {
+            const esGarantia = this.detalle?.tipo === 'garantia';
             this.formDiag.piezas.push({
                 id_pieza:        rp.id_pieza,
                 descripcion:     rp.nombre,
                 cantidad:        1,
-                precio_unitario: rp.precio_venta,
+                // En garantía la pieza va cubierta ($0) por defecto — la
+                // sucursal puede editarlo si decide cobrar una parte.
+                precio_unitario: esGarantia ? 0 : rp.precio_venta,
             });
             this.busquedaPieza    = '';
             this.resultadosPiezas = [];
         },
 
+        // Piezas con descripción real (ignora renglones manuales vacíos) —
+        // determina si el botón guarda solo, o guarda y cotiza.
+        piezasConDatos() {
+            return this.formDiag.piezas.filter(p => p.descripcion.trim());
+        },
+
         // ── Diagnóstico ───────────────────────────────────────────────────────
 
-        async guardarDiagnostico() {
-            if (!this.formDiag.diagnostico.trim()) return;
+        // opts.silent evita el flash + recarga cuando se llama como parte de
+        // guardarYCotizar() (que hace su propio flash al terminar).
+        async guardarDiagnostico(opts = {}) {
+            if (!this.formDiag.diagnostico.trim()) return false;
             this.guardandoDiag = true;
             try {
                 const res  = await fetch(`{{ url('sucursal/reparaciones') }}/${this.detalle.id_reparacion}/diagnostico`, {
@@ -928,35 +941,46 @@ function mantIndex() {
                     },
                     body: JSON.stringify({
                         diagnostico:     this.formDiag.diagnostico,
-                        costo_mano_obra: parseFloat(this.formDiag.costoManoObra) || 0,  // ✓ ya está
-                        piezas: this.formDiag.piezas
-                            .filter(p => p.descripcion.trim())
-                            .map(p => ({
-                                id_pieza:        p.id_pieza ?? null,
-                                descripcion:     p.descripcion.trim(),
-                                cantidad:        parseInt(p.cantidad) || 1,
-                                precio_unitario: parseFloat(p.precio_unitario) || 0,  // ✓ ya está
-                            })),
+                        costo_mano_obra: parseFloat(this.formDiag.costoManoObra) || 0,
+                        piezas: this.piezasConDatos().map(p => ({
+                            id_pieza:        p.id_pieza ?? null,
+                            descripcion:     p.descripcion.trim(),
+                            cantidad:        parseInt(p.cantidad) || 1,
+                            precio_unitario: parseFloat(p.precio_unitario) || 0,
+                        })),
                     }),
                 });
                 const data = await res.json();
-                if (!data.ok) { this.flash(data.mensaje ?? 'Error', 'error'); return; }
-                this.flash('Diagnóstico guardado.');
-                await this.recargarDetalle();
-                await this.cargarItems();
-            } catch { this.flash('Error de conexión', 'error'); }
+                if (!data.ok) { this.flash(data.mensaje ?? 'Error', 'error'); return false; }
+                if (!opts.silent) {
+                    this.flash('Diagnóstico guardado.');
+                    await this.recargarDetalle();
+                    await this.cargarItems();
+                }
+                return true;
+            } catch { this.flash('Error de conexión', 'error'); return false; }
             finally  { this.guardandoDiag = false; }
         },
 
-        // ── Modales cotización / resolver ─────────────────────────────────────
+        // "Añadir reparación": guarda el diagnóstico + piezas y, si el
+        // cliente tiene correo, envía la cotización automáticamente — sin
+        // modal ni paso manual adicional.
+        async guardarYCotizar() {
+            const ok = await this.guardarDiagnostico({ silent: true });
+            if (!ok) return;
 
-        abrirModalCotizacion() {
-            this.formCot.descripcion = '';
-            this.modalCotizacion     = true;
+            const email = this.detalle.cliente_email ?? this.detalle.cliente?.correo;
+            if (!email) {
+                this.flash('Piezas guardadas. El cliente no tiene correo — continúa manualmente.', 'error');
+                await this.recargarDetalle();
+                await this.cargarItems();
+                return;
+            }
+
+            await this.enviarCotizacionAuto();
         },
 
-        async enviarCotizacion() {
-            if (!this.formCot.descripcion.trim()) return;
+        async enviarCotizacionAuto() {
             this.enviandoCot = true;
             try {
                 const res  = await fetch(`{{ url('sucursal/reparaciones') }}/${this.detalle.id_reparacion}/cotizacion`, {
@@ -966,17 +990,18 @@ function mantIndex() {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                         'Accept': 'application/json',
                     },
-                    body: JSON.stringify({ descripcion_trabajo: this.formCot.descripcion }),
+                    body: JSON.stringify({ descripcion_trabajo: this.formDiag.diagnostico.trim() }),
                 });
                 const data = await res.json();
-                this.modalCotizacion = false;
-                if (!data.ok) { this.flash(data.mensaje ?? 'Error', 'error'); return; }
-                this.flash('Cotización enviada al cliente.');
+                if (!data.ok) { this.flash(data.mensaje ?? 'Error al enviar cotización', 'error'); return; }
+                this.flash('Reparación añadida. Cotización enviada al cliente.');
                 await this.recargarDetalle();
                 await this.cargarItems();
             } catch { this.flash('Error de conexión', 'error'); }
             finally  { this.enviandoCot = false; }
         },
+
+        // ── Modal resolver ──────────────────────────────────────────────────
 
         abrirModalResolver() {
             this.opcionesResolucion = this.detalle.tipo === 'mantenimiento'

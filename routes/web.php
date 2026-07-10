@@ -554,6 +554,8 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
             Route::post('/{id}/cotizacion',    [ReparacionController::class, 'enviarCotizacion'])->name('cotizacion');
             Route::post('/{id}/resolver',      [ReparacionController::class, 'resolverCotizacion'])->name('resolver');
             Route::post('/{id}/estado',        [ReparacionController::class, 'avanzarEstado'])->name('estado');
+            Route::get( '/{id}/cobrar',        [ReparacionController::class, 'cobrarForm'])->name('cobrar.form');
+            Route::post('/{id}/cobrar',        [ReparacionController::class, 'cobrar'])->name('cobrar');
         });
 
         Route::prefix('sucursal/stock/piezas')->name('stock_piezas.')->group(function () {
@@ -564,6 +566,7 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
             Route::put('/{id}',                [StockController::class, 'update'])->name('update');
             Route::post('/{id}/entrada',       [StockController::class, 'entrada'])->name('entrada');
             Route::get('/{id}/historial',      [StockController::class, 'historial'])->name('historial');
+            Route::post('/{id}/vender',        [StockController::class, 'vender'])->name('vender');
            
         });
 

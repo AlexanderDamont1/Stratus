@@ -107,6 +107,57 @@ class BicicletaMovimientoService
         ]);
     }
 
+    /**
+     * Vehículo que entra a taller por una OT (reparación, garantía o
+     * mantenimiento — el sistema unificado de Reparaciones). Se dispara
+     * al crear la OT.
+     */
+    public function ingresoOt(
+        string  $num_serie,
+        string  $idNegocio,
+        string  $tipoOt,
+        string  $idReparacion,
+        ?string $motivo = null
+    ): BicicletaMovimiento {
+        $labelTipo = match ($tipoOt) {
+            'garantia'      => 'Garantía',
+            'mantenimiento' => 'Mantenimiento',
+            default         => 'Reparación',
+        };
+
+        return $this->registrar($num_serie, 'ingreso_ot', [
+            'id_negocio' => $idNegocio,
+            'origen'     => 'Cliente',
+            'destino'    => 'Taller',
+            'notas'      => "Ingreso a taller — {$labelTipo} ({$idReparacion})"
+                . ($motivo ? ": {$motivo}" : ''),
+        ]);
+    }
+
+    /**
+     * Vehículo que se entrega de vuelta al cliente al cerrar una OT
+     * (estado 'entregada'). Contraparte de ingresoOt().
+     */
+    public function entregaOt(
+        string $num_serie,
+        string $idNegocio,
+        string $tipoOt,
+        string $idReparacion
+    ): BicicletaMovimiento {
+        $labelTipo = match ($tipoOt) {
+            'garantia'      => 'Garantía',
+            'mantenimiento' => 'Mantenimiento',
+            default         => 'Reparación',
+        };
+
+        return $this->registrar($num_serie, 'entrega_ot', [
+            'id_negocio' => $idNegocio,
+            'origen'     => 'Taller',
+            'destino'    => 'Cliente',
+            'notas'      => "Entrega tras {$labelTipo} ({$idReparacion})",
+        ]);
+    }
+
     public function ajuste(string $num_serie, string $notas): BicicletaMovimiento
     {
         return $this->registrar($num_serie, 'ajuste', ['notas' => $notas]);

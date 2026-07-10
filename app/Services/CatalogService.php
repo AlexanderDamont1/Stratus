@@ -1597,12 +1597,23 @@ class CatalogService
                     ->where('id_negocio', $idNegocio)
                     ->whereDate('created_at', $fecha)
                     ->whereRaw('HOUR(created_at) = ?', [$hora])
-                    ->selectRaw('COUNT(*) as ventas, COALESCE(SUM(total),0) as ingresos')
+                    ->selectRaw("
+                        COUNT(*) as ventas,
+                        COALESCE(SUM(total),0) as ingresos,
+                        COALESCE(SUM(CASE WHEN origen = 'reparacion' THEN total ELSE 0 END),0) as ingresos_reparacion,
+                        COALESCE(SUM(CASE WHEN origen != 'reparacion' OR origen IS NULL THEN total ELSE 0 END),0) as ingresos_venta,
+                        COUNT(CASE WHEN origen = 'reparacion' THEN 1 END) as ventas_reparacion,
+                        COUNT(CASE WHEN origen != 'reparacion' OR origen IS NULL THEN 1 END) as ventas_venta
+                    ")
                     ->first();
                 return [
-                    'label'    => str_pad($hora, 2, '0', STR_PAD_LEFT) . ':00',
-                    'ventas'   => (int)   $row->ventas,
-                    'ingresos' => (float) $row->ingresos,
+                    'label'               => str_pad($hora, 2, '0', STR_PAD_LEFT) . ':00',
+                    'ventas'              => (int)   $row->ventas,
+                    'ingresos'            => (float) $row->ingresos,
+                    'ingresos_reparacion' => (float) $row->ingresos_reparacion,
+                    'ingresos_venta'      => (float) $row->ingresos_venta,
+                    'ventas_reparacion'   => (int)   $row->ventas_reparacion,
+                    'ventas_venta'        => (int)   $row->ventas_venta,
                 ];
             }),
             $idNegocio
@@ -1723,6 +1734,72 @@ class CatalogService
                     'modelo' => $ot->bicicleta?->modelo?->nombre_modelo ?? $ot->unidad_descripcion ?? '—',
                     'dias'   => $ot->created_at?->diffInDays(now()) ?? 0,
                 ])
+                ->toArray(),
+            $idNegocio
+        );
+    }
+
+    /**
+     * Recaudado por OT en el periodo — usa entregada_at (cuándo se cobró y
+     * entregó de verdad, ver ReparacionService::cobrar) y costo_total, no el
+     * ledger de ventas, para no depender de que la venta esté cacheada.
+     * A diferencia de EstadisticaDiaria.ots_ingresos_total (que es solo
+     * negocio-completo), esto sí soporta el filtro por sucursal del dashboard.
+     */
+    public static function getOtsIngresos(
+        string  $idNegocio,
+        string  $desde,
+        string  $hasta,
+        ?string $idSucursal = null
+    ): array {
+        $key = "dashboard:ots_ingresos:{$idNegocio}:{$desde}:{$hasta}:" . ($idSucursal ?? 'todas');
+
+        return self::remember($key, 120, function () use ($idNegocio, $desde, $hasta, $idSucursal) {
+            $base = \App\Models\Reparaciones::where('id_negocio', $idNegocio)
+                ->whereBetween('entregada_at', ["{$desde} 00:00:00", "{$hasta} 23:59:59"])
+                ->when($idSucursal, fn($q) => $q->where('id_usuario_sucursal', $idSucursal));
+
+            $porTipo = (clone $base)
+                ->selectRaw('tipo, COUNT(*) as cnt, COALESCE(SUM(costo_total),0) as total')
+                ->groupBy('tipo')
+                ->get()
+                ->map(fn($r) => ['tipo' => $r->tipo, 'cnt' => (int) $r->cnt, 'total' => (float) $r->total])
+                ->values()
+                ->toArray();
+
+            return [
+                'total'    => array_sum(array_column($porTipo, 'total')),
+                'count'    => array_sum(array_column($porTipo, 'cnt')),
+                'por_tipo' => $porTipo,
+            ];
+        }, $idNegocio);
+    }
+
+    /**
+     * Ingresos del periodo agrupados por origen de la venta (venta normal de
+     * mostrador / cobro de OT / pieza suelta) — para la gráfica de
+     * "Distribución (origen de ingresos)" del dashboard, hermana de la de
+     * métodos de pago pero en el otro eje (de dónde vino el dinero, no cómo
+     * se pagó).
+     */
+    public static function getIngresosPorOrigen(
+        string  $idNegocio,
+        string  $desde,
+        string  $hasta,
+        ?string $idSucursal = null
+    ): array {
+        $key = "dashboard:ingresos_origen:{$idNegocio}:{$desde}:{$hasta}:" . ($idSucursal ?? 'todas');
+
+        return self::remember($key, 120, fn() =>
+            DB::table('ventas')
+                ->where('id_negocio', $idNegocio)
+                ->whereBetween('created_at', ["{$desde} 00:00:00", "{$hasta} 23:59:59"])
+                ->when($idSucursal, fn($q) => $q->where('id_usuario', $idSucursal))
+                ->selectRaw('origen, COUNT(*) as cnt, COALESCE(SUM(total),0) as total')
+                ->groupBy('origen')
+                ->get()
+                ->map(fn($r) => ['origen' => $r->origen, 'cnt' => (int) $r->cnt, 'total' => (float) $r->total])
+                ->values()
                 ->toArray(),
             $idNegocio
         );

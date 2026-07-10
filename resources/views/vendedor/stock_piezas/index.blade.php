@@ -141,6 +141,19 @@
 
                             {{-- Acciones --}}
                             <div class="flex items-center gap-1.5 shrink-0">
+                                <button @click="abrirVenta(p)"
+                                        :disabled="p.stock_actual <= 0"
+                                        title="Vender pieza suelta"
+                                        class="p-2 rounded-lg border border-gray-200 dark:border-gray-600
+                                               text-gray-500 dark:text-gray-400 hover:bg-blue-50
+                                               dark:hover:bg-blue-900/20 hover:border-blue-300
+                                               dark:hover:border-blue-700 hover:text-blue-600
+                                               dark:hover:text-blue-400 transition disabled:opacity-30
+                                               disabled:pointer-events-none">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z"/>
+                                    </svg>
+                                </button>
                                 <button @click="abrirEntrada(p)"
                                         title="Registrar entrada"
                                         class="p-2 rounded-lg border border-gray-200 dark:border-gray-600
@@ -429,6 +442,124 @@
     </div>
 
     {{-- ══════════════════════════════════════════
+         MODAL: Vender pieza suelta (sin OT)
+    ══════════════════════════════════════════ --}}
+    <div x-show="modalVenta" x-cloak
+         x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0"
+         x-transition:leave="transition duration-100" x-transition:leave-end="opacity-0"
+         class="fixed inset-0 bg-black/50 backdrop-blur-[1px] flex items-center justify-center z-50 px-4"
+         @click.self="modalVenta = false">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm max-h-[90vh] overflow-y-auto"
+             x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0 scale-95"
+             x-transition:leave="transition duration-100" x-transition:leave-end="opacity-0 scale-95">
+
+            <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Vender pieza suelta</h3>
+                <p class="text-xs text-gray-400 mt-0.5" x-text="piezaSeleccionada?.nombre"></p>
+            </div>
+
+            <div class="p-6 space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+                            Cantidad <span class="text-red-400">*</span>
+                        </label>
+                        <input type="number" x-model="formVenta.cantidad" min="1"
+                               :max="piezaSeleccionada?.stock_actual" @input="autocompletarPagoVenta()"
+                               class="w-full text-sm border border-gray-200 dark:border-gray-600 rounded-xl px-3.5 py-2.5
+                                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                                      focus:outline-none focus:ring-1 focus:ring-gray-400 font-mono">
+                    </div>
+                    <div class="flex flex-col justify-end">
+                        <p class="text-xs text-gray-400 mb-1.5">Total</p>
+                        <p class="text-lg font-bold text-gray-900 dark:text-white" x-text="fmtVenta(totalVenta)"></p>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">
+                        Cliente <span class="font-normal text-gray-400">(opcional)</span>
+                    </label>
+                    <input type="text" x-model="formVenta.cliente_nombre" placeholder="Nombre"
+                           class="w-full text-sm border border-gray-200 dark:border-gray-600 rounded-xl px-3.5 py-2.5 mb-2
+                                  bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                                  focus:outline-none focus:ring-1 focus:ring-gray-400">
+                    <input type="text" x-model="formVenta.cliente_telefono" placeholder="Teléfono"
+                           class="w-full text-sm border border-gray-200 dark:border-gray-600 rounded-xl px-3.5 py-2.5
+                                  bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                                  focus:outline-none focus:ring-1 focus:ring-gray-400">
+                </div>
+
+                <div class="border-t border-gray-100 dark:border-gray-700 pt-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-xs font-medium text-gray-500 dark:text-gray-400">Pago</label>
+                        <button type="button" @click="agregarPagoVenta()"
+                                class="text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-800
+                                       dark:hover:text-gray-200 transition">
+                            + Dividir pago
+                        </button>
+                    </div>
+
+                    <template x-for="(pago, i) in pagosVenta" :key="i">
+                        <div class="space-y-1.5 mb-2">
+                            <div class="flex items-center gap-2">
+                                <select x-model="pago.id_metodo" @change="onMetodoChangeVenta(i)"
+                                        class="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white
+                                               px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
+                                    <option value="">— Método —</option>
+                                    @foreach($metodos as $m)
+                                    <option value="{{ $m['value'] }}"
+                                            data-efectivo="{{ $m['es_efectivo'] ? '1' : '0' }}"
+                                            data-ref="{{ $m['requiere_referencia'] ? '1' : '0' }}">
+                                        {{ $m['label'] }}
+                                    </option>
+                                    @endforeach
+                                </select>
+                                <template x-if="pagosVenta.length > 1">
+                                    <div class="relative w-24 shrink-0">
+                                        <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">$</span>
+                                        <input type="number" step="0.01" min="0" x-model="pago.monto" @input="recalcularPagosVenta(i)"
+                                               class="w-full pl-5 pr-2 py-2 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white
+                                                      text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition tabular-nums">
+                                    </div>
+                                </template>
+                                <button type="button" @click="quitarPagoVenta(i)"
+                                        x-show="pagosVenta.length > 1 && !(pago.es_efectivo && pagosVenta.filter(p => p.es_efectivo).length === 1)"
+                                        class="shrink-0 text-gray-300 hover:text-red-500 dark:hover:text-red-400 transition">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <input x-show="pago.requiere_referencia" type="text" x-model="pago.referencia"
+                                   placeholder="Folio / referencia…"
+                                   class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white
+                                          px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
+                        </div>
+                    </template>
+
+                    <p class="text-xs" :class="pagosCubreVenta ? 'text-green-600 dark:text-green-400' : 'text-gray-400'"
+                       x-text="pagosCubreVenta ? '✓ Pago completo' : 'Pendiente de asignar pago'"></p>
+                </div>
+            </div>
+
+            <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-2">
+                <button @click="modalVenta = false"
+                        class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300
+                               hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">
+                    Cancelar
+                </button>
+                <button @click="confirmarVenta()"
+                        :disabled="vendiendo || !(formVenta.cantidad > 0) || !pagosCubreVenta || !pagosVenta.every(p => p.id_metodo)"
+                        class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-5 py-2
+                               rounded-lg text-sm font-semibold hover:opacity-90 transition disabled:opacity-40">
+                    <span x-text="vendiendo ? 'Procesando...' : 'Vender'"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {{-- ══════════════════════════════════════════
          MODAL: Historial de movimientos
     ══════════════════════════════════════════ --}}
     <div x-show="modalHistorial" x-cloak
@@ -531,7 +662,7 @@ function stockIndex() {
         stats: { total: 0, bajo_stock: 0 },
 
         // Modales
-        modalForm: false, modalEntrada: false, modalHistorial: false,
+        modalForm: false, modalEntrada: false, modalHistorial: false, modalVenta: false,
         modoEditar: false,
         piezaSeleccionada: null,
 
@@ -545,6 +676,11 @@ function stockIndex() {
             stock_inicial: '', stock_minimo: '',
         },
         formEntrada: { cantidad: '', nota: '' },
+
+        // Venta de pieza suelta
+        formVenta: { cantidad: '', cliente_nombre: '', cliente_telefono: '' },
+        pagosVenta: [],
+        vendiendo: false,
 
         flashVisible: false, flashMsg: '', flashTipo: 'success', flashTimer: null,
 
@@ -701,6 +837,92 @@ function stockIndex() {
                 await this.cargar();
             } catch { this.flash('Error de conexión', 'error'); }
             finally  { this.registrandoEntrada = false; }
+        },
+
+        // ── Venta de pieza suelta ────────────────────────────────────────────
+
+        get totalVenta() {
+            const cant = parseInt(this.formVenta.cantidad) || 0;
+            return cant * (parseFloat(this.piezaSeleccionada?.precio_venta) || 0);
+        },
+        get sumaPagosVenta() {
+            return this.pagosVenta.reduce((s, p) => s + (parseFloat(p.monto) || 0), 0);
+        },
+        get pagosCubreVenta() {
+            if (!(this.totalVenta > 0)) return false;
+            if (this.pagosVenta.length === 1) return true;
+            return Math.round(this.sumaPagosVenta * 100) >= Math.round(this.totalVenta * 100);
+        },
+
+        _nuevoPagoVenta(esEfectivo = false) {
+            return { id_metodo: esEfectivo ? 'efectivo' : '', monto: '', referencia: '', es_efectivo: esEfectivo, requiere_referencia: false };
+        },
+
+        abrirVenta(p) {
+            this.piezaSeleccionada = p;
+            this.formVenta         = { cantidad: 1, cliente_nombre: '', cliente_telefono: '' };
+            this.pagosVenta        = [this._nuevoPagoVenta(true)];
+            this.autocompletarPagoVenta();
+            this.modalVenta        = true;
+        },
+
+        autocompletarPagoVenta() {
+            if (this.pagosVenta.length === 1) this.pagosVenta[0].monto = this.totalVenta.toFixed(2);
+        },
+
+        agregarPagoVenta() { this.pagosVenta.push(this._nuevoPagoVenta()); },
+        quitarPagoVenta(idx) {
+            if (this.pagosVenta.length <= 1) return;
+            if (this.pagosVenta[idx].es_efectivo && this.pagosVenta.filter(p => p.es_efectivo).length === 1) return;
+            this.pagosVenta.splice(idx, 1);
+            this.recalcularPagosVenta();
+        },
+        onMetodoChangeVenta(idx) {
+            const select = document.querySelectorAll('[x-model="pago.id_metodo"]')[idx];
+            if (!select) return;
+            const opt = select.options[select.selectedIndex];
+            if (!opt) return;
+            this.pagosVenta[idx].es_efectivo         = opt.dataset.efectivo === '1';
+            this.pagosVenta[idx].requiere_referencia = opt.dataset.ref === '1';
+        },
+        recalcularPagosVenta(idxEditado) {
+            if (this.pagosVenta.length < 2) return;
+            const destino = idxEditado === 0 ? this.pagosVenta.length - 1 : 0;
+            const ocupado = this.pagosVenta.reduce((s, p, j) => (j !== destino) ? s + (parseFloat(p.monto) || 0) : s, 0);
+            const resta = Math.round((this.totalVenta - ocupado) * 100) / 100;
+            this.pagosVenta[destino].monto = Math.max(0, resta).toFixed(2);
+        },
+        fmtVenta(n) { return '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); },
+
+        async confirmarVenta() {
+            if (!(this.formVenta.cantidad > 0) || !this.pagosCubreVenta) return;
+            this.vendiendo = true;
+            try {
+                const pagosEnviar = this.pagosVenta.length === 1
+                    ? [{ ...this.pagosVenta[0], monto: this.totalVenta.toFixed(2) }]
+                    : this.pagosVenta;
+
+                const res = await fetch(`{{ url('sucursal/stock/piezas') }}/${this.piezaSeleccionada.id_pieza}/vender`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept':       'application/json',
+                    },
+                    body: JSON.stringify({
+                        cantidad:          parseInt(this.formVenta.cantidad),
+                        cliente_nombre:    this.formVenta.cliente_nombre || null,
+                        cliente_telefono:  this.formVenta.cliente_telefono || null,
+                        pagos: pagosEnviar.map(p => ({ metodo: p.id_metodo, monto: parseFloat(p.monto || 0), referencia: p.referencia || null })),
+                    }),
+                });
+                const data = await res.json();
+                if (!data.ok) { this.flash(data.mensaje ?? 'Error al vender', 'error'); return; }
+                this.flash(data.mensaje);
+                this.modalVenta = false;
+                await this.cargar();
+            } catch { this.flash('Error de conexión', 'error'); }
+            finally  { this.vendiendo = false; }
         },
 
         // ── Historial ─────────────────────────────────────────────────────────

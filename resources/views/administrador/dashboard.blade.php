@@ -180,6 +180,17 @@
                     x-text="(kpis[1]?.trend > 0 ? '↑' : '↓') + ' ' + Math.abs(kpis[1]?.trend||0).toFixed(1) + '%'"></span>
             </div>
 
+            <div class="flex items-center flex-wrap gap-x-3 gap-y-1 mt-1.5">
+                <p x-show="ingresosVentaNormal > 0" class="text-[10.5px] text-gray-300 dark:text-gray-600 flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500 shrink-0"></span>
+                    <span x-text="fmt$(ingresosVentaNormal) + ' de ventas'"></span>
+                </p>
+                <p x-show="kpiData.ots_ingresos > 0" class="text-[10.5px] text-purple-300 dark:text-purple-600 flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-purple-400 dark:bg-purple-500 shrink-0"></span>
+                    <span x-text="fmt$(kpiData.ots_ingresos) + ' de reparaciones (OT)'"></span>
+                </p>
+            </div>
+
             {{-- sparkline --}}
             <div class="relative h-[64px] mt-4">
                 <canvas id="ingresos-chart-mobile"></canvas>
@@ -267,6 +278,31 @@
             </template>
         </div>
 
+        {{-- Recaudado por OT (reparaciones / mantenimiento / garantía) --}}
+        <div class="mx-4 mt-4 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-5 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Recaudado por OT</p>
+                <span class="text-[10px] text-gray-400" x-text="(kpiData.ots_entregadas??0)+' entregadas'"></span>
+            </div>
+            <p class="text-[26px] font-semibold tracking-tight text-gray-900 dark:text-gray-100 mb-3"
+               x-text="fmt$(kpiData.ots_ingresos??0)"></p>
+            <template x-if="otsIngresosPorTipo.length === 0">
+                <p class="text-center text-gray-400 text-[11px] py-1">Sin cobros de OT en el periodo</p>
+            </template>
+            <div class="space-y-2">
+                <template x-for="t in otsIngresosPorTipo" :key="'motip-'+t.tipo">
+                    <div class="flex items-center gap-3">
+                        <span class="text-[11px] text-gray-500 dark:text-gray-400 w-[110px] shrink-0 truncate" x-text="labelTipoOt(t.tipo)"></span>
+                        <div class="flex-1 h-[6px] bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                            <div class="h-full rounded-full bg-purple-400"
+                                 :style="{width: (kpiData.ots_ingresos > 0 ? Math.round(t.total/kpiData.ots_ingresos*100) : 0)+'%'}"></div>
+                        </div>
+                        <span class="text-[11px] font-medium text-gray-700 dark:text-gray-300 min-w-[54px] text-right" x-text="fmt$(t.total)"></span>
+                    </div>
+                </template>
+            </div>
+        </div>
+
         {{-- Inventario resumido --}}
         <div class="mx-4 mt-4 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm"
              @click="openModal('bicicletas')">
@@ -311,7 +347,9 @@
                             'border-blue-500': m.tipo_movimiento === 'transferencia_sucursal',
                             'border-amber-500': m.tipo_movimiento === 'venta',
                             'border-purple-500': m.tipo_movimiento === 'mantenimiento',
-                            'border-gray-400': m.tipo_movimiento === 'ajuste'
+                            'border-gray-400': m.tipo_movimiento === 'ajuste',
+                            'border-orange-500': m.tipo_movimiento === 'ingreso_ot',
+                            'border-teal-500': m.tipo_movimiento === 'entrega_ot'
                          }">
                         <div class="w-4 h-4"
                              :class="{
@@ -319,7 +357,9 @@
                                 'text-blue-600': m.tipo_movimiento === 'transferencia_sucursal',
                                 'text-amber-600': m.tipo_movimiento === 'venta',
                                 'text-purple-600': m.tipo_movimiento === 'mantenimiento',
-                                'text-gray-500': m.tipo_movimiento === 'ajuste'
+                                'text-gray-500': m.tipo_movimiento === 'ajuste',
+                                'text-orange-600': m.tipo_movimiento === 'ingreso_ot',
+                                'text-teal-600': m.tipo_movimiento === 'entrega_ot'
                              }"
                              x-html="iconoTipoMovSVG(m.tipo_movimiento)"></div>
                     </div>
@@ -409,6 +449,16 @@
                 <p class="text-[34px] font-semibold tracking-tight leading-none text-gray-900 dark:text-gray-100 mb-1"
                    x-text="kpiData.ingresos ? fmt$(kpiData.ingresos) : '$0.00'"></p>
                 <p class="text-[11px] text-gray-400" x-text="periodoLabel"></p>
+                <div class="flex items-center flex-wrap gap-x-4 gap-y-1 mt-1.5">
+                    <p x-show="ingresosVentaNormal > 0" class="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-gray-400 shrink-0"></span>
+                        <span x-text="fmt$(ingresosVentaNormal) + ' de ventas'"></span>
+                    </p>
+                    <p x-show="kpiData.ots_ingresos > 0" class="text-[11px] text-purple-600 dark:text-purple-400 flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0"></span>
+                        <span x-text="fmt$(kpiData.ots_ingresos) + ' de reparaciones (OT)'"></span>
+                    </p>
+                </div>
 
                 <div class="grid grid-cols-3 gap-3 mt-5">
                     <template x-if="!loading">
@@ -454,6 +504,26 @@
                             <span class="font-semibold text-gray-900 dark:text-gray-100" x-text="fmt$(m.monto)"></span>
                         </div>
                     </template>
+                </div>
+
+                {{-- Misma gráfica que arriba, pero por origen del ingreso (venta normal /
+                     OT / pieza suelta) — eje distinto al método de pago --}}
+                <div class="mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2">Origen de los ingresos</p>
+                    <div class="flex h-3 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700 mb-4" x-show="ingresosPorOrigen.length">
+                        <template x-for="o in ingresosPorOrigen" :key="'segbo-'+o.origen">
+                            <div class="h-full transition-all duration-500" :style="{width: pctWidthOrigen(o.total), background: origenMeta(o.origen).color}"></div>
+                        </template>
+                    </div>
+                    <div class="space-y-2">
+                        <template x-for="o in ingresosPorOrigen" :key="'lbo-'+o.origen">
+                            <div class="flex items-center gap-2 text-[11px]">
+                                <span class="w-2 h-2 rounded-full shrink-0" :style="{background: origenMeta(o.origen).color}"></span>
+                                <span class="text-gray-500 dark:text-gray-400 flex-1 truncate" x-text="origenMeta(o.origen).label"></span>
+                                <span class="font-semibold text-gray-900 dark:text-gray-100" x-text="fmt$(o.total)"></span>
+                            </div>
+                        </template>
+                    </div>
                 </div>
             </div>
         </div>
@@ -556,6 +626,33 @@
                                          :style="{width: kpiData.clientes > 0 ? Math.round(c.cnt/kpiData.clientes*100)+'%' : '0%', opacity: i===0 ? 1 : 0.35}"></div>
                                 </div>
                                 <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400 min-w-[24px] text-right" x-text="c.cnt"></span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                {{-- Recaudado por OT (reparaciones / mantenimiento / garantía) --}}
+                <div class="break-inside-avoid bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all duration-200">
+                    <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60">
+                        <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Recaudado por OT</p>
+                        <span class="text-[10px] text-gray-400" x-text="(kpiData.ots_entregadas??0)+' entregadas'"></span>
+                    </div>
+                    <div class="p-5" x-show="!loading">
+                        <div class="flex items-baseline gap-1.5 mb-4">
+                            <p class="text-[26px] font-semibold tracking-tight leading-none text-gray-900 dark:text-gray-100" x-text="fmt$(kpiData.ots_ingresos??0)"></p>
+                            <p class="text-[11px] text-gray-400">en el periodo</p>
+                        </div>
+                        <template x-if="otsIngresosPorTipo.length === 0">
+                            <p class="text-gray-400 text-[11px]">Sin cobros de OT en el periodo</p>
+                        </template>
+                        <template x-for="(t, i) in otsIngresosPorTipo" :key="'dtip-'+t.tipo">
+                            <div class="flex items-center gap-3 mb-2.5">
+                                <span class="text-[11px] text-gray-500 dark:text-gray-400 w-[90px] shrink-0 truncate" x-text="labelTipoOt(t.tipo)"></span>
+                                <div class="flex-1 h-[3px] bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                    <div class="h-full rounded-full transition-all duration-500 bg-purple-500 dark:bg-purple-400"
+                                         :style="{width: kpiData.ots_ingresos > 0 ? Math.round(t.total/kpiData.ots_ingresos*100)+'%' : '0%', opacity: i===0 ? 1 : 0.5}"></div>
+                                </div>
+                                <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400 min-w-[54px] text-right" x-text="fmt$(t.total)"></span>
                             </div>
                         </template>
                     </div>
@@ -803,7 +900,9 @@
                                     'border-blue-500': m.tipo_movimiento === 'transferencia_sucursal',
                                     'border-amber-500': m.tipo_movimiento === 'venta',
                                     'border-purple-500': m.tipo_movimiento === 'mantenimiento',
-                                    'border-gray-400': m.tipo_movimiento === 'ajuste'
+                                    'border-gray-400': m.tipo_movimiento === 'ajuste',
+                                    'border-orange-500': m.tipo_movimiento === 'ingreso_ot',
+                                    'border-teal-500': m.tipo_movimiento === 'entrega_ot'
                                 }">
                                 <div class="w-4 h-4 flex items-center justify-center"
                                     :class="{
@@ -811,7 +910,9 @@
                                         'text-blue-600 dark:text-blue-400': m.tipo_movimiento === 'transferencia_sucursal',
                                         'text-amber-600 dark:text-amber-400': m.tipo_movimiento === 'venta',
                                         'text-purple-600 dark:text-purple-400': m.tipo_movimiento === 'mantenimiento',
-                                        'text-gray-500 dark:text-gray-400': m.tipo_movimiento === 'ajuste'
+                                        'text-gray-500 dark:text-gray-400': m.tipo_movimiento === 'ajuste',
+                                        'text-orange-600 dark:text-orange-400': m.tipo_movimiento === 'ingreso_ot',
+                                        'text-teal-600 dark:text-teal-400': m.tipo_movimiento === 'entrega_ot'
                                     }"
                                     x-html="iconoTipoMovSVG(m.tipo_movimiento)"></div>
                             </div>
@@ -826,7 +927,9 @@
                                             'bg-blue-100 text-blue-800 dark:bg-blue-800/30 dark:text-blue-400': m.tipo_movimiento === 'transferencia_sucursal',
                                             'bg-amber-100 text-amber-800 dark:bg-amber-800/30 dark:text-amber-400': m.tipo_movimiento === 'venta',
                                             'bg-purple-100 text-purple-800 dark:bg-purple-800/30 dark:text-purple-400': m.tipo_movimiento === 'mantenimiento',
-                                            'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300': m.tipo_movimiento === 'ajuste'
+                                            'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300': m.tipo_movimiento === 'ajuste',
+                                            'bg-orange-100 text-orange-800 dark:bg-orange-800/30 dark:text-orange-400': m.tipo_movimiento === 'ingreso_ot',
+                                            'bg-teal-100 text-teal-800 dark:bg-teal-800/30 dark:text-teal-400': m.tipo_movimiento === 'entrega_ot'
                                         }"
                                         x-text="labelTipoMov(m.tipo_movimiento)">
                                     </span>
@@ -1025,6 +1128,7 @@ function dashboard() {
         graficaSucursales: [], sucursalMetrica: 'ingresos',
         sucursales: [], pedidos: [], ots: [], metodosPago: [],
         clientesTipo: [], horasPico: [], ventasPersonal: [],
+        otsIngresosPorTipo: [], ingresosPorOrigen: [],
 
         // ── NUEVAS PROPIEDADES ──
         sucursalSeleccionada: null, // null = "Todas"
@@ -1082,6 +1186,21 @@ function dashboard() {
             return t > 0 ? Math.round(monto/t*100)+'%' : '0%';
         },
 
+        pctWidthOrigen(monto) {
+            const t = this.ingresosPorOrigen.reduce((s,o)=>s+o.total,0);
+            return t > 0 ? Math.round(monto/t*100)+'%' : '0%';
+        },
+        get ingresosVentaNormal() {
+            return this.ingresosPorOrigen.find(o => o.origen === 'venta')?.total ?? 0;
+        },
+        origenMeta(origen) {
+            return {
+                venta:        { label: 'Venta',          color: '#9ca3af' },
+                reparacion:   { label: 'Reparación (OT)', color: '#a855f7' },
+                pieza_suelta: { label: 'Pieza suelta',    color: '#14b8a6' },
+            }[origen] ?? { label: origen ?? '—', color: '#9ca3af' };
+        },
+
         personalHoyDe(nombre) {
             return this.personalHoy.find(p => p.nombre === nombre) || null;
         },
@@ -1106,7 +1225,12 @@ function dashboard() {
                 { key:'ots',      label:'OTs activas',  value: d.ots_activas,     sub: 'en taller ahora',                                            modal:'otsList',      trend: 0 },
                 { key:'stock',    label:'En stock',     value: SSR.biciStats.en_stock, sub: 'bicicletas',                                            modal:'bicicletas',   trend: 0 },
                 { key:'cupones',  label:'Cupones',      value: fmt$(d.cupones_descuento??0), sub: (d.cupones_usados??0)+' usos',                      modal:'cupones',      trend: 0 },
+                { key:'ots_ingresos', label:'Recaudado OT', value: fmt$(d.ots_ingresos??0), sub: (d.ots_entregadas??0)+' OT entregadas',               modal:null,            trend: 0 },
             ];
+        },
+
+        labelTipoOt(tipo) {
+            return { reparacion:'Reparación', mantenimiento:'Mantenimiento', garantia:'Garantía' }[tipo] ?? (tipo ?? '—');
         },
 
         // ── NUEVO MÉTODO: setSucursal ──
@@ -1199,6 +1323,8 @@ function dashboard() {
                 this.sucursales        = data.sucursales        || [];
                 this.pedidos           = data.pedidos?.recientes || [];
                 this.ots               = data.ots               || [];
+                this.otsIngresosPorTipo = data.ots_ingresos_por_tipo || [];
+                this.ingresosPorOrigen  = data.ingresos_por_origen   || [];
                 this.metodosPago       = data.metodos_pago      || [];
                 this.clientesTipo      = data.clientes_tipo     || [];
                 this.horasPico         = data.horas_pico        || [];
@@ -1556,8 +1682,11 @@ function dashboard() {
 
         // ── Gráficas principales (dashboard) con Chart.js sobre <canvas> ──
         _renderIngresosChart() {
-            const labels = this.graficaDias.map(d => d.label);
-            const data   = this.graficaDias.map(d => d.ingresos);
+            const labels    = this.graficaDias.map(d => d.label);
+            const data      = this.graficaDias.map(d => d.ingresos);
+            const dataVenta = this.graficaDias.map(d => d.ingresos_venta ?? d.ingresos);
+            const dataOt    = this.graficaDias.map(d => d.ingresos_reparacion ?? 0);
+            const hasOt     = dataOt.some(v => v > 0);
             if (!labels.length) return;
 
             const containerId = 'ingresos-chart-wrap';
@@ -1570,26 +1699,52 @@ function dashboard() {
                     const d0 = isDark();
                     const tick = '#9ca3af';
                     const grid = d0 ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
-                    this._charts[containerId] = new Chart(canvas, {
-                        type: 'line',
-                        data: { labels, datasets: [{
-                            data,
-                            borderColor: d0 ? '#3987e5' : '#2a78d6',
-                            backgroundColor: d0 ? 'rgba(57,135,229,0.12)' : 'rgba(42,120,214,0.10)',
+
+                    // Con actividad de OT se apilan dos series (Ventas + Reparaciones)
+                    // para mostrar el panorama completo; sin OT se ve exactamente
+                    // igual que antes (una sola serie, sin leyenda).
+                    const datasets = [{
+                        label: hasOt ? 'Ventas' : 'Ingresos',
+                        data: hasOt ? dataVenta : data,
+                        borderColor: d0 ? '#3987e5' : '#2a78d6',
+                        backgroundColor: d0 ? 'rgba(57,135,229,0.12)' : 'rgba(42,120,214,0.10)',
+                        fill: true, tension: 0.35, borderWidth: 2,
+                        pointRadius: 0, pointHoverRadius: 5,
+                        pointHoverBackgroundColor: d0 ? '#3987e5' : '#2a78d6',
+                        pointHoverBorderColor: d0 ? '#1f2937' : '#ffffff',
+                        pointHoverBorderWidth: 2,
+                        stack: 'ingresos',
+                    }];
+
+                    if (hasOt) {
+                        datasets.push({
+                            label: 'Reparaciones (OT)',
+                            data: dataOt,
+                            borderColor: '#a855f7',
+                            backgroundColor: 'rgba(168,85,247,0.18)',
                             fill: true, tension: 0.35, borderWidth: 2,
                             pointRadius: 0, pointHoverRadius: 5,
-                            pointHoverBackgroundColor: d0 ? '#3987e5' : '#2a78d6',
+                            pointHoverBackgroundColor: '#a855f7',
                             pointHoverBorderColor: d0 ? '#1f2937' : '#ffffff',
                             pointHoverBorderWidth: 2,
-                        }]},
+                            stack: 'ingresos',
+                        });
+                    }
+
+                    this._charts[containerId] = new Chart(canvas, {
+                        type: 'line',
+                        data: { labels, datasets },
                         options: {
                             responsive: true, maintainAspectRatio: false,
-                            plugins: { legend: { display: false }, tooltip: {
-                                callbacks: { label: (ctx) => fmt$(ctx.parsed.y) }
-                            }},
+                            plugins: {
+                                legend: { display: hasOt, position: 'top', align: 'end',
+                                          labels: { boxWidth: 8, boxHeight: 8, usePointStyle: true, pointStyle: 'circle',
+                                                    font: { size: 10 }, color: tick, padding: 10 } },
+                                tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + fmt$(ctx.parsed.y) } }
+                            },
                             scales: {
-                                x: { grid: { display: false }, ticks: { color: tick, font: { size: 10 } } },
-                                y: { grid: { color: grid }, border: { display: false },
+                                x: { stacked: hasOt, grid: { display: false }, ticks: { color: tick, font: { size: 10 } } },
+                                y: { stacked: hasOt, grid: { color: grid }, border: { display: false },
                                     ticks: { color: tick, font: { size: 10 }, maxTicksLimit: 4,
                                             callback: v => v >= 1000 ? Math.round(v/1000)+'k' : v } }
                             }
@@ -1604,8 +1759,11 @@ function dashboard() {
         },
 
         _renderVentasChart() {
-            const labels = this.graficaDias.map(d => d.label);
-            const data   = this.graficaDias.map(d => d.ventas);
+            const labels       = this.graficaDias.map(d => d.label);
+            const data         = this.graficaDias.map(d => d.ventas);
+            const dataVentaCnt = this.graficaDias.map(d => d.ventas_venta ?? d.ventas);
+            const dataOtCnt    = this.graficaDias.map(d => d.ventas_reparacion ?? 0);
+            const hasOt        = dataOtCnt.some(v => v > 0);
             if (!labels.length) return;
 
             const containerId = 'ventas-chart-wrap';
@@ -1621,22 +1779,40 @@ function dashboard() {
             const tick = '#9ca3af';
             const grid = d0 ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
 
-            this._charts[containerId] = new Chart(canvas, {
-                type: 'bar',
-                data: { labels, datasets: [{
-                    data,
-                    backgroundColor: d0 ? '#199e70' : '#1baf7a',
+            const datasets = [{
+                label: 'Ventas',
+                data: hasOt ? dataVentaCnt : data,
+                backgroundColor: d0 ? '#199e70' : '#1baf7a',
+                borderRadius: 4,
+                maxBarThickness: 22,
+                stack: 'ventas',
+            }];
+
+            if (hasOt) {
+                datasets.push({
+                    label: 'Reparaciones (OT)',
+                    data: dataOtCnt,
+                    backgroundColor: '#a855f7',
                     borderRadius: 4,
                     maxBarThickness: 22,
-                }]},
+                    stack: 'ventas',
+                });
+            }
+
+            this._charts[containerId] = new Chart(canvas, {
+                type: 'bar',
+                data: { labels, datasets },
                 options: {
                     responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false }, tooltip: {
-                        callbacks: { label: (ctx) => ctx.parsed.y + ' ventas' }
-                    }},
+                    plugins: {
+                        legend: { display: hasOt, position: 'top', align: 'end',
+                                  labels: { boxWidth: 8, boxHeight: 8, usePointStyle: true, pointStyle: 'circle',
+                                            font: { size: 10 }, color: tick, padding: 10 } },
+                        tooltip: { callbacks: { label: (ctx) => ctx.dataset.label + ': ' + ctx.parsed.y + ' ventas' } }
+                    },
                     scales: {
-                        x: { grid: { display: false }, ticks: { color: tick, font: { size: 10 } } },
-                        y: { grid: { color: grid }, border: { display: false },
+                        x: { stacked: hasOt, grid: { display: false }, ticks: { color: tick, font: { size: 10 } } },
+                        y: { stacked: hasOt, grid: { color: grid }, border: { display: false },
                             ticks: { color: tick, font: { size: 10 }, maxTicksLimit: 4 } }
                     }
                 }
@@ -1788,23 +1964,64 @@ function dashboard() {
             const labels = this.graficaDias.map(d => d.label);
 
             if (type === 'ingresos') {
-                const data = this.graficaDias.map(d => d.ingresos);
-                const anterior = this.graficaAnterior.map(d => d.ingresos);
-                this._buildFinancialSVG({
-                    containerId: 'modal-chart-wrap',
-                    data, anterior, labels,
-                    isMoney: true,
-                    yTicks: calcYTicks(Math.max(...data, 1))
-                });
+                const dataOt = this.graficaDias.map(d => d.ingresos_reparacion ?? 0);
+                const hasOt  = dataOt.some(v => v > 0);
+
+                if (hasOt) {
+                    // Con actividad de OT: dos series (Ventas / Reparaciones) en vez
+                    // del comparativo "vs periodo anterior" — mismo criterio que en
+                    // la tarjeta chica del dashboard.
+                    const dataVenta = this.graficaDias.map(d => d.ingresos_venta ?? d.ingresos);
+                    const multiSeries = [
+                        { label: 'Ventas',              data: dataVenta, color: '#2a78d6' },
+                        { label: 'Reparaciones (OT)',   data: dataOt,    color: '#a855f7' },
+                    ];
+                    this._buildFinancialSVG({
+                        containerId: 'modal-chart-wrap',
+                        data: null, anterior: null, labels,
+                        isMoney: true,
+                        yTicks: calcYTicks(Math.max(...this.graficaDias.map(d => d.ingresos), 1)),
+                        multiSeries,
+                        chartType: 'line'
+                    });
+                } else {
+                    const data = this.graficaDias.map(d => d.ingresos);
+                    const anterior = this.graficaAnterior.map(d => d.ingresos);
+                    this._buildFinancialSVG({
+                        containerId: 'modal-chart-wrap',
+                        data, anterior, labels,
+                        isMoney: true,
+                        yTicks: calcYTicks(Math.max(...data, 1))
+                    });
+                }
             } else if (type === 'ventas') {
-                const data = this.graficaDias.map(d => d.ventas);
-                const anterior = this.graficaAnterior.map(d => d.ventas);
-                this._buildFinancialSVG({
-                    containerId: 'modal-chart-wrap',
-                    data, anterior, labels,
-                    isMoney: false,
-                    yTicks: calcYTicks(Math.max(...data, 1))
-                });
+                const dataOtCnt = this.graficaDias.map(d => d.ventas_reparacion ?? 0);
+                const hasOt     = dataOtCnt.some(v => v > 0);
+
+                if (hasOt) {
+                    const dataVentaCnt = this.graficaDias.map(d => d.ventas_venta ?? d.ventas);
+                    const multiSeries = [
+                        { label: 'Ventas',            data: dataVentaCnt, color: '#1baf7a' },
+                        { label: 'Reparaciones (OT)', data: dataOtCnt,    color: '#a855f7' },
+                    ];
+                    this._buildFinancialSVG({
+                        containerId: 'modal-chart-wrap',
+                        data: null, anterior: null, labels,
+                        isMoney: false,
+                        yTicks: calcYTicks(Math.max(...this.graficaDias.map(d => d.ventas), 1)),
+                        multiSeries,
+                        chartType: 'line'
+                    });
+                } else {
+                    const data = this.graficaDias.map(d => d.ventas);
+                    const anterior = this.graficaAnterior.map(d => d.ventas);
+                    this._buildFinancialSVG({
+                        containerId: 'modal-chart-wrap',
+                        data, anterior, labels,
+                        isMoney: false,
+                        yTicks: calcYTicks(Math.max(...data, 1))
+                    });
+                }
             } else if (type === 'sucursales') {
                 const metrica = this.sucursalMetrica;
                 const multiSeries = this.graficaSucursales.map((s, i) => ({
@@ -1883,7 +2100,8 @@ function dashboard() {
         // ── Modales locales ──
         _modalIngresosKPI() {
             const d = this.kpiData;
-            const totalMonto = this.metodosPago.reduce((s,m)=>s+m.monto,0);
+            const totalMonto  = this.metodosPago.reduce((s,m)=>s+m.monto,0);
+            const totalOrigen = this.ingresosPorOrigen.reduce((s,o)=>s+o.total,0);
             return {
                 title: 'Ingresos del periodo',
                 content: this._stats([
@@ -1891,6 +2109,12 @@ function dashboard() {
                     {v:fmt$((d.ingresos||0)+(d.descuentos||0)),l:'Precio lista'},{v:d.ventas,l:'Ventas'},
                 ]) + this._sec('Aporte por sucursal')
                 + this.sucursales.map(v => this._bar(v.nombre, v.ingresos_total, this.sucursales[0]?.ingresos_total||1,'',fmt$)).join('')
+                + (this.ingresosPorOrigen.length ? this._sec('Origen de los ingresos')
+                + this.ingresosPorOrigen.map(o => {
+                    const meta = this.origenMeta(o.origen);
+                    const p = totalOrigen > 0 ? Math.min(100, Math.round(o.total/totalOrigen*100)) : 0;
+                    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><div style="width:110px;font-size:11px;color:#6b7280;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${meta.label}</div><div style="flex:1;height:4px;background:rgba(0,0,0,0.06);border-radius:99px;"><div style="width:${p}%;height:100%;background:${meta.color};border-radius:99px;"></div></div><div style="font-size:11px;font-weight:500;color:#374151;text-align:right;min-width:52px;">${fmt$(o.total)}</div></div>`;
+                }).join('') : '')
                 + this._sec('Métodos de pago')
                 + this.metodosPago.map(m => `<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;padding:8px 12px;border:1px solid rgba(0,0,0,0.07);border-radius:12px;"><div style="flex:1;"><div style="font-size:12px;font-weight:500;text-transform:capitalize;color:#1f2937;">${m.metodo.replace('_',' ')}</div><div style="font-size:9px;color:#9ca3af;">${m.usos} uso${m.usos!==1?'s':''} · ${pct(m.monto,totalMonto)}% del total</div></div><span style="font-size:13px;font-weight:600;color:#111827;">${fmt$(m.monto)}</span></div>`).join(''),
             };
@@ -1899,12 +2123,19 @@ function dashboard() {
         _modalVentasKPI() {
             const d = this.kpiData;
             const sorted = [...this.horasPico].sort((a,b)=>b.cnt-a.cnt).slice(0,3);
+            const totalOrigenCnt = this.ingresosPorOrigen.reduce((s,o)=>s+o.cnt,0);
             return {
                 title: 'Análisis de ventas',
                 content: this._stats([
                     {v:d.ventas,l:'Total ventas'},{v:fmt$(d.ticket),l:'Ticket promedio'},{v:d.clientes,l:'Clientes únicos'},
                 ]) + this._sec('Pico de ventas')
-                + (sorted.length ? sorted.map(h=>`<div style="font-size:11px;margin-bottom:6px;color:#374151;"><strong style="color:#1f2937;">${h.hora}:00 – ${h.hora+1}:00 h</strong> — ${h.cnt} venta${h.cnt!==1?'s':''}</div>`).join('') : '<p style="color:#9ca3af;font-size:11px;">Sin datos</p>'),
+                + (sorted.length ? sorted.map(h=>`<div style="font-size:11px;margin-bottom:6px;color:#374151;"><strong style="color:#1f2937;">${h.hora}:00 – ${h.hora+1}:00 h</strong> — ${h.cnt} venta${h.cnt!==1?'s':''}</div>`).join('') : '<p style="color:#9ca3af;font-size:11px;">Sin datos</p>')
+                + (this.ingresosPorOrigen.length ? this._sec('Origen de las ventas')
+                + this.ingresosPorOrigen.map(o => {
+                    const meta = this.origenMeta(o.origen);
+                    const p = totalOrigenCnt > 0 ? Math.min(100, Math.round(o.cnt/totalOrigenCnt*100)) : 0;
+                    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><div style="width:110px;font-size:11px;color:#6b7280;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${meta.label}</div><div style="flex:1;height:4px;background:rgba(0,0,0,0.06);border-radius:99px;"><div style="width:${p}%;height:100%;background:${meta.color};border-radius:99px;"></div></div><div style="font-size:11px;font-weight:500;color:#374151;text-align:right;min-width:52px;">${o.cnt} venta${o.cnt!==1?'s':''}</div></div>`;
+                }).join('') : ''),
             };
         },
 
@@ -2363,6 +2594,8 @@ function dashboard() {
                 venta:                  'Venta',
                 mantenimiento:          'Mantenimiento',
                 ajuste:                 'Ajuste',
+                ingreso_ot:             'Ingreso a taller',
+                entrega_ot:             'Entrega a cliente',
             };
             return m[tipo] ?? tipo;
         },
@@ -2374,6 +2607,8 @@ function dashboard() {
                 venta: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-3.5 h-3.5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.5 6M17 13l1.5 6M9 21h6M12 17v4"/></svg>`,
                 mantenimiento: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-3.5 h-3.5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`,
                 ajuste: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-3.5 h-3.5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>`,
+                ingreso_ot: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-3.5 h-3.5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>`,
+                entrega_ot: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-3.5 h-3.5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`,
             };
             return svgs[tipo] || `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-3.5 h-3.5"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/></svg>`;
         },

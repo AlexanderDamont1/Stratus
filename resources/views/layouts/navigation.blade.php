@@ -417,6 +417,17 @@
                             <span class="flex-1 truncate">Reparaciones</span>
                         </a>
 
+                        <a href="{{ route('stock_piezas.index') }}"
+                            class="nav-item {{ request()->routeIs('stock_piezas.*') ? 'nav-item-active' : 'nav-item-inactive' }}"
+                            @click="open = false">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                            </svg>
+
+                            <span class="flex-1 truncate">Piezas y stock</span>
+                        </a>
+
                     @endmodulo
 
                     <a href="{{ route('robo.index') }}"
