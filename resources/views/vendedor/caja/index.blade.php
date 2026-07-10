@@ -4,6 +4,10 @@
         x-init="
             const p = new URLSearchParams(window.location.search);
             if (p.get('abrir') === '1') modal = 'abrir';
+
+            @if(session('limite_excedido'))
+            modal = 'limite_excedido';
+            @endif
         ">
 
         {{-- ===== ENCABEZADO ===== --}}
@@ -161,6 +165,11 @@
                     class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                     + Ingreso manual
                 </button>
+                {{-- NUEVO --}}
+                <button type="button" @click="modal = 'gasto'"
+                    class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                    − Registrar gasto
+                </button>
                 <button type="button" @click="modal = 'corte'"
                     class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                     Corte parcial
@@ -173,6 +182,59 @@
         </div>
 
         @endif
+
+
+        {{-- ══════════════════════════════════════════════
+            GASTOS DE ESTA SEMANA
+        ══════════════════════════════════════════════ --}}
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+            <div class="px-5 py-4 border-b dark:border-gray-700 flex items-center justify-between">
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Gastos de esta semana</h3>
+                    <p class="text-xs text-gray-400 mt-0.5">{{ now()->startOfWeek()->format('d/m') }} – {{ now()->endOfWeek()->format('d/m') }}</p>
+                </div>
+                <button type="button" @click="modal = 'gasto'"
+                    class="text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition">
+                    + Registrar gasto
+                </button>
+            </div>
+            <div class="px-5 py-4">
+                <div class="flex items-end justify-between mb-2">
+                    <div>
+                        <p class="text-xs text-gray-400 uppercase tracking-wider mb-0.5">Gastado</p>
+                        <p class="text-xl font-semibold text-gray-900 dark:text-white">
+                            ${{ number_format($gastoSemana, 2) }}
+                        </p>
+                    </div>
+                    @if($limiteGasto !== null)
+                    <div class="text-right">
+                        <p class="text-xs text-gray-400 uppercase tracking-wider mb-0.5">Límite</p>
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-300">
+                            ${{ number_format($limiteGasto, 2) }}
+                        </p>
+                    </div>
+                    @endif
+                </div>
+
+                @if($limiteGasto !== null)
+                @php
+                    $pct = $limiteGasto > 0 ? min(100, round($gastoSemana / $limiteGasto * 100)) : 0;
+                    $excedido = $gastoSemana > $limiteGasto;
+                @endphp
+                <div class="w-full h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div class="h-full rounded-full transition-all duration-500 {{ $excedido ? 'bg-red-500' : ($pct > 80 ? 'bg-amber-500' : 'bg-green-500') }}"
+                        style="width: {{ $pct }}%"></div>
+                </div>
+                @if($excedido)
+                <p class="text-xs text-red-600 dark:text-red-400 font-medium mt-2">
+                    ⚠ Superaste el límite semanal. Pide a tu supervisor que aumente el tope.
+                </p>
+                @endif
+                @else
+                <p class="text-xs text-gray-400">Esta sucursal no tiene límite configurado.</p>
+                @endif
+            </div>
+        </div>
 
         {{-- ══════════════════════════════════════════════
              Historial de sesiones
@@ -366,6 +428,62 @@
         </div>
 
         {{-- ════════════════════════════════
+     MODAL: REGISTRAR GASTO
+════════════════════════════════ --}}
+<div x-show="modal === 'gasto'" x-cloak
+     x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+     x-transition:leave="transition duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+     class="fixed inset-0 bg-black/50 backdrop-blur-[1px] flex items-center justify-center z-50 px-4"
+     @click.self="modal = ''">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm p-6" @click.stop
+         x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+         x-transition:leave="transition duration-100" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95">
+        <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-1">Registrar gasto</h3>
+        <p class="text-xs text-gray-400 mb-5">Salida de dinero de la sucursal (proveedor, gasolina, papelería, etc.)</p>
+        <form method="POST" action="{{ route('caja.gasto') }}">
+            @csrf
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Monto</label>
+                    <input type="number" name="monto" step="0.01" min="0.01" max="999999.99" placeholder="0.00" required
+                           x-init="$watch('modal', v => v === 'gasto' && $nextTick(() => $el.focus()))"
+                           class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Motivo</label>
+                    <input type="text" name="motivo" maxlength="100" placeholder="Ej. Gasolina, Proveedor X, Papelería..." required
+                        class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
+                        Referencia <span class="normal-case font-normal text-gray-400">(opcional)</span>
+                    </label>
+                    <input type="text" name="referencia" maxlength="120" placeholder="Folio, factura..."
+                        class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
+                        Notas <span class="normal-case font-normal text-gray-400">(opcional)</span>
+                    </label>
+                    <textarea name="notas" rows="2" maxlength="500" placeholder="Observaciones..."
+                        class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition resize-none"></textarea>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 mt-6">
+                <button type="button" @click="modal = ''"
+                    class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">
+                    Cancelar
+                </button>
+                <button type="submit"
+                    class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">
+                    Registrar gasto
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+        {{-- ════════════════════════════════
              MODAL: CORTE PARCIAL
         ════════════════════════════════ --}}
         <div x-show="modal === 'corte'" x-cloak
@@ -416,6 +534,38 @@
                 </form>
             </div>
         </div>
+
+
+        {{-- ════════════════════════════════
+            MODAL: LÍMITE EXCEDIDO
+        ════════════════════════════════ --}}
+        @if(session('limite_excedido'))
+        <div x-show="modal === 'limite_excedido'" x-cloak
+            x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+            class="fixed inset-0 bg-black/50 backdrop-blur-[1px] flex items-center justify-center z-50 px-4"
+            @click.self="modal = ''">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm p-6 text-center" @click.stop>
+                <div class="w-14 h-14 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-7 h-7 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                </div>
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-2">Superaste tu límite de gasto</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    Llevas <strong>${{ number_format(session('limite_excedido_data')['total_semana'] ?? 0, 2) }}</strong>
+                    esta semana, contra un límite de
+                    <strong>${{ number_format(session('limite_excedido_data')['limite'] ?? 0, 2) }}</strong>.
+                </p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-6">
+                    Pídele a tu supervisor que aumente el tope del límite si necesitas seguir registrando gastos.
+                </p>
+                <button type="button" @click="modal = ''"
+                    class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition">
+                    Entendido
+                </button>
+            </div>
+        </div>
+        @endif
 
         {{-- ════════════════════════════════
              MODAL: CERRAR SESIÓN

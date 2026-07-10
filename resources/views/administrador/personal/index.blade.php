@@ -11,6 +11,10 @@
         <div>
             <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Personal</h2>
             <p class="text-xs text-gray-400 mt-0.5">Gestiona los vendedores de tus sucursales.</p>
+            <p class="text-xs text-gray-400 mt-0.5">
+                Comisiones de la semana del {{ \Carbon\Carbon::parse($comisiones['inicio'])->format('d/m') }}
+                al {{ \Carbon\Carbon::parse($comisiones['fin'])->format('d/m') }}
+            </p>
         </div>
         <button @click="abrirCrear()" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-black dark:bg-white text-white dark:text-black shadow-md hover:opacity-80 active:scale-95 transition">
             <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.8" viewBox="0 0 24 24">
@@ -163,6 +167,11 @@
                                         <template x-if="p.sucursales.length > 1">
                                             <div class="text-xs text-gray-400 dark:text-gray-500 truncate"
                                                  x-text="'+ ' + p.sucursales.filter(su => su.id_usuario !== '{{ $s->id_usuario }}').map(su => su.nombre_usuario).join(', ')">
+                                            </div>
+                                        </template>
+                                        <template x-if="(p.comision_semana || 0) > 0">
+                                            <div class="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 truncate"
+                                                 x-text="'$' + Number(p.comision_semana).toLocaleString('es-MX', {minimumFractionDigits:2}) + ' en comisiones esta semana'">
                                             </div>
                                         </template>
                                     </div>

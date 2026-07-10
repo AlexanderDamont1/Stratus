@@ -23,11 +23,15 @@ class Venta extends Model
         'id_cupon',
         'descuento_total',
         'total',
+        'comision_porcentaje',
+        'comision_monto',
     ];
 
     protected $casts = [
-        'descuento_total' => 'decimal:2',
-        'total'           => 'decimal:2',
+        'descuento_total'     => 'decimal:2',
+        'total'               => 'decimal:2',
+        'comision_porcentaje' => 'decimal:2',
+        'comision_monto'      => 'decimal:2',
     ];
 
     protected function idPrefix(): string { return 'VEN'; }

@@ -352,6 +352,10 @@ class DashboardController extends Controller
         $rotacionInventario = CatalogService::getBicicletasSinMovimiento($idNegocio, 45, $idSucursal);
         $margenSucursales   = $idSucursal ? null : CatalogService::getMargenPorSucursal($idNegocio, $desde->toDateString(), $hasta->toDateString());
 
+        // ── Personal — cuánto ha generado cada quien HOY, y gastos del negocio ──
+        $personalHoy = CatalogService::getVentasPersonalHoy($idNegocio);
+        $gastos      = CatalogService::getGastosDashboard($idNegocio, $desde->toDateString(), $hasta->toDateString());
+
         return response()->json([
             'ventas_personal'    => $ventasPersonal,
             'periodo' => [
@@ -393,6 +397,8 @@ class DashboardController extends Controller
             ],
             'rotacion_inventario' => $rotacionInventario,
             'margen_sucursales'   => $margenSucursales,
+            'personal_hoy'        => $personalHoy,
+            'gastos'              => $gastos,
         ]);
     }
 

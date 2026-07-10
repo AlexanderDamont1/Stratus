@@ -78,6 +78,21 @@ return new class extends Migration
                 'created_at'    => now(),
                 'updated_at'    => now(),
             ],
+            [
+                'id_ncf'        => 'NCF230425COM001',
+                'clave'         => 'comision_venta_porcentaje',
+                'nombre'        => 'Comisión por venta',
+                'descripcion'   => 'Porcentaje del total de cada venta que se calcula como comisión para el vendedor (personal) que la realizó.',
+                'icono'         => 'M9 8h6m-6 4h6m-6 4h4M5 3.75h14A1.25 1.25 0 0 1 20.25 5v14A1.25 1.25 0 0 1 19 20.25H5A1.25 1.25 0 0 1 3.75 19V5A1.25 1.25 0 0 1 5 3.75z',
+                'tipo'          => 'numero',
+                'opciones'      => null,
+                'valor_default' => '0',
+                'grupo'         => 'ventas',
+                'orden'         => 2,
+                'activo'        => true,
+                'created_at'    => now(),
+                'updated_at'    => now(),
+            ],
         ]);
     }
 

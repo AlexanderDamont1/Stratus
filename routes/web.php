@@ -268,7 +268,9 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
             Route::post('/{idUsuario}/ajuste', [AdminCajaController::class, 'ajuste'])->name('ajuste');
             Route::post('/{idUsuario}/cerrar-forzado', [AdminCajaController::class, 'cerrarForzado'])->name('cerrar.forzado');
             Route::get('/corte/{id}', [AdminCajaController::class, 'cortePdf'])->name('corte.pdf');
-
+            Route::get('/{idUsuario}/limites', [AdminCajaController::class, 'limites'])->name('limites');
+            Route::post('/{idUsuario}/limites', [AdminCajaController::class, 'guardarLimite'])->name('limites.guardar');
+            Route::delete('/{idUsuario}/limites', [AdminCajaController::class, 'eliminarLimite'])->name('limites.eliminar');
         });
 
 
@@ -537,7 +539,8 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
             Route::post('/cerrar', [CajaController::class, 'cerrar'])->name('cerrar');
             Route::post('/corte-parcial', [CajaController::class, 'corteParcial'])->name('corte.parcial');
             Route::get('/corte/{id}', [CajaController::class, 'cortePdf'])->name('corte.pdf');
-            Route::post('/ingreso', [CajaController::class, 'ingreso'])->name('ingreso'); // ← nueva
+            Route::post('/ingreso', [CajaController::class, 'ingreso'])->name('ingreso');
+            Route::post('/gasto', [CajaController::class, 'gasto'])->name('gasto'); // ← nueva
         });
 
         Route::prefix('sucursal/reparaciones')->name('reparaciones.')->middleware('modulo:reparaciones')->group(function () {

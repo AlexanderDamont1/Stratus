@@ -1438,6 +1438,111 @@ class CatalogService
         );
     }
 
+    // ─── COMISIONES SEMANALES POR PERSONAL ──────────────────────────────────
+
+    /**
+     * Suma las comisiones de venta (lunes–domingo, semana en curso) por
+     * nombre de vendedor. No se cachea: debe reflejar ventas recién registradas.
+     */
+    public static function getComisionesSemanaPersonal(string $idNegocio): array
+    {
+        $inicio = now()->startOfWeek();
+        $fin    = now()->endOfWeek();
+
+        $totalesPorPersonal = Venta::where('id_negocio', $idNegocio)
+            ->whereNotNull('id_personal')
+            ->whereNotNull('comision_monto')
+            ->whereBetween('created_at', [$inicio, $fin])
+            ->selectRaw('id_personal, SUM(comision_monto) as total')
+            ->groupBy('id_personal')
+            ->pluck('total', 'id_personal');
+
+        $nombrePorIdPersonal = Personal::deNegocio($idNegocio)->pluck('nombre', 'id_personal');
+
+        $porNombre = [];
+        foreach ($totalesPorPersonal as $idPersonal => $total) {
+            $nombre = $nombrePorIdPersonal[$idPersonal] ?? null;
+            if (!$nombre) continue;
+            $porNombre[$nombre] = ($porNombre[$nombre] ?? 0) + (float) $total;
+        }
+
+        return [
+            'inicio'     => $inicio->toDateString(),
+            'fin'        => $fin->toDateString(),
+            'por_nombre' => $porNombre,
+        ];
+    }
+
+    // ─── VENTAS POR PERSONAL — HOY (dashboard admin) ────────────────────────
+
+    public static function getVentasPersonalHoy(string $idNegocio): array
+    {
+        $hoy = now()->toDateString();
+
+        return self::remember(
+            "dashboard:personal_hoy:{$idNegocio}:{$hoy}",
+            60,
+            fn() => DB::table('ventas as v')
+                ->join('personal as p', 'v.id_personal', '=', 'p.id_personal')
+                ->where('v.id_negocio', $idNegocio)
+                ->whereDate('v.created_at', $hoy)
+                ->selectRaw('p.nombre, COUNT(*) as ventas, COALESCE(SUM(v.total),0) as ingresos, COALESCE(SUM(v.comision_monto),0) as comision')
+                ->groupBy('p.id_personal', 'p.nombre')
+                ->orderByDesc('ingresos')
+                ->get()
+                ->map(fn($r) => [
+                    'nombre'   => $r->nombre,
+                    'ventas'   => (int) $r->ventas,
+                    'ingresos' => (float) $r->ingresos,
+                    'comision' => (float) $r->comision,
+                ])
+                ->toArray(),
+            $idNegocio
+        );
+    }
+
+    // ─── GASTOS (dashboard admin) ────────────────────────────────────────────
+
+    public static function getGastosDashboard(string $idNegocio, string $desde, string $hasta): array
+    {
+        return self::remember(
+            "dashboard:gastos:{$idNegocio}:{$desde}:{$hasta}",
+            (($hasta >= now()->toDateString()) ? 60 : 3600),
+            function () use ($idNegocio, $desde, $hasta) {
+                $gastoHoy = (float) \App\Models\CajaGasto::where('id_negocio', $idNegocio)
+                    ->where('fecha_gasto', now()->toDateString())
+                    ->sum('monto');
+
+                $porSucursal = \App\Services\CajaService::gastosPorSucursal($idNegocio, $desde, $hasta);
+
+                $nombres = Usuario::whereIn('id_usuario', $porSucursal->keys())
+                    ->pluck('nombre_usuario', 'id_usuario');
+
+                $porSucursalArr = $porSucursal->map(fn($total, $idUsuario) => [
+                    'id_usuario' => $idUsuario,
+                    'nombre'     => $nombres[$idUsuario] ?? '—',
+                    'monto'      => (float) $total,
+                ])->sortByDesc('monto')->values()->toArray();
+
+                $porMotivo = \App\Services\CajaService::gastosPorMotivoNegocio($idNegocio, $desde, $hasta)
+                    ->map(fn($r) => [
+                        'motivo' => $r->motivo,
+                        'cnt'    => (int) $r->cnt,
+                        'total'  => (float) $r->total,
+                    ])
+                    ->toArray();
+
+                return [
+                    'hoy'          => $gastoHoy,
+                    'periodo'      => (float) collect($porSucursalArr)->sum('monto'),
+                    'por_sucursal' => $porSucursalArr,
+                    'por_motivo'   => $porMotivo,
+                ];
+            },
+            $idNegocio
+        );
+    }
+
     public static function invalidatePersonal(string $idNegocio): void
     {
         // Incrementar versión invalida getPersonalByNegocio y getPersonalItem
@@ -1605,7 +1710,7 @@ class CatalogService
             $key,
             60,
             fn() => \App\Models\Reparaciones::where('id_negocio', $idNegocio)
-                ->when($idSucursal, fn($q) => $q->where('id_usuario', $idSucursal))
+                ->when($idSucursal, fn($q) => $q->where('id_usuario_sucursal', $idSucursal)) // ← corregido
                 ->whereIn('estado', ['recibida', 'diagnostico', 'cotizacion_enviada', 'en_proceso'])
                 ->with('bicicleta.modelo')
                 ->orderByDesc('created_at')
@@ -1737,17 +1842,22 @@ class CatalogService
                     ->groupBy('u.id_usuario', 'u.nombre_usuario')
                     ->get();
 
-                // TODO: enchufar aquí la query de gastos_sucursal cuando esté confirmada
-                return $ingresos->map(fn($r) => [
-                    'id_usuario'    => $r->id_usuario,
-                    'nombre'        => $r->nombre_usuario,
-                    'ingresos'      => (float) $r->ingresos,
-                    'gastos'        => 0.0,
-                    'margen'        => (float) $r->ingresos,
-                    'margen_pct'    => 100.0,
-                    'limite_gasto'  => null,
-                    'excede_limite' => false,
-                ])->sortByDesc('margen')->values()->toArray();
+                $gastos = \App\Services\CajaService::gastosPorSucursal($idNegocio, $desde, $hasta);
+
+                return $ingresos->map(function ($r) use ($gastos) {
+                    $ingresoTotal = (float) $r->ingresos;
+                    $gastoTotal   = (float) ($gastos[$r->id_usuario] ?? 0);
+                    $margen       = $ingresoTotal - $gastoTotal;
+
+                    return [
+                        'id_usuario' => $r->id_usuario,
+                        'nombre'     => $r->nombre_usuario,
+                        'ingresos'   => $ingresoTotal,
+                        'gastos'     => $gastoTotal,
+                        'margen'     => $margen,
+                        'margen_pct' => $ingresoTotal > 0 ? round($margen / $ingresoTotal * 100, 1) : 0.0,
+                    ];
+                })->sortByDesc('margen')->values()->toArray();
             },
             $idNegocio
         );

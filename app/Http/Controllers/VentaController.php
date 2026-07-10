@@ -371,15 +371,23 @@ class VentaController extends Controller
                 }
             }
 
+            // ── Comisión — snapshot del % vigente, solo si hay quién la reciba ──
+            $comisionPorcentaje = (float) ($config['comision_venta_porcentaje'] ?? 0);
+            $comisionMonto      = ($idPersonal && $comisionPorcentaje > 0)
+                ? round($totalFinal * $comisionPorcentaje / 100, 2)
+                : null;
+
             // ── Venta ────────────────────────────────────────────────────────
             $venta = Venta::create([
-                'id_negocio'      => $user->id_negocio,
-                'id_cliente'      => $cliente->id_cliente,
-                'id_usuario'      => $user->id_usuario,
-                'id_personal'     => $idPersonal ?? null,
-                'id_cupon'        => $cuponAplicado?->id_cupon,
-                'descuento_total' => $descuentoTotal,
-                'total'           => $totalFinal,
+                'id_negocio'          => $user->id_negocio,
+                'id_cliente'          => $cliente->id_cliente,
+                'id_usuario'          => $user->id_usuario,
+                'id_personal'         => $idPersonal ?? null,
+                'id_cupon'            => $cuponAplicado?->id_cupon,
+                'descuento_total'     => $descuentoTotal,
+                'total'               => $totalFinal,
+                'comision_porcentaje' => $idPersonal ? $comisionPorcentaje : null,
+                'comision_monto'      => $comisionMonto,
             ]);
 
             $bicicletasBroadcast  = [];

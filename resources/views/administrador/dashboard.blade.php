@@ -336,11 +336,14 @@
         <div class="mx-4 mt-4 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm">
             <div class="flex items-center justify-between px-5 py-4 border-b border-gray-50 dark:border-gray-700/60">
                 <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Personal</p>
-                <span class="text-[10px] text-gray-400">{{ count($personal) }}</span>
+                <span class="text-[10px] text-gray-400">{{ count($personal) }} · hoy</span>
             </div>
             <div class="divide-y divide-gray-50 dark:divide-gray-700/60">
                 @foreach($personal as $i => $p)
-                @php $ini = strtoupper(implode('', array_map(fn($w)=>$w[0], array_slice(explode(' ',$p['nombre']),0,2)))); @endphp
+                @php
+                    $ini = strtoupper(implode('', array_map(fn($w)=>$w[0], array_slice(explode(' ',$p['nombre']),0,2))));
+                    $nombreJs = addslashes($p['nombre']);
+                @endphp
                 <div class="flex items-center gap-3 px-5 py-3"
                      @click="openModal('personalItem', {{ $i }})">
                     <div class="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-semibold shrink-0 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
@@ -348,12 +351,49 @@
                     </div>
                     <div class="flex-1 min-w-0">
                         <p class="text-[11px] font-medium text-gray-800 dark:text-gray-200 truncate">{{ $p['nombre'] }}</p>
-                        <p class="text-[9px] text-gray-400 truncate">{{ $p['sucursal'] }}</p>
+                        <p class="text-[9px] text-gray-400 truncate" x-text="personalHoyDe('{{ $nombreJs }}')?.ventas ? personalHoyDe('{{ $nombreJs }}').ventas + ' venta(s) hoy' : '{{ $p['sucursal'] }}'"></p>
                     </div>
-                    <span class="w-1.5 h-1.5 rounded-full shrink-0 {{ $p['activo'] ? 'bg-emerald-500' : 'bg-gray-400' }}"></span>
+                    <div class="text-right shrink-0">
+                        <template x-if="personalHoyDe('{{ $nombreJs }}')">
+                            <p class="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400" x-text="fmt$(personalHoyDe('{{ $nombreJs }}').ingresos)"></p>
+                        </template>
+                        <span class="w-1.5 h-1.5 rounded-full shrink-0 inline-block mt-1 {{ $p['activo'] ? 'bg-emerald-500' : 'bg-gray-400' }}"></span>
+                    </div>
                 </div>
                 @endforeach
             </div>
+        </div>
+
+        {{-- Gastos --}}
+        <div class="mx-4 mt-4 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-5 shadow-sm"
+             @click="openModal('gastos')">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Gastos</p>
+                <span class="text-[10px] text-gray-400">Ver →</span>
+            </div>
+            <div class="flex items-end justify-between mb-3">
+                <div>
+                    <p class="text-[10px] text-gray-400 uppercase tracking-wider">Hoy</p>
+                    <p class="text-[20px] font-semibold text-red-600 dark:text-red-400" x-text="fmt$(gastos.hoy)"></p>
+                </div>
+                <div class="text-right">
+                    <p class="text-[10px] text-gray-400 uppercase tracking-wider">Periodo</p>
+                    <p class="text-[13px] font-medium text-gray-700 dark:text-gray-300" x-text="fmt$(gastos.periodo)"></p>
+                </div>
+            </div>
+            <template x-if="gastos.por_sucursal.length === 0">
+                <p class="text-center text-gray-400 text-[11px] py-2">Sin gastos en el periodo</p>
+            </template>
+            <template x-for="g in gastos.por_sucursal.slice(0,3)" :key="'mgas-'+g.id_usuario">
+                <div class="flex items-center gap-3 mb-3 last:mb-0">
+                    <span class="text-[11px] text-gray-500 dark:text-gray-400 w-[70px] shrink-0 truncate" x-text="g.nombre"></span>
+                    <div class="flex-1 h-[6px] bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full bg-red-500"
+                             :style="{width: gastos.por_sucursal[0]?.monto > 0 ? Math.round(g.monto/gastos.por_sucursal[0].monto*100)+'%' : '0%'}"></div>
+                    </div>
+                    <span class="text-[11px] font-medium text-gray-700 dark:text-gray-300 min-w-[54px] text-right" x-text="fmt$(g.monto)"></span>
+                </div>
+            </template>
         </div>
 
     </div>
@@ -699,7 +739,39 @@
                                 <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400 min-w-[54px] text-right" x-text="fmt$(m.margen)"></span>
                             </div>
                         </template>
-                        <p class="text-[9px] text-gray-400 mt-2 italic">* Gastos aún no capturados — margen = ingresos</p>
+                    </div>
+                </div>
+
+                <!-- NUEVO: Gastos -->
+                <div class="break-inside-avoid bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden cursor-pointer hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all duration-200"
+                     @click="openModal('gastos')">
+                    <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700/60">
+                        <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Gastos</p>
+                        <span class="text-[10px] text-gray-400">Ver →</span>
+                    </div>
+                    <div class="p-5" x-show="!loading">
+                        <div class="flex items-end justify-between mb-3">
+                            <div>
+                                <p class="text-[10px] text-gray-400 uppercase tracking-wider">Hoy</p>
+                                <p class="text-[20px] font-semibold text-red-600 dark:text-red-400" x-text="fmt$(gastos.hoy)"></p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-[10px] text-gray-400 uppercase tracking-wider">Periodo</p>
+                                <p class="text-[13px] font-medium text-gray-700 dark:text-gray-300" x-text="fmt$(gastos.periodo)"></p>
+                            </div>
+                        </div>
+                        <template x-if="gastos.por_sucursal.length === 0">
+                            <p class="text-center text-gray-400 text-[11px] py-3">Sin gastos en el periodo</p>
+                        </template>
+                        <template x-for="g in gastos.por_sucursal.slice(0,3)" :key="'gas-'+g.id_usuario">
+                            <div class="flex items-center gap-3 mb-3 last:mb-0">
+                                <span class="text-[11px] text-gray-500 dark:text-gray-400 w-[70px] shrink-0 truncate" x-text="g.nombre"></span>
+                                <div class="flex-1 h-[3px] bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                    <div class="h-full rounded-full bg-red-500" :style="{width: gastos.por_sucursal[0]?.monto > 0 ? Math.round(g.monto/gastos.por_sucursal[0].monto*100)+'%' : '0%'}"></div>
+                                </div>
+                                <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400 min-w-[54px] text-right" x-text="fmt$(g.monto)"></span>
+                            </div>
+                        </template>
                     </div>
                 </div>
 
@@ -773,11 +845,14 @@
                 <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm">
                     <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700/60">
                         <p class="text-[13px] font-semibold text-gray-800 dark:text-gray-200">Personal</p>
-                        <span class="text-[10px] text-gray-400">{{ count($personal) }}</span>
+                        <span class="text-[10px] text-gray-400">{{ count($personal) }} · hoy</span>
                     </div>
                     <div class="divide-y divide-gray-100 dark:divide-gray-700/60">
                         @foreach($personal as $i => $p)
-                        @php $ini = strtoupper(implode('', array_map(fn($w)=>$w[0], array_slice(explode(' ',$p['nombre']),0,2)))); @endphp
+                        @php
+                            $ini = strtoupper(implode('', array_map(fn($w)=>$w[0], array_slice(explode(' ',$p['nombre']),0,2))));
+                            $nombreJs = addslashes($p['nombre']);
+                        @endphp
                         <div class="flex items-center gap-3 px-5 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
                              @click="openModal('personalItem', {{ $i }})">
                             <div class="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-semibold shrink-0 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
@@ -785,9 +860,14 @@
                             </div>
                             <div class="flex-1 min-w-0">
                                 <p class="text-[11px] font-medium text-gray-800 dark:text-gray-200 truncate">{{ $p['nombre'] }}</p>
-                                <p class="text-[9px] text-gray-400 truncate">{{ $p['sucursal'] }}</p>
+                                <p class="text-[9px] text-gray-400 truncate" x-text="personalHoyDe('{{ $nombreJs }}')?.ventas ? personalHoyDe('{{ $nombreJs }}').ventas + ' venta(s) hoy' : '{{ $p['sucursal'] }}'"></p>
                             </div>
-                            <span class="w-1.5 h-1.5 rounded-full shrink-0 {{ $p['activo'] ? 'bg-emerald-500' : 'bg-gray-400' }}"></span>
+                            <div class="text-right shrink-0">
+                                <template x-if="personalHoyDe('{{ $nombreJs }}')">
+                                    <p class="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400" x-text="fmt$(personalHoyDe('{{ $nombreJs }}').ingresos)"></p>
+                                </template>
+                                <span class="w-1.5 h-1.5 rounded-full shrink-0 inline-block mt-1 {{ $p['activo'] ? 'bg-emerald-500' : 'bg-gray-400' }}"></span>
+                            </div>
                         </div>
                         @endforeach
                     </div>
@@ -951,6 +1031,8 @@ function dashboard() {
         sucursalesDisponibles: SSR.sucursalesDisponibles,
         rotacionInventario: { total_estancadas: 0, dias_umbral: 45, bicicletas: [], por_modelo: [] },
         margenSucursales: [],
+        personalHoy: [],
+        gastos: { hoy: 0, periodo: 0, por_sucursal: [], por_motivo: [] },
 
         // ── Feed en vivo de movimientos de bicicletas ──
         feedMovimientos: [],
@@ -998,6 +1080,10 @@ function dashboard() {
         pctWidth(monto) {
             const t = this.metodosPago.reduce((s,m)=>s+m.monto,0);
             return t > 0 ? Math.round(monto/t*100)+'%' : '0%';
+        },
+
+        personalHoyDe(nombre) {
+            return this.personalHoy.find(p => p.nombre === nombre) || null;
         },
 
         get kpis() {
@@ -1122,6 +1208,8 @@ function dashboard() {
                 // Nuevos campos
                 this.rotacionInventario = data.rotacion_inventario || { total_estancadas: 0, dias_umbral: 45, bicicletas: [], por_modelo: [] };
                 this.margenSucursales   = data.margen_sucursales || [];
+                this.personalHoy       = data.personal_hoy || [];
+                this.gastos             = data.gastos || { hoy: 0, periodo: 0, por_sucursal: [], por_motivo: [] };
 
                 this.pedidos = this.pedidos.map(p => ({
                     ...p,
@@ -1766,6 +1854,7 @@ function dashboard() {
                 // NUEVOS HANDLERS
                 rotacionInventario: () => this._modalRotacionInventario(),
                 margenSucursales:   () => this._modalMargenSucursales(),
+                gastos:             () => this._modalGastos(),
             };
 
             if (localHandlers[type]) {
@@ -1970,7 +2059,30 @@ function dashboard() {
                             <div><div style="font-size:14px;font-weight:600;color:#dc2626;">${fmt$(m.gastos)}</div><div style="font-size:9px;color:#9ca3af;">Gastos</div></div>
                             <div><div style="font-size:14px;font-weight:600;color:#16a34a;">${fmt$(m.margen)}</div><div style="font-size:9px;color:#9ca3af;">Margen</div></div>
                         </div>
-                    </div>`).join('') + '<p style="font-size:10px;color:#9ca3af;font-style:italic;margin-top:8px;">* Gastos pendientes de captura — margen actual = ingresos totales</p>',
+                    </div>`).join(''),
+            };
+        },
+
+        _modalGastos() {
+            const g = this.gastos;
+            return {
+                title: 'Gastos',
+                content: this._stats([
+                    {v: fmt$(g.hoy), l:'Hoy'},
+                    {v: fmt$(g.periodo), l:'Periodo'},
+                    {v: g.por_sucursal.length, l:'Sucursales con gasto'},
+                ]) + this._sec('Por sucursal')
+                + (g.por_sucursal.length
+                    ? g.por_sucursal.map(s => this._bar(s.nombre, s.monto, g.por_sucursal[0]?.monto||1, '', fmt$)).join('')
+                    : '<p style="color:#9ca3af;text-align:center;">Sin gastos en el periodo</p>')
+                + this._sec('Por motivo')
+                + (g.por_motivo.length
+                    ? g.por_motivo.map(m => `
+                        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(0,0,0,0.05);">
+                            <div style="font-size:12px;color:#1f2937;">${m.motivo}<span style="font-size:10px;color:#9ca3af;"> · ${m.cnt} registro${m.cnt!==1?'s':''}</span></div>
+                            <span style="font-size:12px;font-weight:600;color:#dc2626;">${fmt$(m.total)}</span>
+                        </div>`).join('')
+                    : '<p style="color:#9ca3af;text-align:center;">Sin datos</p>'),
             };
         },
 

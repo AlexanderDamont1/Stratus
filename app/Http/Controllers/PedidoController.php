@@ -289,7 +289,21 @@ class PedidoController extends Controller
 
     public function updateStatus(Request $request, string $id_pedido)
     {
-        $pedido = Pedido::findOrFail($id_pedido);
+        $usuario = auth()->user();
+        $pedido  = Pedido::findOrFail($id_pedido);
+
+        if ($usuario->id_rol === 1) {
+            abort_if($pedido->id_usuario !== $usuario->id_usuario, 403);
+        } elseif ($usuario->id_rol === 5) {
+            $autorizado = Enlace::where('id_usuario2', $usuario->id_usuario)
+                ->where('id_usuario1', $pedido->id_usuario)
+                ->where('estado', 'activo')
+                ->exists();
+            abort_if(!$autorizado, 403);
+        } else {
+            abort(403);
+        }
+
         $request->validate(['status' => 'required|in:1,2,3']);
 
         $pedido->update(['status' => $request->status]);
@@ -310,7 +324,11 @@ class PedidoController extends Controller
 
     public function destroy(string $id_pedido)
     {
-        $pedido = Pedido::with(['negocio', 'usuario', 'items'])->findOrFail($id_pedido);
+        $usuario = auth()->user();
+        $pedido  = Pedido::with(['negocio', 'usuario', 'items'])->findOrFail($id_pedido);
+
+        abort_if($usuario->id_rol !== 1, 403);
+        abort_if($pedido->id_usuario !== $usuario->id_usuario, 403);
         abort_if($pedido->status > 1, 403, 'No se puede eliminar un pedido que ya fue preparado o entregado.');
 
         $pedidoId  = $pedido->id_pedido;

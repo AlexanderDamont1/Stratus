@@ -270,6 +270,43 @@
     @endforeach
     @endif
 
+    {{-- ── Detalle de movimientos ── --}}
+    @if(!empty($snapshot['movimientos'] ?? []))
+    <hr class="div-solid">
+    <div class="sec-title">Movimientos</div>
+    @foreach($snapshot['movimientos'] as $mv)
+    <div class="row">
+        <span class="row-lbl" style="font-size:7.5pt;">
+            {{ \Carbon\Carbon::parse($mv['fecha'])->format('H:i') }} · {{ $mv['label'] }}
+        </span>
+        <span class="row-val {{ $mv['es_entrada'] ? 'green' : 'red' }}" style="font-size:8pt;">
+            {{ $mv['es_entrada'] ? '+' : '-' }}${{ number_format($mv['monto'], 2) }}
+        </span>
+    </div>
+    @if(!empty($mv['concepto']))
+    <div style="font-size:6.5pt;color:#999;margin:-1pt 0 2pt;">{{ $mv['concepto'] }}</div>
+    @endif
+    @endforeach
+    @endif
+
+    {{-- ── Gastos registrados ── --}}
+    @if(!empty($snapshot['gastos'] ?? []))
+    <hr class="div-solid">
+    <div class="sec-title">Gastos registrados</div>
+    @foreach($snapshot['gastos'] as $g)
+    <div class="row">
+        <span class="row-lbl" style="font-size:7.5pt;">
+            {{ \Carbon\Carbon::parse($g['fecha'])->format('d/m') }} · {{ $g['motivo'] }}
+        </span>
+        <span class="row-val red" style="font-size:8pt;">-${{ number_format($g['monto'], 2) }}</span>
+    </div>
+    @endforeach
+    <div class="row" style="margin-top:2pt;">
+        <span class="row-lbl" style="font-weight:700">Total gastos</span>
+        <span class="row-val red">-${{ number_format($snapshot['gastos_total'] ?? 0, 2) }}</span>
+    </div>
+    @endif
+
     {{-- ── Notas de cierre ── --}}
     @if($tipo === 'cierre' && !empty($sesion->notas_cierre))
     <hr class="div-dash">

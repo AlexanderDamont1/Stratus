@@ -8,6 +8,7 @@ use App\Models\CajaMovimiento;
 use App\Models\CajaCorte;
 use App\Models\Venta;
 use App\Models\VentaPago;
+use App\Models\CajaGasto;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -302,6 +303,33 @@ class CajaService
 
         $usuario = \App\Models\Usuario::find($sesion->id_usuario_apertura);
 
+        $movimientosDetalle = $movimientos
+            ->sortBy('created_at')
+            ->values()
+            ->map(fn($m) => [
+                'tipo'       => $m->tipo,
+                'label'      => $m->label_tipo,
+                'monto'      => (float) $m->monto,
+                'es_entrada' => (bool) $m->es_entrada,
+                'concepto'   => $m->concepto,
+                'fecha'      => $m->created_at,
+            ])
+            ->toArray();
+
+        $gastosSesion = CajaGasto::where('id_sesion', $sesion->id_sesion)
+            ->orderBy('fecha_gasto')
+            ->get();
+
+        $gastosDetalle = $gastosSesion
+            ->map(fn($g) => [
+                'motivo'     => $g->motivo,
+                'monto'      => (float) $g->monto,
+                'referencia' => $g->referencia,
+                'fecha'      => $g->fecha_gasto,
+            ])
+            ->values()
+            ->toArray();
+
         return [
             'tipo'   => $tipo,
             'sesion' => [
@@ -318,7 +346,10 @@ class CajaService
             ],
             'por_metodo'   => $porMetodo,
             'ventas_count' => $movimientos->where('tipo', 'venta')
-                                 ->pluck('id_venta')->unique()->count(),
+                ->pluck('id_venta')->unique()->count(),
+            'movimientos'  => $movimientosDetalle,
+            'gastos'       => $gastosDetalle,
+            'gastos_total' => (float) $gastosSesion->sum('monto'),
             'corte_at'     => now()->toISOString(),
             'usuario'      => [
                 'id_usuario'     => $sesion->id_usuario_apertura,
@@ -381,5 +412,134 @@ class CajaService
             'id_usuario' => $idUsuario,
             'snapshot'   => $snapshot,
         ]);
+    }
+
+    public static function registrarGasto(
+        string $idNegocio,
+        string $idUsuario,          // sucursal
+        string $idUsuarioRegistro,  // quién lo captura
+        float  $monto,
+        string $motivo,
+        ?string $referencia = null,
+        ?string $notas = null,
+        ?string $fechaGasto = null,
+        ?string $idSesion = null,
+    ): array {
+        $fecha = $fechaGasto ?? now()->toDateString();
+
+        // Límite único de la sucursal, configurado por el admin
+        $limiteConfig = \App\Models\GastoLimite::where('id_negocio', $idNegocio)
+            ->where('id_usuario', $idUsuario)
+            ->value('limite_semanal');
+
+        $gasto = \App\Models\CajaGasto::create([
+            'id_sesion'            => $idSesion,
+            'id_negocio'           => $idNegocio,
+            'id_usuario'           => $idUsuario,
+            'motivo'               => $motivo,
+            'monto'                => $monto,
+            'limite'               => $limiteConfig, // snapshot histórico del límite vigente al momento del gasto
+            'referencia'           => $referencia,
+            'notas'                => $notas,
+            'fecha_gasto'          => $fecha,
+            'id_usuario_registro'  => $idUsuarioRegistro,
+        ]);
+
+        \App\Services\CatalogService::incrementVersion($idNegocio);
+
+        $excedeLimite  = false;
+        $totalSemana   = 0.0;
+
+        if ($limiteConfig !== null) {
+            // Suma TODOS los gastos de la sucursal en la semana en curso (lunes–domingo), sin importar motivo
+            $totalSemana = (float) \App\Models\CajaGasto::where('id_negocio', $idNegocio)
+                ->where('id_usuario', $idUsuario)
+                ->whereBetween('fecha_gasto', [now()->startOfWeek()->toDateString(), now()->endOfWeek()->toDateString()])
+                ->sum('monto');
+
+            $excedeLimite = $totalSemana > $limiteConfig;
+        }
+
+        return [
+            'gasto'         => $gasto,
+            'excede_limite' => $excedeLimite,
+            'total_semana'  => $totalSemana,
+            'limite'        => $limiteConfig !== null ? (float) $limiteConfig : null,
+        ];
+    }
+
+
+    public static function setLimiteGasto(
+        string $idNegocio,
+        string $idUsuario,
+        float  $limiteSemanal,
+        string $idUsuarioAdmin,
+    ): \App\Models\GastoLimite {
+        return \App\Models\GastoLimite::updateOrCreate(
+            [
+                'id_negocio' => $idNegocio,
+                'id_usuario' => $idUsuario,
+            ],
+            [
+                'limite_semanal'   => $limiteSemanal,
+                'id_usuario_admin' => $idUsuarioAdmin,
+            ]
+        );
+    }
+
+    
+    public static function eliminarLimiteGasto(string $idNegocio, string $idUsuario): void
+    {
+        \App\Models\GastoLimite::where('id_negocio', $idNegocio)
+            ->where('id_usuario', $idUsuario)
+            ->delete();
+    }
+
+    
+    public static function getLimiteSucursal(string $idNegocio, string $idUsuario): ?\App\Models\GastoLimite
+    {
+        return \App\Models\GastoLimite::where('id_negocio', $idNegocio)
+            ->where('id_usuario', $idUsuario)
+            ->first();
+    }
+
+    
+    public static function gastosPorSucursal(string $idNegocio, string $desde, string $hasta): \Illuminate\Support\Collection
+    {
+        return \App\Models\CajaGasto::where('id_negocio', $idNegocio)
+            ->whereBetween('fecha_gasto', [$desde, $hasta])
+            ->selectRaw('id_usuario, SUM(monto) as total_gastos')
+            ->groupBy('id_usuario')
+            ->pluck('total_gastos', 'id_usuario');
+    }
+
+   
+    public static function gastosPorMotivo(string $idNegocio, string $idUsuario, string $desde, string $hasta): \Illuminate\Support\Collection
+    {
+        return \App\Models\CajaGasto::where('id_negocio', $idNegocio)
+            ->where('id_usuario', $idUsuario)
+            ->whereBetween('fecha_gasto', [$desde, $hasta])
+            ->selectRaw('motivo, COUNT(*) as cnt, SUM(monto) as total')
+            ->groupBy('motivo')
+            ->orderByDesc('total')
+            ->get();
+    }
+
+    public static function getGastoSemanaActual(string $idNegocio, string $idUsuario): float
+    {
+        return (float) \App\Models\CajaGasto::where('id_negocio', $idNegocio)
+            ->where('id_usuario', $idUsuario)
+            ->whereBetween('fecha_gasto', [now()->startOfWeek()->toDateString(), now()->endOfWeek()->toDateString()])
+            ->sum('monto');
+    }
+
+    public static function gastosPorMotivoNegocio(string $idNegocio, string $desde, string $hasta): \Illuminate\Support\Collection
+    {
+        return \App\Models\CajaGasto::where('id_negocio', $idNegocio)
+            ->whereBetween('fecha_gasto', [$desde, $hasta])
+            ->selectRaw('motivo, COUNT(*) as cnt, SUM(monto) as total')
+            ->groupBy('motivo')
+            ->orderByDesc('total')
+            ->get();
     }
 }

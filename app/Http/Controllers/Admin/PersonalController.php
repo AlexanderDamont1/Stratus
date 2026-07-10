@@ -21,10 +21,17 @@ class PersonalController extends Controller
             'nombre_usuario' => $s->nombre_usuario,
         ])->values()->toArray();
 
+        $comisiones = CatalogService::getComisionesSemanaPersonal($idNegocio);
+        foreach ($personal as &$p) {
+            $p['comision_semana'] = $comisiones['por_nombre'][$p['nombre']] ?? 0;
+        }
+        unset($p);
+
         return view('administrador.personal.index', compact(
             'personal',
             'sucursales',
             'sucursalesJs',
+            'comisiones',
         ));
     }
 

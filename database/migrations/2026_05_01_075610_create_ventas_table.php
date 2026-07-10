@@ -17,6 +17,11 @@ return new class extends Migration
             $table->char('id_cupon', 20)->nullable(); // <- La columna se queda
             $table->decimal('descuento_total', 10, 2)->default(0);
             $table->decimal('total', 10, 2);
+
+            // Comisión del personal que realizó la venta — snapshot del % vigente al momento de vender
+            $table->decimal('comision_porcentaje', 5, 2)->nullable();
+            $table->decimal('comision_monto', 12, 2)->nullable();
+
             $table->timestamps();
 
             $table->foreign('id_negocio')->references('id_negocio')->on('negocios')->cascadeOnDelete();

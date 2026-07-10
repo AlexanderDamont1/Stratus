@@ -167,6 +167,35 @@
                     <p class="text-xs text-gray-400">Sesión cerrada</p>
                 </div>
                 @endif
+
+                @php
+                    $gastoSemanaSuc = $gastosSemana[$suc->id_usuario] ?? 0;
+                    $limiteSuc      = $limitesConfig[$suc->id_usuario] ?? null;
+                    $excedidoSuc    = $limiteSuc !== null && $gastoSemanaSuc > $limiteSuc;
+                @endphp
+                <div class="mt-3 pt-3 border-t dark:border-gray-700">
+                    <div class="flex items-center justify-between text-xs mb-1.5">
+                        <span class="text-gray-400">Gastos de la semana</span>
+                        <span class="font-medium {{ $excedidoSuc ? 'text-red-600 dark:text-red-400' : 'text-gray-700 dark:text-gray-300' }}">
+                            ${{ number_format($gastoSemanaSuc, 2) }}
+                            @if($limiteSuc !== null)
+                                <span class="text-gray-400">/ ${{ number_format($limiteSuc, 2) }}</span>
+                            @endif
+                        </span>
+                    </div>
+                    @if($limiteSuc !== null)
+                    @php $pctSuc = $limiteSuc > 0 ? min(100, round($gastoSemanaSuc / $limiteSuc * 100)) : 0; @endphp
+                    <div class="w-full h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full {{ $excedidoSuc ? 'bg-red-500' : ($pctSuc > 80 ? 'bg-amber-500' : 'bg-green-500') }}"
+                            style="width: {{ $pctSuc }}%"></div>
+                    </div>
+                    @if($excedidoSuc)
+                    <p class="text-xs text-red-600 dark:text-red-400 font-medium mt-1">⚠ Límite superado</p>
+                    @endif
+                    @else
+                    <p class="text-xs text-gray-400">Sin límite configurado</p>
+                    @endif
+                </div>
             </div>
 
             {{-- Footer acciones --}}
@@ -176,6 +205,12 @@
                    class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                     Ver detalle
                 </a>
+                <button type="button"
+                    @click="abrirLimites('{{ $suc->id_usuario }}', '{{ addslashes($suc->nombre_usuario) }}')"
+                    class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                    📊 Límites de gasto
+                </button>
+
                 @if($abierta)
                 <button type="button"
                     @click="abrirIngreso('{{ $suc->id_usuario }}', '{{ addslashes($suc->nombre_usuario) }}')"
@@ -349,6 +384,72 @@
         </div>
     </div>
 
+    
+
+   {{-- ══════════════════════════════════════════════
+     MODAL: LÍMITE DE GASTO DE LA SUCURSAL
+══════════════════════════════════════════════ --}}
+<div x-show="modal === 'limites'" x-cloak
+    x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+    x-transition:leave="transition duration-100" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+    class="fixed inset-0 bg-black/50 backdrop-blur-[1px] flex items-center justify-center z-50 px-4"
+    @click.self="modal = ''">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm p-6" @click.stop
+        x-transition:enter="transition duration-150" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100">
+
+        <div class="flex items-center justify-between mb-1">
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Límite de gasto — <span x-text="targetName"></span></h3>
+            <span x-show="!limitesCargando && limiteActual !== null"
+                  class="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                  x-text="'$' + Number(limiteActual).toLocaleString('es-MX', {minimumFractionDigits:2})"></span>
+        </div>
+        <p class="text-xs text-gray-400 mb-5">
+            Este límite aplica a todos los gastos de la sucursal, sin importar el motivo, y no importa si la caja está abierta o cerrada. Se reinicia automáticamente cada inicio de semana (lunes).
+        </p>
+
+        <p class="text-xs text-gray-400 mb-4" x-show="limitesCargando">Cargando...</p>
+
+        <template x-if="!limitesCargando">
+            <div>
+                <div class="bg-gray-50 dark:bg-gray-900 rounded-lg px-3 py-2.5 mb-4" x-show="limiteActual !== null">
+                    <p class="text-xs text-gray-400 uppercase tracking-wider mb-0.5">Límite actual</p>
+                    <p class="text-lg font-semibold text-gray-900 dark:text-white"
+                       x-text="'$' + Number(limiteActual).toLocaleString('es-MX', {minimumFractionDigits:2})"></p>
+                </div>
+                <p class="text-xs text-gray-400 mb-4" x-show="limiteActual === null">
+                    Esta sucursal aún no tiene límite configurado.
+                </p>
+
+                <form method="POST" :action="`/admin/cajas/${targetId}/limites`">
+                    @csrf
+                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
+                        Nuevo límite semanal
+                    </label>
+                    <input type="number" name="limite_semanal" x-model="limiteForm" step="0.01" min="0" max="999999.99" required
+                        placeholder="0.00"
+                        class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
+
+                    <div class="flex justify-between items-center mt-6">
+                        <button type="button" x-show="limiteActual !== null" @click="quitarLimite()"
+                            class="px-3 py-2 text-xs font-semibold rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:opacity-80 transition">
+                            Quitar límite
+                        </button>
+                        <div class="flex gap-2 ml-auto">
+                            <button type="button" @click="modal = ''"
+                                class="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">
+                                Cancelar
+                            </button>
+                            <button type="submit"
+                                class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition">
+                                Guardar
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </template>
+    </div>
+
     {{-- ══════════════════════════════════════════════
          MODAL: CIERRE FORZADO
     ══════════════════════════════════════════════ --}}
@@ -410,6 +511,9 @@ function adminCajas() {
         targetId: '',
         targetName: '',
         modalDesc: '',
+        limitesCargando: false,
+        limiteActual: null,
+        limiteForm: '',
 
         init() {
             const elToast    = document.getElementById('ws-toast-admin');
@@ -489,6 +593,44 @@ function adminCajas() {
             this.targetId   = id;
             this.targetName = nombre;
             this.modal      = 'cierre';
+        },
+
+        async abrirLimites(id, nombre) {
+            this.targetId   = id;
+            this.targetName = nombre;
+            this.modal      = 'limites';
+            this.limiteActual = null;
+            this.limiteForm  = '';
+            this.limitesCargando = true;
+
+            try {
+                const res  = await fetch(`/admin/cajas/${id}/limites`, {
+                    headers: { 'Accept': 'application/json' }
+                });
+                const data = await res.json();
+                this.limiteActual = (data.limite_semanal !== null && data.limite_semanal !== undefined)
+                    ? Number(data.limite_semanal)
+                    : null;
+                this.limiteForm = this.limiteActual !== null ? this.limiteActual : '';
+            } catch (e) {
+                console.error(e);
+            } finally {
+                this.limitesCargando = false;
+            }
+        },
+
+        quitarLimite() {
+            if (!confirm(`¿Quitar el límite de ${this.targetName}? Quedará sin restricción.`)) return;
+
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/admin/cajas/${this.targetId}/limites`;
+            form.innerHTML = `
+                @csrf
+                <input type="hidden" name="_method" value="DELETE">
+            `;
+            document.body.appendChild(form);
+            form.submit();
         },
     }
 }

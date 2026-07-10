@@ -39,9 +39,14 @@ class CajaController extends Controller
             ->limit(10)
             ->get();
 
-        return view('vendedor.caja.index', compact('caja', 'sesion', 'snapshot', 'historial'));
-    }
+        // ← NUEVO
+        $gastoSemana = CajaService::getGastoSemanaActual($user->id_negocio, $user->id_usuario);
+        $limiteGasto = CajaService::getLimiteSucursal($user->id_negocio, $user->id_usuario)?->limite_semanal;
 
+        return view('vendedor.caja.index', compact(
+            'caja', 'sesion', 'snapshot', 'historial', 'gastoSemana', 'limiteGasto'
+        ));
+    }
     /* ── ABRIR ──────────────────────────────────────────────── */
 
     public function abrir(Request $request)
@@ -214,6 +219,49 @@ class CajaController extends Controller
             return back()->with('success', 'Ingreso registrado correctamente.');
         } catch (\Throwable $e) {
             return back()->with('error', 'Error al registrar ingreso: ' . $e->getMessage());
+        }
+    }
+
+    public function gasto(Request $request)
+    {
+        $request->validate([
+            'monto'      => 'required|numeric|min:0.01|max:999999.99',
+            'motivo'     => 'required|string|max:100',
+            'referencia' => 'nullable|string|max:120',
+            'notas'      => 'nullable|string|max:500',
+            'fecha_gasto'=> 'nullable|date',
+        ]);
+
+        $user   = auth()->user();
+        $caja   = CajaService::cajaDeUsuario($user->id_usuario, $user->id_negocio);
+        $sesion = $caja ? CajaService::sesionActiva($caja->id_caja) : null;
+
+        try {
+            $resultado = CajaService::registrarGasto(
+                idNegocio:         $user->id_negocio,
+                idUsuario:         $user->id_usuario,
+                idUsuarioRegistro: $user->id_usuario,
+                monto:             (float) $request->monto,
+                motivo:            $request->motivo,
+                referencia:        $request->referencia,
+                notas:             $request->notas,
+                fechaGasto:        $request->fecha_gasto,
+                idSesion:          $sesion?->id_sesion,
+            );
+
+            if ($resultado['excede_limite']) {
+                return back()->with('success', 'Gasto registrado correctamente.')
+                    ->with('limite_excedido', true)
+                    ->with('limite_excedido_data', [
+                        'total_semana' => $resultado['total_semana'],
+                        'limite'       => $resultado['limite'],
+                    ]);
+            }
+
+            return back()->with('success', 'Gasto registrado correctamente.');
+        } catch (\Throwable $e) {
+            Log::error('Error al registrar gasto', ['mensaje' => $e->getMessage()]);
+            return back()->with('error', 'Error al registrar gasto: ' . $e->getMessage());
         }
     }
 }
