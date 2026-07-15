@@ -11,7 +11,72 @@
             this.deleteNombre = nombre;
             this.deleteAction = action;
             this.deleteModal  = true;
-        }
+        },
+
+        // ── Color con picker + sugerencia de hex por IA ──
+        colorNombre1: '',
+        colorHex1: '#d5d5d5',
+        colorNombre2: '',
+        colorHex2: '#a12491',
+        colorCombinado: false,
+        sugirendoHex1: false,
+        sugirendoHex2: false,
+        colorError: '',
+        get colorFinal() {
+            const nombre = this.colorCombinado && this.colorNombre2
+                ? this.colorNombre1 + '/' + this.colorNombre2
+                : this.colorNombre1;
+            const hex = this.colorCombinado && this.colorNombre2
+                ? this.colorHex1 + '/' + this.colorHex2
+                : this.colorHex1;
+            return nombre ? nombre + '|' + hex : '';
+        },
+        validarNombreColor(val) {
+            const bloqueadas = ['con','y','e','o','u','del','de','la','el','los','las'];
+            const sufijos    = ['ito','ita','itos','itas','illo','illa','ote','ota'];
+            const w = val.trim().toLowerCase();
+            if (bloqueadas.includes(w)) { this.colorError = `"${w}" no es un color válido`; return false; }
+            for (const s of sufijos) {
+                if (w.endsWith(s) && w.length > s.length + 2) {
+                    this.colorError = `"${w}" parece un diminutivo`; return false;
+                }
+            }
+            this.colorError = '';
+            return true;
+        },
+        async sugerirHexColor(nombre, campo) {
+            if (!nombre || nombre.trim().length < 2) return;
+            if (!this.validarNombreColor(nombre)) return;
+            if (campo === 1) this.sugirendoHex1 = true;
+            if (campo === 2) this.sugirendoHex2 = true;
+            try {
+                const url = {{ auth()->user()->id_rol === 1 ? "'" . route('admin.catalogo.sugerir-hex') . "'" : "'" . route('gestor.vehiculos.sugerir-hex') . "'" }};
+                const res  = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=\"csrf-token\"]').content },
+                    body: JSON.stringify({ nombre: nombre.trim() }),
+                });
+                const data = await res.json();
+                if (data.hex) {
+                    if (campo === 1) this.colorHex1 = data.hex;
+                    if (campo === 2) this.colorHex2 = data.hex;
+                }
+            } catch (e) { console.error(e); }
+            finally {
+                if (campo === 1) this.sugirendoHex1 = false;
+                if (campo === 2) this.sugirendoHex2 = false;
+            }
+        },
+        onColorNombre1(val) {
+            if (!this.validarNombreColor(val)) return;
+            clearTimeout(this._colorTimer1);
+            this._colorTimer1 = setTimeout(() => this.sugerirHexColor(val, 1), 600);
+        },
+        onColorNombre2(val) {
+            if (!this.validarNombreColor(val)) return;
+            clearTimeout(this._colorTimer2);
+            this._colorTimer2 = setTimeout(() => this.sugerirHexColor(val, 2), 600);
+        },
     }"
     class="space-y-6"
 >
@@ -25,7 +90,7 @@
             <p class="text-xs text-gray-400 mt-0.5">Gestiona los colores disponibles por modelo</p>
         </div>
         <button
-            @click="createModal = true"
+            @click="createModal = true; colorNombre1 = ''; colorHex1 = '#d5d5d5'; colorNombre2 = ''; colorHex2 = '#a12491'; colorCombinado = false; colorError = ''"
             class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-md text-sm hover:opacity-90 transition"
         >
             + Crear color
@@ -73,13 +138,24 @@
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900">
                     @forelse($colores as $color)
-                       
+                        @php
+                            $hexes  = colorHexes($color->color);
+                            $nombre = colorNombre($color->color);
+                            $esComb = colorEsCombinado($color->color);
+                        @endphp
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition">
                             {{-- Color --}}
                             <td class="px-4 py-3 text-gray-900 dark:text-white font-medium">
                                 <div class="flex items-center gap-3">
-                                    <div class="h-8 w-8 rounded-full" style="background-color: {{ $color->color }}; border: 1px solid #ddd;"></div>
-                                    <span>{{ $color->color }}</span>
+                                    <div class="h-8 w-8 rounded-full overflow-hidden relative border border-black/10 dark:border-white/10 shrink-0">
+                                        @if($esComb)
+                                            <div class="absolute left-0 top-0 w-1/2 h-full" style="background:{{ $hexes[0] }}"></div>
+                                            <div class="absolute right-0 top-0 w-1/2 h-full" style="background:{{ $hexes[1] ?? $hexes[0] }}"></div>
+                                        @else
+                                            <div class="w-full h-full" style="background:{{ $hexes[0] }}"></div>
+                                        @endif
+                                    </div>
+                                    <span>{{ $nombre }}</span>
                                 </div>
                             </td>
                             {{-- Modelo --}}
@@ -121,13 +197,24 @@
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                         @forelse($colores as $color)
-                           
+                            @php
+                                $hexesM  = colorHexes($color->color);
+                                $nombreM = colorNombre($color->color);
+                                $esCombM = colorEsCombinado($color->color);
+                            @endphp
                             <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                                 <td class="px-3 py-3">
                                     <div class="flex items-center">
-                                        <div class="h-6 w-6 rounded-full mr-2" style="background-color: {{ $color->color }}; border: 1px solid #ddd;"></div>
+                                        <div class="h-6 w-6 rounded-full mr-2 overflow-hidden relative border border-black/10 dark:border-white/10 shrink-0">
+                                            @if($esCombM)
+                                                <div class="absolute left-0 top-0 w-1/2 h-full" style="background:{{ $hexesM[0] }}"></div>
+                                                <div class="absolute right-0 top-0 w-1/2 h-full" style="background:{{ $hexesM[1] ?? $hexesM[0] }}"></div>
+                                            @else
+                                                <div class="w-full h-full" style="background:{{ $hexesM[0] }}"></div>
+                                            @endif
+                                        </div>
                                         <span class="text-xs font-medium text-gray-900 dark:text-white">
-                                            {{ Str::limit($color->color, 15) }}
+                                            {{ Str::limit($nombreM, 15) }}
                                         </span>
                                     </div>
                                 </td>
@@ -211,20 +298,58 @@
                 </button>
             </div>
 
-            <form method="POST" action="{{ auth()->user()->id_rol === 1 ? route('admin.catalogo.colores.store') : route('gestor.vehiculos.colores.store') }}">
+            <form method="POST" action="{{ auth()->user()->id_rol === 1 ? route('admin.catalogo.colores.store') : route('gestor.vehiculos.colores.store') }}"
+                @submit="colorError ? $event.preventDefault() : null">
                 @csrf
+                <input type="hidden" name="color" :value="colorFinal">
+
                 <div class="mb-5">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                         Color <span class="text-red-500">*</span>
                     </label>
-                    <input
-                        type="text"
-                        name="color"
-                        value="{{ old('color') }}"
-                        placeholder="Ej: Rojo, #FF0000"
-                        class="w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 transition"
-                        required
-                    >
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden flex-shrink-0 cursor-pointer relative"
+                            @click="$refs.gestorPicker1.click()">
+                            <div class="absolute inset-0" :style="'background:'+colorHex1"></div>
+                            <div x-show="sugirendoHex1" class="absolute inset-0 bg-black/30 flex items-center justify-center">
+                                <svg class="w-3 h-3 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <input type="color" x-ref="gestorPicker1" class="sr-only" x-model="colorHex1">
+                        <input type="text" x-model="colorNombre1" @input="onColorNombre1($event.target.value)" required
+                            class="flex-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 transition"
+                            placeholder="Ej: Rojo">
+                    </div>
+
+                    <div x-show="colorCombinado" x-transition>
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="w-9 h-9 rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden flex-shrink-0 cursor-pointer relative"
+                                @click="$refs.gestorPicker2.click()">
+                                <div class="absolute inset-0" :style="'background:'+colorHex2"></div>
+                                <div x-show="sugirendoHex2" class="absolute inset-0 bg-black/30 flex items-center justify-center">
+                                    <svg class="w-3 h-3 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                    </svg>
+                                </div>
+                            </div>
+                            <input type="color" x-ref="gestorPicker2" class="sr-only" x-model="colorHex2">
+                            <input type="text" x-model="colorNombre2" @input="onColorNombre2($event.target.value)"
+                                class="flex-1 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 dark:focus:ring-blue-500 transition"
+                                placeholder="Ej: Azul">
+                        </div>
+                    </div>
+
+                    <button type="button" @click="colorCombinado = !colorCombinado; colorNombre2 = ''"
+                        :class="colorCombinado ? 'border-red-200 dark:border-red-800 text-red-500 dark:text-red-400' : 'border-dashed border-gray-300 dark:border-gray-600 text-gray-400'"
+                        class="w-full flex items-center justify-center gap-2 border rounded-lg px-3 py-2 text-xs mb-2 hover:opacity-80 transition">
+                        <span x-text="colorCombinado ? '✕ Quitar combinación' : '+ Agregar combinación de color'"></span>
+                    </button>
+
+                    <p x-show="colorError" x-text="colorError" class="text-xs text-red-500 mb-1.5"></p>
                     @error('color')
                         <p class="text-xs text-red-500 mt-1.5">{{ $message }}</p>
                     @enderror
@@ -261,9 +386,11 @@
                     </button>
                     <button
                         type="submit"
-                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition"
+                        :disabled="!colorNombre1.trim() || !!colorError || sugirendoHex1 || sugirendoHex2"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                        Guardar color
+                        <span x-show="!sugirendoHex1 && !sugirendoHex2">Guardar color</span>
+                        <span x-show="sugirendoHex1 || sugirendoHex2" x-cloak>Sugiriendo color...</span>
                     </button>
                 </div>
             </form>

@@ -823,11 +823,13 @@ class VentaController extends Controller
             'cliente',
             'negocio',
             'detalles.producto',
+            'detalles.pieza',
             'detalles.bicicleta.modelo.marca',
             'detalles.bicicleta.voltaje',
             'detalles.bicicleta.color',
             'personal',
             'pagos',
+            'reparacion',
         ])
             ->where('id_negocio', $user->id_negocio)
             ->findOrFail($id_venta);
@@ -836,9 +838,7 @@ class VentaController extends Controller
             ->filter(fn($d) => $d->bicicleta !== null)
             ->values();
 
-        if ($bicicletas->isEmpty()) {
-            return back()->with('error', 'Esta venta no tiene bicicletas para generar ticket.');
-        }
+        $esGratis = $venta->origen === 'reparacion' && $venta->reparacion?->tipo === 'garantia';
 
         $pdf = Pdf::loadView('vendedor.ventas.ticket', [
             'venta'      => $venta,
@@ -848,7 +848,8 @@ class VentaController extends Controller
             'personal'   => $venta->personal,
             'fecha'      => now()->format('d/m/Y'),
             'pagos'      => $venta->pagos,
-        ])->setPaper('letter', 'landscape');
+            'esGratis'   => $esGratis,
+        ])->setPaper([0, 0, 226.77, 800], 'portrait');
 
         return response()->make($pdf->output(), 200, [
             'Content-Type'        => 'application/pdf',

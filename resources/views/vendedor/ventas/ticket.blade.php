@@ -17,12 +17,11 @@
         body {
             font-family: 'Courier New', Courier, monospace;
             font-size: 9pt;
+            line-height: 1.4;
             color: #111;
             background: #fff;
-            width: 220pt;
-            max-width: 100%;
-            margin: 0 auto;
-            padding: 8pt 6pt 12pt;
+            width: 213pt;
+            padding: 10pt 8pt 14pt;
         }
 
         /* --- encabezado principal --- */
@@ -55,25 +54,42 @@
             border-top: 1pt solid #1a56db;
             border-bottom: 1pt solid #1a56db;
         }
+        .ticket-badge.badge-venta       { color: #4b5563; border-color: #4b5563; }
+        .ticket-badge.badge-pieza       { color: #0f766e; border-color: #0f766e; }
+        .ticket-badge.badge-reparacion  { color: #7e22ce; border-color: #7e22ce; }
+        .ticket-badge.badge-garantia    { color: #b45309; border-color: #b45309; }
+
+        .gratis-banner {
+            display: block;
+            text-align: center;
+            font-size: 13pt;
+            font-weight: 800;
+            letter-spacing: .1em;
+            color: #b45309;
+            background: #fff7ed;
+            border: 1pt dashed #b45309;
+            padding: 6pt 0;
+            margin: 9pt 0;
+        }
 
         /* --- divisores --- */
         .div-solid {
             border: none;
             border-top: 1pt solid #333;
-            margin: 5pt 0;
+            margin: 8pt 0;
         }
 
         .div-dash {
             border: none;
             border-top: 1pt dashed #aaa;
-            margin: 4pt 0;
+            margin: 7pt 0;
         }
 
         /* --- filas genéricas (label + valor) --- */
         .row {
             display: table;
             width: 100%;
-            margin-bottom: 2pt;
+            margin-bottom: 4.5pt;
         }
 
         .row-lbl {
@@ -111,14 +127,14 @@
             text-transform: uppercase;
             letter-spacing: .07em;
             color: #666;
-            margin: 5pt 0 3pt;
+            margin: 9pt 0 5pt;
         }
 
         /* --- metadatos (folio, fechas) --- */
         .meta {
             font-size: 7.5pt;
             color: #666;
-            margin-bottom: 1.5pt;
+            margin-bottom: 3pt;
         }
         .meta-val {
             font-weight: 700;
@@ -128,14 +144,14 @@
         /* --- bloque de bicicleta (estilo compacto) --- */
         .bici-block {
             border: 1pt solid #ddd;
-            margin: 6pt 0 6pt;
-            padding: 4pt 5pt;
+            margin: 8pt 0;
+            padding: 6pt 7pt;
             background: #fefefe;
         }
         .bici-row {
             display: table;
             width: 100%;
-            margin-bottom: 2pt;
+            margin-bottom: 3.5pt;
             font-size: 8pt;
         }
         .bici-row .label {
@@ -168,12 +184,12 @@
 
         /* --- tabla accesorios estilo minimalista --- */
         .accesorios-list {
-            margin-top: 3pt;
+            margin-top: 4pt;
         }
         .acc-row {
             display: table;
             width: 100%;
-            margin-bottom: 2pt;
+            margin-bottom: 4pt;
             font-size: 8pt;
         }
         .acc-nombre {
@@ -203,8 +219,8 @@
         /* --- garantía y notas --- */
         .warranty-note {
             background: #f4f9ff;
-            padding: 5pt;
-            margin: 8pt 0 4pt;
+            padding: 7pt;
+            margin: 10pt 0 6pt;
             font-size: 7.5pt;
             text-align: center;
             border-left: 2pt solid #2563eb;
@@ -215,9 +231,9 @@
         .signatures {
             display: table;
             width: 100%;
-            margin-top: 12pt;
+            margin-top: 16pt;
             border-top: 1pt dashed #aaa;
-            padding-top: 8pt;
+            padding-top: 10pt;
         }
         .sig-left {
             display: table-cell;
@@ -251,8 +267,8 @@
             text-align: center;
             font-size: 7pt;
             color: #888;
-            margin-top: 10pt;
-            line-height: 1.4;
+            margin-top: 14pt;
+            line-height: 1.5;
         }
     </style>
 </head>
@@ -263,14 +279,27 @@
 {{--  Mantiene toda la info: cliente, bicis, accesorios, totales  --}}
 {{-- ============================================================ --}}
 
+@php
+    $origenClase = match(true) {
+        $esGratis                          => 'badge-garantia',
+        $venta->origen === 'reparacion'    => 'badge-reparacion',
+        $venta->origen === 'pieza_suelta'  => 'badge-pieza',
+        default                            => 'badge-venta',
+    };
+@endphp
+
 <div class="biz-name">
     {{ strtoupper($negocio->nombre_negocio ?? 'TIENDA CICLISTA') }}
 </div>
 <div class="biz-sub">Comprobante de compra · Ticket fiscal</div>
 
-<div class="ticket-badge">
-    VENTA #{{ $venta->id_venta }}
+<div class="ticket-badge {{ $origenClase }}">
+    {{ strtoupper($venta->label_origen) }} #{{ $venta->id_venta }}
 </div>
+
+@if($esGratis)
+    <div class="gratis-banner">GRATIS · GARANTÍA</div>
+@endif
 
 {{-- meta datos rápidos: fecha y hora --}}
 <div class="meta">
@@ -343,7 +372,13 @@
                 {{ $bici->modelo->marca->nombre_marca ?? '—' }} 
                 {{ $bici->modelo->nombre_modelo ?? 'Bicicleta' }}
             </span>
-            <span class="bici-precio">${{ number_format($detalle->precio_unitario, 2) }}</span>
+            <span class="bici-precio">
+                @if($esGratis)
+                    <span class="badge-gratis">GRATIS</span>
+                @else
+                    ${{ number_format($detalle->precio_unitario, 2) }}
+                @endif
+            </span>
         </div>
         <div class="bici-row">
             <span class="label">Cantidad:</span>
@@ -364,19 +399,19 @@
 @endforeach
 @endif
 
-{{-- ==================== ACCESORIOS ==================== --}}
+{{-- ==================== ARTÍCULOS / PIEZAS / SERVICIOS ==================== --}}
 @php
-    $accesorios = $venta->detalles->filter(fn($d) => !$d->bicicleta);
+    $otrosItems = $venta->detalles->filter(fn($d) => !$d->bicicleta);
 @endphp
-@if($accesorios->isNotEmpty())
-<div class="sec-title">ACCESORIOS</div>
+@if($otrosItems->isNotEmpty())
+<div class="sec-title">{{ $venta->origen === 'reparacion' ? 'DETALLE DEL SERVICIO' : 'ARTÍCULOS' }}</div>
 <div class="accesorios-list">
-    @foreach($accesorios as $item)
+    @foreach($otrosItems as $item)
     <div class="acc-row">
-        <span class="acc-nombre">{{ $item->producto->nombre_producto ?? 'Producto' }}</span>
+        <span class="acc-nombre">{{ $item->nombre }}</span>
         <span class="acc-cant">{{ $item->cantidad }}</span>
         <span class="acc-precio">
-            @if((float)$item->precio_unitario === 0.0)
+            @if($esGratis || (float)$item->precio_unitario === 0.0)
                 <span class="badge-gratis">GRATIS</span>
             @else
                 ${{ number_format($item->precio_unitario, 2) }}
@@ -398,6 +433,7 @@
     $totalProductos = $venta->detalles->sum('cantidad');
 @endphp
 
+@unless($esGratis)
 <div class="row">
     <span class="row-lbl">Subtotal</span>
     <span class="row-val">${{ number_format($subtotal, 2) }}</span>
@@ -405,12 +441,13 @@
 
 @if($descuento > 0)
 <div class="row">
-    <span class="row-lbl">Descuento 
+    <span class="row-lbl">Descuento
         @if($venta->cupon)({{ $venta->cupon->codigo ?? 'cupón' }})@endif
     </span>
     <span class="row-val red">-${{ number_format($descuento, 2) }}</span>
 </div>
 @endif
+@endunless
 
 <div class="row">
     <span class="row-lbl">Artículos</span>
@@ -421,7 +458,11 @@
 
 <div class="row">
     <span class="row-lbl" style="font-weight:800;">TOTAL PAGADO</span>
-    <span class="row-val big green">${{ number_format($total, 2) }}</span>
+    @if($esGratis)
+        <span class="row-val big" style="color:#b45309;">GRATIS</span>
+    @else
+        <span class="row-val big green">${{ number_format($total, 2) }}</span>
+    @endif
 </div>
 
 {{-- ==================== GARANTÍA (solo si hay bicis) ==================== --}}
@@ -432,18 +473,7 @@
 </div>
 @endif
 
-{{-- ==================== FIRMAS ==================== --}}
-<div class="signatures">
-    <div class="sig-left">
-        <div class="sig-line" style="width:90%;"></div>
-        <div class="sig-label">Nombre y firma del cliente</div>
-    </div>
-    <div class="sig-right">
-        <div class="sig-line" style="width:90%;"></div>
-        <div class="sig-label">Atendido por</div>
-        <div class="sig-name">{{ $personal?->nombre ?? $negocio->nombre_negocio ?? 'Vendedor(a)' }}</div>
-    </div>
-</div>
+
 
 <hr class="div-solid">
 

@@ -920,6 +920,9 @@ function stockIndex() {
                 if (!data.ok) { this.flash(data.mensaje ?? 'Error al vender', 'error'); return; }
                 this.flash(data.mensaje);
                 this.modalVenta = false;
+                if (data.id_venta) {
+                    window.open(`{{ route('ventas.ticket', ':id') }}`.replace(':id', data.id_venta), '_blank');
+                }
                 await this.cargar();
             } catch { this.flash('Error de conexión', 'error'); }
             finally  { this.vendiendo = false; }

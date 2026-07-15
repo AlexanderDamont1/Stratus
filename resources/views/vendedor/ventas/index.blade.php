@@ -113,16 +113,14 @@
                                 Ver
                             </a>
 
-                            @if($tieneBici)
-                                <button
-                                    onclick="openPreview('{{ $tienePoliza ? route('ventas.poliza', $venta->id_venta) : route('ventas.ticket', $venta->id_venta) }}')"
-                                    class="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/30 px-2.5 py-1 rounded-md transition">
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                                    </svg>
-                                    {{ $tienePoliza ? 'Póliza' : 'Ticket' }}
-                                </button>
-                            @endif
+                            <button
+                                onclick="window.open('{{ $tienePoliza ? route('ventas.poliza', $venta->id_venta) : route('ventas.ticket', $venta->id_venta) }}', '_blank')"
+                                class="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/30 px-2.5 py-1 rounded-md transition">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                                </svg>
+                                {{ $tienePoliza ? 'Póliza' : 'Ticket' }}
+                            </button>
                         </div>
 
                     </div>
@@ -197,37 +195,4 @@
         </div>
     </div>
 
-    {{-- Modal preview --}}
-    <div id="previewModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center z-50">
-        <div class="relative w-[95%] md:w-[80%] lg:w-[65%] h-[90%] bg-white rounded-xl shadow-2xl overflow-hidden">
-            <div class="flex justify-between items-center px-4 py-2 border-b bg-gray-100">
-                <span class="text-sm font-semibold">Vista previa</span>
-                <button onclick="closePreview()" class="text-gray-500 hover:text-black text-lg leading-none">&times;</button>
-            </div>
-            <iframe id="previewFrame" class="w-full h-full"></iframe>
-        </div>
-    </div>
-
-    <script>
-        function openPreview(url) {
-            const modal = document.getElementById('previewModal');
-            const frame = document.getElementById('previewFrame');
-            frame.src = url;
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        }
-
-        function closePreview() {
-            const modal = document.getElementById('previewModal');
-            const frame = document.getElementById('previewFrame');
-            frame.src = '';
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }
-
-        document.addEventListener('click', function(e) {
-            const modal = document.getElementById('previewModal');
-            if (e.target === modal) closePreview();
-        });
-    </script>
 </x-app-layout>

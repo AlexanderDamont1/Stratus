@@ -22,8 +22,9 @@ class ModeloController extends Controller
         if (!in_array($user->id_rol, [1, 5])) abort(403);
 
         if ($user->id_rol === 5) {
-           
+
             $modelosPag = Modelo::whereNull('id_negocio')
+                ->with('marca')
                 ->orderBy('nombre_modelo')
                 ->paginate(15);
 
@@ -97,7 +98,7 @@ class ModeloController extends Controller
 
         $modelo = Modelo::create([
             'nombre_modelo' => $request->nombre_modelo,
-            'id_marca'      => $user->id_rol === 1 ? $request->id_marca : null,
+            'id_marca'      => $user->id_rol === 1 ? $request->id_marca : self::idMarcaGestor(),
             'id_negocio'    => $idNegocio,
         ]);
 
@@ -180,7 +181,7 @@ class ModeloController extends Controller
 
         $modelo->update([
             'nombre_modelo' => $request->nombre_modelo,
-            'id_marca'      => $user->id_rol === 1 ? $request->id_marca : $modelo->id_marca,
+            'id_marca'      => $user->id_rol === 1 ? $request->id_marca : ($modelo->id_marca ?? self::idMarcaGestor()),
         ]);
 
         CatalogoActualizado::dispatch(
@@ -252,5 +253,15 @@ class ModeloController extends Controller
         return redirect()
             ->route('admin.catalogo.index')
             ->with('success', 'Modelo y sus datos asociados eliminados correctamente.');
+    }
+
+    // ─── HELPERS ────────────────────────────────────────────────────────────
+
+    /**
+     * ID de la marca pública "Evobike" que usa el catálogo global del Gestor (rol 5).
+     */
+    private static function idMarcaGestor(): ?string
+    {
+        return CatalogService::getMarcasPublicas()->first()?->id_marca;
     }
 }

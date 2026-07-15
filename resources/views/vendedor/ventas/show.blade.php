@@ -17,7 +17,7 @@
             </div>
 
             <div class="flex flex-col items-end gap-2 sm:flex-row-reverse sm:items-center">
-                <button onclick="openPreview('{{ route('ventas.ticket', $venta->id_venta) }}')"
+                <button onclick="window.open('{{ route('ventas.ticket', $venta->id_venta) }}', '_blank')"
                         class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-md text-sm hover:opacity-90 transition whitespace-nowrap flex items-center gap-1.5">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -27,7 +27,7 @@
                 </button>
 
                 @if($tieneGarantia)
-                    <button onclick="openPreview('{{ route('ventas.poliza', $venta->id_venta) }}')"
+                    <button onclick="window.open('{{ route('ventas.poliza', $venta->id_venta) }}', '_blank')"
                             class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-md text-sm hover:opacity-90 transition whitespace-nowrap flex items-center gap-1.5">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -361,25 +361,6 @@
 
     </div>
 
-    {{-- ===== MODAL IFRAME ===== --}}
-    <div id="previewModal"
-         class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
-        <div class="relative w-full max-w-5xl h-[90vh] bg-white dark:bg-gray-900
-                    rounded-2xl shadow-2xl overflow-hidden">
-            <div class="flex justify-between items-center px-5 py-3
-                        border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-                <span class="text-sm font-semibold text-gray-800 dark:text-white">Vista previa</span>
-                <button onclick="closePreview()"
-                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </button>
-            </div>
-            <iframe id="previewFrame" class="w-full h-[calc(100%-56px)]"></iframe>
-        </div>
-    </div>
-
     @if($autoTicket)
         <script>
             document.addEventListener('DOMContentLoaded', function () {
@@ -389,30 +370,6 @@
             });
         </script>
     @endif
-
-    <script>
-        function openPreview(url) {
-            const modal = document.getElementById('previewModal');
-            document.getElementById('previewFrame').src = url;
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        }
-
-        function closePreview() {
-            const modal = document.getElementById('previewModal');
-            document.getElementById('previewFrame').src = '';
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }
-
-        document.addEventListener('click', function (e) {
-            if (e.target === document.getElementById('previewModal')) closePreview();
-        });
-
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') closePreview();
-        });
-    </script>
 
 </x-app-layout>
 

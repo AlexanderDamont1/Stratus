@@ -285,6 +285,7 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
             Route::post('/marcas/{idMarca}/politica', [AdminGarantiaController::class, 'guardarPolitica'])->name('marcas.politica');
             Route::post('/componentes', [AdminGarantiaController::class, 'guardarDefs'])->name('componentes.guardar');
             Route::delete('/componentes/{id}', [AdminGarantiaController::class, 'borrarDef'])->name('componentes.borrar');
+            Route::post('/componentes/sugerir-excepciones', [AdminGarantiaController::class, 'sugerirExcepciones'])->name('componentes.sugerir-excepciones');
             Route::patch('/reclamo/{id}/estado', [AdminGarantiaController::class, 'estadoReclamo'])->name('reclamo.estado');
             Route::post('/reclamo/{id}/reemplazo', [AdminGarantiaController::class, 'reemplazo'])->name('reclamo.reemplazo');
             //Route::post('/politica', [AdminGarantiaController::class, 'guardarPolitica'])->name('politica');
@@ -364,27 +365,7 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
             Route::get('/voltajes-disponibles/{modelo}', [ModeloVoltajeController::class, 'voltajesDisponibles'])->name('voltajes.disponibles');
 
             // Sugerir hex por IA
-            Route::post('/sugerir-hex', function (Request $request) {
-                $request->validate(['nombre' => 'required|string|max:50']);
-
-                $response = \Illuminate\Support\Facades\Http::withHeaders([
-                    'Authorization' => 'Bearer ' . config('services.groq.key'),
-                    'Content-Type' => 'application/json',
-                ])->post('https://api.groq.com/openai/v1/chat/completions', [
-                    'model' => 'llama-3.1-8b-instant',
-                    'max_tokens' => 10,
-                    'messages' => [
-                        ['role' => 'system', 'content' => 'Eres un asistente que SOLO responde con colores hexadecimales en formato #RRGGBB. Sin explicaciones, sin texto extra, solo el hex.'],
-                        ['role' => 'user', 'content' => "¿Qué color hexadecimal representa \"{$request->nombre}\"?"],
-                    ],
-                ]);
-
-                $hex = trim($response->json('choices.0.message.content') ?? '');
-
-                return response()->json([
-                    'hex' => preg_match('/^#[0-9A-Fa-f]{6}$/', $hex) ? $hex : null,
-                ]);
-            })->name('sugerir-hex');
+            Route::post('/sugerir-hex', [ColorController::class, 'sugerirHex'])->name('sugerir-hex');
         });
 
         // Config
@@ -461,6 +442,9 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
                 Route::get('/voltajes/{voltaje}/editar', [VoltajeController::class, 'edit'])->name('voltajes.edit');
                 Route::put('/voltajes/{voltaje}', [VoltajeController::class, 'update'])->name('voltajes.update');
                 Route::delete('/voltajes/{voltaje}', [VoltajeController::class, 'destroy'])->name('voltajes.destroy');
+
+                // Sugerir hex por IA (misma lógica que usa el rol 1)
+                Route::post('/sugerir-hex', [ColorController::class, 'sugerirHex'])->name('sugerir-hex');
             });
         });
 

@@ -355,6 +355,58 @@
                                                       focus:ring-1 focus:ring-gray-400">
                                     </div>
 
+                                    {{-- Row 3b: excepciones --}}
+                                    <div>
+                                        <div class="flex items-center justify-between mb-1 gap-2 flex-wrap">
+                                            <label class="block text-[10px] text-gray-400 font-medium">
+                                                Excepciones de garantía
+                                                <span class="font-normal text-gray-300 dark:text-gray-600">(una por línea)</span>
+                                            </label>
+                                            <div class="flex items-center gap-1.5 shrink-0">
+                                                <select
+                                                    x-show="excepcionesDisponibles.length > 0"
+                                                    @change="reutilizarExcepciones(idx, $event.target.value); $event.target.value = ''"
+                                                    class="text-[10px] border border-gray-200 dark:border-gray-600 rounded-md
+                                                           px-1.5 py-0.5 bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400
+                                                           focus:outline-none focus:ring-1 focus:ring-gray-400 max-w-[140px]">
+                                                    <option value="">Reutilizar de...</option>
+                                                    <template x-for="(op, opIdx) in excepcionesDisponibles" :key="opIdx">
+                                                        <option :value="opIdx" x-text="op.marca + ' — ' + op.nombre + ' (' + op.excepciones.length + ')'"></option>
+                                                    </template>
+                                                </select>
+                                                <button type="button"
+                                                        @click="sugerirExcepcionesIA(idx)"
+                                                        :disabled="sugiriendoIdx !== null || !comp.nombre.trim()"
+                                                        class="flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-md
+                                                               border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400
+                                                               hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition
+                                                               disabled:opacity-40 disabled:cursor-not-allowed">
+                                                    <svg class="w-3 h-3 shrink-0" :class="sugiriendoIdx === idx ? 'animate-spin' : ''" viewBox="0 0 24 24" fill="currentColor">
+                                                        <template x-if="sugiriendoIdx !== idx">
+                                                            <g>
+                                                                <path d="M12 2.5c.3 3.2 1.1 5.4 2.4 6.7 1.3 1.3 3.5 2.1 6.7 2.4-3.2.3-5.4 1.1-6.7 2.4-1.3 1.3-2.1 3.5-2.4 6.7-.3-3.2-1.1-5.4-2.4-6.7C8.3 12.5 6.1 11.7 2.9 11.4c3.2-.3 5.4-1.1 6.7-2.4C10.9 7.7 11.7 5.5 12 2.5z"/>
+                                                                <path d="M19 14c.15 1.6.55 2.7 1.2 3.35.65.65 1.75 1.05 3.35 1.2-1.6.15-2.7.55-3.35 1.2-.65.65-1.05 1.75-1.2 3.35-.15-1.6-.55-2.7-1.2-3.35-.65-.65-1.75-1.05-3.35-1.2 1.6-.15 2.7-.55 3.35-1.2.65-.65 1.05-1.75 1.2-3.35z"/>
+                                                            </g>
+                                                        </template>
+                                                        <template x-if="sugiriendoIdx === idx">
+                                                            <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="14 10"/>
+                                                        </template>
+                                                    </svg>
+                                                    <span x-text="sugiriendoIdx === idx ? 'Generando...' : 'Generar con IA'"></span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <textarea
+                                            :value="comp.excepciones.join('\n')"
+                                            @input="comp.excepciones = $event.target.value.split('\n').map(s => s.trim()).filter(Boolean); componentesDirty = true"
+                                            rows="3"
+                                            placeholder="Ej: Cortos circuitos por modificaciones no originales"
+                                            class="w-full border border-gray-200 dark:border-gray-600 rounded-lg
+                                                   px-2.5 py-1.5 text-xs bg-white dark:bg-gray-700
+                                                   text-gray-900 dark:text-white focus:outline-none
+                                                   focus:ring-1 focus:ring-gray-400 resize-y"></textarea>
+                                    </div>
+
                                     {{-- Row 4: checkboxes --}}
                                     <div class="flex items-center gap-5 pt-0.5">
                                         <label class="flex items-center gap-2 cursor-pointer select-none group">
@@ -438,6 +490,7 @@
                 subiendo: false,
                 guardando: false,
                 guardandoPolitica: false,
+                sugiriendoIdx: null,
                 pollingInt: null,
                 flashVisible: false, flashMsg: '', flashTipo: 'success', flashTimer: null,
 
@@ -480,12 +533,14 @@
                             'incluye'      => $d->incluye,
                             'duracion'     => $d->duracion_meses,
                             'cobertura'    => $d->cobertura ?? '',
+                            'excepciones'  => $d->excepciones ?? [],
                             'serializable' => $d->serializable,
                             'excluido'     => $d->excluido,
                         ])
                         : [];
                 @endphp
                 componentes: @json($componentesIniciales),
+                excepcionesDisponibles: @json($excepcionesDisponibles),
 
                 idMarcaGarantia: '{{ $config?->id_marca_garantia ?? "" }}',
 
@@ -518,6 +573,7 @@
                                 duracion:     c.duracion ?? 12,
                                 cobertura:    c.cobertura ?? '',
                                 incluye:      Array.isArray(c.incluye) ? c.incluye : [],
+                                excepciones:  Array.isArray(c.excepciones) ? c.excepciones : [],
                                 serializable: c.serializable ?? false,
                                 excluido:     c.excluido ?? false,
                             }));
@@ -532,6 +588,7 @@
                                     duracion:     g.duracion_meses ?? g.duracion ?? 12,
                                     cobertura:    g.cobertura ?? '',
                                     incluye:      Array.isArray(g.incluye) ? g.incluye : [],
+                                    excepciones:  [],
                                     serializable: ['motor', 'bateria', 'controlador'].some(k => clave.includes(k)),
                                     excluido:     false,
                                 };
@@ -547,9 +604,52 @@
                 agregarComponente() {
                     this.componentes.push({
                         clave: '', nombre: '', incluye: [], duracion: 12,
-                        cobertura: '', serializable: false, excluido: false,
+                        cobertura: '', excepciones: [], serializable: false, excluido: false,
                     });
                     this.componentesDirty = true;
+                },
+
+                reutilizarExcepciones(idx, indexDisponible) {
+                    if (indexDisponible === '' || indexDisponible === null) return;
+                    const fuente = this.excepcionesDisponibles[indexDisponible];
+                    if (!fuente) return;
+                    this.componentes[idx].excepciones = [...fuente.excepciones];
+                    this.componentesDirty = true;
+                },
+
+                async sugerirExcepcionesIA(idx) {
+                    const comp = this.componentes[idx];
+                    if (!comp || !comp.nombre.trim() || this.sugiriendoIdx !== null) return;
+                    this.sugiriendoIdx = idx;
+                    try {
+                        const res = await fetch('{{ route("admin.garantias.componentes.sugerir-excepciones") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type':     'application/json',
+                                'X-CSRF-TOKEN':     document.querySelector('meta[name="csrf-token"]').content,
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept':           'application/json',
+                            },
+                            body: JSON.stringify({
+                                nombre_componente: comp.nombre,
+                                cobertura:         comp.cobertura,
+                                incluye:           comp.incluye,
+                            }),
+                        });
+                        const data = await res.json();
+                        if (!data.ok) { this.flash(data.mensaje ?? 'Error al generar excepciones con IA.', 'error'); return; }
+                        if (!data.excepciones.length) { this.flash('La IA no encontró sugerencias para este componente.', 'error'); return; }
+
+                        const existentes = new Set(comp.excepciones.map(e => e.toLowerCase()));
+                        const nuevas = data.excepciones.filter(e => !existentes.has(e.toLowerCase()));
+                        comp.excepciones = [...comp.excepciones, ...nuevas];
+                        this.componentesDirty = true;
+                        this.flash(`${nuevas.length} excepción(es) sugerida(s) por IA.`);
+                    } catch {
+                        this.flash('Error de conexión con la IA.', 'error');
+                    } finally {
+                        this.sugiriendoIdx = null;
+                    }
                 },
 
                 eliminarComponente(idx) {

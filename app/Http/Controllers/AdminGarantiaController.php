@@ -14,6 +14,7 @@ use App\Services\PdfGarantiaService;
 use App\Services\ReparacionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class AdminGarantiaController extends Controller
@@ -100,7 +101,21 @@ class AdminGarantiaController extends Controller
             ]);
         }
 
-        return view('administrador.garantias.editar-marca', compact('marca', 'config'));
+        // Excepciones ya configuradas en OTRAS marcas del mismo negocio, para que el
+        // admin pueda reutilizarlas (copiar) en vez de volver a escribirlas.
+        $excepcionesDisponibles = GarantiaComponenteDef::with('marcaGarantia.marca')
+            ->where('id_negocio', $user->id_negocio)
+            ->get()
+            ->filter(fn($d) => !empty($d->excepciones))
+            ->map(fn($d) => [
+                'clave'       => $d->clave_componente,
+                'nombre'      => $d->nombre_componente,
+                'marca'       => $d->marcaGarantia?->marca?->nombre_marca ?? '—',
+                'excepciones' => $d->excepciones,
+            ])
+            ->values();
+
+        return view('administrador.garantias.editar-marca', compact('marca', 'config', 'excepcionesDisponibles'));
     }
 
     // ─── POST: subir PDF ──────────────────────────────────────────────────
@@ -209,6 +224,8 @@ class AdminGarantiaController extends Controller
             'componentes.*.incluye'        => 'nullable|array',
             'componentes.*.duracion'       => 'required|integer|min:0',
             'componentes.*.cobertura'      => 'nullable|string|max:255',
+            'componentes.*.excepciones'    => 'nullable|array',
+            'componentes.*.excepciones.*'  => 'string|max:255',
             'componentes.*.serializable'   => 'boolean',
             'componentes.*.excluido'       => 'boolean',
         ]);
@@ -236,6 +253,7 @@ class AdminGarantiaController extends Controller
                         'incluye'          => $comp['incluye'] ?? [],
                         'duracion_meses'   => $comp['duracion'],
                         'cobertura'        => $comp['cobertura'] ?? null,
+                        'excepciones'      => $comp['excepciones'] ?? [],
                         'serializable'     => $comp['serializable'] ?? false,
                         'excluido'         => $comp['excluido'] ?? false,
                         'activo'           => true,
@@ -251,6 +269,64 @@ class AdminGarantiaController extends Controller
             'mensaje'           => 'Componentes guardados correctamente.',
             'id_marca_garantia' => $config->id_marca_garantia,
         ]);
+    }
+
+    // ─── POST: sugerir excepciones de garantía por IA (Groq) ───────────────
+    public function sugerirExcepciones(Request $request)
+    {
+        $user = auth()->user();
+        if ($user->id_rol != 1) abort(403);
+
+        $request->validate([
+            'nombre_componente' => 'required|string|max:120',
+            'cobertura'         => 'nullable|string|max:255',
+            'incluye'           => 'nullable|array',
+        ]);
+
+        $contexto = "Componente: {$request->nombre_componente}.";
+        if ($request->filled('cobertura')) {
+            $contexto .= " Cobertura: {$request->cobertura}.";
+        }
+        if ($request->filled('incluye')) {
+            $contexto .= ' Incluye: ' . implode(', ', $request->incluye) . '.';
+        }
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . config('services.groq.key'),
+                'Content-Type'  => 'application/json',
+            ])->post('https://api.groq.com/openai/v1/chat/completions', [
+                'model'      => 'llama-3.1-8b-instant',
+                'max_tokens' => 400,
+                'messages'   => [
+                    ['role' => 'system', 'content' => 'Eres un asistente que redacta excepciones de garantía para tiendas de bicicletas y vehículos eléctricos. '
+                        . 'Dado un componente, responde SOLO con un array JSON de 3 a 5 strings cortos en español, cada uno una causa típica de exclusión de garantía '
+                        . 'para ese componente (ej. mal uso, modificaciones, condiciones ambientales, desgaste natural). Sin explicaciones, sin texto extra, solo el JSON array.'],
+                    ['role' => 'user', 'content' => $contexto],
+                ],
+            ]);
+
+            $texto = trim($response->json('choices.0.message.content') ?? '');
+            // La IA a veces envuelve el array en ```json ... ``` pese a la instrucción.
+            $texto = preg_replace('/^```(?:json)?|```$/m', '', $texto);
+            $texto = trim($texto);
+
+            $excepciones = json_decode($texto, true);
+            if (!is_array($excepciones)) {
+                return response()->json(['ok' => false, 'mensaje' => 'La IA no devolvió una respuesta válida.'], 422);
+            }
+
+            $excepciones = collect($excepciones)
+                ->filter(fn($e) => is_string($e) && trim($e) !== '')
+                ->map(fn($e) => trim($e))
+                ->values()
+                ->all();
+
+            return response()->json(['ok' => true, 'excepciones' => $excepciones]);
+        } catch (\Exception $e) {
+            Log::error('Error al sugerir excepciones de garantía con IA', ['error' => $e->getMessage()]);
+            return response()->json(['ok' => false, 'mensaje' => 'Error al conectar con la IA.'], 500);
+        }
     }
 
     // ─── POST: guardar política de reemplazo POR MARCA ────────────────────

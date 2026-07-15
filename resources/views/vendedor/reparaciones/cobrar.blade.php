@@ -272,6 +272,10 @@ function cobrarOt() {
                 const data = await res.json();
                 if (!data.ok) { this.flash(data.mensaje ?? 'Error al cobrar', 'error'); return; }
 
+                if (data.id_venta) {
+                    window.open(`{{ route('ventas.ticket', ':id') }}`.replace(':id', data.id_venta), '_blank');
+                }
+
                 window.location.href = "{{ route('reparaciones.index') }}?cobrado=1";
             } catch { this.flash('Error de conexión', 'error'); }
             finally { this.enviando = false; }

@@ -226,6 +226,37 @@ class ColorController extends Controller
             ->with('success', 'Color actualizado correctamente.');
     }
 
+    // ─── SUGERIR HEX (IA) ───────────────────────────────────────────────────
+
+    /**
+     * Sugiere un color hexadecimal para un nombre de color vía IA (Groq).
+     * Compartido por rol 1 y rol 5: es lógica de IA pura, sin datos de negocio.
+     */
+    public function sugerirHex(Request $request)
+    {
+        if (!in_array(auth()->user()->id_rol, [1, 5])) abort(403);
+
+        $request->validate(['nombre' => 'required|string|max:50']);
+
+        $response = \Illuminate\Support\Facades\Http::withHeaders([
+            'Authorization' => 'Bearer ' . config('services.groq.key'),
+            'Content-Type'  => 'application/json',
+        ])->post('https://api.groq.com/openai/v1/chat/completions', [
+            'model'      => 'llama-3.1-8b-instant',
+            'max_tokens' => 10,
+            'messages'   => [
+                ['role' => 'system', 'content' => 'Eres un asistente que SOLO responde con colores hexadecimales en formato #RRGGBB. Sin explicaciones, sin texto extra, solo el hex.'],
+                ['role' => 'user', 'content' => "¿Qué color hexadecimal representa \"{$request->nombre}\"?"],
+            ],
+        ]);
+
+        $hex = trim($response->json('choices.0.message.content') ?? '');
+
+        return response()->json([
+            'hex' => preg_match('/^#[0-9A-Fa-f]{6}$/', $hex) ? $hex : null,
+        ]);
+    }
+
     // ─── DESTROY ─────────────────────────────────────────────────────────────
 
     public function destroy(Color $color)

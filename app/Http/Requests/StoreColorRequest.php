@@ -18,7 +18,6 @@ class StoreColorRequest extends FormRequest
     {
         $user      = auth()->user();
         $idNegocio = $user->id_rol === 1 ? $user->id_negocio : null;
-        $esRol5    = $user->id_rol === 5;
 
         return [
             'id_modelo' => [
@@ -29,27 +28,9 @@ class StoreColorRequest extends FormRequest
                 'required',
                 'string',
                 'max:255',
-                function ($attribute, $value, $fail) use ($esRol5) {
+                function ($attribute, $value, $fail) {
 
-                    // Rol 5 — formato simple sin hex, solo validar nombre
-                    if ($esRol5) {
-                        $bloqueadas = ['con', 'y', 'e', 'o', 'u', 'del', 'de', 'la', 'el', 'los', 'las'];
-                        $sufijos    = ['ito', 'ita', 'itos', 'itas', 'illo', 'illa', 'ote', 'ota'];
-                        $n = strtolower(trim($value));
-                        if (in_array($n, $bloqueadas)) {
-                            $fail("\"$n\" no es un nombre de color válido.");
-                            return;
-                        }
-                        foreach ($sufijos as $s) {
-                            if (str_ends_with($n, $s) && strlen($n) > strlen($s) + 2) {
-                                $fail("\"$n\" parece un diminutivo. Usa el nombre base.");
-                                return;
-                            }
-                        }
-                        return; // ← pasa sin validar hex
-                    }
-
-                    // Rol 1 — formato con hex obligatorio: "Nombre|#hex"
+                    // Mismo formato para rol 1 y rol 5: "Nombre|#hex" (o "Nombre1/Nombre2|#hex1/#hex2")
                     $partes = explode('|', $value);
                     if (count($partes) !== 2) {
                         $fail('Formato inválido. Se esperaba Nombre|#hex');

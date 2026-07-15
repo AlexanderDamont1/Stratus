@@ -24,6 +24,7 @@ class GarantiaComponenteDef extends Model
         'incluye',
         'duracion_meses',
         'cobertura',
+        'excepciones',
         'serializable',
         'excluido',
         'activo',
@@ -31,6 +32,7 @@ class GarantiaComponenteDef extends Model
 
     protected $casts = [
         'incluye'       => 'array',
+        'excepciones'   => 'array',
         'serializable'  => 'boolean',
         'excluido'      => 'boolean',
         'activo'        => 'boolean',
