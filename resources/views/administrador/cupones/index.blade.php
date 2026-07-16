@@ -133,6 +133,12 @@
         .dark .cupon-toggle.off { background: #4b5563; }
     </style>
 
+    <x-onboarding
+        :steps="config('onboarding')['admin.cupones.modal-crear'] ?? []"
+        clave="admin.cupones.modal-crear"
+        trigger-event="cupon-modal-abierto"
+    />
+
     <div class="mx-auto space-y-7" x-data="cuponesPage()" x-init="init()">
 
         {{-- ===== HEADER ===== --}}
@@ -432,7 +438,7 @@
                 <div class="px-6 py-5 space-y-5 max-h-[75vh] overflow-y-auto">
 
                     {{-- Tipo de cupón --}}
-                    <div>
+                    <div data-onboarding="cupon-tipo">
                         <label class="block text-xs font-medium text-gray-900 dark:text-white mb-2">Tipo de cupón</label>
                         <div class="grid grid-cols-3 gap-3">
                             <button type="button" @click="form.tipo_cupon = '1'; resetBeneficio()"
@@ -470,7 +476,7 @@
                     </div>
 
                     {{-- Nombre y código --}}
-                    <div class="grid grid-cols-2 gap-4">
+                    <div data-onboarding="cupon-nombre" class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs text-gray-900 dark:text-white mb-1">Nombre del cupón</label>
                             <input type="text" x-model="form.nombre" placeholder="Ej. Promoción de verano"
@@ -495,7 +501,7 @@
 
                     {{-- Beneficio tipo 1 --}}
                     <template x-if="form.tipo_cupon === '1'">
-                        <div class="space-y-3 p-4 bg-[#EAF3DE] dark:bg-green-900/10 rounded-xl border border-[#C0DD97] dark:border-green-900/30">
+                        <div data-onboarding="cupon-descuento" class="space-y-3 p-4 bg-[#EAF3DE] dark:bg-green-900/10 rounded-xl border border-[#C0DD97] dark:border-green-900/30">
                             <p class="text-xs font-medium text-[#27500A] dark:text-green-400">Configurar descuento</p>
                             <div class="grid grid-cols-3 gap-3">
                                 <div>
@@ -535,7 +541,7 @@
 
                     {{-- Beneficio tipo 2 --}}
                     <template x-if="form.tipo_cupon === '2'">
-                        <div class="space-y-3 p-4 bg-[#EEEDFE] dark:bg-purple-900/10 rounded-xl border border-[#CECBF6] dark:border-purple-900/30">
+                        <div data-onboarding="cupon-descuento" class="space-y-3 p-4 bg-[#EEEDFE] dark:bg-purple-900/10 rounded-xl border border-[#CECBF6] dark:border-purple-900/30">
                             <p class="text-xs font-medium text-[#26215C] dark:text-purple-400">Seleccionar accesorio gratis</p>
                             <select x-model="form.id_producto_gratis"
                                 class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-gray-400">
@@ -549,7 +555,7 @@
 
                     {{-- Beneficio tipo 3 --}}
                     <template x-if="form.tipo_cupon === '3'">
-                        <div class="space-y-3 p-4 bg-[#FAEEDA] dark:bg-orange-900/10 rounded-xl border border-[#FAC775] dark:border-orange-900/30">
+                        <div data-onboarding="cupon-descuento" class="space-y-3 p-4 bg-[#FAEEDA] dark:bg-orange-900/10 rounded-xl border border-[#FAC775] dark:border-orange-900/30">
                             <p class="text-xs font-medium text-[#412402] dark:text-orange-400">Configurar beneficio de mantenimiento</p>
                             <div class="grid grid-cols-3 gap-2">
                                 <button type="button" @click="form.mantenimiento_tipo = 'gratis'; form.tipo_descuento = null; form.valor_descuento = ''"
@@ -608,7 +614,7 @@
                     </div>
 
                     {{-- Condiciones --}}
-                    <div>
+                    <div data-onboarding="cupon-condiciones">
                         <div class="flex items-center justify-between mb-3">
                             <div>
                                 <p class="text-xs font-medium text-gray-900 dark:text-white">Condiciones</p>
@@ -936,6 +942,7 @@
                     }
 
                     this.crearModal = true;
+                    window.dispatchEvent(new CustomEvent('cupon-modal-abierto'));
                 },
 
                 abrirCrear() {
@@ -959,6 +966,7 @@
                         reglas: [{ tipo: 'sucursal', valor: '' }],
                     };
                     this.crearModal = true;
+                    window.dispatchEvent(new CustomEvent('cupon-modal-abierto'));
                 },
 
                 generarCodigo() {

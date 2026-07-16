@@ -1,5 +1,6 @@
 import './bootstrap';
 import Alpine from 'alpinejs';
+import onboardingTour from './onboarding';
 
 window.Alpine = Alpine;
 
@@ -54,6 +55,8 @@ async function recargarMarcaCard(idMarca) {
 }
 
 document.addEventListener('alpine:init', () => {
+    Alpine.data('onboardingTour', onboardingTour);
+
     Alpine.data('catalogoPage', () => ({
 
         loading: true,

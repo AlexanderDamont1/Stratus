@@ -42,6 +42,17 @@
         {{-- (fuera del zoom para que fixed inset-0 funcione bien)   --}}
 
         @auth
+            @php
+                $onboardingClave = request()->route()?->getName();
+                // Acceso por clave exacta: los nombres de ruta traen puntos
+                // (ej. "administrador.dashboard") que config() interpretaría
+                // como notación anidada si se concatenaran en el string.
+                $onboardingPasos = $onboardingClave ? (config('onboarding')[$onboardingClave] ?? []) : [];
+            @endphp
+            <x-onboarding :steps="$onboardingPasos" :clave="$onboardingClave ?? ''" />
+        @endauth
+
+        @auth
             <script>
                 document.addEventListener('DOMContentLoaded', function () {
 

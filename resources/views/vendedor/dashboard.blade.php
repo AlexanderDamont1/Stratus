@@ -18,6 +18,7 @@
 
             {{-- Botón primario: abre modal sin cámara --}}
             <button
+                data-onboarding="vendedor-ingresar"
                 @click="abrirModal()"
                 class="inline-flex items-center gap-2 bg-gray-900 dark:bg-white text-white
                        dark:text-gray-900 px-4 py-2 rounded-xl text-sm font-semibold
@@ -34,7 +35,7 @@
     <x-flash-messages />
 
     {{-- ═══════ TABLA ═══════ --}}
-    <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800
+    <div data-onboarding="vendedor-tabla" class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800
                 overflow-hidden shadow-sm">
 
         @php

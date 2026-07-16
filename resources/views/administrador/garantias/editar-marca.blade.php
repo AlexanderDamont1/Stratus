@@ -22,7 +22,7 @@
 
                 {{-- Estado activa badge --}}
                 @php $activa = $config?->activa ?? false; @endphp
-                <div class="flex items-center gap-2 bg-white dark:bg-gray-800 border border-gray-200
+                <div data-onboarding="marca-toggle-activa" class="flex items-center gap-2 bg-white dark:bg-gray-800 border border-gray-200
                             dark:border-gray-700 rounded-xl px-4 py-2.5 shadow-sm">
                     <span class="text-xs text-gray-500 dark:text-gray-400 font-medium">Garantía activa</span>
                     <button
@@ -71,7 +71,7 @@
             <div class="space-y-6 lg:col-span-1">
 
                 {{-- ── Sección PDF ── --}}
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+                <div data-onboarding="marca-pdf-section" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
                     <div class="px-5 pt-5 pb-4">
                         <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Póliza PDF</p>
                         <p class="text-xs text-gray-400 mt-0.5">La IA extrae los componentes automáticamente</p>
@@ -162,7 +162,7 @@
                 </div>
 
                 {{-- ── Sección: Política de reemplazo (por marca) ── --}}
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+                <div data-onboarding="marca-politica-section" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
                     <div class="px-5 pt-5 pb-4">
                         <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Política de reemplazo</p>
                         <p class="text-xs text-gray-400 mt-0.5">¿Qué garantía recibe un componente sustituido?</p>
@@ -241,7 +241,7 @@
 
             {{-- Columna derecha: Componentes --}}
             <div class="lg:col-span-2 flex flex-col">
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden flex flex-col flex-1">
+                <div data-onboarding="marca-componentes-section" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden flex flex-col flex-1">
                     <div class="flex items-start justify-between gap-4 px-5 pt-5 pb-4 border-b border-gray-100 dark:border-gray-700">
                         <div>
                             <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Componentes con garantía</p>

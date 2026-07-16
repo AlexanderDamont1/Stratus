@@ -60,7 +60,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
 
         {{-- ── Columna lista ── --}}
-        <div class="lg:col-span-1 space-y-2 overflow-y-auto" style="max-height:calc(100vh - 220px)">
+        <div data-onboarding="ot-lista" class="lg:col-span-1 space-y-2 overflow-y-auto" style="max-height:calc(100vh - 220px)">
 
             <div x-show="cargando" class="flex flex-col gap-2">
                 <template x-for="i in 5" :key="i">
@@ -155,7 +155,7 @@
 
         {{-- ── Panel detalle ── --}}
         <div class="lg:col-span-2">
-            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden"
+            <div data-onboarding="ot-panel-detalle" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden"
                  style="min-height:420px">
 
                 <div x-show="!seleccionada && !cargandoDetalle"

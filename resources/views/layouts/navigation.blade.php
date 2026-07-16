@@ -93,7 +93,9 @@
     }
 </style>
 
-<div x-data="{ open: false }" class="flex overflow-hidden bg-gray-50 dark:bg-gray-950"
+<div x-data="{ open: false }"
+    @onboarding-paso.window="if ($event.detail.selector === '[data-onboarding=\'sidebar-nav\']') open = true"
+    class="flex overflow-hidden bg-gray-50 dark:bg-gray-950"
     style="height: calc(100vh / 0.87);">
 
     {{-- Overlay móvil --}}
@@ -142,7 +144,7 @@
         
 
         {{-- Navegación --}}
-        <nav class="flex-1 px-2 py-3 overflow-y-auto space-y-0.5">
+        <nav data-onboarding="sidebar-nav" class="flex-1 px-2 py-3 overflow-y-auto space-y-0.5">
 
             
             {{-- ============================================================

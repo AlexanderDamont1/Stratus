@@ -118,6 +118,7 @@
         </div>
         <div class="flex flex-col items-end gap-2 sm:flex-row-reverse sm:items-center">
             <button
+                data-onboarding="root-crear-link"
                 @click="createModal = true"
                 class="inline-flex items-center gap-1.5 bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-md text-sm font-medium hover:opacity-90 hover:scale-105 transform transition duration-200 whitespace-nowrap"
             >
@@ -137,7 +138,7 @@
     </div>
 
     {{-- ===== ESTADÍSTICAS ===== --}}
-    <div class="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
+    <div data-onboarding="root-stats" class="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
         {{-- Links --}}
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-2 py-2 sm:px-4 sm:py-3">
             <p class="text-[9px] sm:text-[10px] text-gray-400 uppercase tracking-wider mb-0.5 sm:mb-1">Links</p>
@@ -173,7 +174,7 @@
     </div>
 
     {{-- ===== TABLA DE LINKS ===== --}}
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+    <div data-onboarding="root-tabla-links" class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
         <div class="px-4 py-3 border-b dark:border-gray-700 flex items-center justify-between">
             <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Links de registro</h3>
             <span class="text-xs text-gray-400">{{ $links->total() }} total</span>

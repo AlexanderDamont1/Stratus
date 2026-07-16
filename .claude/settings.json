@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx vite *)",
+      "Bash(php artisan tinker '--execute= *)",
+      "Bash(php artisan *)",
+      "Bash(php -l config/onboarding.php)",
+      "Bash(php -r ' *)",
+      "Bash(netstat -ano)",
+      "Bash(powershell -Command \"Stop-Process -Id 24184 -Force\")",
+      "Bash(mv /tmp/onboarding_qa_hot_backup3 public/hot)",
+      "Bash(grep -v \"^$\")",
+      "Read(//tmp/**)"
+    ]
+  }
+}

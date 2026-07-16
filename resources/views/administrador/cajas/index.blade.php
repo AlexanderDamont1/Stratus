@@ -24,6 +24,7 @@
             <p class="text-xs text-gray-400 mt-0.5">Vista consolidada — todas las sucursales</p>
         </div>
         <button type="button"
+            data-onboarding="cajas-asignar-btn"
             @click="modal = 'crear'; targetId = ''; targetName = ''; modalDesc = 'Selecciona la sucursal para asignarle una caja.'"
             class="bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition">
             + Asignar caja
@@ -37,7 +38,7 @@
         $cajasAbiertas = $snapshots->count();
         $sucSinCaja    = $sucSinCaja ?? 0;
     @endphp
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div data-onboarding="cajas-resumen" class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow px-5 py-4">
             <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Total en cajas</p>
             <p id="ws-idx-total-global"
@@ -70,7 +71,7 @@
         <p class="text-xs text-gray-400">Crea vendedores desde <strong>Admin → Vendedores</strong> para ver sus cajas aquí.</p>
     </div>
     @else
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+    <div data-onboarding="cajas-tarjetas" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         @foreach($sucursales as $suc)
         @php
             $caja    = $cajas[$suc->id_usuario] ?? null;
@@ -202,10 +203,12 @@
             @if($caja)
             <div class="px-5 py-3 border-t dark:border-gray-700 flex flex-wrap gap-2">
                 <a href="{{ route('admin.cajas.show', $suc->id_usuario) }}"
+                   data-onboarding="cajas-ver-detalle"
                    class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                     Ver detalle
                 </a>
                 <button type="button"
+                    data-onboarding="cajas-limites"
                     @click="abrirLimites('{{ $suc->id_usuario }}', '{{ addslashes($suc->nombre_usuario) }}')"
                     class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                     📊 Límites de gasto
@@ -213,6 +216,7 @@
 
                 @if($abierta)
                 <button type="button"
+                    data-onboarding="cajas-ingreso"
                     @click="abrirIngreso('{{ $suc->id_usuario }}', '{{ addslashes($suc->nombre_usuario) }}')"
                     class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                     + Ingreso

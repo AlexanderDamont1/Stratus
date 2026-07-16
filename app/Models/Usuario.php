@@ -32,6 +32,7 @@ class Usuario extends Authenticatable
         'lat',
         'lng',
         'place_id',
+        'onboarding_visto',
     ];
 
     protected $hidden = [
@@ -45,6 +46,7 @@ class Usuario extends Authenticatable
         'email_verified_at' => 'datetime',
         'lat'               => 'float',
         'lng'               => 'float',
+        'onboarding_visto'  => 'array',
     ];
 
     protected function idPrefix(): string
@@ -142,6 +144,27 @@ class Usuario extends Authenticatable
     public function requiereSesionUnica(): bool
     {
         return in_array($this->id_rol, [6, 44]);
+    }
+
+    // ── Onboarding ─────────────────────────────────────────
+
+    public function haVistoOnboarding(string $clave): bool
+    {
+        return in_array($clave, $this->onboarding_visto ?? []);
+    }
+
+    public function marcarOnboardingVisto(string $clave): void
+    {
+        $visto = $this->onboarding_visto ?? [];
+        if (!in_array($clave, $visto)) {
+            $visto[] = $clave;
+            $this->update(['onboarding_visto' => $visto]);
+        }
+    }
+
+    public function reiniciarOnboarding(): void
+    {
+        $this->update(['onboarding_visto' => []]);
     }
 
     public function routeNotificationForMail($notification = null): string

@@ -21,6 +21,7 @@
 
         {{-- Filtros --}}
         <form method="GET" action="{{ route('admin.garantias.reclamos') }}"
+              data-onboarding="reclamos-filtros"
               class="flex flex-wrap items-center gap-2">
             <input type="text" name="num_serie"
                    value="{{ request('num_serie') }}"
@@ -146,7 +147,7 @@
                     </span>
 
                     @if($r->estado !== 'finalizado')
-                    <button @click="abrirGestion({{ json_encode([
+                    <button data-onboarding="reclamos-gestionar-btn" @click="abrirGestion({{ json_encode([
                         'id'              => $r->id_reclamo,
                         'num_serie'       => $r->num_serie,
                         'componente'      => $r->bicicletaGarantia->garantiaDef->nombre_componente ?? $r->clave_componente,

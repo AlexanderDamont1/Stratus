@@ -28,7 +28,7 @@
 
             <div class="hidden lg:flex items-center gap-3 flex-wrap">
                 {{-- Botones de periodo --}}
-                <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700/50 rounded-xl p-1">
+                <div data-onboarding="admin-periodo" class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700/50 rounded-xl p-1">
                     <template x-for="p in presets.filter(x=>x.key!=='custom')" :key="p.key">
                         <button
                             class="text-[11px] font-medium px-3.5 py-1.5 rounded-lg transition-all duration-150"
@@ -50,7 +50,7 @@
                 </div>
 
                 <!-- NUEVO: Selector de sucursal -->
-                <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700/50 rounded-xl p-1">
+                <div data-onboarding="admin-sucursal-selector" class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700/50 rounded-xl p-1">
                     <button
                         class="text-[11px] font-medium px-3.5 py-1.5 rounded-lg transition-all duration-150"
                         :class="!sucursalSeleccionada
@@ -443,7 +443,7 @@
     <div class="hidden lg:block max-w-screen-2xl mx-auto px-6 py-6 space-y-6">
 
         {{-- Panel resumen --}}
-        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6 grid grid-cols-1 lg:grid-cols-[1fr_1px_1fr] gap-6">
+        <div data-onboarding="admin-resumen" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6 grid grid-cols-1 lg:grid-cols-[1fr_1px_1fr] gap-6">
             <div>
                 <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2">Ingresos totales</p>
                 <p class="text-[34px] font-semibold tracking-tight leading-none text-gray-900 dark:text-gray-100 mb-1"
@@ -529,7 +529,7 @@
         </div>
 
         {{-- Gráficas principales: a todo el ancho de la vista --}}
-        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div data-onboarding="admin-graficas" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
 
             {{-- Ingresos --}}
             <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 flex flex-col cursor-pointer"

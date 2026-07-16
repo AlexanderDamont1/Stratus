@@ -42,6 +42,7 @@ use App\Http\Controllers\Sucursal\ReparacionController;
 use App\Http\Controllers\CotizacionController;
 use App\Http\Controllers\Sucursal\StockController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\OnboardingController;
 
 /*
 |--------------------------------------------------------------------------
@@ -157,6 +158,9 @@ Route::middleware('auth')->group(function () {
         $controller = app(AuthenticatedSessionController::class);
         return redirect($controller->dashboardPorRol($usuario->id_rol));
     })->name('dashboard');
+
+    Route::post('/onboarding/completar', [OnboardingController::class, 'completar'])->name('onboarding.completar');
+    Route::post('/onboarding/reiniciar', [OnboardingController::class, 'reiniciar'])->name('onboarding.reiniciar');
 
     Route::get('/verificacion-pendiente', [AuthenticatedSessionController::class, 'verificacionPendiente'])->name('verificacion.pendiente');
 
