@@ -259,7 +259,7 @@ class ColorController extends Controller
 
     // ─── DESTROY ─────────────────────────────────────────────────────────────
 
-    public function destroy(Color $color)
+    public function destroy(Request $request, Color $color)
     {
         $user = auth()->user();
 
@@ -268,10 +268,13 @@ class ColorController extends Controller
         if ($user->id_rol === 5 && !is_null($color->id_negocio)) abort(403);
 
         if ($color->bicicletas()->exists()) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'No se puede eliminar: tiene bicicletas asociadas.'], 422);
+            }
             return back()->with('error', 'No se puede eliminar: tiene bicicletas asociadas.');
         }
 
-        
+
         $idColor   = $color->id_color;
         $idModelo  = $color->id_modelo;
         $idNegocio = $color->id_negocio;
@@ -290,6 +293,10 @@ class ColorController extends Controller
 
         if ($user->id_negocio) {
             CatalogService::invalidateCatalogoCompleto($user->id_negocio);
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => true, 'mensaje' => 'Color eliminado correctamente.']);
         }
 
         return redirect()

@@ -36,14 +36,7 @@ class ConfigController extends Controller
     public function update(Request $request)
     {
         try {
-
             $user = Auth::user();
-
-            Log::info('CONFIG UPDATE START', [
-                'user' => $user->id_usuario ?? null,
-                'negocio' => $user->id_negocio ?? null,
-                'request' => $request->all()
-            ]);
 
             if ($user->id_rol !== 1) {
                 abort(403);
@@ -53,19 +46,33 @@ class ConfigController extends Controller
                 ->get()
                 ->keyBy('clave');
 
-            Log::info('CONFIG DEFINICIONES', [
-                'count' => $definiciones->count()
-            ]);
+            $reglas = [];
+            $atributos = [];
+            foreach ($definiciones as $clave => $def) {
+                if (!$request->has($clave)) {
+                    continue;
+                }
+
+                $reglas[$clave] = match ($def->tipo) {
+                    'numero'     => ['required', 'numeric'],
+                    'porcentaje' => ['required', 'numeric', 'min:0', 'max:100'],
+                    'texto'      => ['nullable', 'string', 'max:255'],
+                    default      => ['nullable'],
+                };
+                $atributos[$clave] = $def->nombre;
+            }
+
+            $mensajes = [
+                'required' => 'El campo :attribute es obligatorio.',
+                'numeric'  => 'El campo :attribute debe ser un número.',
+                'min'      => 'El campo :attribute no puede ser menor a :min.',
+                'max'      => 'El campo :attribute no puede ser mayor a :max.',
+                'string'   => 'El campo :attribute debe ser texto.',
+            ];
+
+            $request->validate($reglas, $mensajes, $atributos);
 
             foreach ($definiciones as $clave => $def) {
-
-                Log::info('CONFIG LOOP', [
-                    'clave' => $clave,
-                    'id_ncf' => $def->id_ncf,
-                    'has_request' => $request->has($clave),
-                    'request_value' => $request->input($clave)
-                ]);
-
                 if (!$request->has($clave)) {
                     continue;
                 }
@@ -74,12 +81,7 @@ class ConfigController extends Controller
                     ? json_encode($request->input($clave, []))
                     : $request->input($clave);
 
-                Log::info('CONFIG VALOR PROCESADO', [
-                    'clave' => $clave,
-                    'valor' => $valor
-                ]);
-
-                $registro = NegocioConfigValor::updateOrCreate(
+                NegocioConfigValor::updateOrCreate(
                     [
                         'id_negocio' => $user->id_negocio,
                         'id_ncf' => $def->id_ncf
@@ -88,32 +90,26 @@ class ConfigController extends Controller
                         'valor' => $valor
                     ]
                 );
-
-                Log::info('CONFIG GUARDADO', [
-                    'saved' => $registro->toArray()
-                ]);
             }
 
             CatalogService::invalidateConfigNegocio($user->id_negocio);
-
-            Log::info('CONFIG CACHE INVALIDATED');
 
             return back()->with(
                 'success',
                 'Configuración guardada correctamente.'
             );
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
         } catch (\Throwable $e) {
 
             Log::error('CONFIG UPDATE ERROR', [
                 'message' => $e->getMessage(),
                 'line' => $e->getLine(),
                 'file' => $e->getFile(),
-                'trace' => $e->getTraceAsString()
             ]);
 
-            dd($e);
-
+            return back()->with('error', 'Ocurrió un error al guardar la configuración.');
         }
     }
 }

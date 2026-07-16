@@ -48,12 +48,19 @@
                 'radio'          => collect($opciones)->firstWhere('value', $valorActual)['label'] ?? $valorActual,
                 'toggle'         => $valorActual ? 'Activado' : 'Desactivado',
                 'checkbox_multi' => is_array($valorActual) ? count($valorActual) . ' seleccionadas' : '—',
+                'porcentaje'     => $valorActual . '%',
                 default          => $valorActual,
             };
             $iconPath = $def->icono ?? 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z';
+
+            $valorParaJs = match($def->tipo) {
+                'toggle'         => (bool) $valorActual,
+                'checkbox_multi' => is_array($valorActual) ? $valorActual : [],
+                default          => (string) $valorActual,
+            };
         @endphp
 
-        <div x-data="{ open: false }" class="border-b dark:border-gray-700 last:border-b-0">
+        <div x-data="{ open: {{ $errors->has($def->clave) ? 'true' : 'false' }} }" class="border-b dark:border-gray-700 last:border-b-0">
 
             {{-- Fila --}}
             <button type="button" @click="open = !open"
@@ -95,20 +102,20 @@
                  x-transition:leave-end="opacity-0 -translate-y-1"
                  class="border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30">
 
-                <form method="POST" action="{{ route('admin.config.update') }}" class="px-6 py-5 space-y-4">
+                <form method="POST" action="{{ route('admin.config.update') }}" class="px-6 py-5 space-y-4"
+                      x-data='itemConfig(@json($def->tipo, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP), @json($valorParaJs, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP))'>
                     @csrf
 
                     {{-- RADIO --}}
                     @if($def->tipo === 'radio')
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3"
-                         x-data="{ modo: '{{ $valorActual }}' }">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         @foreach($opciones as $opcion)
-                        <label class="relative flex flex-col rounded-lg border-2 p-4 cursor-pointer transition-all duration-150
-                                      {{ $valorActual === $opcion['value']
-                                          ? 'border-gray-800 dark:border-white bg-white dark:bg-gray-700/40'
-                                          : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/40 hover:border-gray-300 dark:hover:border-gray-500' }}">
+                        <label class="relative flex flex-col rounded-lg border-2 p-4 cursor-pointer transition-all duration-150"
+                               :class="valor === '{{ $opcion['value'] }}'
+                                   ? 'border-gray-800 dark:border-white bg-white dark:bg-gray-700/40'
+                                   : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/40 hover:border-gray-300 dark:hover:border-gray-500'">
                             <input type="radio" name="{{ $def->clave }}" value="{{ $opcion['value'] }}"
-                                   x-model="modo" class="absolute opacity-0 w-full h-full cursor-pointer">
+                                   x-model="valor" class="absolute opacity-0 w-full h-full cursor-pointer">
                             <div class="flex items-start justify-between gap-3">
                                 <div class="flex-1 min-w-0">
                                     <span class="block text-sm font-medium text-gray-800 dark:text-gray-200">
@@ -120,13 +127,13 @@
                                     </span>
                                     @endif
                                 </div>
-                                <div x-show="modo === '{{ $opcion['value'] }}'"
+                                <div x-show="valor === '{{ $opcion['value'] }}'"
                                      class="shrink-0 w-5 h-5 rounded-full bg-gray-900 dark:bg-white flex items-center justify-center mt-0.5">
                                     <svg class="w-3 h-3 text-white dark:text-gray-900" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                                     </svg>
                                 </div>
-                                <div x-show="modo !== '{{ $opcion['value'] }}'"
+                                <div x-show="valor !== '{{ $opcion['value'] }}'"
                                      class="shrink-0 w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 mt-0.5">
                                 </div>
                             </div>
@@ -136,27 +143,26 @@
 
                     {{-- TOGGLE --}}
                     @elseif($def->tipo === 'toggle')
-                    <div x-data="{ activo: {{ $valorActual ? 'true' : 'false' }} }" class="flex items-center gap-3">
-                        <input type="hidden" name="{{ $def->clave }}" :value="activo ? '1' : '0'">
-                        <button type="button" @click="activo = !activo"
+                    <div class="flex items-center gap-3">
+                        <input type="hidden" name="{{ $def->clave }}" :value="valor ? '1' : '0'">
+                        <button type="button" @click="valor = !valor"
                                 class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none"
-                                :class="activo ? 'bg-gray-900 dark:bg-white' : 'bg-gray-300 dark:bg-gray-600'">
+                                :class="valor ? 'bg-gray-900 dark:bg-white' : 'bg-gray-300 dark:bg-gray-600'">
                             <span class="inline-block h-4 w-4 transform rounded-full bg-white dark:bg-gray-900 transition-transform duration-200 shadow"
-                                  :class="activo ? 'translate-x-6' : 'translate-x-1'"></span>
+                                  :class="valor ? 'translate-x-6' : 'translate-x-1'"></span>
                         </button>
                         <span class="text-sm text-gray-700 dark:text-gray-300"
-                              x-text="activo ? 'Activado' : 'Desactivado'"></span>
+                              x-text="valor ? 'Activado' : 'Desactivado'"></span>
                     </div>
 
                     {{-- CHECKBOX MULTI --}}
                     @elseif($def->tipo === 'checkbox_multi')
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         @foreach($opciones as $opcion)
-                        @php $checked = is_array($valorActual) && in_array($opcion['value'], $valorActual); @endphp
                         <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700
                                       hover:bg-white dark:hover:bg-gray-800 cursor-pointer transition-colors">
                             <input type="checkbox" name="{{ $def->clave }}[]" value="{{ $opcion['value'] }}"
-                                   {{ $checked ? 'checked' : '' }}
+                                   x-model="valor"
                                    class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 focus:ring-gray-500">
                             <div>
                                 <span class="block text-sm font-medium text-gray-800 dark:text-gray-200">{{ $opcion['label'] }}</span>
@@ -170,28 +176,44 @@
 
                     {{-- TEXTO --}}
                     @elseif($def->tipo === 'texto')
-                    <input type="text" name="{{ $def->clave }}" value="{{ $valorActual }}"
+                    <input type="text" name="{{ $def->clave }}" value="{{ $valorActual }}" x-model="valor"
                            class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white
                                   px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
 
                     {{-- NUMERO --}}
                     @elseif($def->tipo === 'numero')
-                    <input type="number" name="{{ $def->clave }}" value="{{ $valorActual }}"
+                    <input type="number" name="{{ $def->clave }}" value="{{ $valorActual }}" x-model.number="valor"
                            class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white
                                   px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
+
+                    {{-- PORCENTAJE --}}
+                    @elseif($def->tipo === 'porcentaje')
+                    <div class="relative">
+                        <input type="number" name="{{ $def->clave }}" value="{{ $valorActual }}" x-model.number="valor"
+                               min="0" max="100" step="0.01"
+                               class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white
+                                      px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
+                        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none">%</span>
+                    </div>
                     @endif
+
+                    @error($def->clave)
+                        <p class="text-xs text-red-500">{{ $message }}</p>
+                    @enderror
 
                     {{-- Guardar --}}
                     <div class="flex justify-end pt-2 border-t dark:border-gray-700">
                         <button type="submit"
+                                :disabled="!dirty"
                                 class="inline-flex items-center gap-2 px-4 py-2
                                        bg-gray-900 dark:bg-white text-white dark:text-gray-900
                                        text-sm font-semibold rounded-md hover:opacity-90
-                                       active:scale-[0.98] transition-all duration-150">
+                                       active:scale-[0.98] transition-all duration-150
+                                       disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                             </svg>
-                            Guardar
+                            <span x-text="dirty ? 'Guardar' : 'Sin cambios'"></span>
                         </button>
                     </div>
                 </form>
@@ -207,4 +229,22 @@
     </p>
 
 </div>
+
+<script>
+    function itemConfig(tipo, original) {
+        return {
+            tipo,
+            original,
+            valor: Array.isArray(original) ? [...original] : original,
+            get dirty() {
+                if (Array.isArray(this.valor)) {
+                    const a = [...this.valor].map(String).sort();
+                    const b = [...this.original].map(String).sort();
+                    return JSON.stringify(a) !== JSON.stringify(b);
+                }
+                return String(this.valor) !== String(this.original);
+            },
+        };
+    }
+</script>
 </x-app-layout>

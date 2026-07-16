@@ -152,7 +152,7 @@ class MarcaController extends Controller
 
     // ─── DESTROY ─────────────────────────────────────────────────────────────
 
-    public function destroy(Marca $marca)
+    public function destroy(Request $request, Marca $marca)
     {
         $user = auth()->user();
 
@@ -160,10 +160,13 @@ class MarcaController extends Controller
         if ($marca->id_negocio !== $user->id_negocio) abort(403);
 
         if ($marca->modelos()->exists()) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'No se puede eliminar: tiene modelos asociados.'], 422);
+            }
             return back()->with('error', 'No se puede eliminar: tiene modelos asociados.');
         }
 
-       
+
         $idMarca   = $marca->id_marca;
         $idNegocio = $marca->id_negocio;
 
@@ -178,6 +181,10 @@ class MarcaController extends Controller
 
         CatalogService::invalidateMarca($idMarca, $idNegocio);
         CatalogService::invalidateCatalogoCompleto($user->id_negocio);
+
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => true, 'mensaje' => 'Marca eliminada correctamente.']);
+        }
 
         return redirect()
             ->route($this->routeByRol('marcas'))

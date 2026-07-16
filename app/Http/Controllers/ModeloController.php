@@ -213,7 +213,7 @@ class ModeloController extends Controller
 
     // ─── DESTROY ─────────────────────────────────────────────────────────────
 
-    public function destroy(Modelo $modelo)
+    public function destroy(Request $request, Modelo $modelo)
     {
         $user = auth()->user();
 
@@ -222,6 +222,9 @@ class ModeloController extends Controller
         if ($user->id_rol === 5 && !is_null($modelo->id_negocio)) abort(403);
 
         if ($modelo->bicicletas()->exists()) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'No se puede eliminar: tiene bicicletas asociadas.'], 422);
+            }
             return back()->with('error', 'No se puede eliminar: tiene bicicletas asociadas.');
         }
 
@@ -229,7 +232,7 @@ class ModeloController extends Controller
         $idNegocio = $modelo->id_negocio;
         $idMarca   = $modelo->id_marca;
 
-      
+
 
         // Eliminación en cascada desde PHP
         \App\Models\Color::where('id_modelo', $idModelo)->delete();
@@ -244,10 +247,14 @@ class ModeloController extends Controller
             $idMarca,
         );
 
-       
+
         CatalogService::invalidateModelo($idModelo, $idNegocio);
         if ($user->id_negocio) {
             CatalogService::invalidateCatalogoCompleto($user->id_negocio);
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => true, 'mensaje' => 'Modelo y sus datos asociados eliminados correctamente.']);
         }
 
         return redirect()

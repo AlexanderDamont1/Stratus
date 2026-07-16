@@ -108,7 +108,7 @@ class ModeloVoltajeController extends Controller
 
     // ─── DESTROY ─────────────────────────────────────────────────────────────
 
-    public function destroy(string $id)
+    public function destroy(Request $request, string $id)
     {
         $user     = auth()->user();
         $relacion = ModeloVoltaje::findOrFail($id);
@@ -125,6 +125,9 @@ class ModeloVoltajeController extends Controller
             ->exists();
 
         if ($tieneBicicletas) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'No se puede eliminar: hay bicicletas con esta combinación.'], 422);
+            }
             return back()->with('error', 'No se puede eliminar: hay bicicletas con esta combinación.');
         }
 
@@ -146,6 +149,10 @@ class ModeloVoltajeController extends Controller
         CatalogService::invalidateVoltaje($idVoltaje, $idNegocio);
         if ($user->id_negocio) {
             CatalogService::invalidateCatalogoCompleto($user->id_negocio);
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => true, 'mensaje' => 'Relación eliminada correctamente.']);
         }
 
         return redirect()
