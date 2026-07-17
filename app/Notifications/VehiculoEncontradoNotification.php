@@ -31,16 +31,34 @@ class VehiculoEncontradoNotification extends Notification
         $fecha  = $this->reporte->encontrado_at?->format('d/m/Y H:i') ?? now()->format('d/m/Y H:i');
 
         return (new MailMessage)
-            ->subject('¡Tu vehículo ha sido encontrado! — ArrowX')
-            ->greeting("Hola, {$notifiable->nombre_cliente}")
-            ->line('¡Buenas noticias! Tu vehículo con reporte de robo ha sido detectado en la red ArrowX.')
-            ->line("**Vehículo:** {$marca} {$modelo}")
-            ->line("**N° de serie:** {$serie}")
-            ->line("**Folio del reporte:** {$folio}")
-            ->line("**Detectado en:** {$sucursal}")
-            ->line("**Fecha de detección:** {$fecha}")
-            ->line('El vehículo ha sido resguardado por la sucursal. Comunícate con ellos para coordinar la recuperación.')
-            ->line('Gracias por confiar en la tecnología de **CloudLabs**.')
-            ->salutation('Equipo ArrowX — CloudLabs');
+            ->subject('¡Tu vehículo ha sido encontrado! — ArrowK')
+            ->view('emails.vehiculo-encontrado', [
+                'nombreCliente' => $notifiable->nombre_cliente,
+                'marca'         => $marca,
+                'modelo'        => $modelo,
+                'serie'         => $serie,
+                'folio'         => $folio,
+                'sucursal'      => $sucursal,
+                'fecha'         => $fecha,
+                'ubicacionUrl'  => $this->ubicacionUrl(),
+            ]);
+    }
+
+    // Enlace a Google Maps de la sucursal que detectó el vehículo. Usa
+    // coordenadas si la sucursal las tiene cargadas; si no, busca por su
+    // dirección. Si no hay ninguna de las dos, no hay enlace que mostrar.
+    protected function ubicacionUrl(): ?string
+    {
+        $usuario = $this->reporte->usuarioEncontrado;
+
+        if ($usuario?->lat && $usuario?->lng) {
+            return "https://www.google.com/maps?q={$usuario->lat},{$usuario->lng}";
+        }
+
+        if (!empty($usuario?->direccion)) {
+            return 'https://www.google.com/maps/search/?api=1&query=' . urlencode($usuario->direccion);
+        }
+
+        return null;
     }
 }

@@ -26,14 +26,13 @@ class ReporteRoboConfirmadoNotification extends Notification
         $folio  = $this->reporte->id_reporte;
 
         return (new MailMessage)
-            ->subject('Reporte de robo confirmado — ArrowX')
-            ->greeting("Hola, {$notifiable->nombre_cliente}")
-            ->line('Tu reporte de robo ha sido **confirmado** exitosamente.')
-            ->line("**Vehículo:** {$marca} {$modelo}")
-            ->line("**N° de serie:** {$serie}")
-            ->line("**Folio del reporte:** {$folio}")
-            ->line('Tu vehículo ha sido marcado en toda la red ArrowX. Si alguna sucursal detecta el vehículo, serás notificado de inmediato.')
-            ->line('Guarda tu folio para cualquier aclaración.')
-            ->salutation('Equipo ArrowX — CloudLabs');
+            ->subject('Reporte de robo confirmado — ArrowK')
+            ->view('emails.robo-confirmado', [
+                'nombreCliente' => $notifiable->nombre_cliente,
+                'marca'         => $marca,
+                'modelo'        => $modelo,
+                'serie'         => $serie,
+                'folio'         => $folio,
+            ]);
     }
 }

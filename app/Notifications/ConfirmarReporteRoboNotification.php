@@ -27,13 +27,12 @@ class ConfirmarReporteRoboNotification extends Notification
 
         return (new MailMessage)
             ->subject('Reporte de robo registrado — confirma tu vehículo')
-            ->greeting("Hola, {$notifiable->nombre_cliente}")
-            ->line('Hemos recibido un reporte de robo para uno de tus vehículos registrados en ArrowX.')
-            ->line("**Vehículo:** {$marca} {$modelo}")
-            ->line("**N° de serie:** {$serie}")
-            ->line('Si fuiste tú quien reportó el robo, confirma haciendo clic en el botón de abajo. El enlace expira en **48 horas**.')
-            ->action('Confirmar reporte de robo', $url)
-            ->line('Si no reconoces este reporte, ignora este correo.')
-            ->salutation('Equipo ArrowX — CloudLabs');
+            ->view('emails.confirmar-robo', [
+                'nombreCliente' => $notifiable->nombre_cliente,
+                'marca'         => $marca,
+                'modelo'        => $modelo,
+                'serie'         => $serie,
+                'url'           => $url,
+            ]);
     }
 }

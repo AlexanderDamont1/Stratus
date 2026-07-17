@@ -33,6 +33,7 @@ class ReporteRobo extends Model
         'encontrado_at',
         'entregado_at',
         'id_negocio_encontrado',
+        'id_usuario_encontrado',
         'notas',
     ];
 
@@ -98,5 +99,10 @@ class ReporteRobo extends Model
     public function negocioEncontrado()
     {
         return $this->belongsTo(Negocio::class, 'id_negocio_encontrado', 'id_negocio');
+    }
+
+    public function usuarioEncontrado()
+    {
+        return $this->belongsTo(Usuario::class, 'id_usuario_encontrado', 'id_usuario');
     }
 }   

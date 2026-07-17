@@ -94,6 +94,8 @@
             </button>
         </div>
 
+        <p x-show="serieError" x-cloak class="text-xs text-red-500 mt-1" x-text="serieError"></p>
+
         {{-- Reset --}}
         <button x-show="resultado !== null" @click="resetear()"
             class="mt-3 text-xs text-gray-400 hover:text-red-500 transition">
@@ -294,6 +296,35 @@
         </div>
     </div>
 
+    {{-- ===== MODAL: UNIDAD NO VENDIDA (no se puede reportar como robada) ===== --}}
+    <div x-show="noVendidaModal" x-cloak
+        x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0"
+        x-transition:leave="transition ease-in duration-150" x-transition:leave-end="opacity-0"
+        class="fixed inset-0 bg-black/50 backdrop-blur-[2px] flex items-center justify-center z-50 px-4">
+        <div x-show="noVendidaModal"
+            x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95"
+            x-transition:leave="transition ease-in duration-150" x-transition:leave-end="opacity-0 scale-95"
+            class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-sm" @click.stop>
+
+            <div class="flex flex-col items-center text-center gap-3 mb-5">
+                <div class="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                    <svg class="w-6 h-6 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <h3 class="text-base font-semibold text-gray-900 dark:text-white">No se puede registrar como robada</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    Esta unidad todavía no ha sido vendida a un cliente, así que no es posible levantar un reporte de robo sobre ella.
+                </p>
+            </div>
+
+            <button @click="noVendidaModal = false; resetear()"
+                class="w-full bg-gray-900 dark:bg-white dark:text-gray-900 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition active:scale-95">
+                Entendido
+            </button>
+        </div>
+    </div>
+
     {{-- ===== ALPINE JS ===== --}}
     <script>
 
@@ -341,8 +372,10 @@
             buscando:     false,
             levantando:   false,
             resultado:    null,
-            exitoModal:   false,
-            roboModal:    false,
+            serieError:   '',
+            exitoModal:     false,
+            roboModal:      false,
+            noVendidaModal: false,
             folioReporte: '',
             roboInfo:     { folio: '' },
             flashVisible: false,
@@ -361,14 +394,16 @@
             },
 
             resetear() {
-                this.serie     = '';
-                this.notas     = '';
-                this.resultado = null;
+                this.serie      = '';
+                this.notas      = '';
+                this.resultado  = null;
+                this.serieError = '';
             },
 
             async buscarSerie() {
                 if (!this.serie.trim()) return;
-                this.buscando = true;
+                this.buscando   = true;
+                this.serieError = '';
                 try {
                     const res = await fetch(`{{ route('robo.buscar') }}?num_serie=${this.serie.toUpperCase().trim()}`, {
                         headers: {
@@ -385,15 +420,20 @@
                         return;
                     }
 
+                    if (data.error === 'no_vendida') {
+                        this.noVendidaModal = true;
+                        return;
+                    }
+
                     if (!res.ok) {
-                        this.flash(data.mensaje || 'Vehículo no encontrado.', 'error');
+                        this.serieError = 'Por favor intenta con otro número de serie.';
                         return;
                     }
 
                     this.resultado = data;
 
                 } catch {
-                    this.flash('Error de conexión.', 'error');
+                    this.serieError = 'Por favor intenta con otro número de serie.';
                 } finally {
                     this.buscando = false;
                 }

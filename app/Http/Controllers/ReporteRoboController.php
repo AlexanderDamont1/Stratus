@@ -38,6 +38,26 @@ class ReporteRoboController extends Controller
             return response()->json(['ok' => false, 'mensaje' => 'Vehículo no encontrado en el sistema ArrowX.'], 404);
         }
 
+        // 1. Ya tiene un reporte de robo activo → no se puede levantar otro
+        if (RoboService::estaReportada($numSerie)) {
+            $reporte = RoboService::getReporteActivo($numSerie);
+            return response()->json([
+                'ok'      => false,
+                'error'   => 'ya_reportada',
+                'mensaje' => 'Este vehículo ya tiene un reporte de robo activo.',
+                'folio'   => $reporte?->id_reporte,
+            ], 409);
+        }
+
+        // 2. Solo se puede reportar como robada una unidad vendida (status 2)
+        if ($bici->status != 2) {
+            return response()->json([
+                'ok'      => false,
+                'error'   => 'no_vendida',
+                'mensaje' => 'Esta unidad no se puede registrar como robada porque todavía no ha sido vendida a un cliente.',
+            ], 422);
+        }
+
         // Buscar la venta para datos de compra
         $venta = \App\Models\Venta::with(['negocio'])
             ->whereHas('detalles', fn($q) => $q->where('num_serie', $numSerie))
@@ -159,7 +179,7 @@ class ReporteRoboController extends Controller
 
         // Si está confirmado y lo detecta otra sucursal → marcar encontrado
         if ($reporte?->esConfirmado()) {
-            RoboService::marcarEncontrado($numSerie, $user->id_negocio);
+            RoboService::marcarEncontrado($numSerie, $user->id_negocio, $user->id_usuario);
             $reporte->refresh();
         }
 

@@ -91,15 +91,10 @@ class Cotizacion extends Model
     {
         static::creating(function (self $model) {
             if (empty($model->id_cotizacion)) {
-                $ultimo = static::orderByDesc('id_cotizacion')
-                    ->lockForUpdate()
-                    ->value('id_cotizacion');
-
-                $num = $ultimo
-                    ? (int) substr($ultimo, strrpos($ultimo, '-') + 1) + 1
-                    : 1;
-
-                $model->id_cotizacion = 'COT-' . str_pad($num, 5, '0', STR_PAD_LEFT);
+                $model->id_cotizacion = 'COT-'
+                    . now()->format('Ymd')
+                    . strtoupper(substr(str_shuffle('ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 0, 4))
+                    . random_int(100, 999);
             }
 
             if (empty($model->token)) {

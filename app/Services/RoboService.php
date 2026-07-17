@@ -131,8 +131,9 @@ class RoboService
     }
 
     public static function marcarEncontrado(
-        string $numSerie,
-        string $idNegocioEncontrado,
+        string  $numSerie,
+        string  $idNegocioEncontrado,
+        ?string $idUsuarioEncontrado = null,
     ): ?ReporteRobo {
         $reporte = ReporteRobo::where('num_serie', $numSerie)
             ->where('estado', ReporteRobo::CONFIRMADO)
@@ -142,9 +143,10 @@ class RoboService
         if (!$reporte) return null;
 
         $reporte->update([
-            'estado'                => ReporteRobo::EN_CUSTODIA,
-            'encontrado_at'         => now(),
-            'id_negocio_encontrado' => $idNegocioEncontrado,
+            'estado'                 => ReporteRobo::EN_CUSTODIA,
+            'encontrado_at'          => now(),
+            'id_negocio_encontrado'  => $idNegocioEncontrado,
+            'id_usuario_encontrado'  => $idUsuarioEncontrado,
         ]);
 
         // Se queda en el set global — sigue bloqueado hasta entrega física

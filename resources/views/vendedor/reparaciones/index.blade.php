@@ -237,57 +237,6 @@
                                 </div>
                             </div>
 
-                            {{-- ── Alerta cotización rechazada ── --}}
-                            <template x-if="detalle.cotizacion && detalle.cotizacion.respuesta === 0 && detalle.tipo === 'reparacion'">
-                                <div class="flex items-start gap-3 bg-red-50 dark:bg-red-900/20
-                                            border border-red-200 dark:border-red-800 rounded-xl px-4 py-3">
-                                    <svg class="w-4 h-4 text-red-500 dark:text-red-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
-                                    </svg>
-                                    <div class="min-w-0">
-                                        <p class="text-xs font-semibold text-red-700 dark:text-red-400">El cliente rechazó la cotización</p>
-                                        <p class="text-xs text-red-600 dark:text-red-500 mt-0.5">
-                                            Contáctalo para decidir si se cancela o se negocia:
-                                            <span class="font-semibold font-mono"
-                                                  x-text="detalle.cliente_telefono ?? detalle.cliente?.telefono ?? '—'"></span>
-                                        </p>
-                                        <div class="flex gap-2 mt-2">
-                                            <a :href="'tel:'+(detalle.cliente_telefono ?? detalle.cliente?.telefono ?? '')"
-                                               class="text-[11px] font-medium px-2.5 py-1 rounded-lg
-                                                      bg-red-100 dark:bg-red-800/30 text-red-700 dark:text-red-400
-                                                      hover:bg-red-200 dark:hover:bg-red-800/50 transition">
-                                                📞 Llamar
-                                            </a>
-                                            <a :href="'https://wa.me/'+(detalle.cliente_telefono ?? detalle.cliente?.telefono ?? '').replace(/\D/g,'')"
-                                               target="_blank"
-                                               class="text-[11px] font-medium px-2.5 py-1 rounded-lg
-                                                      bg-green-100 dark:bg-green-800/30 text-green-700 dark:text-green-400
-                                                      hover:bg-green-200 dark:hover:bg-green-800/50 transition">
-                                                WhatsApp
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </template>
-
-                            {{-- ── Alerta cotización expirada sin respuesta ── --}}
-                            <template x-if="detalle.cotizacion && !detalle.cotizacion.respuesta && detalle.cotizacion.expires_at && new Date(detalle.cotizacion.expires_at) < new Date()">
-                                <div class="flex items-start gap-3 bg-amber-50 dark:bg-amber-900/20
-                                            border border-amber-200 dark:border-amber-700 rounded-xl px-4 py-3">
-                                    <svg class="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                    </svg>
-                                    <div>
-                                        <p class="text-xs font-semibold text-amber-700 dark:text-amber-400">Cotización expirada sin respuesta</p>
-                                        <p class="text-xs text-amber-600 dark:text-amber-500 mt-0.5">
-                                            El cliente no respondió a tiempo. Comunícate o resuelve manualmente.
-                                            Tel: <span class="font-semibold font-mono"
-                                                       x-text="detalle.cliente_telefono ?? detalle.cliente?.telefono ?? '—'"></span>
-                                        </p>
-                                    </div>
-                                </div>
-                            </template>
-
                             {{-- ── Problema reportado + diagnóstico ── --}}
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
@@ -468,110 +417,141 @@
                                                                  focus:outline-none focus:ring-1 focus:ring-gray-400 resize-none"></textarea>
                                             </div>
 
-                                            <div>
-                                                <label class="block text-xs text-gray-400 mb-1">Costo mano de obra</label>
-                                                <input type="number" x-model="formDiag.costoManoObra" min="0" step="0.01"
-                                                       placeholder="0.00"
-                                                       class="w-full text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2
-                                                              bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                                                              focus:outline-none focus:ring-1 focus:ring-gray-400 font-mono">
-                                            </div>
-
-                                            {{-- ── Piezas con buscador de catálogo ── --}}
-                                            <div>
-                                                <div class="flex items-center justify-between mb-1.5">
-                                                    <label class="text-xs text-gray-400">Piezas / componentes</label>
-                                                    <button type="button" @click="agregarPieza()"
-                                                            class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700
-                                                                   dark:hover:text-gray-200 underline underline-offset-2">
-                                                        + Agregar manual
-                                                    </button>
-                                                </div>
-
-                                                {{-- Buscador catálogo --}}
-                                                <div class="relative mb-2">
-                                                    <input type="text"
-                                                           x-model="busquedaPieza"
-                                                           @input.debounce.400ms="buscarPiezas()"
-                                                           @focus="buscarPiezas()"
-                                                           @keydown.escape="resultadosPiezas = []"
-                                                           placeholder="Buscar pieza por nombre o clave..."
-                                                           class="w-full text-xs border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2
-                                                                  bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                                                                  focus:outline-none focus:ring-1 focus:ring-gray-400">
-                                                    <svg x-show="buscandoPieza"
-                                                         class="animate-spin w-3.5 h-3.5 text-gray-400 absolute right-3 top-2"
-                                                         fill="none" viewBox="0 0 24 24">
-                                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                                                    </svg>
-
-                                                    {{-- Dropdown resultados --}}
-                                                    <div x-show="resultadosPiezas.length > 0"
-                                                         x-transition:enter="transition ease-out duration-100"
-                                                         x-transition:enter-start="opacity-0 -translate-y-1"
-                                                         class="absolute z-20 top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800
-                                                                border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg overflow-hidden">
-                                                        <template x-for="rp in resultadosPiezas" :key="rp.id_pieza">
-                                                            <button type="button"
-                                                                    @click="seleccionarPiezaCatalogo(rp)"
-                                                                    class="w-full flex items-center justify-between gap-3 px-3 py-2.5
-                                                                           hover:bg-gray-50 dark:hover:bg-gray-700 transition text-left">
-                                                                <div class="min-w-0">
-                                                                    <div class="flex items-center gap-1.5 flex-wrap">
-                                                                        <span class="text-xs font-medium text-gray-800 dark:text-gray-200"
-                                                                              x-text="rp.nombre"></span>
-                                                                        <span class="text-[10px] font-mono bg-gray-100 dark:bg-gray-700
-                                                                                     text-gray-500 px-1 rounded"
-                                                                              x-text="rp.clave"></span>
-                                                                        <span x-show="!rp.compatible"
-                                                                              class="text-[10px] bg-amber-50 dark:bg-amber-900/20
-                                                                                     text-amber-600 dark:text-amber-400 px-1.5 rounded
-                                                                                     border border-amber-200 dark:border-amber-700">
-                                                                            no verificada
-                                                                        </span>
-                                                                    </div>
-                                                                    <p class="text-[10px] mt-0.5"
-                                                                       :class="rp.stock_bajo
-                                                                           ? 'text-red-500 dark:text-red-400'
-                                                                           : 'text-gray-400'"
-                                                                       x-text="'Stock: ' + rp.stock_actual + (rp.stock_bajo ? ' ⚠ stock bajo' : '')">
-                                                                    </p>
-                                                                </div>
-                                                                <span class="text-xs font-semibold text-gray-600 dark:text-gray-300 shrink-0"
-                                                                      x-text="'$'+Number(rp.precio_venta).toLocaleString('es-MX')"></span>
-                                                            </button>
-                                                        </template>
-                                                    </div>
-                                                </div>
-
-                                                {{-- Lista piezas agregadas --}}
+                                            {{-- Mantenimiento/garantía: colapsado por defecto — solo un botón "Añadir Piezas" --}}
+                                            <template x-if="detalle.tipo !== 'reparacion' && !mostrarFormPiezas()">
                                                 <div class="space-y-2">
-                                                    <template x-for="(p, idx) in formDiag.piezas" :key="idx">
-                                                        <div class="grid grid-cols-12 gap-1.5 items-center">
-                                                            <input type="text" x-model="p.descripcion"
-                                                                   placeholder="Descripción"
-                                                                   :readonly="!!p.id_pieza"
-                                                                   :class="p.id_pieza ? 'bg-gray-50 dark:bg-gray-600' : ''"
-                                                                   class="col-span-5 text-xs border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5
-                                                                          bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                                                                          focus:outline-none focus:ring-1 focus:ring-gray-400">
-                                                            <input type="number" x-model="p.cantidad" min="1" placeholder="Cant"
-                                                                   class="col-span-2 text-xs border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5
-                                                                          bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                                                                          focus:outline-none focus:ring-1 focus:ring-gray-400 text-center">
-                                                            <input type="number" x-model="p.precio_unitario" min="0" step="0.01" placeholder="Precio"
-                                                                   class="col-span-4 text-xs border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5
-                                                                          bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                                                                          focus:outline-none focus:ring-1 focus:ring-gray-400 font-mono">
-                                                            <button type="button" @click="formDiag.piezas.splice(idx, 1)"
-                                                                    class="col-span-1 text-gray-400 hover:text-red-500 transition text-center">×</button>
+                                                    <template x-if="detalle.tipo === 'garantia' && piezasGarantiaAuto().length > 0">
+                                                        <div class="space-y-1.5">
+                                                            <p class="text-xs text-gray-400">Pieza cubierta por garantía</p>
+                                                            <template x-for="(p, idx) in piezasGarantiaAuto()" :key="idx">
+                                                                <div class="flex items-center justify-between bg-purple-50 dark:bg-purple-900/20
+                                                                            border border-purple-100 dark:border-purple-800 rounded-lg px-3 py-2">
+                                                                    <span class="text-xs text-purple-700 dark:text-purple-400" x-text="p.descripcion"></span>
+                                                                    <span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full
+                                                                                 bg-purple-100 dark:bg-purple-800/30 text-purple-700 dark:text-purple-400">
+                                                                        Garantía
+                                                                    </span>
+                                                                </div>
+                                                            </template>
                                                         </div>
                                                     </template>
-                                                    <p x-show="formDiag.piezas.length === 0"
-                                                       class="text-xs text-gray-400 italic">Sin piezas — solo mano de obra</p>
+                                                    <button type="button" @click="mostrarPiezasExtra = true"
+                                                            class="text-xs font-medium text-gray-600 dark:text-gray-300 border border-gray-200
+                                                                   dark:border-gray-600 rounded-lg px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                                                        + Añadir Piezas
+                                                    </button>
                                                 </div>
-                                            </div>
+                                            </template>
+
+                                            {{-- Reparación: siempre visible. Mantenimiento/garantía: solo tras pulsar "Añadir Piezas" --}}
+                                            <template x-if="detalle.tipo === 'reparacion' || mostrarFormPiezas()">
+                                                <div class="space-y-3">
+                                                    <div>
+                                                        <label class="block text-xs text-gray-400 mb-1">Costo mano de obra</label>
+                                                        <input type="number" x-model="formDiag.costoManoObra" min="0" step="0.01"
+                                                               placeholder="0.00"
+                                                               class="w-full text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2
+                                                                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                                                                      focus:outline-none focus:ring-1 focus:ring-gray-400 font-mono">
+                                                    </div>
+
+                                                    {{-- ── Piezas con buscador de catálogo ── --}}
+                                                    <div>
+                                                        <div class="flex items-center justify-between mb-1.5">
+                                                            <label class="text-xs text-gray-400">Piezas / componentes</label>
+                                                            <button type="button" @click="agregarPieza()"
+                                                                    class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700
+                                                                           dark:hover:text-gray-200 underline underline-offset-2">
+                                                                + Agregar manual
+                                                            </button>
+                                                        </div>
+
+                                                        {{-- Buscador catálogo --}}
+                                                        <div class="relative mb-2">
+                                                            <input type="text"
+                                                                   x-model="busquedaPieza"
+                                                                   @input.debounce.400ms="buscarPiezas()"
+                                                                   @focus="buscarPiezas()"
+                                                                   @keydown.escape="resultadosPiezas = []"
+                                                                   placeholder="Buscar pieza por nombre o clave..."
+                                                                   class="w-full text-xs border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2
+                                                                          bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                                                                          focus:outline-none focus:ring-1 focus:ring-gray-400">
+                                                            <svg x-show="buscandoPieza"
+                                                                 class="animate-spin w-3.5 h-3.5 text-gray-400 absolute right-3 top-2"
+                                                                 fill="none" viewBox="0 0 24 24">
+                                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                                            </svg>
+
+                                                            {{-- Dropdown resultados --}}
+                                                            <div x-show="resultadosPiezas.length > 0"
+                                                                 x-transition:enter="transition ease-out duration-100"
+                                                                 x-transition:enter-start="opacity-0 -translate-y-1"
+                                                                 class="absolute z-20 top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800
+                                                                        border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg overflow-hidden">
+                                                                <template x-for="rp in resultadosPiezas" :key="rp.id_pieza">
+                                                                    <button type="button"
+                                                                            @click="seleccionarPiezaCatalogo(rp)"
+                                                                            class="w-full flex items-center justify-between gap-3 px-3 py-2.5
+                                                                                   hover:bg-gray-50 dark:hover:bg-gray-700 transition text-left">
+                                                                        <div class="min-w-0">
+                                                                            <div class="flex items-center gap-1.5 flex-wrap">
+                                                                                <span class="text-xs font-medium text-gray-800 dark:text-gray-200"
+                                                                                      x-text="rp.nombre"></span>
+                                                                                <span class="text-[10px] font-mono bg-gray-100 dark:bg-gray-700
+                                                                                             text-gray-500 px-1 rounded"
+                                                                                      x-text="rp.clave"></span>
+                                                                                <span x-show="!rp.compatible"
+                                                                                      class="text-[10px] bg-amber-50 dark:bg-amber-900/20
+                                                                                             text-amber-600 dark:text-amber-400 px-1.5 rounded
+                                                                                             border border-amber-200 dark:border-amber-700">
+                                                                                    no verificada
+                                                                                </span>
+                                                                            </div>
+                                                                            <p class="text-[10px] mt-0.5"
+                                                                               :class="rp.stock_bajo
+                                                                                   ? 'text-red-500 dark:text-red-400'
+                                                                                   : 'text-gray-400'"
+                                                                               x-text="'Stock: ' + rp.stock_actual + (rp.stock_bajo ? ' ⚠ stock bajo' : '')">
+                                                                            </p>
+                                                                        </div>
+                                                                        <span class="text-xs font-semibold text-gray-600 dark:text-gray-300 shrink-0"
+                                                                              x-text="'$'+Number(rp.precio_venta).toLocaleString('es-MX')"></span>
+                                                                    </button>
+                                                                </template>
+                                                            </div>
+                                                        </div>
+
+                                                        {{-- Lista piezas agregadas --}}
+                                                        <div class="space-y-2">
+                                                            <template x-for="(p, idx) in formDiag.piezas" :key="idx">
+                                                                <div class="grid grid-cols-12 gap-1.5 items-center">
+                                                                    <input type="text" x-model="p.descripcion"
+                                                                           placeholder="Descripción"
+                                                                           :readonly="!!p.id_pieza"
+                                                                           :class="p.id_pieza ? 'bg-gray-50 dark:bg-gray-600' : ''"
+                                                                           class="col-span-5 text-xs border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5
+                                                                                  bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                                                                                  focus:outline-none focus:ring-1 focus:ring-gray-400">
+                                                                    <input type="number" x-model="p.cantidad" min="1" placeholder="Cant"
+                                                                           class="col-span-2 text-xs border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5
+                                                                                  bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                                                                                  focus:outline-none focus:ring-1 focus:ring-gray-400 text-center">
+                                                                    <input type="number" x-model="p.precio_unitario" min="0" step="0.01" placeholder="Precio"
+                                                                           class="col-span-4 text-xs border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5
+                                                                                  bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                                                                                  focus:outline-none focus:ring-1 focus:ring-gray-400 font-mono">
+                                                                    <button type="button" @click="formDiag.piezas.splice(idx, 1)"
+                                                                            class="col-span-1 text-gray-400 hover:text-red-500 transition text-center">×</button>
+                                                                </div>
+                                                            </template>
+                                                            <p x-show="formDiag.piezas.length === 0"
+                                                               class="text-xs text-gray-400 italic">Sin piezas — solo mano de obra</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </template>
 
                                             <button @click="piezasConDatos().length > 0 ? guardarYCotizar() : guardarDiagnostico()"
                                                     :disabled="guardandoDiag || enviandoCot || !formDiag.diagnostico.trim()"
@@ -609,7 +589,10 @@
                                 {{-- cotizacion_enviada → resolver --}}
                                 <template x-if="detalle.estado === 'cotizacion_enviada'">
                                     <div class="space-y-2">
-                                        <template x-if="detalle.cotizacion && detalle.cotizacion.respuesta === null">
+
+                                        {{-- Pendiente, sin expirar: solo esperar. Ningún botón de avance —
+                                             el único que queda disponible es "Cancelar orden", más abajo. --}}
+                                        <template x-if="cotizacionPendiente()">
                                             <p class="text-xs text-gray-400 italic">
                                                 Esperando respuesta del cliente…
                                                 <span x-show="detalle.cotizacion.expires_at"
@@ -617,7 +600,51 @@
                                                 </span>
                                             </p>
                                         </template>
-                                        <div class="flex gap-2 flex-wrap">
+
+                                        {{-- Expiró sin respuesta y sí había algo cotizado: ahora sí se
+                                             muestra el teléfono para contactar al cliente. --}}
+                                        <template x-if="cotizacionVencida() && cotizacionTieneMonto()">
+                                            <div class="flex items-start gap-3 bg-amber-50 dark:bg-amber-900/20
+                                                        border border-amber-200 dark:border-amber-700 rounded-xl px-4 py-3">
+                                                <svg class="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                </svg>
+                                                <div>
+                                                    <p class="text-xs font-semibold text-amber-700 dark:text-amber-400">Cotización expirada sin respuesta</p>
+                                                    <p class="text-xs text-amber-600 dark:text-amber-500 mt-0.5">
+                                                        El cliente no respondió a tiempo. Comunícate para conocer su decisión.
+                                                        Tel: <span class="font-semibold font-mono"
+                                                                   x-text="detalle.cliente_telefono ?? detalle.cliente?.telefono ?? '—'"></span>
+                                                    </p>
+                                                    <div class="flex gap-2 mt-2">
+                                                        <a :href="'tel:'+(detalle.cliente_telefono ?? detalle.cliente?.telefono ?? '')"
+                                                           class="text-[11px] font-medium px-2.5 py-1 rounded-lg
+                                                                  bg-amber-100 dark:bg-amber-800/30 text-amber-700 dark:text-amber-400
+                                                                  hover:bg-amber-200 dark:hover:bg-amber-800/50 transition">
+                                                            Llamar
+                                                        </a>
+                                                        <a :href="'https://wa.me/'+(detalle.cliente_telefono ?? detalle.cliente?.telefono ?? '').replace(/\D/g,'')"
+                                                           target="_blank"
+                                                           class="text-[11px] font-medium px-2.5 py-1 rounded-lg
+                                                                  bg-green-100 dark:bg-green-800/30 text-green-700 dark:text-green-400
+                                                                  hover:bg-green-200 dark:hover:bg-green-800/50 transition">
+                                                            WhatsApp
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                        {{-- Ya se rechazó de forma manual (el trabajador ya habló con el
+                                             cliente) pero la OT se quedó aquí — permite registrar una nueva decisión. --}}
+                                        <template x-if="detalle.cotizacion && detalle.cotizacion.respuesta === 0 && detalle.cotizacion.resolucion_manual">
+                                            <p class="text-xs text-red-500 dark:text-red-400">
+                                                El cliente rechazó la cotización (resolución manual). Puedes registrar una nueva decisión.
+                                            </p>
+                                        </template>
+
+                                        <div class="flex gap-2 flex-wrap"
+                                             x-show="cotizacionVencida() || (detalle.cotizacion && detalle.cotizacion.respuesta === 0 && detalle.cotizacion.resolucion_manual)">
                                             <button @click="abrirModalResolver()"
                                                     class="flex items-center gap-1.5 bg-gray-900 dark:bg-white dark:text-gray-900
                                                            text-white px-4 py-2.5 rounded-xl text-sm font-semibold
@@ -755,6 +782,9 @@ function mantIndex() {
         flashVisible: false, flashMsg: '', flashTipo: 'success', flashTimer: null,
         stats: { activas: 0, listas: 0 },
         formDiag: { diagnostico: '', costoManoObra: '', piezas: [] },
+        // Mantenimiento/garantía: la sección de mano de obra + piezas nace
+        // oculta detrás del botón "Añadir Piezas" — se reinicia por cada OT.
+        mostrarPiezasExtra: false,
 
         // ── Buscador de piezas en diagnóstico ──
         busquedaPieza: '',
@@ -846,9 +876,10 @@ function mantIndex() {
         },
 
         async cargarDetalle(id) {
-            this.detalle         = null;
-            this.cargandoDetalle = true;
-            this.formDiag        = { diagnostico: '', costoManoObra: '', piezas: [] };
+            this.detalle          = null;
+            this.cargandoDetalle  = true;
+            this.formDiag         = { diagnostico: '', costoManoObra: '', piezas: [] };
+            this.mostrarPiezasExtra = false;
             try {
                 const res  = await fetch(`{{ url('sucursal/reparaciones') }}/${id}`, {
                     headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
@@ -856,16 +887,19 @@ function mantIndex() {
                 const data = await res.json();
                 if (data.ok) {
                     this.detalle = data.data;
-                    if (this.detalle.diagnostico) {
-                        this.formDiag.diagnostico   = this.detalle.diagnostico;
-                        this.formDiag.costoManoObra = this.detalle.costo_mano_obra ?? '';
-                        this.formDiag.piezas        = (this.detalle.piezas ?? []).map(p => ({
-                            id_pieza:        p.id_pieza ?? null,
-                            descripcion:     p.pieza?.nombre ?? p.descripcion ?? '',
-                            cantidad:        p.cantidad,
-                            precio_unitario: p.precio_unitario,
-                        }));
-                    }
+                    this.formDiag.diagnostico   = this.detalle.diagnostico ?? '';
+                    this.formDiag.costoManoObra = this.detalle.costo_mano_obra ?? '';
+                    // Siempre se precargan las piezas ya guardadas (incluida la
+                    // pieza de garantía auto-registrada) — de lo contrario, al
+                    // guardar el diagnóstico se perdería lo que no viniera en
+                    // el formulario, porque sincronizarPiezas() reemplaza todo.
+                    this.formDiag.piezas = (this.detalle.piezas ?? []).map(p => ({
+                        id_pieza:        p.id_pieza ?? null,
+                        descripcion:     p.pieza?.nombre ?? p.descripcion ?? '',
+                        cantidad:        p.cantidad,
+                        precio_unitario: p.precio_unitario,
+                        es_garantia:     !!p.es_garantia,
+                    }));
                 }
             } catch { this.flash('Error cargando detalle', 'error'); }
             finally  { this.cargandoDetalle = false; }
@@ -922,6 +956,22 @@ function mantIndex() {
         // determina si el botón guarda solo, o guarda y cotiza.
         piezasConDatos() {
             return this.formDiag.piezas.filter(p => p.descripcion.trim());
+        },
+
+        // Piezas cubiertas por garantía (registradas automáticamente al
+        // aprobar el reclamo) vs. piezas capturadas manualmente por la sucursal.
+        piezasGarantiaAuto() {
+            return this.formDiag.piezas.filter(p => p.es_garantia);
+        },
+        piezasManuales() {
+            return this.formDiag.piezas.filter(p => !p.es_garantia);
+        },
+
+        // Mantenimiento/garantía: el formulario de mano de obra + piezas se
+        // mantiene oculto hasta que se pulsa "Añadir Piezas" — a menos que ya
+        // haya piezas capturadas manualmente en una sesión anterior.
+        mostrarFormPiezas() {
+            return this.mostrarPiezasExtra || this.piezasManuales().length > 0;
         },
 
         // ── Diagnóstico ───────────────────────────────────────────────────────
@@ -1076,6 +1126,26 @@ function mantIndex() {
             if (!m.cotizacion) return false;
             if (m.cotizacion.respuesta !== null) return false;
             return m.cotizacion.expires_at && new Date(m.cotizacion.expires_at) < new Date();
+        },
+
+        // ── Estado de la cotización del detalle abierto ─────────────────────────
+
+        cotizacionVencida() {
+            const c = this.detalle?.cotizacion;
+            if (!c || c.respuesta !== null) return false;
+            return !!(c.expires_at && new Date(c.expires_at) < new Date());
+        },
+
+        cotizacionPendiente() {
+            const c = this.detalle?.cotizacion;
+            if (!c || c.respuesta !== null) return false;
+            return !this.cotizacionVencida();
+        },
+
+        // ¿Se cotizó algo (piezas y/o costo) que amerite contactar al cliente?
+        cotizacionTieneMonto() {
+            const c = this.detalle?.cotizacion;
+            return !!(c && Number(c.costo_total) > 0);
         },
 
         pasoActivo(val) {

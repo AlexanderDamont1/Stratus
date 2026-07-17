@@ -396,13 +396,23 @@ class AdminGarantiaController extends Controller
         $nuevoEstadoOt = $request->decision === 'aprobar' ? 'recibida' : 'cancelada';
 
         try {
-            ReparacionService::avanzarEstado(
+            $rep = ReparacionService::avanzarEstado(
                 $reclamo->id_reparacion,
                 $nuevoEstadoOt,
                 $user->id_usuario,
                 $user->id_negocio,
                 $request->resultado,
             );
+
+            // Al aprobar, la pieza cubierta por la garantía se registra sola —
+            // el vendedor no la vuelve a capturar manualmente.
+            if ($request->decision === 'aprobar') {
+                $reclamo->loadMissing('bicicletaGarantia.garantiaDef');
+                $nombreComponente = $reclamo->bicicletaGarantia?->garantiaDef?->nombre_componente
+                    ?? $reclamo->clave_componente;
+
+                ReparacionService::registrarPiezaGarantia($rep, $nombreComponente);
+            }
         } catch (\Throwable $e) {
             Log::error('Error al decidir reclamo de garantía', ['error' => $e->getMessage()]);
             return response()->json([

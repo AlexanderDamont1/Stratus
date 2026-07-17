@@ -28,33 +28,15 @@ class ComprobanteVentaNotification extends Notification implements ShouldQueue
         $total    = $detalles->sum(fn($d) => $d->precio_unitario * $d->cantidad);
         $cliente  = $this->venta->cliente;
 
-        $mail = (new MailMessage)
-            ->subject('Tu comprobante de compra — ArrowX')
-            ->greeting("Hola, {$cliente->nombre_cliente}")
-            ->line('Gracias por tu compra. Aquí está el resumen:')
-            ->line('---');
-
-        foreach ($detalles as $detalle) {
-            $nombre = $detalle->producto->nombre_producto ?? '—';
-            $precio = number_format($detalle->precio_unitario, 2);
-            $cant   = $detalle->cantidad;
-
-            $linea = "{$nombre} x{$cant} — \${$precio}";
-
-            if ($detalle->bicicleta) {
-                $bici   = $detalle->bicicleta;
-                $linea .= " | Serie: {$bici->num_serie}";
-                $linea .= " | {$bici->modelo->nombre_modelo} {$bici->voltaje->voltaje}";
-            }
-
-            $mail->line($linea);
-        }
-
-        $mail->line('---')
-             ->line("**Total: $" . number_format($total, 2) . "**")
-             ->line("Vendedor: {$this->nombreVendedor}")
-             ->line("Fecha: " . $this->venta->created_at->format('d/m/Y H:i'));
-
-        return $mail;
+        return (new MailMessage)
+            ->subject('Tu comprobante de compra — ArrowK')
+            ->view('emails.comprobante-venta', [
+                'venta'          => $this->venta,
+                'detalles'       => $detalles,
+                'total'          => $total,
+                'cliente'        => $cliente,
+                'nombreVendedor' => $this->nombreVendedor,
+                'fecha'          => $this->venta->created_at->format('d/m/Y H:i'),
+            ]);
     }
 }

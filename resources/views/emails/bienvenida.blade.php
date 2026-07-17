@@ -1,6 +1,6 @@
 @extends('emails.layout')
 
-@section('titulo', 'Cuenta verificada')
+@section('titulo', 'Bienvenido a ArrowK')
 
 @section('contenido')
 

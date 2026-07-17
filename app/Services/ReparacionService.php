@@ -330,17 +330,46 @@ class ReparacionService
             'respondido_at' => now(),
         ]);
 
+        $rep = $cotizacion->reparacion;
+
         if ($respuesta === 1) {
-            $rep = $cotizacion->reparacion;
             $rep->avanzarEstado(
                 'en_proceso',
                 $rep->id_usuario_sucursal,
                 'Cliente aceptó la cotización por email'
             );
-            self::invalidar($rep->id_negocio);
+        } else {
+            $rep->avanzarEstado(
+                'en_proceso',
+                $rep->id_usuario_sucursal,
+                'Cliente rechazó la cotización por email'
+            );
         }
+        self::invalidar($rep->id_negocio);
 
         return $cotizacion->fresh();
+    }
+
+    // ── Garantía ──────────────────────────────────────────────────────────────
+
+    /**
+     * Registra automáticamente la pieza cubierta por un reclamo de garantía
+     * aprobado, sin tocar (ni borrar) las piezas ya existentes de la OT.
+     */
+    public static function registrarPiezaGarantia(Reparaciones $rep, string $nombreComponente): void
+    {
+        ReparacionPieza::create([
+            'id_reparacion'    => $rep->id_reparacion,
+            'id_pieza'         => null,
+            'descripcion'      => $nombreComponente,
+            'cantidad'         => 1,
+            'precio_unitario'  => 0,
+            'subtotal'         => 0,
+            'es_garantia'      => true,
+            'stock_descontado' => false,
+        ]);
+
+        self::invalidar($rep->id_negocio);
     }
 
     public static function resolverManualmente(

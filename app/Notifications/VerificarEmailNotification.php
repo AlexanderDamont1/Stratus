@@ -22,11 +22,10 @@ class VerificarEmailNotification extends Notification
         $url = route('verificar.email', ['token' => $this->token]);
 
         return (new MailMessage)
-            ->subject('Verifica tu cuenta — ArrowX')
-            ->greeting("Hola, {$this->nombre}")
-            ->line('Gracias por registrarte. Para activar tu cuenta haz clic en el botón.')
-            ->action('Verificar cuenta', $url)
-            ->line('Este enlace expira en 24 horas.')
-            ->line('Si no creaste esta cuenta, ignora este correo.');
+            ->subject('Verifica tu cuenta — ArrowK')
+            ->view('emails.verificar-email', [
+                'nombre' => $this->nombre,
+                'url'    => $url,
+            ]);
     }
 }

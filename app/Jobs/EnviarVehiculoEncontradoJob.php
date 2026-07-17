@@ -26,6 +26,7 @@ class EnviarVehiculoEncontradoJob implements ShouldQueue
         $reporte = ReporteRobo::with([
             'cliente',
             'negocioEncontrado',
+            'usuarioEncontrado',
             'bicicleta.modelo.marca',
             'bicicleta.voltaje',
         ])->find($this->idReporte);
