@@ -403,9 +403,9 @@
                             animate: false
                         }));
                         this.bicicletaInfo = {
-                            marca:   data.bicicleta.marca?.nombre_marca  ?? '—',
-                            modelo:  data.bicicleta.modelo?.nombre_modelo ?? '—',
-                            voltaje: data.bicicleta.voltaje?.voltaje      ?? '—',
+                            marca:   data.bicicleta.marca   ?? '—',
+                            modelo:  data.bicicleta.modelo  ?? '—',
+                            voltaje: data.bicicleta.voltaje ?? '—',
                             status:  data.bicicleta.status,
                         };
 
