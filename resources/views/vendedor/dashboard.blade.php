@@ -246,17 +246,28 @@
                                 <div id="qr-reader"
                                     class="w-full rounded-xl border border-gray-200 dark:border-gray-700
                                         bg-gray-50 dark:bg-gray-800 overflow-hidden min-h-[180px]"></div>
-                                <div class="flex items-center justify-between mt-2">
+                                <div class="flex items-center justify-between mt-2 gap-2">
                                     <p class="text-xs text-gray-400">Apunta al QR — se agrega automáticamente</p>
-                                    <button @click="detenerCamara()"
-                                        class="text-xs text-gray-400 hover:text-red-500 transition font-medium
-                                            flex items-center gap-1">
-                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M6 18L18 6M6 6l12 12"/>
-                                        </svg>
-                                        Cerrar cámara
-                                    </button>
+                                    <div class="flex items-center gap-3 shrink-0">
+                                        <button x-show="scanCamaras.length > 1" @click="cambiarCamara()"
+                                            class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition font-medium
+                                                flex items-center gap-1">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                            </svg>
+                                            Cambiar cámara
+                                        </button>
+                                        <button @click="detenerCamara()"
+                                            class="text-xs text-gray-400 hover:text-red-500 transition font-medium
+                                                flex items-center gap-1">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M6 18L18 6M6 6l12 12"/>
+                                            </svg>
+                                            Cerrar cámara
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -541,6 +552,8 @@ function vendedorDashboard() {
         _scanner:        null,
         _scannerIniciado: false,
         _scannerPausado: false,
+        scanCamaras:     [],   /* ← NUEVO: cámaras traseras disponibles, para evitar el gran angular */
+        scanCamaraIdx:   0,
 
         /* ─── init ──────────────────────── */
         init() {
@@ -600,12 +613,44 @@ function vendedorDashboard() {
             if (!el) return;
 
             this.scannerActivo    = true;
-            this._scanner         = new Html5Qrcode('qr-reader');
             this._scannerIniciado = true;
+
+            // Celulares con varios lentes traseros (principal, gran angular,
+            // telefoto) — pedir solo facingMode:'environment' deja que el
+            // navegador elija cualquiera, y en varios Android abre el gran
+            // angular, que enfoca mal de cerca y falla al leer el código.
+            if (this.scanCamaras.length === 0) {
+                try {
+                    const camaras = await Html5Qrcode.getCameras();
+                    this.scanCamaras   = camaras || [];
+                    this.scanCamaraIdx = this._elegirCamaraTrasera(this.scanCamaras);
+                } catch (e) {
+                    this.scanCamaras = []; // sin permiso/soporte — cae a facingMode genérico
+                }
+            }
+
+            await this._arrancarCamara();
+        },
+
+        _elegirCamaraTrasera(camaras) {
+            if (!camaras || camaras.length <= 1) return 0;
+            const evitar    = /ultra ?wide|gran ?angular|wide ?angle|tele ?photo|telefoto|macro/i;
+            const esTrasera = c => /back|rear|trasera|environment/i.test(c.label || '');
+            const traseras  = camaras.filter(esTrasera);
+            const base      = traseras.length ? traseras : camaras;
+            const buenas    = base.filter(c => !evitar.test(c.label || ''));
+            const elegida   = buenas[0] || base[0];
+            return camaras.indexOf(elegida);
+        },
+
+        async _arrancarCamara() {
+            this._scanner = new Html5Qrcode('qr-reader');
+            const camara  = this.scanCamaras[this.scanCamaraIdx];
+            const fuente  = camara ? { deviceId: { exact: camara.id } } : { facingMode: 'environment' };
 
             try {
                 await this._scanner.start(
-                    { facingMode: 'environment' },
+                    fuente,
                     { fps: 10, qrbox: { width: 200, height: 200 } },
                     async (decoded) => {
                         if (this._scannerPausado) return;
@@ -622,6 +667,20 @@ function vendedorDashboard() {
                 this.scannerActivo    = false;
                 this._scannerIniciado = false;
             }
+        },
+
+        // Botón manual "Cambiar de cámara" — por si la heurística automática
+        // no acertó en algún modelo de celular en particular.
+        async cambiarCamara() {
+            if (this.scanCamaras.length < 2) return;
+            this.scanCamaraIdx = (this.scanCamaraIdx + 1) % this.scanCamaras.length;
+
+            const scanner = this._scanner;
+            this._scanner = null;
+            if (scanner) {
+                try { await scanner.stop(); scanner.clear(); } catch (e) {}
+            }
+            await this._arrancarCamara();
         },
 
         async _detenerScanner() {

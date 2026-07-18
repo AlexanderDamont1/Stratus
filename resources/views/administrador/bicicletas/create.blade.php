@@ -103,6 +103,16 @@
                 </div>
 
                 <p class="text-xs text-gray-400 text-center mt-3">Apunta la cámara al código del vehículo</p>
+
+                <button type="button" x-show="scanCamaras.length > 1" @click="cambiarCamara()"
+                    class="w-full mt-3 flex items-center justify-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400
+                           border border-gray-200 dark:border-gray-600 rounded-xl py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    Cambiar de cámara — si se ve borroso o muy abierto
+                </button>
             </div>
 
             <div class="px-5 pb-5" x-show="scanModo === 'secuencial'">
@@ -1130,6 +1140,8 @@ function cargaMasiva() {
         scanFilaIdx:     null,
         scanError:       '',
         scanRecienLeido: false,
+        scanCamaras:     [],   // [{ id, label }] — cámaras traseras disponibles
+        scanCamaraIdx:   0,    // cuál de scanCamaras está activa ahora mismo
         _scanner:        null,
         _scanBusy:       false,
 
@@ -1313,24 +1325,80 @@ function cargaMasiva() {
             this.scanFilaIdx = idx;
             this._abrirScanner();
         },
-        _abrirScanner() {
+        async _abrirScanner() {
             this.scanError  = '';
             this.scanModal  = true;
-            this.$nextTick(() => {
-                if (typeof Html5Qrcode === 'undefined') {
-                    this.scanError = 'No se pudo cargar el lector de códigos.';
-                    return;
+            await this.$nextTick();
+
+            if (typeof Html5Qrcode === 'undefined') {
+                this.scanError = 'No se pudo cargar el lector de códigos.';
+                return;
+            }
+
+            // Muchos celulares traen 2-3 lentes traseros (principal, gran
+            // angular, telefoto). Pedir solo facingMode:'environment' deja
+            // que el navegador elija cualquiera, y en varios Android termina
+            // abriendo el gran angular — que enfoca mal de cerca y falla al
+            // leer el código. Por eso se listan las cámaras y se elige a
+            // propósito la que NO sea gran angular/telefoto.
+            if (this.scanCamaras.length === 0) {
+                try {
+                    const camaras = await Html5Qrcode.getCameras();
+                    this.scanCamaras   = camaras || [];
+                    this.scanCamaraIdx = this._elegirCamaraTrasera(this.scanCamaras);
+                } catch (e) {
+                    this.scanCamaras = []; // sin permiso/soporte — cae a facingMode genérico
                 }
-                this._scanner = new Html5Qrcode('qr-reader-region');
-                this._scanner.start(
-                    { facingMode: 'environment' },
-                    { fps: 10, qrbox: { width: 250, height: 250 } },
-                    (texto) => this._onScan(texto),
-                    () => {} // se dispara en cada frame sin lectura — se ignora
-                ).catch(() => {
-                    this.scanError = 'No se pudo acceder a la cámara. Verifica los permisos del navegador.';
-                });
+            }
+
+            this._iniciarCamara();
+        },
+        // Heurística para evitar el lente gran angular / telefoto: primero
+        // busca por nombre (funciona en iOS Safari y varios Android con
+        // labels descriptivos); si los nombres no dicen nada (ej. "camera2 0,
+        // facing back"), los fabricantes casi siempre listan el lente
+        // principal primero entre las traseras.
+        _elegirCamaraTrasera(camaras) {
+            if (!camaras || camaras.length <= 1) return 0;
+
+            const evitar    = /ultra ?wide|gran ?angular|wide ?angle|tele ?photo|telefoto|macro/i;
+            const esTrasera = c => /back|rear|trasera|environment/i.test(c.label || '');
+
+            const traseras = camaras.filter(esTrasera);
+            const base     = traseras.length ? traseras : camaras;
+
+            const buenas = base.filter(c => !evitar.test(c.label || ''));
+            const elegida = buenas[0] || base[0];
+
+            return camaras.indexOf(elegida);
+        },
+        _iniciarCamara() {
+            this._scanner = new Html5Qrcode('qr-reader-region');
+
+            const camara = this.scanCamaras[this.scanCamaraIdx];
+            const fuente = camara ? { deviceId: { exact: camara.id } } : { facingMode: 'environment' };
+
+            this._scanner.start(
+                fuente,
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                (texto) => this._onScan(texto),
+                () => {} // se dispara en cada frame sin lectura — se ignora
+            ).catch(() => {
+                this.scanError = 'No se pudo acceder a la cámara. Verifica los permisos del navegador.';
             });
+        },
+        // Botón manual "Cambiar de cámara" — por si la heurística automática
+        // no acertó en algún modelo de celular en particular.
+        async cambiarCamara() {
+            if (this.scanCamaras.length < 2) return;
+            this.scanCamaraIdx = (this.scanCamaraIdx + 1) % this.scanCamaras.length;
+
+            const scanner = this._scanner;
+            this._scanner = null;
+            if (scanner) {
+                try { await scanner.stop(); scanner.clear(); } catch (e) {}
+            }
+            this._iniciarCamara();
         },
         _onScan(textoLeido) {
             if (this._scanBusy) return;

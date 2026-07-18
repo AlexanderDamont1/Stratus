@@ -395,6 +395,13 @@
                                 <div class="absolute top-1/2 left-0 right-0 h-px bg-gray-900/50 dark:bg-white/50 animate-pulse"></div>
                             </div>
                         </div>
+                        <button x-show="camCamaras.length > 1" @click="cambiarCamara()"
+                                class="absolute top-2 left-2 bg-black/50 text-white p-1.5 rounded-lg" title="Cambiar cámara">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                        </button>
                         <button @click="cerrarCamara()" class="absolute top-2 right-2 bg-black/50 text-white p-1.5 rounded-lg">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18L18 6M6 6l12 12"/>
@@ -1018,6 +1025,8 @@
                 guardando: false,
                 camaraActiva: false,
                 scannerInterval: null,
+                camCamaras: [],   // ← NUEVO: cámaras traseras disponibles, para evitar el gran angular
+                camCamaraIdx: 0,
                 scanModal: false,
                 justRegistered: false,
                 loteModal: false,
@@ -1350,12 +1359,75 @@
                     this.camaraActiva = true;
                     await this.$nextTick();
                     try {
-                        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-                        this.$refs.videoEl.srcObject = stream;
-                        this.iniciarScan();
+                        if (this.camCamaras.length === 0) {
+                            await this._detectarCamaras();
+                        }
+                        await this._arrancarCamara();
                     } catch (e) {
                         alert('No se pudo acceder a la cámara.');
                         this.camaraActiva = false;
+                    }
+                },
+
+                // Celulares con varios lentes traseros (principal, gran
+                // angular, telefoto) — pedir solo facingMode:'environment'
+                // deja que el navegador elija cualquiera, y en varios
+                // Android abre el gran angular, que enfoca mal de cerca y
+                // falla al leer el código. Por eso se listan las cámaras y
+                // se elige a propósito la que NO sea gran angular/telefoto.
+                async _detectarCamaras() {
+                    try {
+                        // enumerateDevices() solo da labels útiles con
+                        // permiso ya concedido — un primer getUserMedia
+                        // genérico lo garantiza.
+                        const previo = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                        previo.getTracks().forEach(t => t.stop());
+
+                        const devices = await navigator.mediaDevices.enumerateDevices();
+                        this.camCamaras   = devices.filter(d => d.kind === 'videoinput');
+                        this.camCamaraIdx = this._elegirCamaraTrasera(this.camCamaras);
+                    } catch (e) {
+                        this.camCamaras = []; // sin permiso/soporte — cae a facingMode genérico
+                    }
+                },
+
+                _elegirCamaraTrasera(camaras) {
+                    if (!camaras || camaras.length <= 1) return 0;
+                    const evitar    = /ultra ?wide|gran ?angular|wide ?angle|tele ?photo|telefoto|macro/i;
+                    const esTrasera = c => /back|rear|trasera|environment/i.test(c.label || '');
+                    const traseras  = camaras.filter(esTrasera);
+                    const base      = traseras.length ? traseras : camaras;
+                    const buenas    = base.filter(c => !evitar.test(c.label || ''));
+                    const elegida   = buenas[0] || base[0];
+                    return camaras.indexOf(elegida);
+                },
+
+                async _arrancarCamara() {
+                    const camara = this.camCamaras[this.camCamaraIdx];
+                    const constraints = camara
+                        ? { video: { deviceId: { exact: camara.deviceId } } }
+                        : { video: { facingMode: 'environment' } };
+
+                    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    this.$refs.videoEl.srcObject = stream;
+                    this.iniciarScan();
+                },
+
+                // Botón manual "Cambiar de cámara" — por si la heurística
+                // automática no acertó en algún modelo de celular en particular.
+                async cambiarCamara() {
+                    if (this.camCamaras.length < 2) return;
+                    this.camCamaraIdx = (this.camCamaraIdx + 1) % this.camCamaras.length;
+
+                    clearInterval(this.scannerInterval);
+                    if (this.$refs.videoEl?.srcObject) {
+                        this.$refs.videoEl.srcObject.getTracks().forEach(t => t.stop());
+                        this.$refs.videoEl.srcObject = null;
+                    }
+                    try {
+                        await this._arrancarCamara();
+                    } catch (e) {
+                        alert('No se pudo cambiar de cámara.');
                     }
                 },
 
