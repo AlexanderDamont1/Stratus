@@ -257,6 +257,8 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
         // Movimientos
         Route::prefix('admin/movimientos')->name('admin.movimientos.')->middleware('modulo:tracking')->group(function () {
             Route::get('/', [MovimientoController::class, 'index'])->name('index');
+            Route::get('/tabla', [MovimientoController::class, 'tabla'])->name('tabla');
+            Route::get('/tabla/pdf', [MovimientoController::class, 'tablaPdf'])->name('tabla.pdf');
             Route::get('/historial/{serie}', [MovimientoController::class, 'historial'])->name('historial');
             Route::get('/buscar', [MovimientoController::class, 'buscar'])->name('buscar');
         });
@@ -508,6 +510,7 @@ Route::middleware(['auth', 'single.session', 'force.setup', 'trial.expirado', 'e
             Route::get('/{id}', [VentaController::class, 'show'])->name('show');
             Route::get('/{id}/poliza', [VentaController::class, 'poliza'])->name('poliza');
             Route::get('/{id}/ticket', [VentaController::class, 'ticket'])->name('ticket');
+            Route::patch('/{id}/referencia', [VentaController::class, 'guardarReferencia'])->name('referencia');
         });
 
         Route::post('/sucursal/cupones/validar', [CuponValidarController::class, 'validar'])->name('cupones.validar');

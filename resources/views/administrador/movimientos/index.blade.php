@@ -47,6 +47,16 @@
                     <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
                     En vivo
                 </span>
+                <a href="{{ route('admin.movimientos.tabla') }}"
+                   class="inline-flex items-center gap-1.5 bg-gray-900 dark:bg-white dark:text-gray-900
+                          text-white px-3.5 py-2 rounded-lg text-xs font-semibold hover:opacity-90
+                          active:scale-[0.98] transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M3 10h18M3 6h18M3 14h18M3 18h18"/>
+                    </svg>
+                    Ver en tablas
+                </a>
             </div>
         </div>
 

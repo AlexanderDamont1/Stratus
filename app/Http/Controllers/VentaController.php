@@ -736,7 +736,53 @@ class VentaController extends Controller
 
         $autoTicket = session()->pull('auto_ticket') === $id_venta;
 
-        return view('vendedor.ventas.show', compact('venta', 'tieneGarantia', 'autoTicket'));
+        // VentaPago solo guarda el "value" crudo en metodo — el label y el
+        // flag requiere_referencia viven en el catálogo global de
+        // negocio_config (mismo patrón que ReparacionController::cobrarForm).
+        $opcionesPago = collect(
+            \App\Models\NegocioConfig::where('clave', 'metodos_pago')->where('activo', true)->value('opciones') ?? []
+        )->keyBy('value');
+
+        $venta->pagos->each(function ($pago) use ($opcionesPago) {
+            $opcion = $opcionesPago->get($pago->metodo);
+            $pago->label               = $opcion['label'] ?? $pago->metodo;
+            $pago->requiere_referencia = (bool) ($opcion['requiere_referencia'] ?? false);
+        });
+
+        // No hay pasarela de pago real — si el método requiere comprobante
+        // (tarjeta/transferencia) y no se capturó la referencia al cobrar, se
+        // pide aquí con un modal obligatorio antes de dejar ver el detalle.
+        $pagosPendientesReferencia = $venta->pagos
+            ->filter(fn ($p) => $p->requiere_referencia && empty($p->referencia))
+            ->values();
+
+        return view('vendedor.ventas.show', compact('venta', 'tieneGarantia', 'autoTicket', 'pagosPendientesReferencia'));
+    }
+
+    /* =====================================================
+     | REFERENCIA DE PAGO (comprobante manual — sin pasarela)
+     ===================================================== */
+
+    public function guardarReferencia(Request $request, string $id_venta)
+    {
+        $user = auth()->user();
+
+        $validated = $request->validate([
+            'referencias'              => 'required|array|min:1',
+            'referencias.*.id_pago'    => 'required|string|max:20',
+            'referencias.*.referencia' => 'required|string|max:20',
+        ]);
+
+        $venta = Venta::where('id_negocio', $user->id_negocio)->findOrFail($id_venta);
+
+        foreach ($validated['referencias'] as $r) {
+            VentaPago::where('id_pago', $r['id_pago'])
+                ->where('id_venta', $venta->id_venta)
+                ->where('id_negocio', $user->id_negocio)
+                ->update(['referencia' => trim($r['referencia'])]);
+        }
+
+        return response()->json(['ok' => true]);
     }
 
     /* =====================================================

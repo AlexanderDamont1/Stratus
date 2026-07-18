@@ -39,6 +39,72 @@
             </div>
         </div>
 
+        {{-- ===== MODAL OBLIGATORIO: REFERENCIA DE PAGO ===== --}}
+        {{-- No hay pasarela de pago ni terminal integrada — si el método de
+             pago requiere comprobante (tarjeta/transferencia) y no se
+             capturó la referencia al cobrar, se pide aquí. El modal no se
+             puede cerrar sin llenarla (sin botón de cerrar, sin click en el
+             fondo, sin tecla Escape). --}}
+        @if($pagosPendientesReferencia->isNotEmpty())
+            @php
+                $pendientesModal = $pagosPendientesReferencia->map(fn ($p) => [
+                    'id_pago'    => $p->id_pago,
+                    'label'      => $p->label,
+                    'monto'      => (float) $p->monto,
+                    'referencia' => '',
+                ])->values();
+            @endphp
+        <div x-data='referenciaModal(@json($pendientesModal))' style="display:contents">
+            <div class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[200] px-4">
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md p-6">
+                    <div class="flex items-start gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-800/30 flex items-center justify-center shrink-0">
+                            <svg class="w-5 h-5 text-amber-700 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Falta la referencia del pago</h3>
+                            <p class="text-xs text-gray-400 mt-0.5">
+                                Esta venta se cobró con un método que requiere comprobante. Captura la referencia de la terminal o transferencia para continuar.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <template x-for="p in pendientes" :key="p.id_pago">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                                    <span x-text="p.label"></span> —
+                                    <span x-text="'$' + p.monto.toLocaleString('es-MX', {minimumFractionDigits:2})"></span>
+                                </label>
+                                <input type="text" x-model="p.referencia" maxlength="20"
+                                       placeholder="Folio / referencia del comprobante"
+                                       class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm
+                                              bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                                              focus:outline-none focus:ring-1 focus:ring-gray-400">
+                            </div>
+                        </template>
+                    </div>
+
+                    <p x-show="error" x-cloak class="text-xs text-red-500 mt-3" x-text="error"></p>
+
+                    <button @click="guardar()" :disabled="!listo() || guardando"
+                            class="w-full mt-5 bg-gray-900 dark:bg-white dark:text-gray-900 text-white py-2.5
+                                   rounded-xl text-sm font-semibold hover:opacity-90 transition
+                                   disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                        <svg x-show="guardando" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                        </svg>
+                        <span x-text="guardando ? 'Guardando...' : 'Guardar y continuar'"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        @endif
+
         {{-- ===== FLASH MESSAGE ===== --}}
         @if(session('success'))
             <div x-data="{ show: true }" x-show="show" x-cloak
@@ -369,6 +435,45 @@
                 }, 800);
             });
         </script>
+    @endif
+
+    @if($pagosPendientesReferencia->isNotEmpty())
+    <script>
+        function referenciaModal(pendientesIniciales) {
+            return {
+                pendientes: pendientesIniciales,
+                guardando: false,
+                error: '',
+
+                listo() {
+                    return this.pendientes.every(p => p.referencia.trim().length > 0);
+                },
+
+                async guardar() {
+                    if (!this.listo()) return;
+                    this.guardando = true;
+                    this.error = '';
+                    try {
+                        const res = await fetch(`{{ route('ventas.referencia', $venta->id_venta) }}`, {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                referencias: this.pendientes.map(p => ({ id_pago: p.id_pago, referencia: p.referencia.trim() })),
+                            }),
+                        });
+                        const data = await res.json();
+                        if (!data.ok) { this.error = data.mensaje ?? 'No se pudo guardar. Intenta de nuevo.'; return; }
+                        window.location.reload();
+                    } catch { this.error = 'Error de conexión. Intenta de nuevo.'; }
+                    finally { this.guardando = false; }
+                },
+            };
+        }
+    </script>
     @endif
 
 </x-app-layout>

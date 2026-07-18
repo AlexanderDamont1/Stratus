@@ -49,6 +49,71 @@
         </div>
     </div>
 
+    {{-- ===== MODAL: ESCANEAR QR ===== --}}
+    <div x-show="scanModal" x-cloak
+        x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0"
+        x-transition:leave="transition ease-in duration-150" x-transition:leave-end="opacity-0"
+        class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[100] px-4">
+        <div x-show="scanModal"
+             x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95"
+             x-transition:leave="transition ease-in duration-150" x-transition:leave-end="opacity-0 scale-95"
+             class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden border border-gray-200 dark:border-gray-700">
+
+            <div class="flex items-center justify-between px-5 pt-5 pb-3">
+                <div class="min-w-0">
+                    <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                        <span x-text="scanModo === 'secuencial' ? 'Escanear números de serie' : 'Escanear número de serie'"></span>
+                    </p>
+                    <p class="text-xs text-gray-400 mt-0.5" x-show="scanModo === 'secuencial'">
+                        Se llenan en orden ·
+                        <span x-text="filas.filter(f => !f.num_serie).length"></span>
+                        <span x-text="filas.filter(f => !f.num_serie).length === 1 ? ' pendiente' : ' pendientes'"></span>
+                    </p>
+                    <p class="text-xs text-gray-400 mt-0.5" x-show="scanModo === 'individual'">
+                        Fila <span x-text="scanFilaIdx !== null ? scanFilaIdx + 1 : ''"></span>
+                    </p>
+                </div>
+                <button type="button" @click="cerrarScanner()"
+                    class="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="px-5 pb-3">
+                <div class="relative rounded-xl overflow-hidden bg-black aspect-square">
+                    <div id="qr-reader-region" class="w-full h-full"></div>
+                    <div x-show="scanRecienLeido" x-cloak
+                         x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0"
+                         x-transition:leave="transition ease-in duration-300" x-transition:leave-end="opacity-0"
+                         class="absolute inset-0 bg-emerald-500/30 flex items-center justify-center pointer-events-none">
+                        <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <div x-show="scanError" x-cloak
+                     class="mt-3 flex items-center gap-2 text-xs text-red-500 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">
+                    <svg class="w-3.5 h-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                    </svg>
+                    <span x-text="scanError"></span>
+                </div>
+
+                <p class="text-xs text-gray-400 text-center mt-3">Apunta la cámara al código del vehículo</p>
+            </div>
+
+            <div class="px-5 pb-5" x-show="scanModo === 'secuencial'">
+                <button type="button" @click="cerrarScanner()"
+                    class="w-full text-xs font-medium text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-xl py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                    Terminar escaneo
+                </button>
+            </div>
+        </div>
+    </div>
+
     {{-- ===== FLASH (estilo garantías) ===== --}}
     <div x-show="flashVisible" x-cloak
          x-transition:enter="transition ease-out duration-300"
@@ -333,9 +398,22 @@
                             <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">Números de serie</p>
                             <p class="text-xs text-gray-400 mt-0.5">Series de exactamente 17 caracteres</p>
                         </div>
-                        <span x-show="filas.length > 0"
-                              x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 scale-50" x-transition:enter-end="opacity-100 scale-100"
-                              class="shrink-0 text-[10px] font-semibold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded-lg" x-text="filas.length"></span>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <button type="button" x-show="filas.length > 0" @click="abrirEscaneoSecuencial()"
+                                :disabled="filas.filter(f => !f.num_serie).length === 0"
+                                class="flex items-center gap-1.5 text-xs font-semibold bg-gray-900 dark:bg-white dark:text-gray-900
+                                       text-white px-3 py-2 rounded-lg hover:opacity-90 active:scale-[0.98] transition
+                                       disabled:opacity-40 disabled:cursor-not-allowed">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M4 7V5a1 1 0 011-1h2M4 17v2a1 1 0 001 1h2m10-14h2a1 1 0 011 1v2m-3 11h2a1 1 0 001-1v-2M7 12h10"/>
+                                </svg>
+                                Escanear QR
+                            </button>
+                            <span x-show="filas.length > 0"
+                                  x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 scale-50" x-transition:enter-end="opacity-100 scale-100"
+                                  class="text-[10px] font-semibold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded-lg" x-text="filas.length"></span>
+                        </div>
                     </div>
 
                     {{-- Vacío --}}
@@ -380,6 +458,26 @@
                                                 'border-gray-200 dark:border-gray-600 focus:ring-gray-300 dark:focus:ring-gray-500': fila.num_serie.length === 0 && !fila.error
                                             }">
                                     </div>
+
+                                    {{-- Escanear (solo si no tiene serie) / Borrar (solo si sí tiene) --}}
+                                    <button type="button" x-show="fila.num_serie.length === 0" @click="abrirEscaneoFila(idx)"
+                                        class="shrink-0 flex items-center gap-1 text-[11px] font-medium text-gray-500 dark:text-gray-400
+                                               border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5
+                                               hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 transition">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                  d="M4 7V5a1 1 0 011-1h2M4 17v2a1 1 0 001 1h2m10-14h2a1 1 0 011 1v2m-3 11h2a1 1 0 001-1v-2M7 12h10"/>
+                                        </svg>
+                                        Escanear
+                                    </button>
+                                    <button type="button" x-show="fila.num_serie.length > 0" @click="fila.num_serie = ''; validarSerie(idx)"
+                                        title="Borrar número de serie"
+                                        class="shrink-0 w-6 h-6 rounded-md flex items-center justify-center text-gray-300 dark:text-gray-600
+                                               hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
 
                                     {{-- Color (con anillo si está seleccionado) --}}
                                     <span class="w-4 h-4 rounded-sm shrink-0 inline-block transition duration-150"
@@ -688,6 +786,26 @@
                                             <span x-text="fila.error"></span>
                                         </div>
                                         <div class="flex items-center gap-2 pt-0.5">
+                                            {{-- Escanear (solo si no tiene serie) / Borrar (solo si sí tiene) --}}
+                                            <button type="button" x-show="fila.num_serie.length === 0" @click="abrirEscaneoFila(idx)"
+                                                class="shrink-0 flex items-center gap-1 text-[10px] font-medium text-gray-500 dark:text-gray-400
+                                                       border border-gray-200 dark:border-gray-600 rounded-lg px-1.5 py-1
+                                                       hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 transition">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                          d="M4 7V5a1 1 0 011-1h2M4 17v2a1 1 0 001 1h2m10-14h2a1 1 0 011 1v2m-3 11h2a1 1 0 001-1v-2M7 12h10"/>
+                                                </svg>
+                                                Escanear
+                                            </button>
+                                            <button type="button" x-show="fila.num_serie.length > 0" @click="fila.num_serie = ''; validarSerie(idx)"
+                                                title="Borrar número de serie"
+                                                class="shrink-0 w-5 h-5 rounded-md flex items-center justify-center text-gray-300 dark:text-gray-600
+                                                       hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                                </svg>
+                                            </button>
+
                                             {{-- Color --}}
                                             <span class="w-3.5 h-3.5 rounded-sm shrink-0 inline-block transition duration-150"
                                                 :class="{
@@ -990,6 +1108,7 @@
     </form>
 </div>
 
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
 function cargaMasiva() {
     return {
@@ -1004,6 +1123,15 @@ function cargaMasiva() {
         _uid:                  0,
         mostrarModalSinMarcas: false,
         filtroModelo:          '',
+
+        // ── Escaneo con cámara ──
+        scanModal:       false,
+        scanModo:        'secuencial', // 'secuencial' (FIFO, botón global) | 'individual' (una fila)
+        scanFilaIdx:     null,
+        scanError:       '',
+        scanRecienLeido: false,
+        _scanner:        null,
+        _scanBusy:       false,
 
         get modelosDisponibles() {
             const m = this.catalogo.find(m => String(m.id_marca) === this.plantilla.id_marca);
@@ -1168,6 +1296,112 @@ function cargaMasiva() {
             clearTimeout(this.flashTimer);
             this.flashTimer = setTimeout(() => this.flashVisible = false, tipo === 'error' ? 4500 : 3000);
         },
+
+        // ── Escaneo con cámara ───────────────────────────────────────────────
+        // Botón global: escanea en secuencia y llena, en orden (FIFO), la
+        // primera fila que aún no tenga número de serie.
+        abrirEscaneoSecuencial() {
+            if (this.filas.filter(f => !f.num_serie).length === 0) return;
+            this.scanModo    = 'secuencial';
+            this.scanFilaIdx = null;
+            this._abrirScanner();
+        },
+        // Botón por fila: solo aparece si esa fila no tiene serie, y un único
+        // escaneo llena exclusivamente esa fila (no hay avance secuencial).
+        abrirEscaneoFila(idx) {
+            this.scanModo    = 'individual';
+            this.scanFilaIdx = idx;
+            this._abrirScanner();
+        },
+        _abrirScanner() {
+            this.scanError  = '';
+            this.scanModal  = true;
+            this.$nextTick(() => {
+                if (typeof Html5Qrcode === 'undefined') {
+                    this.scanError = 'No se pudo cargar el lector de códigos.';
+                    return;
+                }
+                this._scanner = new Html5Qrcode('qr-reader-region');
+                this._scanner.start(
+                    { facingMode: 'environment' },
+                    { fps: 10, qrbox: { width: 250, height: 250 } },
+                    (texto) => this._onScan(texto),
+                    () => {} // se dispara en cada frame sin lectura — se ignora
+                ).catch(() => {
+                    this.scanError = 'No se pudo acceder a la cámara. Verifica los permisos del navegador.';
+                });
+            });
+        },
+        _onScan(textoLeido) {
+            if (this._scanBusy) return;
+            this._scanBusy = true;
+
+            const texto = textoLeido.trim().toUpperCase();
+
+            if (this.scanModo === 'individual') {
+                this.filas[this.scanFilaIdx].num_serie = texto;
+                this.validarSerie(this.scanFilaIdx);
+                this._confirmarLectura();
+                this.cerrarScanner();
+                return;
+            }
+
+            // Secuencial: FIFO — llena la primera fila vacía, en el orden en
+            // que se agregaron.
+            const idx = this.filas.findIndex(f => !f.num_serie);
+            if (idx === -1) { this.cerrarScanner(); return; }
+
+            this.filas[idx].num_serie = texto;
+            this.validarSerie(idx);
+            this._confirmarLectura();
+
+            if (this.filas.filter(f => !f.num_serie).length === 0) {
+                this.mostrarFlash('Todas las series fueron escaneadas.');
+                this.cerrarScanner();
+                return;
+            }
+
+            // Pausa breve para no volver a leer el mismo código de inmediato,
+            // luego reanuda para seguir con la siguiente fila vacía.
+            if (this._scanner) {
+                this._scanner.pause(true);
+                setTimeout(() => {
+                    if (this._scanner) { try { this._scanner.resume(); } catch (e) {} }
+                    this._scanBusy = false;
+                }, 700);
+            } else {
+                this._scanBusy = false;
+            }
+        },
+        _confirmarLectura() {
+            this.reproducirBeep();
+            this.scanRecienLeido = true;
+            setTimeout(() => this.scanRecienLeido = false, 400);
+        },
+        reproducirBeep() {
+            try {
+                const ctx  = new (window.AudioContext || window.webkitAudioContext)();
+                const osc  = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain); gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.value = 880;
+                gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.18);
+            } catch (e) {}
+        },
+        cerrarScanner() {
+            this._scanBusy = false;
+            const scanner  = this._scanner;
+            this._scanner  = null;
+            this.scanModal = false;
+            if (scanner) {
+                scanner.stop().then(() => scanner.clear()).catch(() => {});
+            }
+        },
+
         enviar(form) {
             if (!this.puedeGuardar) return;
             this.submitting = true;

@@ -1067,6 +1067,147 @@ class CatalogService
         self::incrementVersion($idNegocio);
     }
 
+    // ─── HISTORIAL DE VEHÍCULOS EN TABLA (rol 1) ───────────────────────────────
+    //
+    // Reporte de todas las bicicletas del negocio con sus 3 fechas de ciclo de
+    // vida: en fábrica (Bicicleta.created_at), ingreso a sucursal y vendida
+    // (ambas leídas de bicicleta_movimientos, tipos 'transferencia_sucursal' y
+    // 'venta'). TTL corto (no versión) para no depender de que cada punto del
+    // código que crea/mueve una bicicleta recuerde invalidar esta caché.
+
+    public static function getHistorialBicicletasTabla(
+        string  $idNegocio,
+        int     $page = 1,
+        ?string $busqueda = null,
+        ?string $desde = null,
+        ?string $hasta = null,
+        ?string $idSucursal = null
+    ): LengthAwarePaginator {
+        $construir = function () use ($idNegocio, $page, $busqueda, $desde, $hasta, $idSucursal) {
+            $query = self::queryHistorialBicicletas($idNegocio, $busqueda, $desde, $hasta, $idSucursal);
+
+            $paginado = $query->orderByDesc('created_at')->paginate(15, ['*'], 'page', $page);
+
+            self::inyectarFechasMovimientos($paginado->getCollection(), $idNegocio);
+
+            return $paginado;
+        };
+
+        // No se cachea la búsqueda, el rango de fechas ni la sucursal
+        // (variantes infinitas) — solo el listado por defecto, igual que
+        // getBicicletasPorUsuarioPaginadas().
+        if (!empty($busqueda) || $desde !== null || $hasta !== null || $idSucursal !== null) {
+            return $construir();
+        }
+
+        return self::remember("historial:tabla:negocio:{$idNegocio}:page:{$page}", 60, $construir, $idNegocio);
+    }
+
+    /**
+     * Mismo listado que getHistorialBicicletasTabla() pero sin paginar —
+     * usado para generar el PDF del período seleccionado completo.
+     */
+    public static function getHistorialBicicletasParaPdf(
+        string  $idNegocio,
+        ?string $busqueda = null,
+        ?string $desde = null,
+        ?string $hasta = null,
+        ?string $idSucursal = null
+    ): \Illuminate\Support\Collection {
+        $items = self::queryHistorialBicicletas($idNegocio, $busqueda, $desde, $hasta, $idSucursal)
+            ->orderByDesc('created_at')
+            ->get();
+
+        self::inyectarFechasMovimientos($items, $idNegocio);
+
+        return $items;
+    }
+
+    private static function queryHistorialBicicletas(
+        string  $idNegocio,
+        ?string $busqueda,
+        ?string $desde,
+        ?string $hasta,
+        ?string $idSucursal = null
+    ) {
+        // La marca real se guarda en modelos.id_marca — bicicletas.id_marca
+        // no se rellena al crear (ver BicicletaController::storeMasivo), así
+        // que la marca siempre se debe leer vía modelo->marca, no directo.
+        $query = Bicicleta::with(['modelo.marca', 'color', 'voltaje'])
+            ->where('id_negocio', $idNegocio);
+
+        if (!empty($busqueda)) {
+            $q = strtoupper(trim($busqueda));
+            $query->where(function ($qq) use ($q) {
+                $qq->where('num_serie', 'like', "%{$q}%")
+                   ->orWhereHas('modelo.marca', fn($m) => $m->where('nombre_marca', 'like', "%{$q}%"))
+                   ->orWhereHas('modelo', fn($m) => $m->where('nombre_modelo', 'like', "%{$q}%"));
+            });
+        }
+
+        if (!empty($desde)) {
+            $query->whereDate('created_at', '>=', $desde);
+        }
+        if (!empty($hasta)) {
+            $query->whereDate('created_at', '<=', $hasta);
+        }
+
+        if (!empty($idSucursal)) {
+            $query->where('id_usuario', $idSucursal);
+        }
+
+        return $query;
+    }
+
+    private static function inyectarFechasMovimientos(\Illuminate\Support\Collection $items, string $idNegocio): void
+    {
+        $series = $items->pluck('num_serie')->all();
+        if (empty($series)) return;
+
+        $movimientos = BicicletaMovimiento::where('id_negocio', $idNegocio)
+            ->whereIn('num_serie', $series)
+            ->whereIn('tipo_movimiento', ['transferencia_sucursal', 'venta'])
+            ->orderBy('fecha_movimiento')
+            ->get()
+            ->groupBy('num_serie');
+
+        $items->each(function ($bici) use ($movimientos) {
+            $movsBici = $movimientos->get($bici->num_serie, collect());
+            $bici->fecha_ingreso_sucursal = optional(
+                $movsBici->where('tipo_movimiento', 'transferencia_sucursal')->last()
+            )->fecha_movimiento;
+            $bici->fecha_vendida = optional(
+                $movsBici->where('tipo_movimiento', 'venta')->last()
+            )->fecha_movimiento;
+        });
+    }
+
+    public static function getHistorialBicicletasStats(string $idNegocio): array
+    {
+        return self::remember(
+            "historial:stats:negocio:{$idNegocio}",
+            60,
+            function () use ($idNegocio) {
+                $stats = Bicicleta::where('id_negocio', $idNegocio)
+                    ->selectRaw("
+                        COUNT(*) as total,
+                        SUM(id_usuario IS NULL AND status != 2) as en_fabrica,
+                        SUM(id_usuario IS NOT NULL AND status != 2) as en_sucursal,
+                        SUM(status = 2) as vendidas
+                    ")
+                    ->first();
+
+                return [
+                    'total'       => (int) $stats->total,
+                    'en_fabrica'  => (int) $stats->en_fabrica,
+                    'en_sucursal' => (int) $stats->en_sucursal,
+                    'vendidas'    => (int) $stats->vendidas,
+                ];
+            },
+            $idNegocio
+        );
+    }
+
     // ─── VENTAS ─────────────────────────────────────────────────────────────
 
     public static function getVentasByVendedor(string $idNegocio, string $idUsuario, int $page = 1): LengthAwarePaginator

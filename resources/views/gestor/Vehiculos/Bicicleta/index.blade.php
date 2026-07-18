@@ -234,7 +234,7 @@
                                             color:       { color: e.detail.color },
                                             status:      e.detail.status,
                                             updated_at:  new Date().toISOString(),
-                                            animateEntrada: true,     // ✅ bandera para animación verde
+                                            animateEntrada: true,    
                                             animateSalida: false
                                         };
                                         this.filas.unshift(nuevaBici);

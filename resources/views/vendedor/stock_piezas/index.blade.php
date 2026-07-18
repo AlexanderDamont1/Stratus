@@ -531,10 +531,9 @@
                                     </svg>
                                 </button>
                             </div>
-                            <input x-show="pago.requiere_referencia" type="text" x-model="pago.referencia"
-                                   placeholder="Folio / referencia…"
-                                   class="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white
-                                          px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white/30 transition">
+                            <p x-show="pago.requiere_referencia" class="text-[11px] text-gray-400">
+                                El folio de este pago se pedirá en el detalle de la venta.
+                            </p>
                         </div>
                     </template>
 
@@ -918,8 +917,18 @@ function stockIndex() {
                 });
                 const data = await res.json();
                 if (!data.ok) { this.flash(data.mensaje ?? 'Error al vender', 'error'); return; }
-                this.flash(data.mensaje);
                 this.modalVenta = false;
+
+                // Si algún pago requiere comprobante (tarjeta/transferencia) y no
+                // se capturó la referencia aquí, se termina en el detalle de la
+                // venta — ahí un modal obligatorio la pide antes de continuar.
+                const faltaReferencia = pagosEnviar.some(p => p.requiere_referencia && !p.referencia);
+                if (data.id_venta && faltaReferencia) {
+                    window.location.href = `{{ route('ventas.show', ':id') }}`.replace(':id', data.id_venta);
+                    return;
+                }
+
+                this.flash(data.mensaje);
                 if (data.id_venta) {
                     window.open(`{{ route('ventas.ticket', ':id') }}`.replace(':id', data.id_venta), '_blank');
                 }
