@@ -11,7 +11,7 @@
 <body class="font-sans antialiased text-gray-900 dark:text-gray-100 bg-gray-100 dark:bg-gray-900 min-h-[100svh] flex items-center justify-center px-6">
 
     <div class="w-full max-w-sm text-center space-y-6">
-        <p class="text-6xl font-light text-gray-300 dark:text-gray-700 tracking-tight">404</p>
+        <p class="text-6xl font-bold text-gray-900 dark:text-white tracking-tight">404</p>
 
         <div class="space-y-2">
             <h1 class="text-xl font-semibold text-gray-900 dark:text-white">Página no encontrada</h1>
