@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.bunny.net">
   <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet">
   @vite(['resources/css/app.css', 'resources/js/app.js'])
+  @include('partials.google-analytics')
 </head>
 
 <body class="font-figtree bg-white dark:bg-gray-900 text-gray-900 dark:text-white antialiased overflow-x-hidden">
