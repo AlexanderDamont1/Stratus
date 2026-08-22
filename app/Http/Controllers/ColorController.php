@@ -9,6 +9,8 @@ use App\Services\CatalogService;
 use App\Traits\ResolvesAdminRoute;
 use App\Http\Requests\StoreColorRequest;
 use App\Events\CatalogoActualizado;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class ColorController extends Controller
 {
@@ -232,36 +234,74 @@ class ColorController extends Controller
      * Sugiere un color hexadecimal para un nombre de color vía IA (Groq).
      * Compartido por rol 1 y rol 5: es lógica de IA pura, sin datos de negocio.
      */
-    public function sugerirHex(Request $request)
-    {
-        if (!in_array(auth()->user()->id_rol, [1, 5])) abort(403);
-
-        $request->validate(['nombre' => 'required|string|max:50']);
-
-        $response = \Illuminate\Support\Facades\Http::withHeaders([
-    'Authorization' => 'Bearer ' . config('services.groq.key'),
-    'Content-Type'  => 'application/json',
-])->post('https://api.groq.com/openai/v1/chat/completions', [
-    'model'      => 'openai/gpt-oss-20b',
-    'max_tokens' => 10,
-    'messages'   => [
-        [
-            'role' => 'system',
-            'content' => 'Eres un asistente que SOLO responde con colores hexadecimales en formato #RRGGBB. Sin explicaciones, sin texto extra, solo el hex.'
-        ],
-        [
-            'role' => 'user',
-            'content' => "¿Qué color hexadecimal representa \"{$request->nombre}\"?"
-        ],
-    ],
-]);
-
+   public function sugerirHex(Request $request)
+{
+    if (!in_array(auth()->user()->id_rol, [1, 5])) abort(403);
+ 
+    $request->validate(['nombre' => 'required|string|max:50']);
+ 
+    try {
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . config('services.groq.key'),
+            'Content-Type'  => 'application/json',
+        ])->timeout(15)->post('https://api.groq.com/openai/v1/chat/completions', [
+            'model'       => 'openai/gpt-oss-20b',
+            'temperature' => 0.1,
+ 
+            // NUEVO: es reasoning model. Sin esto se gasta el max_tokens "pensando"
+            // y regresa contenido vacio (el mismo bug que vimos en PdfGarantiaService).
+            'reasoning_effort' => 'low',
+            'reasoning_format' => 'hidden',
+ 
+            // NUEVO: 10 tokens no alcanza ni para el hex ("#RRGGBB" ya son ~5-6 tokens)
+            // ni deja margen para el razonamiento oculto, aunque sea "low". Con 60
+            // sobra para el hex y el poco pensamiento que le tome decidir el color.
+            'max_tokens' => 60,
+ 
+            'messages' => [
+                [
+                    'role'    => 'system',
+                    'content' => 'Eres un asistente que SOLO responde con colores hexadecimales en formato #RRGGBB. Sin explicaciones, sin texto extra, solo el hex.',
+                ],
+                [
+                    'role'    => 'user',
+                    'content' => "¿Qué color hexadecimal representa \"{$request->nombre}\"?",
+                ],
+            ],
+        ]);
+ 
+        if (!$response->successful()) {
+            Log::error('sugerirHex: Groq respondio con error', [
+                'status' => $response->status(),
+                'body'   => $response->body(),
+                'nombre' => $request->nombre,
+            ]);
+ 
+            return response()->json(['hex' => null]);
+        }
+ 
         $hex = trim($response->json('choices.0.message.content') ?? '');
-
+ 
+        if (!preg_match('/^#[0-9A-Fa-f]{6}$/', $hex)) {
+            Log::warning('sugerirHex: respuesta no tenia formato hex valido', [
+                'content_raw' => $hex,
+                'nombre'      => $request->nombre,
+            ]);
+        }
+ 
         return response()->json([
             'hex' => preg_match('/^#[0-9A-Fa-f]{6}$/', $hex) ? $hex : null,
         ]);
+ 
+    } catch (\Exception $e) {
+        Log::error('sugerirHex: excepcion al llamar a Groq', [
+            'error'  => $e->getMessage(),
+            'nombre' => $request->nombre,
+        ]);
+ 
+        return response()->json(['hex' => null]);
     }
+}
 
     // ─── DESTROY ─────────────────────────────────────────────────────────────
 

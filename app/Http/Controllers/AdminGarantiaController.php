@@ -272,6 +272,7 @@ class AdminGarantiaController extends Controller
     }
 
     // ─── POST: sugerir excepciones de garantía por IA (Groq) ───────────────
+    // ─── POST: sugerir excepciones de garantía por IA (Groq) ───────────────
     public function sugerirExcepciones(Request $request)
     {
         $user = auth()->user();
@@ -295,24 +296,75 @@ class AdminGarantiaController extends Controller
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . config('services.groq.key'),
                 'Content-Type'  => 'application/json',
-            ])->post('https://api.groq.com/openai/v1/chat/completions', [
-                'model'      => 'llama-3.1-8b-instant',
-                'max_tokens' => 400,
-                'messages'   => [
-                    ['role' => 'system', 'content' => 'Eres un asistente que redacta excepciones de garantía para tiendas de bicicletas y vehículos eléctricos. '
-                        . 'Dado un componente, responde SOLO con un array JSON de 3 a 5 strings cortos en español, cada uno una causa típica de exclusión de garantía '
-                        . 'para ese componente (ej. mal uso, modificaciones, condiciones ambientales, desgaste natural). Sin explicaciones, sin texto extra, solo el JSON array.'],
+            ])->timeout(15)->post('https://api.groq.com/openai/v1/chat/completions', [
+                // FIX: llama-3.1-8b-instant ya no existe en Groq (deprecado), no
+                // aparece en el /v1/models de la cuenta. Este endpoint estaba
+                // tronando en silencio. Usamos el mismo modelo que ya validamos
+                // en el resto del sistema.
+                'model'       => 'openai/gpt-oss-20b',
+                'temperature' => 0.2,
+
+                // Es reasoning model, sin esto se gasta el max_tokens pensando.
+                'reasoning_effort' => 'low',
+                'reasoning_format' => 'hidden',
+
+                // json_object exige raiz de objeto, no de array -> le pedimos
+                // que envuelva el array en {"excepciones": [...]}.
+                'response_format' => [
+                    'type' => 'json_object',
+                ],
+
+                'max_tokens' => 500,
+
+                'messages' => [
+                    [
+                        'role' => 'system',
+                        'content' => 'Eres un asistente que redacta excepciones de garantía para tiendas de bicicletas y vehículos eléctricos. '
+                            . 'Dado un componente, responde SOLO con un objeto JSON con esta forma: {"excepciones": ["...", "...", "..."]}, '
+                            . 'con 3 a 5 strings cortos en español, cada uno una causa típica de exclusión de garantía para ese componente '
+                            . '(ej. mal uso, modificaciones, condiciones ambientales, desgaste natural). Sin explicaciones, sin texto extra, solo el JSON.',
+                    ],
                     ['role' => 'user', 'content' => $contexto],
                 ],
             ]);
 
+            if (!$response->successful()) {
+                Log::error('sugerirExcepciones: Groq respondio con error', [
+                    'status'  => $response->status(),
+                    'body'    => $response->body(),
+                    'contexto' => $contexto,
+                ]);
+
+                return response()->json(['ok' => false, 'mensaje' => 'Error al conectar con la IA.'], 500);
+            }
+
             $texto = trim($response->json('choices.0.message.content') ?? '');
-            // La IA a veces envuelve el array en ```json ... ``` pese a la instrucción.
+            // Salvaguarda por si aun asi envuelve la respuesta en ```json ... ```
             $texto = preg_replace('/^```(?:json)?|```$/m', '', $texto);
             $texto = trim($texto);
 
-            $excepciones = json_decode($texto, true);
+            $decoded = json_decode($texto, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded)) {
+                Log::error('sugerirExcepciones: JSON invalido de Groq', [
+                    'content_raw'   => $texto,
+                    'finish_reason' => $response->json('choices.0.finish_reason'),
+                    'contexto'      => $contexto,
+                ]);
+
+                return response()->json(['ok' => false, 'mensaje' => 'La IA no devolvió una respuesta válida.'], 422);
+            }
+
+            // Acepta tanto {"excepciones": [...]} (formato pedido) como un array
+            // suelto [...] por si el modelo lo manda asi de todos modos.
+            $excepciones = $decoded['excepciones'] ?? $decoded;
+
             if (!is_array($excepciones)) {
+                Log::error('sugerirExcepciones: estructura inesperada', [
+                    'decoded'  => $decoded,
+                    'contexto' => $contexto,
+                ]);
+
                 return response()->json(['ok' => false, 'mensaje' => 'La IA no devolvió una respuesta válida.'], 422);
             }
 
@@ -324,7 +376,10 @@ class AdminGarantiaController extends Controller
 
             return response()->json(['ok' => true, 'excepciones' => $excepciones]);
         } catch (\Exception $e) {
-            Log::error('Error al sugerir excepciones de garantía con IA', ['error' => $e->getMessage()]);
+            Log::error('Error al sugerir excepciones de garantía con IA', [
+                'error'    => $e->getMessage(),
+                'contexto' => $contexto,
+            ]);
             return response()->json(['ok' => false, 'mensaje' => 'Error al conectar con la IA.'], 500);
         }
     }
