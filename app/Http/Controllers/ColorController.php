@@ -239,16 +239,22 @@ class ColorController extends Controller
         $request->validate(['nombre' => 'required|string|max:50']);
 
         $response = \Illuminate\Support\Facades\Http::withHeaders([
-            'Authorization' => 'Bearer ' . config('services.groq.key'),
-            'Content-Type'  => 'application/json',
-        ])->post('https://api.groq.com/openai/v1/chat/completions', [
-            'model'      => 'llama-3.1-8b-instant',
-            'max_tokens' => 10,
-            'messages'   => [
-                ['role' => 'system', 'content' => 'Eres un asistente que SOLO responde con colores hexadecimales en formato #RRGGBB. Sin explicaciones, sin texto extra, solo el hex.'],
-                ['role' => 'user', 'content' => "¿Qué color hexadecimal representa \"{$request->nombre}\"?"],
-            ],
-        ]);
+    'Authorization' => 'Bearer ' . config('services.groq.key'),
+    'Content-Type'  => 'application/json',
+])->post('https://api.groq.com/openai/v1/chat/completions', [
+    'model'      => 'openai/gpt-oss-20b',
+    'max_tokens' => 10,
+    'messages'   => [
+        [
+            'role' => 'system',
+            'content' => 'Eres un asistente que SOLO responde con colores hexadecimales en formato #RRGGBB. Sin explicaciones, sin texto extra, solo el hex.'
+        ],
+        [
+            'role' => 'user',
+            'content' => "¿Qué color hexadecimal representa \"{$request->nombre}\"?"
+        ],
+    ],
+]);
 
         $hex = trim($response->json('choices.0.message.content') ?? '');
 
